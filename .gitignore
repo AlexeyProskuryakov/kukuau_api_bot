@@ -1,1 +1,4 @@
 github.com
+bin
+logs
+*.pid
