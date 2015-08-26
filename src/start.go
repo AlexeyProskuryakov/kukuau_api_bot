@@ -1,6 +1,7 @@
 package main
 
 import (
+	"log"
 	"msngr"
 	"net/http"
 )
@@ -8,5 +9,12 @@ import (
 func main() {
 	f := msngr.BotControlHandler
 	http.HandleFunc("/", f)
-	http.ListenAndServe(":8080", nil)
+	addr := ":8080"
+
+	log.Printf("\nStart listen and serving at: %v\nuse handler: %+q", addr, f)
+	serv := &http.Server{
+		Addr: addr,
+	}
+	log.Fatal(serv.ListenAndServe())
+
 }
