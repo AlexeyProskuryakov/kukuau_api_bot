@@ -37,18 +37,17 @@ func (s CommandsHandler) ProcessRequest(in inPkg) ([]Command, error) {
 				Title:    "Отменить заказ",
 				Action:   "cancel_order",
 				Position: 0,
-				Form:     Form{},
 			},
 		}, nil
 
 	} else {
-		taxi_call_form := Form{
+		taxi_call_form := &OutForm{
 			Title: "Форма вызова такси",
 			Type:  "form",
 			Name:  "call_taxi",
 			Text:  "Откуда: ?(street_from), ?(house_from), ?(entrance). Куда: ?(street_to), ?(house_to). Когда: ?(time)",
-			Fields: []Field{
-				Field{
+			Fields: []OutField{
+				OutField{
 					Name:     "street_from",
 					Required: true,
 					Type:     "dict",
@@ -60,7 +59,7 @@ func (s CommandsHandler) ProcessRequest(in inPkg) ([]Command, error) {
 						URL:      "http://foo.bar",
 					},
 				},
-				Field{
+				OutField{
 					Name:     "house_from",
 					Required: true,
 					Type:     "text",
@@ -71,7 +70,7 @@ func (s CommandsHandler) ProcessRequest(in inPkg) ([]Command, error) {
 						Required: true,
 					},
 				},
-				Field{
+				OutField{
 					Name:     "entrance",
 					Required: false,
 					Type:     "number",
@@ -82,7 +81,7 @@ func (s CommandsHandler) ProcessRequest(in inPkg) ([]Command, error) {
 						Required: false,
 					},
 				},
-				Field{
+				OutField{
 					Name:     "street_to",
 					Required: true,
 					Type:     "text",
@@ -94,7 +93,7 @@ func (s CommandsHandler) ProcessRequest(in inPkg) ([]Command, error) {
 						URL:      "http://foo.bar",
 					},
 				},
-				Field{
+				OutField{
 					Name:     "house_to",
 					Required: true,
 					Type:     "text",
@@ -105,7 +104,7 @@ func (s CommandsHandler) ProcessRequest(in inPkg) ([]Command, error) {
 						Required: true,
 					},
 				},
-				Field{
+				OutField{
 					Name:     "time",
 					Required: false,
 					Type:     "text",
@@ -153,15 +152,15 @@ func (noh NewOrderHandler) ProcessMessage(in inPkg) (string, error) {
 		for _, field := range in.Message.Command.Form.Fields {
 			switch fn := field.Name; fn {
 			case "street_from":
-				from = field.Value.Text
+				from = field.Data.Text
 			case "street_to":
-				to = field.Value.Text
+				to = field.Data.Text
 			case "house_to":
-				ht = field.Value.Text
+				ht = field.Data.Text
 			case "house_from":
-				hf = field.Value.Text
+				hf = field.Data.Text
 			case "time":
-				fv := field.Value.Value
+				fv := field.Data.Value
 				if fv == "0" {
 					t = "сейчас"
 				} else {

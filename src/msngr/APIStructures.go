@@ -29,25 +29,6 @@ type FieldAttribute struct {
 	URL      string `json:"url,omitempty"`
 }
 
-type Field struct {
-	Name       string         `json:"name"`
-	Required   bool           `json:"required,omitempty"`
-	Type       string         `json:"type,omitempty"`
-	Label      string         `json:"label"`
-	Value      string         `json:"value,omitempty"`
-	Attributes FieldAttribute `json:"attrs"`
-}
-
-type Form struct {
-	Title  string  `json:"title,omitempty"`
-	Text   string  `json:"text,omitempty"`
-	Type   string  `json:"type,omitempty"`
-	Name   string  `json:"name,omitempty"`
-	Label  string  `json:"label,omitempty"`
-	URL    string  `json:"url,omitempty"`
-	Fields []Field `json:"fields,omitempty"`
-}
-
 type InForm struct {
 	Title  string    `json:"title,omitempty"`
 	Text   string    `json:"text,omitempty"`
@@ -63,10 +44,10 @@ type InField struct {
 	Required bool   `json:"required,omitempty"`
 	Type     string `json:"type,omitempty"`
 	Label    string `json:"label"`
-	Value    struct {
+	Data     struct {
 		Value string `json:"value"`
 		Text  string `json:"text"`
-	} `json:"value,omitempty"`
+	} `json:"data,omitempty"`
 	Attributes FieldAttribute `json:"attrs"`
 }
 type InCommand struct {
@@ -99,11 +80,30 @@ type inPkg struct {
 	Request *InRequest `json:"request"`
 }
 
+type OutField struct {
+	Name       string         `json:"name"`
+	Required   bool           `json:"required,omitempty"`
+	Type       string         `json:"type,omitempty"`
+	Label      string         `json:"label"`
+	Value      string         `json:"value,omitempty"`
+	Attributes FieldAttribute `json:"attrs"`
+}
+
+type OutForm struct {
+	Title  string     `json:"title,omitempty"`
+	Text   string     `json:"text,omitempty"`
+	Type   string     `json:"type,omitempty"`
+	Name   string     `json:"name,omitempty"`
+	Label  string     `json:"label,omitempty"`
+	URL    string     `json:"url,omitempty"`
+	Fields []OutField `json:"fields,omitempty"`
+}
+
 type Command struct {
-	Title    string `json:"title"`
-	Action   string `json:"action"`
-	Position int    `json:"position"`
-	Form     Form   `json:"form"`
+	Title    string   `json:"title"`
+	Action   string   `json:"action"`
+	Position int      `json:"position"`
+	Form     *OutForm `json:"form"`
 }
 
 type OutMessage struct {
@@ -120,7 +120,7 @@ type OutRequest struct {
 		Title  string    `json:"title,omitempty"`
 		Action string    `json:"action"`
 		Text   string    `json:"text,omitempty"`
-		Form   *Form     `json:"form,omitempty"`
+		Form   *OutForm  `json:"form,omitempty"`
 		Result []Command `json:"result,omitempty"`
 	} `json:"query"`
 }
