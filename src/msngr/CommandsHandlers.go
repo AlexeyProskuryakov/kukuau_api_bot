@@ -139,7 +139,7 @@ func (s CommandsHandler) ProcessRequest(in inPkg) ([]Command, error) {
 type InformationHandler struct{}
 
 func (ih InformationHandler) ProcessMessage(in inPkg) (string, error) {
-	return "!!! This is TAXI !!! ", nil
+	return "Срочный заказ такси в Новосибирске. Быстрая подача. Оплата наличными или картой. ", nil
 }
 
 type NewOrderHandler struct{}
