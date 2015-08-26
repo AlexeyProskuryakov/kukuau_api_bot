@@ -171,7 +171,7 @@ func (noh NewOrderHandler) ProcessMessage(in inPkg) (string, error) {
 		}
 
 		uh.SetUserState(in.From, ORDER_CREATE)
-		result := fmt.Sprintf("Ваш заказ создан! Поедем из ул %v дом %v, на %v к дому %v. Cтоймость %v, машина прибудет %v", from, hf, to, ht, rand.Int31n(500)+50, t)
+		result := fmt.Sprintf("Ваш заказ создан! Поедем из %v дом %v, на %v к дому %v. Cтоймость %v рублей, машина прибудет %v", from, hf, to, ht, rand.Int31n(500)+50, t)
 		return result, nil
 	} else {
 		return "Заказ уже создан!", errors.New("Заказ уже создан!")
