@@ -156,9 +156,9 @@ func (noh NewOrderHandler) ProcessMessage(in inPkg) (string, error) {
 			case "street_to":
 				to = field.Data.Text
 			case "house_to":
-				ht = field.Data.Text
+				ht = field.Data.Value
 			case "house_from":
-				hf = field.Data.Text
+				hf = field.Data.Value
 			case "time":
 				fv := field.Data.Value
 				if fv == "0" {
