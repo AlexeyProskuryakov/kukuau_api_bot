@@ -109,7 +109,7 @@ func (s ShopAuthoriseHandler) ProcessMessage(in InPkg) (string, error) {
 		shop_db.SetUserState(in.From, USER_AUTHORISED)
 		return "Вы авторизовались. Ура!", nil
 	}
-	return "Не правильные логин или пароль :(", errors.New("Пара логин да пароль не совпадают :(")
+	return "Не правильные логин или пароль :(", nil
 
 }
 
