@@ -131,7 +131,7 @@ func (os ShopOrderStateHandler) ProcessMessage(in InPkg) (string, error) {
 		result := fmt.Sprintf("Ваш заказ с номером %v %v", rand.Int31n(10000), __choiceString(order_states[:]))
 		return result, nil
 	}
-	return "", errors.New("Авторизуйтесь пожалуйста!")
+	return "Авторизуйтесь пожалуйста!", nil
 }
 
 type ShopSupportMessageHandler struct{}
