@@ -4,33 +4,26 @@ import (
 	"errors"
 	"fmt"
 	"math/rand"
-	// "strconv"
 )
 
-type requestCommandProcessor interface {
-	ProcessRequest(in inPkg) ([]Command, error)
+var TaxiRequestCommands = map[string]RequestCommandProcessor{
+	"commands": TaxiCommandsHandler{},
 }
 
-type messageCommandProcessor interface {
-	ProcessMessage(in inPkg) (string, error)
+var TaxiMessageCommands = map[string]MessageCommandProcessor{
+	"information":     TaxiInformationHandler{},
+	"new_order":       TaxiNewOrderHandler{},
+	"cancel_order":    TaxiCancelOrderHandler{},
+	"calculate_price": TaxiCalculatePriceHandler{},
 }
+var url = "http://foo.bar.baz"
+var _userHandler = GetUserHandler()
 
-var requestCommands = map[string]requestCommandProcessor{
-	"commands": CommandsHandler{},
-}
+type TaxiCommandsHandler struct{}
 
-var messageCommands = map[string]messageCommandProcessor{
-	"information":     InformationHandler{},
-	"new_order":       NewOrderHandler{},
-	"cancel_order":    CancelOrderHandler{},
-	"calculate_price": CalculatePriceHandler{},
-}
+func (s TaxiCommandsHandler) ProcessRequest(in InPkg) ([]Command, error) {
 
-type CommandsHandler struct{}
-
-func (s CommandsHandler) ProcessRequest(in inPkg) ([]Command, error) {
-	uh := GetUserHandler()
-	state := uh.GetUserState(in.From)
+	state := _userHandler.GetUserState(in.From)
 	if state == ORDER_CREATE {
 		return []Command{
 			Command{
@@ -48,68 +41,50 @@ func (s CommandsHandler) ProcessRequest(in inPkg) ([]Command, error) {
 			Text:  "Откуда: ?(street_from), ?(house_from), ?(entrance). Куда: ?(street_to), ?(house_to). Когда: ?(time)",
 			Fields: []OutField{
 				OutField{
-					Name:     "street_from",
-					Required: true,
-					Type:     "dict",
-					Label:    "FromLabel",
-					Value:    "FromValue",
+					Name: "street_from",
+					Type: "dict",
 					Attributes: FieldAttribute{
 						Label:    "улица/район",
 						Required: true,
-						URL:      "http://foo.bar",
+						URL:      &url,
 					},
 				},
 				OutField{
-					Name:     "house_from",
-					Required: true,
-					Type:     "text",
-					Label:    "house_from",
-					Value:    "house_from",
+					Name: "house_from",
+					Type: "text",
 					Attributes: FieldAttribute{
 						Label:    "дом",
 						Required: true,
 					},
 				},
 				OutField{
-					Name:     "entrance",
-					Required: false,
-					Type:     "number",
-					Label:    "entrance",
-					Value:    "entrance",
+					Name: "entrance",
+					Type: "number",
 					Attributes: FieldAttribute{
 						Label:    "подъезд",
 						Required: false,
 					},
 				},
 				OutField{
-					Name:     "street_to",
-					Required: true,
-					Type:     "text",
-					Label:    "time_label",
-					Value:    "time_value",
+					Name: "street_to",
+					Type: "text",
 					Attributes: FieldAttribute{
 						Label:    "улица/район",
 						Required: true,
-						URL:      "http://foo.bar",
+						URL:      &url,
 					},
 				},
 				OutField{
-					Name:     "house_to",
-					Required: true,
-					Type:     "text",
-					Label:    "house_to",
-					Value:    "house_to",
+					Name: "house_to",
+					Type: "text",
 					Attributes: FieldAttribute{
 						Label:    "дом",
 						Required: true,
 					},
 				},
 				OutField{
-					Name:     "time",
-					Required: false,
-					Type:     "text",
-					Label:    "time",
-					Value:    "time",
+					Name: "time",
+					Type: "text",
 					Attributes: FieldAttribute{
 						Label:    "время",
 						Required: false,
@@ -136,17 +111,17 @@ func (s CommandsHandler) ProcessRequest(in inPkg) ([]Command, error) {
 	}
 }
 
-type InformationHandler struct{}
+type TaxiInformationHandler struct{}
 
-func (ih InformationHandler) ProcessMessage(in inPkg) (string, error) {
+func (ih TaxiInformationHandler) ProcessMessage(in InPkg) (string, error) {
 	return "Срочный заказ такси в Новосибирске. Быстрая подача. Оплата наличными или картой. ", nil
 }
 
-type NewOrderHandler struct{}
+type TaxiNewOrderHandler struct{}
 
-func (noh NewOrderHandler) ProcessMessage(in inPkg) (string, error) {
-	uh := GetUserHandler()
-	state := uh.GetUserState(in.From)
+func (noh TaxiNewOrderHandler) ProcessMessage(in InPkg) (string, error) {
+
+	state := _userHandler.GetUserState(in.From)
 	if state != ORDER_CREATE {
 		var from, to, hf, ht, t string
 		for _, field := range in.Message.Command.Form.Fields {
@@ -170,7 +145,7 @@ func (noh NewOrderHandler) ProcessMessage(in inPkg) (string, error) {
 
 		}
 
-		uh.SetUserState(in.From, ORDER_CREATE)
+		_userHandler.SetUserState(in.From, ORDER_CREATE)
 		result := fmt.Sprintf("Ваш заказ создан! Поедем из %v дом %v, на %v к дому %v. Cтоймость %v рублей, машина прибудет %v", from, hf, to, ht, rand.Int31n(500)+50, t)
 		return result, nil
 	} else {
@@ -179,17 +154,16 @@ func (noh NewOrderHandler) ProcessMessage(in inPkg) (string, error) {
 
 }
 
-type CancelOrderHandler struct{}
+type TaxiCancelOrderHandler struct{}
 
-func (coh CancelOrderHandler) ProcessMessage(in inPkg) (string, error) {
-	uh := GetUserHandler()
-	uh.SetUserState(in.From, ORDER_CANCELED)
+func (coh TaxiCancelOrderHandler) ProcessMessage(in InPkg) (string, error) {
+	_userHandler.SetUserState(in.From, ORDER_CANCELED)
 	return "Ваш заказ отменен", nil
 }
 
-type CalculatePriceHandler struct {
+type TaxiCalculatePriceHandler struct {
 }
 
-func (cph CalculatePriceHandler) ProcessMessage(in inPkg) (string, error) {
+func (cph TaxiCalculatePriceHandler) ProcessMessage(in InPkg) (string, error) {
 	return fmt.Sprintf("Стоймость будет всего лишь %v рублей!", rand.Int31n(500)+50), nil
 }

@@ -2,19 +2,24 @@ package main
 
 import (
 	"log"
-	"msngr"
+	m "msngr"
 	"net/http"
 )
 
 func main() {
-	f := msngr.BotControlHandler
-	http.HandleFunc("/", f)
+	taxi_controller_handler := m.FormBotControllerHandler(m.TaxiRequestCommands, m.TaxiMessageCommands)
+	shop_controller_handler := m.FormBotControllerHandler(m.ShopRequestCommands, m.ShopMessageCommands)
+
+	http.HandleFunc("/taxi", taxi_controller_handler)
+	http.HandleFunc("/shop", shop_controller_handler)
+
 	addr := ":8080"
 
-	log.Printf("\nStart listen and serving at: %v\nuse handler: %+q", addr, f)
+	log.Printf("\nStart listen and serving at: %v\n", addr)
 	serv := &http.Server{
 		Addr: addr,
 	}
+
 	log.Fatal(serv.ListenAndServe())
 
 }

@@ -14,9 +14,9 @@ func genId() string {
 	return fmt.Sprintf("%d", time.Now().UnixNano()/int64(time.Millisecond))
 }
 
-func getInPackage(r *http.Request) (inPkg, error) {
+func getInPackage(r *http.Request) (InPkg, error) {
 	log.Println("getting in! will retrieve body from request")
-	var in inPkg
+	var in InPkg
 
 	body, err := ioutil.ReadAll(r.Body)
 	if err != nil {
@@ -32,7 +32,7 @@ func getInPackage(r *http.Request) (inPkg, error) {
 	return in, err
 }
 
-func setOutPackage(w http.ResponseWriter, out outPkg) {
+func setOutPackage(w http.ResponseWriter, out OutPkg) {
 	log.Println("forming out! will marshaing out response")
 
 	jsoned_out, err := json.Marshal(&out)
@@ -45,43 +45,53 @@ func setOutPackage(w http.ResponseWriter, out outPkg) {
 	fmt.Fprintf(w, "%s", string(jsoned_out))
 }
 
-func BotControlHandler(w http.ResponseWriter, r *http.Request) {
-	log.Println("processing request...")
-	if r.Method != "POST" {
-		http.Error(w, "I can not work with non POST methods", 405)
-		return
-	}
+type controllerHandler func(w http.ResponseWriter, r *http.Request)
 
-	in, err := getInPackage(r)
-	out := new(outPkg)
+func FormBotControllerHandler(request_cmds map[string]RequestCommandProcessor, message_cmds map[string]MessageCommandProcessor) controllerHandler {
 
-	log.Println("forming response...")
-
-	out.To = in.From
-
-	if in.Request != nil {
-		log.Println("processing request")
-		action := in.Request.Query.Action
-		out.Request = &OutRequest{ID: genId(), Type: "result"}
-		out.Request.Query.Action = action
-		if commandProcessor, ok := requestCommands[action]; ok {
-			out.Request.Query.Result, err = commandProcessor.ProcessRequest(in)
+	return func(w http.ResponseWriter, r *http.Request) {
+		log.Println("processing taxi request...")
+		if r.Method != "POST" {
+			http.Error(w, "I can not work with non POST methods", 405)
+			return
 		}
 
-	} else if in.Message != nil {
-		log.Println("processing message")
-		out.Message = &OutMessage{Type: in.Message.Type, Thread: in.Message.Thread, ID: genId()}
-		action := in.Message.Command.Action
-		if commandProcessor, ok := messageCommands[action]; ok {
-			out.Message.Body, err = commandProcessor.ProcessMessage(in)
+		in, err := getInPackage(r)
+		out := new(OutPkg)
+
+		log.Println("forming response...")
+
+		out.To = in.From
+
+		if in.Request != nil {
+			log.Println("processing request")
+			action := in.Request.Query.Action
+			out.Request = &OutRequest{ID: genId(), Type: "result"}
+			out.Request.Query.Action = action
+			if commandProcessor, ok := request_cmds[action]; ok {
+				out.Request.Query.Result, err = commandProcessor.ProcessRequest(in)
+			} else {
+				out.Request.Query.Text = "Команда не поддерживается."
+			}
+
+		} else if in.Message != nil {
+			log.Println("processing message")
+			out.Message = &OutMessage{Type: in.Message.Type, Thread: in.Message.Thread, ID: genId()}
+			action := in.Message.Command.Action
+			if commandProcessor, ok := message_cmds[action]; ok {
+				out.Message.Body, err = commandProcessor.ProcessMessage(in)
+			} else {
+				out.Message.Body = "Команда не поддерживается."
+			}
+
+		}
+		log.Printf("%+v\n", out)
+
+		if err != nil {
+			out.Message = &OutMessage{Type: "error", Thread: "0", ID: genId(), Body: fmt.Sprintf("%+v", err)}
 		}
 
-	}
-	log.Printf("%+v\n", out)
-
-	if err != nil {
-		out.Message = &OutMessage{Type: "error", Thread: "0", ID: genId(), Body: fmt.Sprintf("%+v", err)}
+		setOutPackage(w, *out)
 	}
 
-	setOutPackage(w, *out)
 }

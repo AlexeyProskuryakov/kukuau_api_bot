@@ -23,10 +23,10 @@ from: “username”,
 */
 
 type FieldAttribute struct {
-	Label    string `json:"label"`
-	Required bool   `json:"required"`
-	Regex    string `json:"regex,omitempty"`
-	URL      string `json:"url,omitempty"`
+	Label    string  `json:"label"`
+	Required bool    `json:"required"`
+	Regex    *string `json:"regex,omitempty"`
+	URL      *string `json:"url,omitempty"`
 }
 
 type InForm struct {
@@ -40,15 +40,12 @@ type InForm struct {
 }
 
 type InField struct {
-	Name     string `json:"name"`
-	Required bool   `json:"required,omitempty"`
-	Type     string `json:"type,omitempty"`
-	Label    string `json:"label"`
-	Data     struct {
+	Name string `json:"name"`
+	Type string `json:"type,omitempty"`
+	Data struct {
 		Value string `json:"value"`
 		Text  string `json:"text"`
 	} `json:"data,omitempty"`
-	Attributes FieldAttribute `json:"attrs"`
 }
 type InCommand struct {
 	Title  string `json:"title,omitempty"`
@@ -73,7 +70,7 @@ type InRequest struct {
 	} `json:"query"`
 }
 
-type inPkg struct {
+type InPkg struct {
 	From string `json:"from"`
 
 	Message *InMessage `json:"message"`
@@ -81,11 +78,10 @@ type inPkg struct {
 }
 
 type OutField struct {
-	Name       string         `json:"name"`
-	Required   bool           `json:"required,omitempty"`
-	Type       string         `json:"type,omitempty"`
-	Label      string         `json:"label"`
-	Value      string         `json:"value,omitempty"`
+	Name string `json:"name"`
+	Type string `json:"type,omitempty"`
+	Data *struct {
+	} `json:"data,omitempty"`
 	Attributes FieldAttribute `json:"attrs"`
 }
 
@@ -103,7 +99,7 @@ type Command struct {
 	Title    string   `json:"title"`
 	Action   string   `json:"action"`
 	Position int      `json:"position"`
-	Form     *OutForm `json:"form"`
+	Form     *OutForm `json:"form,omitempty"`
 }
 
 type OutMessage struct {
@@ -125,7 +121,7 @@ type OutRequest struct {
 	} `json:"query"`
 }
 
-type outPkg struct {
+type OutPkg struct {
 	To      string      `json:"to"`
 	Message *OutMessage `json:"message,omitempty"`
 	Request *OutRequest `json:"request,omitempty"`
