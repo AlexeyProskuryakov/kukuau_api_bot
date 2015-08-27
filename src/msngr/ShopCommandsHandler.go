@@ -1,7 +1,6 @@
 package msngr
 
 import (
-	"errors"
 	"fmt"
 	"log"
 	"math/rand"
