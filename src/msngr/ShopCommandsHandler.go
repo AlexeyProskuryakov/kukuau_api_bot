@@ -18,6 +18,7 @@ var ShopMessageCommands = map[string]MessageCommandProcessor{
 	"authorise":       ShopAuthoriseHandler{},
 	"orders_state":    ShopOrderStateHandler{},
 	"support_message": ShopSupportMessageHandler{},
+	"log_out":         ShopLogOutMessageHandler{},
 }
 
 type ShopCommandsHandler struct{}
@@ -62,6 +63,11 @@ func (ch ShopCommandsHandler) ProcessRequest(in InPkg) ([]Command, error) {
 						},
 					},
 				},
+			},
+			Command{
+				Title:    "Выйти",
+				Action:   "log_out",
+				Position: 2,
 			},
 		}
 	} else {
@@ -143,4 +149,11 @@ type ShopInformationHandler struct{}
 
 func (ih ShopInformationHandler) ProcessMessage(in InPkg) (string, error) {
 	return "Покупки в тысячах проверенных магазинов! ", nil
+}
+
+type ShopLogOutMessageHandler struct{}
+
+func (lo ShopLogOutMessageHandler) ProcessMessage(in InPkg) (string, error) {
+	shop_db.DeleteUserState(in.From)
+	return "Вы вышли. Ура!", nil
 }
