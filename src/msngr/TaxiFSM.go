@@ -3,7 +3,7 @@ package msngr
 //experiments with finite state machines
 import (
 	"fmt"
-	"fsm"
+	"github.com/looplab/fsm"
 )
 
 type Taxi struct {

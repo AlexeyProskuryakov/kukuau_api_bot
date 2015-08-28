@@ -18,6 +18,7 @@ LOG=${HOME}/logs/sdb.logs
 start()
 {   
     export GOPATH=${HOME}
+    ${EXEC} get github.com/looplab/fsm
     ${EXEC} build ${HOME}/src/start_demo_bot.go
     ${HOME}/start_demo_bot >  ${LOG} 2>&1 &
     pidof start_demo_bot > ${PID} 
