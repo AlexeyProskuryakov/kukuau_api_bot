@@ -18,8 +18,9 @@ func GetUserHandler() *userHandler {
 			state_map:     make(map[string]int),
 			passwords_map: make(map[string]string),
 		}
+
 		instance.SetUserPassword("test", "123")
-		instance.SetUserPassword("alesha", "qwerty")
+
 	})
 	return instance
 }

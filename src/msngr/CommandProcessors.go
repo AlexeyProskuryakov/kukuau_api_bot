@@ -5,5 +5,5 @@ type RequestCommandProcessor interface {
 }
 
 type MessageCommandProcessor interface {
-	ProcessMessage(in InPkg) (string, error)
+	ProcessMessage(in InPkg) (string, *[]Command, error)
 }

@@ -79,7 +79,7 @@ func FormBotControllerHandler(request_cmds map[string]RequestCommandProcessor, m
 			out.Message = &OutMessage{Type: in.Message.Type, Thread: in.Message.Thread, ID: genId()}
 			action := in.Message.Command.Action
 			if commandProcessor, ok := message_cmds[action]; ok {
-				out.Message.Body, err = commandProcessor.ProcessMessage(in)
+				out.Message.Body, out.Message.Commands, err = commandProcessor.ProcessMessage(in)
 			} else {
 				out.Message.Body = "Команда не поддерживается."
 			}

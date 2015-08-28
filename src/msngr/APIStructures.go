@@ -1,27 +1,5 @@
 package msngr
 
-/*
-
-from: “username”,
-	request: {
-		(данные запроса)
-}
-}
-
-●	from(*) | to(*) - имя получателя или отправителя
-●	request(*) - тело запроса
-○	id(*) - уникальный идентификатор
-○	type(*) - тип запроса, может содержать значения:
-■	get - запрос на получение каких-либо данных
-■	result - результат запроса
-■	error - ошибка возникшая в результате запроса
-○	query(*) - если поле “type” имеет значение “get” содержит строку с названием команды,
-если имеет значение “result”, то должно содержать результат в виде списка элементов.
-Если элементы отсутствуют, список должен быть пустым.
-
-
-*/
-
 type FieldAttribute struct {
 	Label    string  `json:"label"`
 	Required bool    `json:"required"`
@@ -103,10 +81,11 @@ type Command struct {
 }
 
 type OutMessage struct {
-	ID     string `json:"id"`
-	Type   string `json:"type,omitempty"`
-	Thread string `json:"thread,omitempty"`
-	Body   string `json:"body"`
+	ID       string     `json:"id"`
+	Type     string     `json:"type,omitempty"`
+	Thread   string     `json:"thread,omitempty"`
+	Body     string     `json:"body"`
+	Commands *[]Command `json:"commands,omitempty"`
 }
 
 type OutRequest struct {
