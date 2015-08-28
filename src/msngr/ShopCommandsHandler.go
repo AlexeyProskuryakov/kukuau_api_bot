@@ -152,7 +152,7 @@ func (sm ShopSupportMessageHandler) ProcessMessage(in InPkg) (string, *[]Command
 type ShopInformationHandler struct{}
 
 func (ih ShopInformationHandler) ProcessMessage(in InPkg) (string, *[]Command, error) {
-	return "Покупки в тысячах проверенных магазинов! ", nil, nil
+	return "Покупки в тысячах проверенных магазинов! (тестовый логин: test, пароль: 123)", nil, nil
 }
 
 type ShopLogOutMessageHandler struct{}
