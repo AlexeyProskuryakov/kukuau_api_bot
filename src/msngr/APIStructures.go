@@ -49,10 +49,10 @@ type InRequest struct {
 }
 
 type InPkg struct {
-	From string `json:"from"`
-
-	Message *InMessage `json:"message"`
-	Request *InRequest `json:"request"`
+	From     string     `json:"from"`
+	UserData *string    `json:"from"`
+	Message  *InMessage `json:"message"`
+	Request  *InRequest `json:"request"`
 }
 
 type OutField struct {

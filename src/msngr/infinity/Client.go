@@ -133,9 +133,9 @@ type outPkg struct {
 	Request *RequestType `json:"request,omitempty"`
 }
 
-func getPrice(inbox *inPkg, p *Infinity) string {
-	var order NewOrder_type
-	var to Dest
+func getPrice(inbox *inPkg, p *infinity) string {
+	var order NewOrder
+	var to Destination
 	order.IdService = 5001753333
 	for _, v := range inbox.Message.Command.Form.Fields {
 		switch v.Name {
@@ -274,7 +274,7 @@ func getCmdList(ServerHost string) []ResultItem {
 	return results
 }
 
-func controlHandler(w http.ResponseWriter, r *http.Request, ServerHost string, p *Infinity) {
+func controlHandler(w http.ResponseWriter, r *http.Request, ServerHost string, p *infinity) {
 	w.WriteHeader(200)
 	log.Println("Request...")
 	var inbox inPkg

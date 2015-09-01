@@ -3,13 +3,23 @@ package msngr
 import (
 	"errors"
 	"fmt"
-	"math/rand"
+	"log"
+
 	inf "msngr/infinity"
+
+	"strconv"
+	"time"
+)
+
+const (
+	timeFormat = "2006-01-02 15:04:05"
 )
 
 //todo what about many inifinity apis
 var url = "http://localhost:8080/_streets"
-var infinity = inf.InfinityAPI
+var TaxisInfinity = inf.GetInfinityAPI()
+
+var im = inf.InfinityMixin{API: TaxisInfinity}
 
 var commands_at_created_order = []Command{
 	Command{
@@ -98,9 +108,9 @@ var TaxiRequestCommands = map[string]RequestCommandProcessor{
 
 var TaxiMessageCommands = map[string]MessageCommandProcessor{
 	"information":     TaxiInformationHandler{},
-	"new_order":       TaxiNewOrderHandler{},
-	"cancel_order":    TaxiCancelOrderHandler{},
-	"calculate_price": TaxiCalculatePriceHandler{},
+	"new_order":       TaxiNewOrderHandler{InfinityMixin: im},
+	"cancel_order":    TaxiCancelOrderHandler{InfinityMixin: im},
+	"calculate_price": TaxiCalculatePriceHandler{InfinityMixin: im},
 }
 
 var _taxi_db = GetUserHandler()
@@ -122,50 +132,89 @@ func (ih TaxiInformationHandler) ProcessMessage(in InPkg) (string, *[]Command, e
 	return "Срочный заказ такси в Новосибирске. Быстрая подача. Оплата наличными или картой. ", nil, nil
 }
 
-type TaxiNewOrderHandler struct{}
+type TaxiNewOrderHandler struct {
+	inf.InfinityMixin
+}
+
+func _get_time_from_timestamp(tst string) time.Time {
+	i, err := strconv.ParseInt(tst, 10, 64)
+	if err != nil {
+		panic(err)
+	}
+	dst := time.Unix(i, 0)
+	return dst
+}
+
+func _form_order(fields []InField) (new_order inf.NewOrder) {
+	var from_info, to_info, hf, ht, when string
+	for _, field := range fields {
+		switch fn := field.Name; fn {
+		case "street_from":
+			from_info = field.Data.Value
+		case "street_to":
+			to_info = field.Data.Value
+		case "house_to":
+			ht = field.Data.Value
+		case "house_from":
+			hf = field.Data.Value
+
+		case "time": //todo see time! with exceptions
+			when = field.Data.Value
+
+			if when == "0" {
+				new_order.DeliveryMinutes = 0
+			} else {
+				new_order.DeliveryTime = _get_time_from_timestamp(when).Format(timeFormat)
+			}
+		}
+	}
+	//fucking hardcode //todo refactor
+	new_order.Phone = "89537631628"
+	new_order.IdService = 5001753333
+	new_order.Notes = "Хочется комфортную машину"
+	new_order.Attributes = [2]int64{1000113000, 1000113002}
+	//end fucking hardcode
+
+	new_order.Delivery = inf.H_get_delivery(from_info, hf)
+	new_order.Destinations = []inf.Destination{inf.H_get_destination(to_info, ht)}
+
+	return
+}
 
 func (noh TaxiNewOrderHandler) ProcessMessage(in InPkg) (string, *[]Command, error) {
+	log.Println(noh.API)
 	state := _taxi_db.GetUserState(in.From)
 	if state != ORDER_CREATE {
-		var from, to, hf, ht, t string
-		for _, field := range in.Message.Command.Form.Fields {
-			switch fn := field.Name; fn {
-			case "street_from":
-				from = field.Data.Text
-			case "street_to":
-				to = field.Data.Text
-			case "house_to":
-				ht = field.Data.Value
-			case "house_from":
-				hf = field.Data.Value
-			case "time":
-				fv := field.Data.Value
-				if fv == "0" {
-					t = "сейчас"
-				} else {
-					t = fmt.Sprintf("через %v минут", rand.Int31n(10)+10)
-				}
-			}
-
-		}
+		new_order := _form_order(in.Message.Command.Form.Fields)
+		ans, ord_error := noh.API.NewOrder(new_order)
 		_taxi_db.SetUserState(in.From, ORDER_CREATE)
-		result := fmt.Sprintf("Ваш заказ создан! Поедем из %v дом %v, на %v к дому %v. Cтоймость %v рублей, машина прибудет %v", from, hf, to, ht, rand.Int31n(500)+50, t)
+		if ord_error != nil {
+			panic(ord_error)
+		}
+		result := fmt.Sprintf("Ваш заказ создан! Вот так: %+v и ответ таков: %+v ", new_order, ans)
 		return result, &commands_at_created_order, nil
 	} else {
 		return "Заказ уже создан!", nil, errors.New("Заказ уже создан!")
 	}
-
 }
 
-type TaxiCancelOrderHandler struct{}
+type TaxiCancelOrderHandler struct {
+	inf.InfinityMixin
+}
 
 func (coh TaxiCancelOrderHandler) ProcessMessage(in InPkg) (string, *[]Command, error) {
 	_taxi_db.SetUserState(in.From, ORDER_CANCELED)
 	return "Ваш заказ отменен", nil, nil
 }
 
-type TaxiCalculatePriceHandler struct{}
+type TaxiCalculatePriceHandler struct {
+	inf.InfinityMixin
+}
 
 func (cph TaxiCalculatePriceHandler) ProcessMessage(in InPkg) (string, *[]Command, error) {
-	return fmt.Sprintf("Стоймость будет всего лишь %v рублей!", rand.Int31n(500)+50), nil, nil
+	order := _form_order(in.Message.Command.Form.Fields)
+	s, details := cph.API.CalcOrderCost(order)
+	log.Println(details)
+	cost := strconv.Itoa(s)
+	return fmt.Sprintf("Стоймость будет всего лишь %v рублей! \nА детали таковы: %v", cost, details), nil, nil
 }

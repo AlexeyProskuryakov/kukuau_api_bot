@@ -19,18 +19,12 @@ func main() {
 	shop_controller_handler := m.FormBotControllerHandler(m.ShopRequestCommands, m.ShopMessageCommands)
 
 	//prepare Infinity API
-	var infApi = ia.InfinityAPI
-	infApi.ConnString = i_conn_string
-	infApi.Host = i_host
-	status := infApi.Login(i_password, i_password)
-	if status {
-		log.Println("Установлено соединение с Infinity")
-	}
+	var infApi = ia.GetInfinityAPI()
 
 	http.HandleFunc("/taxi", taxi_controller_handler)
 	http.HandleFunc("/shop", shop_controller_handler)
 	http.HandleFunc("/_streets", func(w http.ResponseWriter, r *http.Request) {
-		ia.StreetsSearchHandler(w, r, infApi)
+		ia.StreetsSearchHandler(w, r, *infApi)
 	})
 
 	addr := ":8080"

@@ -27,10 +27,10 @@ func warnp(err error) {
 	}
 }
 
-// Infinity - Структура для работы с API Infinity.
-type Infinity struct {
+// infinity - Структура для работы с API infinity.
+type infinity struct {
 	Host       string
-	ConnString string // Строка подключения к Infinity API
+	ConnString string // Строка подключения к infinity API
 	// default: http://109.202.25.248:8080/WebAPITaxi/
 	LoginTime     time.Time
 	Cookie        *http.Cookie
@@ -78,7 +78,7 @@ type Answer struct {
 	} `json:"content"`
 }
 
-type Dest struct {
+type Destination struct {
 	Lat          float64 `json:"lat"`           // : <Широта координаты адреса (при указании места на карте). Если указано, информация о доставке по указанию и адресе игнорируется>,
 	Lon          float64 `json:"lon"`           // : <Долгота координаты адреса (при указании места на карте). Если указано, информация о доставке по указанию и адресе игнорируется>,"isByDirection" : <Заказ машины с указанием пункта назначения при подаче (если задано в true,информация о адресе игнонрируются)>,
 	IdAddres     string  `json:"idAddress"`     // : <Идентификатор существующего описания адреса (адрес дома или объекта)>,
@@ -95,7 +95,24 @@ type Dest struct {
 	IdFastAddres string  `json:"idFastAddress"` // // : <ID быстрого адреса. Дополнительное информационное поле, описывающее быстрый адрес, связанный с указанным адресом. Значение учитывается только при указании idAddress>
 }
 
-type NewOrder_type struct {
+type Delivery struct {
+	//Lat           float64 `json:"lat"`           // : <Широта координаты адреса (при указании места на карте). Если указано, информация о адресе игнорируется>,
+	//Lon           float64 `json:"lon"`           // : <Долгота координаты адреса (при указании места на карте). Если указано, информация о адресе игнорируется>,
+	//IdAddress     string `json:"idAddress"`      // <Идентификатор существующего описания адреса (адрес дома или объекта)>,
+	IdRegion int64 `json:"idRegion"` // <Идентификатор региона (Int64)>,
+	//IdDistrict    int64  `json:"idDistrict"`    // : <Идентификатор района (Int64)>,
+	//IdCity        int64  `json:"idCity"`        // : <Идентификатор города (Int64)>,
+	//IdPlace       int64  `json:"idPlace"`       //: <Идентификатор поселения (Int64)>,
+	IdStreet int64  `json:"idStreet"` // : <Идентификатор улицы (Int64)>,
+	House    string `json:"house"`    // : <№ дома (строка)>,
+	//Building      string `json:"building"`      // : <Строение (строка)>,
+	Fracion    string `json:"fraction"`  // : <Корпус (строка)>,
+	Entrance   string `json:"entrance"`  // : <Подъезд (строка)>,
+	Apartament string `json:"apartment"` // : <№ квартиры (строка)>,
+	//IdFastAddress string `json:"idFastAddress"` //: <ID быстрого адреса. Дополнительное информационное поле, описывающее быстрый адрес, связанный с указанным адресом. Значение учитывается только при указании idAddress>
+}
+
+type NewOrder struct {
 	//request
 	Phone           string `json:"phone"`
 	DeliveryTime    string `json:"deliveryTime"`    //<Время подачи в формате yyyy-MM-dd HH:mm:ss>
@@ -105,33 +122,18 @@ type NewOrder_type struct {
 	//Markups           [2]int64 `json:"markups"`           // <Массив идентификаторов наценок заказа>
 	Attributes [2]int64 `json:"attributes"` // <Массив идентификаторов дополнительных атрибутов заказа>
 	// Инфомация о месте подачи машины
-	Delivery struct {
-		//Lat           float64 `json:"lat"`           // : <Широта координаты адреса (при указании места на карте). Если указано, информация о адресе игнорируется>,
-		//Lon           float64 `json:"lon"`           // : <Долгота координаты адреса (при указании места на карте). Если указано, информация о адресе игнорируется>,
-		//IdAddress     string `json:"idAddress"`      // <Идентификатор существующего описания адреса (адрес дома или объекта)>,
-		IdRegion int64 `json:"idRegion"` // <Идентификатор региона (Int64)>,
-		//IdDistrict    int64  `json:"idDistrict"`    // : <Идентификатор района (Int64)>,
-		//IdCity        int64  `json:"idCity"`        // : <Идентификатор города (Int64)>,
-		//IdPlace       int64  `json:"idPlace"`       //: <Идентификатор поселения (Int64)>,
-		IdStreet int64  `json:"idStreet"` // : <Идентификатор улицы (Int64)>,
-		House    string `json:"house"`    // : <№ дома (строка)>,
-		//Building      string `json:"building"`      // : <Строение (строка)>,
-		Fracion    string `json:"fraction"`  // : <Корпус (строка)>,
-		Entrance   string `json:"entrance"`  // : <Подъезд (строка)>,
-		Apartament string `json:"apartment"` // : <№ квартиры (строка)>,
-		//IdFastAddress string `json:"idFastAddress"` //: <ID быстрого адреса. Дополнительное информационное поле, описывающее быстрый адрес, связанный с указанным адресом. Значение учитывается только при указании idAddress>
-	} `json:"delivery"`
 
+	Delivery Delivery `json:"delivery"`
 	// Пункты назначения заказа (массив, не может быть пустым)
-	Destinations []Dest `json:"destinations"`
+	Destinations []Destination `json:"destinations"`
 	// Флаг безналичного заказа
 	//IsNotCash bool `json:"isNotCash"` //: <true или false (bool)>
 }
 
-// Login - Авторизация в сервисе Infinity. Входные параметры: login:string; password:string.
+// Login - Авторизация в сервисе infinity. Входные параметры: login:string; password:string.
 // Возвращает true, если авторизация прошла успешно, false иначе.
-// Устанавливает время авторизации в Infinity.LoginTime при успешной авторизации.
-func (p *Infinity) Login(login, password string) bool {
+// Устанавливает время авторизации в infinity.LoginTime при успешной авторизации.
+func (p *infinity) Login(login, password string) bool {
 	p.LoginResponse.Success = false
 	client := &http.Client{}
 	req, err := http.NewRequest("GET", p.ConnString+"Login", nil)
@@ -152,7 +154,8 @@ func (p *Infinity) Login(login, password string) bool {
 	err = json.Unmarshal(body, &p.LoginResponse)
 	warnp(err)
 	if p.LoginResponse.Success {
-		log.Println("JSESSIONID: ", p.LoginResponse.SessionID)
+		log.Println("[login] JSESSIONID: ", p.LoginResponse.SessionID)
+		// log.Printf("[login] self: %+q\n", p)
 		p.Cookie = &http.Cookie{
 			Name:   "JSESSIONID",
 			Value:  p.LoginResponse.SessionID,
@@ -165,10 +168,10 @@ func (p *Infinity) Login(login, password string) bool {
 	return false
 }
 
-// Ping возвращает true если запрос выполнен успешно и время сервера Infinity в формате yyyy-MM-dd HH:mm:ss.
+// Ping возвращает true если запрос выполнен успешно и время сервера infinity в формате yyyy-MM-dd HH:mm:ss.
 // Если запрос выполнен неуспешно возвращает false и пустую строку.
 // Условие: пользователь должен быть авторизован.
-func (p *Infinity) Ping() (bool, string) {
+func (p *infinity) Ping() (bool, string) {
 	client := &http.Client{}
 	req, err := http.NewRequest("GET", p.ConnString+"RemoteCall", nil)
 	warnp(err)
@@ -183,7 +186,7 @@ func (p *Infinity) Ping() (bool, string) {
 	//log.Println("Cookies in request? ", req.Cookies())
 	res, err := client.Do(req)
 	if res.Status == "403 Forbidden" {
-		err = errors.New("Ошибка авторизации Infinity! (Возможно не установлены cookies)")
+		err = errors.New("Ошибка авторизации infinity! (Возможно не установлены cookies)")
 	}
 	warnp(err)
 	defer res.Body.Close()
@@ -221,7 +224,7 @@ type InfinityCarInfo struct {
 }
 
 // GetServices возвращает информацию об услугах доступных для заказа (filterField is set to true!)
-func (p *Infinity) GetServices() []InfinityService {
+func (p *infinity) GetServices() []InfinityService {
 	var tmp []InfinityServices
 	client := &http.Client{}
 	req, err := http.NewRequest("GET", p.ConnString+"GetViewData", nil)
@@ -235,7 +238,7 @@ func (p *Infinity) GetServices() []InfinityService {
 	//log.Println("Cookies in request? ", req.Cookies())
 	res, err := client.Do(req)
 	if res.Status == "403 Forbidden" {
-		err = errors.New("Ошибка авторизации Infinity! (Возможно не установлены cookies)")
+		err = errors.New("Ошибка авторизации infinity! (Возможно не установлены cookies)")
 	}
 	warnp(err)
 	defer res.Body.Close()
@@ -248,7 +251,7 @@ func (p *Infinity) GetServices() []InfinityService {
 }
 
 // GetCarsInfo возвращает информацию о машинах
-func (p *Infinity) GetCarsInfo() []InfinityCarInfo {
+func (p *infinity) GetCarsInfo() []InfinityCarInfo {
 	var tmp []InfinityCarsInfo
 	client := &http.Client{}
 	req, err := http.NewRequest("GET", p.ConnString+"GetViewData", nil)
@@ -261,7 +264,7 @@ func (p *Infinity) GetCarsInfo() []InfinityCarInfo {
 	//log.Println("Cookies in request? ", req.Cookies())
 	res, err := client.Do(req)
 	if res.Status == "403 Forbidden" {
-		err = errors.New("Ошибка авторизации Infinity! (Возможно не установлены cookies)")
+		err = errors.New("Ошибка авторизации infinity! (Возможно не установлены cookies)")
 	}
 	warnp(err)
 	defer res.Body.Close()
@@ -276,7 +279,7 @@ func (p *Infinity) GetCarsInfo() []InfinityCarInfo {
 //////////////////////////////////////////////////////////////////////////////////////////////////////
 ////////////////////////////////////////U N S T A B L E///////////////////////////////////////////////
 //////////////////////////////////////////////////////////////////////////////////////////////////////
-func (p *Infinity) NewOrder() (bool, int64, int64) {
+func (p *infinity) NewOrder(order NewOrder) (Answer, error) {
 	client := &http.Client{}
 	req, err := http.NewRequest("GET", p.ConnString+"RemoteCall", nil)
 	warnp(err)
@@ -284,52 +287,7 @@ func (p *Infinity) NewOrder() (bool, int64, int64) {
 	values := req.URL.Query()
 	values.Add("method", "Taxi.WebAPI.NewOrder")
 
-	var temp NewOrder_type
-
-	temp.Phone = "89261234567"
-	temp.DeliveryTime = "2015-07-15 07:00:00"
-	temp.DeliveryMinutes = 60
-	temp.IdService = 5001753333
-	temp.Notes = "Хочется комфортную машину"
-	//tMarkups := [2]int64{7002780031, 7004760103}
-	tAttributes := [2]int64{1000113000, 1000113002}
-	//temp.Markups = tMarkups
-	temp.Attributes = tAttributes
-
-	//temp.Delivery.Lat = null
-	//temp.Delivery.Lon = null
-	//temp.Delivery.IdAddres = null
-	temp.Delivery.IdRegion = 7006803034
-	//temp.Delivery.IdDistrict = null
-	//temp.Delivery.IdCity = null
-	//temp.Delivery.IdPlace = null
-	//temp.Delivery.IdStreet = 7006804169
-	temp.Delivery.House = "1"
-	//temp.Delivery.Building = null
-	temp.Delivery.Fracion = "1"
-	temp.Delivery.Entrance = "2"
-	temp.Delivery.Apartament = "30"
-	//temp.Delivery.IdFastAddres = null
-
-	var t Dest
-	t.Lat = 55.807898
-	t.Lon = 37.785449
-	//temp.Destinations.IdAddres = null
-	t.IdRegion = 7006803034
-	//temp.Destinations.IdDistrict = null
-	//temp.Destinations.IdCity = null
-	t.IdPlace = 7006803054
-	t.IdStreet = 7006803054
-	t.House = "12"
-	//temp.Destinations.Building = null
-	//temp.Destinations.Fracion = null
-	t.Entrance = "2"
-	t.Apartament = "30"
-	//temp.Destinations.IdFastAddress = null
-	temp.Destinations = append(temp.Destinations, t)
-	// http://109.202.25.248:8080/WebAPITaxi/RemoteCall?method=Taxi.WebAPI.NewOrder&params={"phone":"89261234567","deliveryTime":"2015-07-15+07:00:00","deliveryMinutes":60,"idService":5001753333,"notes":"Хочется+комфортную+машину","markups":[7002780031,7004760103],"attributes":[1000113000,1000113002],"delivery":{"idRegion":7006803034,"idStreet":0,"house":"1","fraction":"1","entrance":"2","apartment":"30"},"destinations":[{"lat":55.807898,"lon":37.785449},{"idRegion":7006803034,"idPlace":7006803054,"idStreet":7006803054,"house":"12","entrance":"2","apartment":"30"}]}
-
-	param, err := json.Marshal(temp)
+	param, err := json.Marshal(order)
 	warn(err)
 	values.Add("params", string(param))
 
@@ -338,12 +296,12 @@ func (p *Infinity) NewOrder() (bool, int64, int64) {
 	req.URL.RawQuery = values.Encode()
 
 	log.Println(req.URL)
-
+	log.Printf("[New Order] inf cookie: %+v \n[%+v]", p.Cookie, p)
 	req.AddCookie(p.Cookie)
 	//log.Println("Cookies in request? ", req.Cookies())
 	res, err := client.Do(req)
 	if res.Status == "403 Forbidden" {
-		err = errors.New("Ошибка авторизации Infinity! (Возможно не установлены cookies)")
+		err = errors.New("Ошибка авторизации infinity! (Возможно не установлены cookies)")
 	}
 	warnp(err)
 	defer res.Body.Close()
@@ -352,13 +310,13 @@ func (p *Infinity) NewOrder() (bool, int64, int64) {
 
 	log.Println(string(body))
 
-	var tmp Answer
-	err = json.Unmarshal(body, &tmp)
+	var ans Answer
+	err = json.Unmarshal(body, &ans)
 	warnp(err)
-	return tmp.IsSuccess, tmp.Content.Id, tmp.Content.Number
+	return ans, err
 }
 
-func (p *Infinity) CalcOrderCost(order NewOrder_type) (int, string) {
+func (p *infinity) CalcOrderCost(order NewOrder) (int, string) {
 	client := &http.Client{}
 	req, err := http.NewRequest("GET", p.ConnString+"RemoteCall", nil)
 	warnp(err)
@@ -366,7 +324,7 @@ func (p *Infinity) CalcOrderCost(order NewOrder_type) (int, string) {
 	values := req.URL.Query()
 	values.Add("method", "Taxi.WebAPI.CalcOrderCost")
 
-	/*var temp NewOrder_type
+	/*var temp NewOrder
 
 	temp.Phone = "89261234567"
 	temp.DeliveryTime = "2015-07-15 07:00:00"
@@ -425,7 +383,7 @@ func (p *Infinity) CalcOrderCost(order NewOrder_type) (int, string) {
 	//log.Println("Cookies in request? ", req.Cookies())
 	res, err := client.Do(req)
 	if res.Status == "403 Forbidden" {
-		err = errors.New("Ошибка авторизации Infinity! (Возможно не установлены cookies)")
+		err = errors.New("Ошибка авторизации infinity! (Возможно не установлены cookies)")
 	}
 	warnp(err)
 	defer res.Body.Close()
@@ -451,7 +409,7 @@ type PrivateParams struct {
 //Taxi.WebAPI.Client.GetPrivateParams (Получение параметров клиента)
 //Контент:
 //Параметры личного кабинета клиента в виде JSON объекта: { "name" : <Имя клиента>, "login" : <Логин клиента> }
-func (p *Infinity) GetPrivateParams() (bool, string, string) {
+func (p *infinity) GetPrivateParams() (bool, string, string) {
 	client := &http.Client{}
 	req, err := http.NewRequest("GET", p.ConnString+"RemoteCall", nil)
 	warnp(err)
@@ -465,7 +423,7 @@ func (p *Infinity) GetPrivateParams() (bool, string, string) {
 	//log.Println("Cookies in request? ", req.Cookies())
 	res, err := client.Do(req)
 	if res.Status == "403 Forbidden" {
-		err = errors.New("Ошибка авторизации Infinity! (Возможно не установлены cookies)")
+		err = errors.New("Ошибка авторизации infinity! (Возможно не установлены cookies)")
 	}
 	warnp(err)
 	defer res.Body.Close()
@@ -485,7 +443,7 @@ func (p *Infinity) GetPrivateParams() (bool, string, string) {
 //Taxi.WebAPI.Client.ChangePassword (Изменение пароля) Изменяет пароль клиента.
 //Параметры:
 //Новый пароль (строка)
-func (p *Infinity) ChangePassword(password string) (bool, string) {
+func (p *infinity) ChangePassword(password string) (bool, string) {
 	client := &http.Client{}
 	req, err := http.NewRequest("GET", p.ConnString+"RemoteCall", nil)
 	warnp(err)
@@ -503,7 +461,7 @@ func (p *Infinity) ChangePassword(password string) (bool, string) {
 	//log.Println("Cookies in request? ", req.Cookies())
 	res, err := client.Do(req)
 	if res.Status == "403 Forbidden" {
-		err = errors.New("Ошибка авторизации Infinity! (Возможно не установлены cookies)")
+		err = errors.New("Ошибка авторизации infinity! (Возможно не установлены cookies)")
 	}
 	warnp(err)
 	defer res.Body.Close()
@@ -519,7 +477,7 @@ func (p *Infinity) ChangePassword(password string) (bool, string) {
 //Taxi.WebAPI.Client.ChangeName (Изменение имени клиента) Изменяет имя клиента в системе.
 //Параметры:
 //Новое имя клиента (строка)
-func (p *Infinity) ChangeName(name string) (bool, string) {
+func (p *infinity) ChangeName(name string) (bool, string) {
 	client := &http.Client{}
 	req, err := http.NewRequest("GET", p.ConnString+"RemoteCall", nil)
 	warnp(err)
@@ -537,7 +495,7 @@ func (p *Infinity) ChangeName(name string) (bool, string) {
 	//log.Println("Cookies in request? ", req.Cookies())
 	res, err := client.Do(req)
 	if res.Status == "403 Forbidden" {
-		err = errors.New("Ошибка авторизации Infinity! (Возможно не установлены cookies)")
+		err = errors.New("Ошибка авторизации infinity! (Возможно не установлены cookies)")
 	}
 	warnp(err)
 	defer res.Body.Close()
@@ -553,7 +511,7 @@ func (p *Infinity) ChangeName(name string) (bool, string) {
 //Taxi.WebAPI.Client.SendMessage (Отправка сообщения оператору) Отправляет операторам системы уведомление с сообщением данного клиента
 //Параметры:
 //Текст сообщения (строка)
-func (p *Infinity) SendMessage(message string) (bool, string /*, string*/) {
+func (p *infinity) SendMessage(message string) (bool, string /*, string*/) {
 	client := &http.Client{}
 	req, err := http.NewRequest("GET", p.ConnString+"RemoteCall", nil)
 	warnp(err)
@@ -571,7 +529,7 @@ func (p *Infinity) SendMessage(message string) (bool, string /*, string*/) {
 	//log.Println("Cookies in request? ", req.Cookies())
 	res, err := client.Do(req)
 	if res.Status == "403 Forbidden" {
-		err = errors.New("Ошибка авторизации Infinity! (Возможно не установлены cookies)")
+		err = errors.New("Ошибка авторизации infinity! (Возможно не установлены cookies)")
 	}
 	warnp(err)
 	defer res.Body.Close()
@@ -584,7 +542,7 @@ func (p *Infinity) SendMessage(message string) (bool, string /*, string*/) {
 	return temp.IsSuccess, temp.Message
 }
 
-func (p *Infinity) CallbackRequest(phone string) (bool, string) {
+func (p *infinity) CallbackRequest(phone string) (bool, string) {
 	client := &http.Client{}
 	req, err := http.NewRequest("GET", p.ConnString+"RemoteCall", nil)
 	warnp(err)
@@ -602,7 +560,7 @@ func (p *Infinity) CallbackRequest(phone string) (bool, string) {
 	//log.Println("Cookies in request? ", req.Cookies())
 	res, err := client.Do(req)
 	if res.Status == "403 Forbidden" {
-		err = errors.New("Ошибка авторизации Infinity! (Возможно не установлены cookies)")
+		err = errors.New("Ошибка авторизации infinity! (Возможно не установлены cookies)")
 	}
 	warnp(err)
 	defer res.Body.Close()
@@ -617,7 +575,7 @@ func (p *Infinity) CallbackRequest(phone string) (bool, string) {
 
 //Taxi.WebAPI.Client.ClearHistory (Очистка истории заказов клиента)
 //Отмечает закрытые заказы клиента как не видимые для личного кабинета (т.е. сама информация о заказе не удаляется)
-func (p *Infinity) ClearHistory() (bool, string) {
+func (p *infinity) ClearHistory() (bool, string) {
 	client := &http.Client{}
 	req, err := http.NewRequest("GET", p.ConnString+"RemoteCall", nil)
 	warnp(err)
@@ -632,7 +590,7 @@ func (p *Infinity) ClearHistory() (bool, string) {
 	//log.Println("Cookies in request? ", req.Cookies())
 	res, err := client.Do(req)
 	if res.Status == "403 Forbidden" {
-		err = errors.New("Ошибка авторизации Infinity! (Возможно не установлены cookies)")
+		err = errors.New("Ошибка авторизации infinity! (Возможно не установлены cookies)")
 	}
 	warnp(err)
 	defer res.Body.Close()
@@ -648,7 +606,7 @@ func (p *Infinity) ClearHistory() (bool, string) {
 //Taxi.WebAPI.Client.CancelOrder (Отказ от заказа) Устанавливает для указанного заказа состояние «Отменен»
 //Параметры:
 //Идентификатор заказа (Int64)
-func (p *Infinity) CancelOrder(order int64) (bool, string) {
+func (p *infinity) CancelOrder(order int64) (bool, string) {
 	client := &http.Client{}
 	req, err := http.NewRequest("GET", p.ConnString+"RemoteCall", nil)
 	warnp(err)
@@ -668,7 +626,7 @@ func (p *Infinity) CancelOrder(order int64) (bool, string) {
 	//log.Println("Cookies in request? ", req.Cookies())
 	res, err := client.Do(req)
 	if res.Status == "403 Forbidden" {
-		err = errors.New("Ошибка авторизации Infinity! (Возможно не установлены cookies)")
+		err = errors.New("Ошибка авторизации infinity! (Возможно не установлены cookies)")
 	}
 	warnp(err)
 	defer res.Body.Close()
@@ -696,7 +654,7 @@ type feedback struct {
 	Notes   string `json:"notes"`
 }
 
-func (p *Infinity) Feedback(inf feedback) (bool, string) {
+func (p *infinity) Feedback(inf feedback) (bool, string) {
 	client := &http.Client{}
 	req, err := http.NewRequest("GET", p.ConnString+"RemoteCall", nil)
 	warnp(err)
@@ -716,7 +674,7 @@ func (p *Infinity) Feedback(inf feedback) (bool, string) {
 	//log.Println("Cookies in request? ", req.Cookies())
 	res, err := client.Do(req)
 	if res.Status == "403 Forbidden" {
-		err = errors.New("Ошибка авторизации Infinity! (Возможно не установлены cookies)")
+		err = errors.New("Ошибка авторизации infinity! (Возможно не установлены cookies)")
 	}
 	warnp(err)
 	defer res.Body.Close()
@@ -733,7 +691,7 @@ func (p *Infinity) Feedback(inf feedback) (bool, string) {
 //Отправляет операторам системы уведомление «Клиент не видит машину»
 //Параметры:
 //Идентификатор заказа (Int64)
-func (p *Infinity) WhereIT(ID int64) (bool, string) {
+func (p *infinity) WhereIT(ID int64) (bool, string) {
 	client := &http.Client{}
 	req, err := http.NewRequest("GET", p.ConnString+"RemoteCall", nil)
 	warnp(err)
@@ -753,7 +711,7 @@ func (p *Infinity) WhereIT(ID int64) (bool, string) {
 	//log.Println("Cookies in request? ", req.Cookies())
 	res, err := client.Do(req)
 	if res.Status == "403 Forbidden" {
-		err = errors.New("Ошибка авторизации Infinity! (Возможно не установлены cookies)")
+		err = errors.New("Ошибка авторизации infinity! (Возможно не установлены cookies)")
 	}
 	warnp(err)
 	defer res.Body.Close()
@@ -781,7 +739,7 @@ type phonesEdit struct {
 	Contact string `json:"contact"`
 }
 
-func (p *Infinity) PhonesEdit(phone phonesEdit) (bool, string) {
+func (p *infinity) PhonesEdit(phone phonesEdit) (bool, string) {
 	client := &http.Client{}
 	req, err := http.NewRequest("GET", p.ConnString+"RemoteCall", nil)
 	warnp(err)
@@ -801,7 +759,7 @@ func (p *Infinity) PhonesEdit(phone phonesEdit) (bool, string) {
 	//log.Println("Cookies in request? ", req.Cookies())
 	res, err := client.Do(req)
 	if res.Status == "403 Forbidden" {
-		err = errors.New("Ошибка авторизации Infinity! (Возможно не установлены cookies)")
+		err = errors.New("Ошибка авторизации infinity! (Возможно не установлены cookies)")
 	}
 	warnp(err)
 	defer res.Body.Close()
@@ -818,7 +776,7 @@ func (p *Infinity) PhonesEdit(phone phonesEdit) (bool, string) {
 //Taxi.WebAPI.Client.Phones.Remove (Удаление телефона клиента) Удаляет указанный телефон клиента.
 //Параметры:
 //Идентификатор телефона клиента (Int64)
-func (p *Infinity) PhonesRemove(phone int64) (bool, string) {
+func (p *infinity) PhonesRemove(phone int64) (bool, string) {
 	client := &http.Client{}
 	req, err := http.NewRequest("GET", p.ConnString+"RemoteCall", nil)
 	warnp(err)
@@ -838,7 +796,7 @@ func (p *Infinity) PhonesRemove(phone int64) (bool, string) {
 	//log.Println("Cookies in request? ", req.Cookies())
 	res, err := client.Do(req)
 	if res.Status == "403 Forbidden" {
-		err = errors.New("Ошибка авторизации Infinity! (Возможно не установлены cookies)")
+		err = errors.New("Ошибка авторизации infinity! (Возможно не установлены cookies)")
 	}
 	warnp(err)
 	defer res.Body.Close()
@@ -873,7 +831,7 @@ type favorite struct {
 
 //Параметры idRegion, idDistrict, idCity, idStreet, house, building, fraction используются для создания нового
 //описания адреса и не анализируются при указании параметра idAddress.
-func (p *Infinity) AddressesEdit(f favorite) (bool, string) {
+func (p *infinity) AddressesEdit(f favorite) (bool, string) {
 	client := &http.Client{}
 	req, err := http.NewRequest("GET", p.ConnString+"RemoteCall", nil)
 	warnp(err)
@@ -893,7 +851,7 @@ func (p *Infinity) AddressesEdit(f favorite) (bool, string) {
 	//log.Println("Cookies in request? ", req.Cookies())
 	res, err := client.Do(req)
 	if res.Status == "403 Forbidden" {
-		err = errors.New("Ошибка авторизации Infinity! (Возможно не установлены cookies)")
+		err = errors.New("Ошибка авторизации infinity! (Возможно не установлены cookies)")
 	}
 	warnp(err)
 	defer res.Body.Close()
@@ -906,7 +864,7 @@ func (p *Infinity) AddressesEdit(f favorite) (bool, string) {
 	return temp.IsSuccess, temp.Message
 }
 
-func (p *Infinity) AddressesRemove(id int64) (bool, string) {
+func (p *infinity) AddressesRemove(id int64) (bool, string) {
 	client := &http.Client{}
 	req, err := http.NewRequest("GET", p.ConnString+"RemoteCall", nil)
 	warnp(err)
@@ -926,7 +884,7 @@ func (p *Infinity) AddressesRemove(id int64) (bool, string) {
 	//log.Println("Cookies in request? ", req.Cookies())
 	res, err := client.Do(req)
 	if res.Status == "403 Forbidden" {
-		err = errors.New("Ошибка авторизации Infinity! (Возможно не установлены cookies)")
+		err = errors.New("Ошибка авторизации infinity! (Возможно не установлены cookies)")
 	}
 	warnp(err)
 	defer res.Body.Close()
@@ -962,7 +920,7 @@ type Order struct {
 }
 
 //Taxi.Orders (Заказы: активные и предварительные)
-func (p *Infinity) Orders() []Order {
+func (p *infinity) Orders() []Order {
 	client := &http.Client{}
 	req, err := http.NewRequest("GET", p.ConnString+"GetViewData", nil)
 	warnp(err)
@@ -979,7 +937,7 @@ func (p *Infinity) Orders() []Order {
 	//log.Println("Cookies in request? ", req.Cookies())
 	res, err := client.Do(req)
 	if res.Status == "403 Forbidden" {
-		err = errors.New("Ошибка авторизации Infinity! (Возможно не установлены cookies)")
+		err = errors.New("Ошибка авторизации infinity! (Возможно не установлены cookies)")
 	}
 	warnp(err)
 	defer res.Body.Close()
@@ -994,7 +952,7 @@ func (p *Infinity) Orders() []Order {
 }
 
 //Taxi.Orders.Closed.ByDates (История заказов: По датам)
-func (p *Infinity) OrdersClosedByDates() []Order {
+func (p *infinity) OrdersClosedByDates() []Order {
 	client := &http.Client{}
 	req, err := http.NewRequest("GET", p.ConnString+"GetViewData", nil)
 	warnp(err)
@@ -1011,7 +969,7 @@ func (p *Infinity) OrdersClosedByDates() []Order {
 	//log.Println("Cookies in request? ", req.Cookies())
 	res, err := client.Do(req)
 	if res.Status == "403 Forbidden" {
-		err = errors.New("Ошибка авторизации Infinity! (Возможно не установлены cookies)")
+		err = errors.New("Ошибка авторизации infinity! (Возможно не установлены cookies)")
 	}
 	warnp(err)
 	defer res.Body.Close()
@@ -1026,7 +984,7 @@ func (p *Infinity) OrdersClosedByDates() []Order {
 }
 
 //Taxi.Orders.Closed.LastN (История заказов: Последние)
-func (p *Infinity) OrdersClosedlastN() []Order {
+func (p *infinity) OrdersClosedlastN() []Order {
 	client := &http.Client{}
 	req, err := http.NewRequest("GET", p.ConnString+"GetViewData", nil)
 	warnp(err)
@@ -1043,7 +1001,7 @@ func (p *Infinity) OrdersClosedlastN() []Order {
 	//log.Println("Cookies in request? ", req.Cookies())
 	res, err := client.Do(req)
 	if res.Status == "403 Forbidden" {
-		err = errors.New("Ошибка авторизации Infinity! (Возможно не установлены cookies)")
+		err = errors.New("Ошибка авторизации infinity! (Возможно не установлены cookies)")
 	}
 	warnp(err)
 	defer res.Body.Close()
@@ -1061,7 +1019,7 @@ func (p *Infinity) OrdersClosedlastN() []Order {
 //Taxi.Destinations.ByClosedOrder (Пункты назначения: Закрытые заказы (история))
 
 //Taxi.Markups (Список доступных наценок)
-func (p *Infinity) Markups() []Order {
+func (p *infinity) Markups() []Order {
 	client := &http.Client{}
 	req, err := http.NewRequest("GET", p.ConnString+"GetViewData", nil)
 	warnp(err)
@@ -1078,7 +1036,7 @@ func (p *Infinity) Markups() []Order {
 	//log.Println("Cookies in request? ", req.Cookies())
 	res, err := client.Do(req)
 	if res.Status == "403 Forbidden" {
-		err = errors.New("Ошибка авторизации Infinity! (Возможно не установлены cookies)")
+		err = errors.New("Ошибка авторизации infinity! (Возможно не установлены cookies)")
 	}
 	warnp(err)
 	defer res.Body.Close()
@@ -1147,7 +1105,7 @@ type Address struct {
 	Place      string `json:"Place,omitempty"`
 }
 
-func (p *Infinity) AddressesSearch(text string) FastAddress {
+func (p *infinity) AddressesSearch(text string) FastAddress {
 	client := &http.Client{}
 	req, err := http.NewRequest("GET", p.ConnString+"GetViewData", nil)
 	warnp(err)
@@ -1164,7 +1122,7 @@ func (p *Infinity) AddressesSearch(text string) FastAddress {
 	//log.Println("Cookies in request? ", req.Cookies())
 	res, err := client.Do(req)
 	if res.Status == "403 Forbidden" {
-		err = errors.New("Ошибка авторизации Infinity! (Возможно не установлены cookies)")
+		err = errors.New("Ошибка авторизации infinity! (Возможно не установлены cookies)")
 	}
 	warnp(err)
 	defer res.Body.Close()
@@ -1181,7 +1139,7 @@ func (p *Infinity) AddressesSearch(text string) FastAddress {
 }
 
 //Taxi.ClientAddresses (Адреса клиента)
-func (p *Infinity) ClientAddresses() FastAddress {
+func (p *infinity) ClientAddresses() FastAddress {
 	client := &http.Client{}
 	req, err := http.NewRequest("GET", p.ConnString+"GetViewData", nil)
 	warnp(err)
@@ -1199,7 +1157,7 @@ func (p *Infinity) ClientAddresses() FastAddress {
 	//log.Println("Cookies in request? ", req.Cookies())
 	res, err := client.Do(req)
 	if res.Status == "403 Forbidden" {
-		err = errors.New("Ошибка авторизации Infinity! (Возможно не установлены cookies)")
+		err = errors.New("Ошибка авторизации infinity! (Возможно не установлены cookies)")
 	}
 	warnp(err)
 	defer res.Body.Close()
@@ -1256,55 +1214,26 @@ func (l *logfile) Close() {
 }
 
 // Global API variable
-var InfinityAPI Infinity
+var instance *infinity
+var once sync.Once
 
-/*
-	In - POST
+func GetInfinityAPI() *infinity {
+	once.Do(func() {
+		instance = &infinity{}
+		instance.ConnString = "http://109.202.25.248:8080/WebAPITaxi/"
+		instance.Host = "109.202.25.248:8080"
+		instance.Login("test1", "test1")
 
-	{
-
-    "from": "username",
-
-    "message": {
-
-        "id": "12345",
-
-        "type": "chat",
-
-        "thread": "564563",
-
-        "body": "Текст сообщения"
-
-    }
-
+	})
+	return instance
 }
-
-  Out
-{
-
-    "to": "username",
-
-    "message": {
-
-        "id": "8937958",
-
-        "type": "chat",
-
-        "thread": "564563",
-
-        "body": "Текст ответного сообщения"
-
-    }
-
-}
-*/
 
 type DictItem struct {
 	Value string `json:"value"`
 	Text  string `json:"text"`
 }
 
-func StreetsSearchHandler(w http.ResponseWriter, r *http.Request, i Infinity) {
+func StreetsSearchHandler(w http.ResponseWriter, r *http.Request, i infinity) {
 	w.Header().Set("Content-type", "application/json")
 	w.WriteHeader(http.StatusOK)
 
@@ -1334,13 +1263,31 @@ func StreetsSearchHandler(w http.ResponseWriter, r *http.Request, i Infinity) {
 	}
 }
 
-/////////////////////////////////////////////////
-//я временно закомменчу твой мейн чтобы отлаживать своим инфинити-функции
+//helpers for forming destionation and delivery on infinity results after street search request
+func H_get_delivery(info string, house string) (d Delivery) {
+	//"{\"ID\":5009756374,\"IDParent\":5009755360,\"Name\":\"Николаева\",\"ShortName\":\"ул\",\"ItemType\":5,\"FullName\":\" ул Николаева\",\"IDRegion\":5009755359,\"IDDistrict\":0,\"IDCity\":5009755360,\"IDPlace\":0,\"Region\":\"обл Новосибирская\",\"City\":\"г Новосибирск\"}"
+	err := json.Unmarshal([]byte(info), &d)
+	warn(err)
+	d.House = house
+	return
+}
+
+func H_get_destination(info string, house string) (d Destination) {
+	err := json.Unmarshal([]byte(info), &d)
+	warn(err)
+	d.House = house
+	return
+}
+
+type InfinityMixin struct {
+	API *infinity
+}
+
 func main() {
 	//var flagDBCons int
 	var flagPort int
 	var flagNoLog bool
-	//flag.IntVar(&flagDBCons, "dbcons", 1, "Count of database connections")
+
 	flag.IntVar(&flagPort, "port", 80, "Bind to custom port.")
 	flag.BoolVar(&flagNoLog, "nolog", false, "Turn off writing log")
 
@@ -1361,19 +1308,19 @@ func main() {
 		log2file.SetName()
 	}()
 
-	//sm := http.NewServeMux()
-	//sm.HandleFunc("/", controlHandler)
+	InfinityAPI := GetInfinityAPI()
+
 	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
-		controlHandler(w, r, "localhost:"+strconv.Itoa(flagPort), &InfinityAPI)
+		controlHandler(w, r, "localhost:"+strconv.Itoa(flagPort), InfinityAPI)
 	})
 	http.HandleFunc("/streets/", func(w http.ResponseWriter, r *http.Request) {
-		StreetsSearchHandler(w, r, InfinityAPI)
+		StreetsSearchHandler(w, r, *InfinityAPI)
 	})
 	InfinityAPI.ConnString = "http://109.202.25.248:8080/WebAPITaxi/"
 	InfinityAPI.Host = "109.202.25.248:8080"
 	status := InfinityAPI.Login("test1", "test1")
 	if status {
-		log.Println("Установлено соединение с Infinity")
+		log.Println("Установлено соединение с infinity")
 	}
 
 	status, serverTime := InfinityAPI.Ping()
@@ -1382,61 +1329,9 @@ func main() {
 		log.Println(InfinityAPI.GetServices())
 		log.Println(InfinityAPI.GetCarsInfo())
 	} else {
-		log.Println("Проблема со связью с сервером Infinity")
+		log.Println("Проблема со связью с сервером infinity")
 	}
 
-	//l, err := net.Listen("tcp4", ":"+strconv.Itoa(flagPort))
-	//if err != nil {
-	//		log.Fatal(err)
-	//	}
-	//log.Fatal(http.Serve(l, sm))
 	log.Println("Started at localhost:", flagPort)
 	http.ListenAndServe(":"+strconv.Itoa(flagPort), nil)
 }
-
-/*
-func main() {
-	var taxi Infinity
-	taxi.ConnString = "http://109.202.25.248:8080/WebAPITaxi/"
-	taxi.Host = "109.202.25.248:8080"
-	status := taxi.Login("test1", "test1")
-	if status {
-		log.Println("Установлено соединение с Infinity")
-	}
-
-	status, serverTime := taxi.Ping()
-	if status {
-		log.Println("Время сервера: ", serverTime)
-		//log.Println(taxi.GetServices())
-		//log.Println(taxi.GetCarsInfo())
-		//log.Println(taxi.NewOrder())
-
-		//log.Println(taxi.GetPrivateParams())								TESTED
-		log.Println(taxi.CalcOrderCost())									//TESTED || Input Must be changed
-		//log.Println(taxi.ChangePassword("NEW PASSWORD")  )
-		//log.Println(taxi.ChangeName("NEW LOGIN"))
-		//log.Println(taxi.SendMessage("Test"));							TESTED
-		//log.Println(taxi.CallbackRequest("+7 123 456 7890"))				TESTED
-		//log.Println(taxi.ClearHistory())									TESTED
-		//log.Println(taxi.CancelOrder(5063813619))							TESTED
-		//log.Println(taxi.Feedback(feedback{5063813619, 5, "test"}))		TESTED
-		//log.Println(taxi.WhereIT(5063813619))								TESTED
-		//log.Println(taxi.PhonesEdit(phonesEdit{123, "+7 123 456 7890"}))	TESTED
-		//log.Println(taxi.PhonesRemove(123))								TESTED
-		//log.Println(taxi.AddressesEdit(FAVORITE STRUCT))					TESTED
-		//log.Println(taxi.AddressesRemove(ADDRESID int64))					TESTED
-
-
-		//log.Println(taxi.Orders())
-		//log.Println(taxi.OrdersClosedByDates())
-		//log.Println(taxi.OrdersClosedlastN())
-		//log.Println(taxi.Markups())
-		log.Println(taxi.AddressesSearch("Никол"))
-		//log.Println(taxi.ClientAddresses())
-
-
-	} else {
-		log.Println("Проблема со связью с сервером Infinity")
-	}
-}
-*/
