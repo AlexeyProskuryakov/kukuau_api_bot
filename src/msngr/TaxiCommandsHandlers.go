@@ -3,11 +3,14 @@ package msngr
 import (
 	"errors"
 	"fmt"
-
 	"math/rand"
+	inf "msngr/infinity"
 )
 
-var url = "http://foo.bar.baz"
+//todo what about many inifinity apis
+var url = "http://localhost:8080/_streets"
+var infinity = inf.InfinityAPI
+
 var commands_at_created_order = []Command{
 	Command{
 		Title:    "Отменить заказ",

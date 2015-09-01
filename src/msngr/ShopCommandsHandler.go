@@ -48,7 +48,7 @@ var not_authorised_commands = []Command{
 		Form: &OutForm{
 			Name: "Форма ввода данных пользователя",
 			Type: "form",
-			Text: "Пользователь: ?(user), пароль ?(password)",
+			Text: "Пользователь: ?(username), пароль ?(password)",
 			Fields: []OutField{
 				OutField{
 					Name: "username",
