@@ -51,7 +51,7 @@ var not_authorised_commands = []Command{
 			Text: "Пользователь: ?(user), пароль ?(password)",
 			Fields: []OutField{
 				OutField{
-					Name: "user",
+					Name: "username",
 					Type: "text",
 					Attributes: FieldAttribute{
 						Label:    "имя пользователя",
@@ -138,7 +138,7 @@ var order_states = [3]string{"обработан", "создан", "отправ
 func (os ShopOrderStateHandler) ProcessMessage(in InPkg) (string, *[]Command, error) {
 	if shop_db.GetUserState(in.From) == USER_AUTHORISED {
 		result := fmt.Sprintf("Ваш заказ с номером %v %v", rand.Int31n(10000), __choiceString(order_states[:]))
-		return result, nil, nil
+		return result, &authorised_commands, nil
 	}
 	return "Авторизуйтесь пожалуйста!", nil, nil
 }

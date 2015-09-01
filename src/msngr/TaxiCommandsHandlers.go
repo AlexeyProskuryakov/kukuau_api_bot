@@ -63,7 +63,7 @@ var taxi_call_form = &OutForm{
 		},
 		OutField{
 			Name: "street_to",
-			Type: "text",
+			Type: "dict",
 			Attributes: FieldAttribute{
 				Label:    "улица/район",
 				Required: true,
@@ -80,7 +80,7 @@ var taxi_call_form = &OutForm{
 		},
 		OutField{
 			Name: "time",
-			Type: "text",
+			Type: "datetime",
 			Attributes: FieldAttribute{
 				Label:    "время",
 				Required: false,
