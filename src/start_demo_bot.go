@@ -1,6 +1,8 @@
 package main
 
 import (
+	"flag"
+	"fmt"
 	"log"
 	m "msngr"
 	ia "msngr/infinity"
@@ -15,6 +17,7 @@ var (
 )
 
 func main() {
+
 	taxi_controller_handler := m.FormBotControllerHandler(m.TaxiRequestCommands, m.TaxiMessageCommands)
 	shop_controller_handler := m.FormBotControllerHandler(m.ShopRequestCommands, m.ShopMessageCommands)
 
@@ -33,7 +36,10 @@ func main() {
 		ia.StreetsSearchHandler(w, r, infApi)
 	})
 
-	addr := ":8080"
+	port := flag.Int("port", 9191, "port of bot")
+	flag.Parse()
+
+	addr := fmt.Sprintf("%+v:%+v", "", *port)
 
 	log.Printf("\nStart listen and serving at: %v\n", addr)
 	serv := &http.Server{
