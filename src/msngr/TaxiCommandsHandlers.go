@@ -26,12 +26,12 @@ var commands_at_not_created_order = []Command{
 		Form:     taxi_call_form,
 	},
 
-	Command{
-		Title:    "Рассчитать цену",
-		Action:   "calculate_price",
-		Position: 1,
-		Form:     taxi_call_form,
-	},
+	// Command{
+	// 	Title:    "Рассчитать цену",
+	// 	Action:   "calculate_price",
+	// 	Position: 1,
+	// 	Form:     taxi_call_form,
+	// },
 }
 var taxi_call_form = &OutForm{
 	Title: "Форма вызова такси",
