@@ -152,7 +152,7 @@ func (noh TaxiNewOrderHandler) ProcessMessage(in InPkg) (string, *[]Command, err
 		result := fmt.Sprintf("Ваш заказ создан! Поедем из %v дом %v, на %v к дому %v. Cтоймость %v рублей, машина прибудет %v", from, hf, to, ht, rand.Int31n(500)+50, t)
 		return result, &commands_at_created_order, nil
 	} else {
-		return "Заказ уже создан!", nil, errors.New("Заказ уже создан!")
+		return "Заказ уже создан!", &commands_at_created_order, errors.New("Заказ уже создан!")
 	}
 
 }
@@ -161,7 +161,7 @@ type TaxiCancelOrderHandler struct{}
 
 func (coh TaxiCancelOrderHandler) ProcessMessage(in InPkg) (string, *[]Command, error) {
 	_taxi_db.SetUserState(in.From, ORDER_CANCELED)
-	return "Ваш заказ отменен", nil, nil
+	return "Ваш заказ отменен", &commands_at_not_created_order, nil
 }
 
 type TaxiCalculatePriceHandler struct{}
