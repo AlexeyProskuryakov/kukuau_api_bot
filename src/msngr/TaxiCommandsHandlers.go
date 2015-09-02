@@ -43,7 +43,7 @@ var taxi_call_form = &OutForm{
 			Name: "street_from",
 			Type: "dict",
 			Attributes: FieldAttribute{
-				Label:    "улица/район",
+				Label:    "улица",
 				Required: true,
 				URL:      &url,
 			},
@@ -68,7 +68,7 @@ var taxi_call_form = &OutForm{
 			Name: "street_to",
 			Type: "dict",
 			Attributes: FieldAttribute{
-				Label:    "улица/район",
+				Label:    "улица",
 				Required: true,
 				URL:      &url,
 			},
