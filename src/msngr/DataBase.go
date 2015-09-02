@@ -57,12 +57,12 @@ func (uh userHandler) SetUserOrderId(username string, order_id int64) {
 	uh.orders_map[username] = order_id
 	uh.state_map[username] = ORDER_CREATE
 }
-func (uh userHandler) GetUserOrderId(username string) (oid *int64, e error) {
+func (uh userHandler) GetUserOrderId(username string) (oid int64, e error) {
 	oid, ok := uh.orders_map[username]
 	if ok {
-		return p, nil
+		return oid, nil
 	}
-	return nil, errors.New("order not exists!")
+	return -1, errors.New("order not exists!")
 }
 func (uh userHandler) CancelOrderId(username string) {
 	delete(uh.orders_map, username)

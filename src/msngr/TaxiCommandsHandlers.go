@@ -190,7 +190,7 @@ func (noh TaxiNewOrderHandler) ProcessMessage(in InPkg) (string, *[]Command, err
 		if ord_error != nil {
 			panic(ord_error)
 		}
-		_taxi_db.SetUserOrder(in.From, ans.Content.Id)
+		_taxi_db.SetUserOrderId(in.From, ans.Content.Id)
 		result := fmt.Sprintf("Ваш заказ создан! Вот так: %+v и ответ таков: %+v ", new_order, ans)
 		return result, &commands_at_created_order, nil
 	} else {

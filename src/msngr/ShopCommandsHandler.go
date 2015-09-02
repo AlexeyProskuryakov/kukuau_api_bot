@@ -158,6 +158,6 @@ func (ih ShopInformationHandler) ProcessMessage(in InPkg) (string, *[]Command, e
 type ShopLogOutMessageHandler struct{}
 
 func (lo ShopLogOutMessageHandler) ProcessMessage(in InPkg) (string, *[]Command, error) {
-	shop_db.DeleteUserState(in.From)
+	shop_db.RemoveUserState(in.From)
 	return "Вы вышли. Ура!", &not_authorised_commands, nil //todo
 }
