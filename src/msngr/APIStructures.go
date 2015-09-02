@@ -78,6 +78,8 @@ type Command struct {
 	Action   string   `json:"action"`
 	Position int      `json:"position"`
 	Form     *OutForm `json:"form,omitempty"`
+	Repeat   bool     `json:"repeat"`
+	Fixed    bool     `json:"fixed"`
 }
 
 type OutMessage struct {

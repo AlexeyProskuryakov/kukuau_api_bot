@@ -19,6 +19,7 @@ var authorised_commands = []Command{
 		Title:    "Написать в тех. поддержку",
 		Action:   "support_message",
 		Position: 1,
+		Fixed:    true,
 		Form: &OutForm{
 			Type: "form",
 			Text: "?(text)",

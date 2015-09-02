@@ -23,6 +23,7 @@ var commands_at_not_created_order = []Command{
 		Title:    "Вызвать такси",
 		Action:   "new_order",
 		Position: 0,
+		Repeat:   true,
 		Form:     taxi_call_form,
 	},
 
