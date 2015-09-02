@@ -187,10 +187,10 @@ func (noh TaxiNewOrderHandler) ProcessMessage(in InPkg) (string, *[]Command, err
 	if state != ORDER_CREATE {
 		new_order := _form_order(in.Message.Command.Form.Fields)
 		ans, ord_error := noh.API.NewOrder(new_order)
-		_taxi_db.SetUserState(in.From, ORDER_CREATE)
 		if ord_error != nil {
 			panic(ord_error)
 		}
+		_taxi_db.SetUserOrder(in.From, ans.Content.Id)
 		result := fmt.Sprintf("Ваш заказ создан! Вот так: %+v и ответ таков: %+v ", new_order, ans)
 		return result, &commands_at_created_order, nil
 	} else {
@@ -203,8 +203,21 @@ type TaxiCancelOrderHandler struct {
 }
 
 func (coh TaxiCancelOrderHandler) ProcessMessage(in InPkg) (string, *[]Command, error) {
-	_taxi_db.SetUserState(in.From, ORDER_CANCELED)
-	return "Ваш заказ отменен", nil, nil
+	state := _taxi_db.GetUserState(in.From)
+	if state == ORDER_CREATE {
+		order_id, err := _taxi_db.GetUserOrderId(in.From)
+		if err != nil {
+			return "У вас нет заказов!", &commands_at_not_created_order, errors.New("У вас нет заказов!")
+		}
+		ok, info := coh.API.CancelOrder(order_id)
+		if !ok {
+			err_str := fmt.Sprintf("Какие-то проблемы с отменой заказа %+v", info)
+			return err_str, nil, errors.New(err_str)
+		}
+		_taxi_db.CancelOrderId(in.From)
+		return "Ваш заказ отменен", &commands_at_not_created_order, nil
+	}
+	return "У вас нет заказов!", &commands_at_not_created_order, errors.New("У вас нет заказов!")
 }
 
 type TaxiCalculatePriceHandler struct {
