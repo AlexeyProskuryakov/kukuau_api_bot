@@ -1,0 +1,13 @@
+{
+	"main" : {
+		"port" : 9191,
+		"callback_addr" : "foo.bar.baz"
+		},
+
+	"infinity" : {
+			"login" : "test1",
+			"password" : "test1",
+			"conn_string" : "http://109.202.25.248:8080/WebAPITaxi/",
+			"host" : "109.202.25.248:8080"
+			}	
+	}

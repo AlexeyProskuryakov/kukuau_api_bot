@@ -15,11 +15,11 @@ const (
 	timeFormat = "2006-01-02 15:04:05"
 )
 
-//todo what about many inifinity apis
-var url = "http://localhost:8080/_streets"
-var TaxisInfinity = inf.GetInfinityAPI()
-
-var im = inf.InfinityMixin{API: TaxisInfinity}
+//todo what about many inifinity apis?
+//settings of this module
+var (
+	url string
+)
 
 var commands_at_created_order = []Command{
 	Command{
@@ -100,17 +100,6 @@ var taxi_call_form = &OutForm{
 			},
 		},
 	},
-}
-
-var TaxiRequestCommands = map[string]RequestCommandProcessor{
-	"commands": TaxiCommandsHandler{},
-}
-
-var TaxiMessageCommands = map[string]MessageCommandProcessor{
-	"information":     TaxiInformationHandler{},
-	"new_order":       TaxiNewOrderHandler{InfinityMixin: im},
-	"cancel_order":    TaxiCancelOrderHandler{InfinityMixin: im},
-	"calculate_price": TaxiCalculatePriceHandler{InfinityMixin: im},
 }
 
 var _taxi_db = GetUserHandler()

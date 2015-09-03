@@ -27,6 +27,13 @@ func warnp(err error) {
 	}
 }
 
+type InfinityApiParams struct {
+	Host              string `json:"host"`
+	Login             string `json:"login"`
+	Password          string `json:"password"`
+	ConnectionsString string `json:"conn_string"`
+}
+
 // infinity - Структура для работы с API infinity.
 type infinity struct {
 	Host       string
@@ -62,6 +69,25 @@ type infinity struct {
 		Content string `json:"content"`
 	}
 	Services []InfinityServices `json:"InfinityServices"`
+}
+
+// Global API variable
+var instance *infinity
+var once sync.Once
+
+type InfinityMixin struct {
+	API *infinity
+}
+
+func GetInfinityAPI(iap InfinityApiParams) *infinity {
+	log.Println("params: ", iap)
+	once.Do(func() {
+		instance = &infinity{}
+		instance.ConnString = iap.ConnectionsString
+		instance.Host = iap.Host
+		instance.Login(iap.Login, iap.Password)
+	})
+	return instance
 }
 
 type Answer struct {
@@ -122,12 +148,11 @@ type NewOrder struct {
 	//Markups           [2]int64 `json:"markups"`           // <Массив идентификаторов наценок заказа>
 	Attributes [2]int64 `json:"attributes"` // <Массив идентификаторов дополнительных атрибутов заказа>
 	// Инфомация о месте подачи машины
-
 	Delivery Delivery `json:"delivery"`
 	// Пункты назначения заказа (массив, не может быть пустым)
 	Destinations []Destination `json:"destinations"`
 	// Флаг безналичного заказа
-	//IsNotCash bool `json:"isNotCash"` //: <true или false (bool)>
+	IsNotCash bool `json:"isNotCash"` //: <true или false (bool)>
 }
 
 // Login - Авторизация в сервисе infinity. Входные параметры: login:string; password:string.
@@ -1213,21 +1238,6 @@ func (l *logfile) Close() {
 	l.m.Unlock()
 }
 
-// Global API variable
-var instance *infinity
-var once sync.Once
-
-func GetInfinityAPI() *infinity {
-	once.Do(func() {
-		instance = &infinity{}
-		instance.ConnString = "http://109.202.25.248:8080/WebAPITaxi/"
-		instance.Host = "109.202.25.248:8080"
-		instance.Login("test1", "test1")
-
-	})
-	return instance
-}
-
 type DictItem struct {
 	Value string `json:"value"`
 	Text  string `json:"text"`
@@ -1279,10 +1289,6 @@ func H_get_destination(info string, house string) (d Destination) {
 	return
 }
 
-type InfinityMixin struct {
-	API *infinity
-}
-
 func main() {
 	//var flagDBCons int
 	var flagPort int
@@ -1308,7 +1314,8 @@ func main() {
 		log2file.SetName()
 	}()
 
-	InfinityAPI := GetInfinityAPI()
+	api_params := InfinityApiParams{}
+	InfinityAPI := GetInfinityAPI(api_params)
 
 	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
 		controlHandler(w, r, "localhost:"+strconv.Itoa(flagPort), InfinityAPI)
