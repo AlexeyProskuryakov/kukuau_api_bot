@@ -1,4 +1,6 @@
 use demo_bot.sh for starting and stoping demo bot.
-No any config at now :(
-localhost and port 8080
+config at congig.json
+after first start run this command:
+---
+go get gopkg.in/mgo.v2
 

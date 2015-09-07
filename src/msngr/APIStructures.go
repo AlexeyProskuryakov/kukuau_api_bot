@@ -50,7 +50,7 @@ type InRequest struct {
 
 type InPkg struct {
 	From     string     `json:"from"`
-	UserData *string    `json:"from"`
+	UserData *string    `json:"user_data,omitempty"`
 	Message  *InMessage `json:"message"`
 	Request  *InRequest `json:"request"`
 }

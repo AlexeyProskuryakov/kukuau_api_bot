@@ -14,8 +14,21 @@ func genId() string {
 	return fmt.Sprintf("%d", time.Now().UnixNano()/int64(time.Millisecond))
 }
 
+type Notifier struct {
+	address string
+}
+
+func NewNotifier(addr string) *Notifier {
+	return &Notifier{address: addr}
+}
+
+func (n Notifier) Notify(order_id int64, state int) {
+	log.Println("Notifier notifying at:", n.address, "that order id:", order_id, "have state: ", state)
+	http.Post(n.address, "string", fmt.Sprintf("to order %v i have state %v", order_id, state))
+}
+
 func getInPackage(r *http.Request) (InPkg, error) {
-	log.Println("getting in! will retrieve body from request")
+
 	var in InPkg
 
 	body, err := ioutil.ReadAll(r.Body)
@@ -33,7 +46,6 @@ func getInPackage(r *http.Request) (InPkg, error) {
 }
 
 func setOutPackage(w http.ResponseWriter, out OutPkg) {
-	log.Println("forming out! will marshaing out response")
 
 	jsoned_out, err := json.Marshal(&out)
 	if err != nil {
@@ -50,7 +62,6 @@ type controllerHandler func(w http.ResponseWriter, r *http.Request)
 func FormBotControllerHandler(request_cmds map[string]RequestCommandProcessor, message_cmds map[string]MessageCommandProcessor) controllerHandler {
 
 	return func(w http.ResponseWriter, r *http.Request) {
-		log.Println("processing taxi request...")
 		if r.Method != "POST" {
 			http.Error(w, "I can not work with non POST methods", 405)
 			return
@@ -64,7 +75,7 @@ func FormBotControllerHandler(request_cmds map[string]RequestCommandProcessor, m
 		out.To = in.From
 
 		if in.Request != nil {
-			log.Println("processing request")
+			log.Printf("processing request %+v", in)
 			action := in.Request.Query.Action
 			out.Request = &OutRequest{ID: genId(), Type: "result"}
 			out.Request.Query.Action = action
@@ -75,7 +86,7 @@ func FormBotControllerHandler(request_cmds map[string]RequestCommandProcessor, m
 			}
 
 		} else if in.Message != nil {
-			log.Println("processing message")
+			log.Printf("processing message %+v", in)
 			out.Message = &OutMessage{Type: in.Message.Type, Thread: in.Message.Thread, ID: genId()}
 			action := in.Message.Command.Action
 			if commandProcessor, ok := message_cmds[action]; ok {

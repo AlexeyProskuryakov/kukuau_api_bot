@@ -17,9 +17,7 @@ const (
 
 //todo what about many inifinity apis?
 //settings of this module
-var (
-	url string
-)
+var DictUrl string
 
 var commands_at_created_order = []Command{
 	Command{
@@ -55,7 +53,7 @@ var taxi_call_form = &OutForm{
 			Attributes: FieldAttribute{
 				Label:    "улица/район",
 				Required: true,
-				URL:      &url,
+				URL:      &DictUrl,
 			},
 		},
 		OutField{
@@ -80,7 +78,7 @@ var taxi_call_form = &OutForm{
 			Attributes: FieldAttribute{
 				Label:    "улица/район",
 				Required: true,
-				URL:      &url,
+				URL:      &DictUrl,
 			},
 		},
 		OutField{
@@ -119,10 +117,6 @@ type TaxiInformationHandler struct{}
 
 func (ih TaxiInformationHandler) ProcessMessage(in InPkg) (string, *[]Command, error) {
 	return "Срочный заказ такси в Новосибирске. Быстрая подача. Оплата наличными или картой. ", nil, nil
-}
-
-type TaxiNewOrderHandler struct {
-	inf.InfinityMixin
 }
 
 func _get_time_from_timestamp(tst string) time.Time {
@@ -170,16 +164,20 @@ func _form_order(fields []InField) (new_order inf.NewOrder) {
 	return
 }
 
+type TaxiNewOrderHandler struct {
+	inf.InfinityMixin
+	inf.OrderHandlerMixin
+}
+
 func (noh TaxiNewOrderHandler) ProcessMessage(in InPkg) (string, *[]Command, error) {
-	log.Println(noh.API)
-	state := _taxi_db.GetUserState(in.From)
-	if state != ORDER_CREATE {
+	order_id := noh.Orders.GetOrderIdByOwner(in.From)
+	if order_id == -1 || (noh.Orders.GetState(order_id) == 7) {
 		new_order := _form_order(in.Message.Command.Form.Fields)
 		ans, ord_error := noh.API.NewOrder(new_order)
 		if ord_error != nil {
 			panic(ord_error)
 		}
-		_taxi_db.SetUserOrderId(in.From, ans.Content.Id)
+		noh.Orders.AddOrder(ans.Content.Id, in.From)
 		result := fmt.Sprintf("Ваш заказ создан! Вот так: %+v и ответ таков: %+v ", new_order, ans)
 		return result, &commands_at_created_order, nil
 	} else {
@@ -189,22 +187,18 @@ func (noh TaxiNewOrderHandler) ProcessMessage(in InPkg) (string, *[]Command, err
 
 type TaxiCancelOrderHandler struct {
 	inf.InfinityMixin
+	inf.OrderHandlerMixin
 }
 
 func (coh TaxiCancelOrderHandler) ProcessMessage(in InPkg) (string, *[]Command, error) {
-	state := _taxi_db.GetUserState(in.From)
-	if state == ORDER_CREATE {
-		order_id, err := _taxi_db.GetUserOrderId(in.From)
-		if err != nil {
-			return "У вас нет заказов!", &commands_at_not_created_order, errors.New("У вас нет заказов!")
-		}
+	order_id := coh.Orders.GetOrderIdByOwner(in.From)
+	if order_id != -1 {
 		ok, info := coh.API.CancelOrder(order_id)
 		if !ok {
 			err_str := fmt.Sprintf("Какие-то проблемы с отменой заказа %+v", info)
 			return err_str, nil, errors.New(err_str)
 		}
-		_taxi_db.CancelOrderId(in.From)
-		return "Ваш заказ отменен", &commands_at_not_created_order, nil
+		return fmt.Sprintf("Ваш заказ отменен (%+v)", info), &commands_at_not_created_order, nil
 	}
 	return "У вас нет заказов!", &commands_at_not_created_order, errors.New("У вас нет заказов!")
 }

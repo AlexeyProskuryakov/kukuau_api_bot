@@ -1,4 +1,6 @@
 github.com
 bin
 logs
+pkg
 *.pid
+gopkg.in

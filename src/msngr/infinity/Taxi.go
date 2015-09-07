@@ -3,17 +3,25 @@ package infinity
 import (
 	"encoding/json"
 	"errors"
-	"flag"
+	// "flag"
 	"fmt"
 	"io/ioutil"
 	"log"
 	"net/http"
 	"net/url"
 	"os"
-	"strconv"
+	// "strconv"
 	"sync"
 	"time"
 )
+
+type TaxiInterface interface {
+	NewOrder(order NewOrder) (Answer, error)
+	CancelOrder(order_id int64) (bool, string)
+	CalcOrderCost(order NewOrder) (int, string)
+	AddressesSearch(text string) FastAddress
+	Orders() []Order
+}
 
 func warn(err error) {
 	if err != nil {
@@ -31,7 +39,7 @@ type InfinityApiParams struct {
 	Host              string `json:"host"`
 	Login             string `json:"login"`
 	Password          string `json:"password"`
-	ConnectionsString string `json:"conn_string"`
+	ConnectionsString string `json:"connection_string"`
 }
 
 // infinity - Структура для работы с API infinity.
@@ -73,21 +81,31 @@ type infinity struct {
 
 // Global API variable
 var instance *infinity
+var fakeInstance *FakeInfinity
 var once sync.Once
 
 type InfinityMixin struct {
-	API *infinity
+	API TaxiInterface
 }
 
-func GetInfinityAPI(iap InfinityApiParams) *infinity {
-	log.Println("params: ", iap)
-	once.Do(func() {
-		instance = &infinity{}
-		instance.ConnString = iap.ConnectionsString
-		instance.Host = iap.Host
-		instance.Login(iap.Login, iap.Password)
-	})
-	return instance
+func GetInfinityAPI(iap InfinityApiParams, isTest bool) TaxiInterface {
+	if isTest {
+		log.Println("return test API")
+		once.Do(func() {
+			fakeInstance = &FakeInfinity{}
+		})
+
+		return fakeInstance
+	} else {
+		log.Println("return REAL API AHTUNG!!!")
+		once.Do(func() {
+			instance = &infinity{}
+			instance.ConnString = iap.ConnectionsString
+			instance.Host = iap.Host
+			instance.Login(iap.Login, iap.Password)
+		})
+		return instance
+	}
 }
 
 type Answer struct {
@@ -153,6 +171,26 @@ type NewOrder struct {
 	Destinations []Destination `json:"destinations"`
 	// Флаг безналичного заказа
 	IsNotCash bool `json:"isNotCash"` //: <true или false (bool)>
+}
+
+type Order struct {
+	ID                int64  `json:"ID"`                // ID
+	State             int    `json:"State"`             //Состояние заказа
+	Cost              int    `json:"Cost"`              //Стоимость
+	IsNotCash         bool   `json:"IsNotCash"`         //Безналичный заказ (bool)
+	IsPrevious        int    `json:"IsPrevious"`        //Тип заказа (0 –активный, 1-предварительный, 2-предварительный ставший активным)
+	LastStateTime     string `json:"LastStateTime"`     //Дата-Время последнего и\зменения состояния
+	DeliveryTime      string `json:"DeliveryTime"`      //Требуемое время подачи машины
+	Distance          int    `json:"Distance"`          //Расстояние км (если оно рассчитано системой)
+	TimeOfArrival     string `json:"TimeOfArrival"`     //Прогнозируемое время прибытия машины на заказ
+	IDDeliveryAddress int64  `json:"IDDeliveryAddress"` //ID адреса подачи
+	DeliveryStr       string `json:"DeliveryStr"`       //Адрес подачи в виде текста
+	DestinationsStr   string `json:"DestinationsStr"`   //Пункты назначения в виде текста (с учетом настроек отображения в диспетчерской: Первый/Последний/Все)
+	IDCar             int64  `json:"IDCar"`             //ID машины
+	IDService         int64  `json:"IdService"`         //ID услуги
+	Car               string `json:"Car"`               //Позывной машины
+	Service           string `json:"Service"`           //Услуга
+	Drivers           string `json:"Drivers"`           //ФИО Водителя
 }
 
 // Login - Авторизация в сервисе infinity. Входные параметры: login:string; password:string.
@@ -924,26 +962,6 @@ func (p *infinity) AddressesRemove(id int64) (bool, string) {
 
 /////////////////////////////
 
-type Order struct {
-	ID                int64  `json:"ID"`                // ID
-	State             int    `json:"State"`             //Состояние заказа
-	Cost              int    `json:"Cost"`              //Стоимость
-	IsNotCash         bool   `json:"IsNotCash"`         //Безналичный заказ (bool)
-	IsPrevious        int    `json:"IsPrevious"`        //Тип заказа (0 –активный, 1-предварительный, 2-предварительный ставший активным)
-	LastStateTime     string `json:"LastStateTime"`     //Дата-Время последнего и\зменения состояния
-	DeliveryTime      string `json:"DeliveryTime"`      //Требуемое время подачи машины
-	Distance          int    `json:"Distance"`          //Расстояние км (если оно рассчитано системой)
-	TimeOfArrival     string `json:"TimeOfArrival"`     //Прогнозируемое время прибытия машины на заказ
-	IDDeliveryAddress int64  `json:"IDDeliveryAddress"` //ID адреса подачи
-	DeliveryStr       string `json:"DeliveryStr"`       //Адрес подачи в виде текста
-	DestinationsStr   string `json:"DestinationsStr"`   //Пункты назначения в виде текста (с учетом настроек отображения в диспетчерской: Первый/Последний/Все)
-	IDCar             int64  `json:"IDCar"`             //ID машины
-	IDService         int64  `json:"IdService"`         //ID услуги
-	Car               string `json:"Car"`               //Позывной машины
-	Service           string `json:"Service"`           //Услуга
-	Drivers           string `json:"Drivers"`           //ФИО Водителя
-}
-
 //Taxi.Orders (Заказы: активные и предварительные)
 func (p *infinity) Orders() []Order {
 	client := &http.Client{}
@@ -1243,7 +1261,7 @@ type DictItem struct {
 	Text  string `json:"text"`
 }
 
-func StreetsSearchHandler(w http.ResponseWriter, r *http.Request, i infinity) {
+func StreetsSearchHandler(w http.ResponseWriter, r *http.Request, i TaxiInterface) {
 	w.Header().Set("Content-type", "application/json")
 	w.WriteHeader(http.StatusOK)
 
@@ -1263,7 +1281,7 @@ func StreetsSearchHandler(w http.ResponseWriter, r *http.Request, i infinity) {
 				t, err := json.Marshal(nitem)
 				item.Value = string(t)
 				warn(err)
-				item.Text = nitem.Name
+				item.Text = fmt.Sprintf("%v %v", nitem.Name, nitem.ShortName)
 				results = append(results, item)
 			}
 		}
@@ -1289,56 +1307,123 @@ func H_get_destination(info string, house string) (d Destination) {
 	return
 }
 
-func main() {
-	//var flagDBCons int
-	var flagPort int
-	var flagNoLog bool
+// func main() {
+// 	//var flagDBCons int
+// 	var flagPort int
+// 	var flagNoLog bool
 
-	flag.IntVar(&flagPort, "port", 80, "Bind to custom port.")
-	flag.BoolVar(&flagNoLog, "nolog", false, "Turn off writing log")
+// 	flag.IntVar(&flagPort, "port", 80, "Bind to custom port.")
+// 	flag.BoolVar(&flagNoLog, "nolog", false, "Turn off writing log")
 
-	flag.Parse()
-	t1 := time.Now()
-	log.Println(fmt.Sprintf("%ds", (24*3600 - t1.Hour()*3600 + t1.Minute()*60 + t1.Second())))
-	var log2file logfile
-	if !flagNoLog {
+// 	flag.Parse()
+// 	t1 := time.Now()
+// 	log.Println(fmt.Sprintf("%ds", (24*3600 - t1.Hour()*3600 + t1.Minute()*60 + t1.Second())))
+// 	var log2file logfile
+// 	if !flagNoLog {
 
-		log2file.SetName()
-		defer log2file.Close()
+// 		log2file.SetName()
+// 		defer log2file.Close()
+// 	}
+// 	go func() {
+// 		t1 := time.Now()
+// 		leftTime, _ := time.ParseDuration(fmt.Sprintf("%ds", (24*3600 - t1.Hour()*3600 + t1.Minute()*60 + t1.Second())))
+// 		timer := time.NewTimer(leftTime) // Seconds left until a new Day
+// 		<-timer.C
+// 		log2file.SetName()
+// 	}()
+
+// 	api_params := InfinityApiParams{}
+// 	InfinityAPI := GetInfinityAPI(api_params)
+
+// 	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
+// 		controlHandler(w, r, "localhost:"+strconv.Itoa(flagPort), InfinityAPI)
+// 	})
+// 	http.HandleFunc("/streets/", func(w http.ResponseWriter, r *http.Request) {
+// 		StreetsSearchHandler(w, r, *InfinityAPI)
+// 	})
+// 	InfinityAPI.ConnString = "http://109.202.25.248:8080/WebAPITaxi/"
+// 	InfinityAPI.Host = "109.202.25.248:8080"
+// 	status := InfinityAPI.Login("test1", "test1")
+// 	if status {
+// 		log.Println("Установлено соединение с infinity")
+// 	}
+
+// 	status, serverTime := InfinityAPI.Ping()
+// 	if status {
+// 		log.Println("Время сервера: ", serverTime)
+// 		log.Println(InfinityAPI.GetServices())
+// 		log.Println(InfinityAPI.GetCarsInfo())
+// 	} else {
+// 		log.Println("Проблема со связью с сервером infinity")
+// 	}
+
+// 	log.Println("Started at localhost:", flagPort)
+// 	http.ListenAndServe(":"+strconv.Itoa(flagPort), nil)
+// }
+
+////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////
+type FakeInfinity struct {
+	orders []Order
+}
+
+func (inf *FakeInfinity) NewOrder(order NewOrder) (ans Answer, e error) {
+	saved_order := Order{
+		ID:    int64(len(inf.orders) + 1),
+		State: 0,
+		Cost:  100500,
 	}
-	go func() {
-		t1 := time.Now()
-		leftTime, _ := time.ParseDuration(fmt.Sprintf("%ds", (24*3600 - t1.Hour()*3600 + t1.Minute()*60 + t1.Second())))
-		timer := time.NewTimer(leftTime) // Seconds left until a new Day
-		<-timer.C
-		log2file.SetName()
-	}()
 
-	api_params := InfinityApiParams{}
-	InfinityAPI := GetInfinityAPI(api_params)
+	inf.orders = append(inf.orders, saved_order)
 
-	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
-		controlHandler(w, r, "localhost:"+strconv.Itoa(flagPort), InfinityAPI)
-	})
-	http.HandleFunc("/streets/", func(w http.ResponseWriter, r *http.Request) {
-		StreetsSearchHandler(w, r, *InfinityAPI)
-	})
-	InfinityAPI.ConnString = "http://109.202.25.248:8080/WebAPITaxi/"
-	InfinityAPI.Host = "109.202.25.248:8080"
-	status := InfinityAPI.Login("test1", "test1")
-	if status {
-		log.Println("Установлено соединение с infinity")
+	ans = Answer{
+		IsSuccess: true,
+		Message:   "test order was formed",
 	}
+	ans.Content.Id = saved_order.ID
+	log.Println("FA now i have orders: ", len(inf.orders))
+	return
+}
 
-	status, serverTime := InfinityAPI.Ping()
-	if status {
-		log.Println("Время сервера: ", serverTime)
-		log.Println(InfinityAPI.GetServices())
-		log.Println(InfinityAPI.GetCarsInfo())
-	} else {
-		log.Println("Проблема со связью с сервером infinity")
+func (inf *FakeInfinity) Orders() []Order {
+	return inf.orders
+}
+
+func (inf *FakeInfinity) CancelOrder(order_id int64) (bool, string) {
+	log.Println("FA order was canceled", order_id)
+	for i, order := range inf.orders {
+		if order.ID == order_id {
+			inf.orders[i].State = 7
+			return true, "test order was cancelled"
+		}
 	}
+	return false, "order not found :( "
+}
 
-	log.Println("Started at localhost:", flagPort)
-	http.ListenAndServe(":"+strconv.Itoa(flagPort), nil)
+func (p *FakeInfinity) CalcOrderCost(order NewOrder) (int, string) {
+	log.Println("FA calulate cost for order: ", order)
+	return 100500, "Good cost!"
+}
+
+func (p *FakeInfinity) AddressesSearch(text string) FastAddress {
+	// 	type FastAddress struct {
+	// 	Rows []struct {
+	// 		ID         int64  `json:"ID"`
+	// 		IDParent   int64  `json:"IDParent,omitempty"`
+	// 		Name       string `json:"Name"`
+	// 		ShortName  string `json:"ShortName,omitempty"`
+	// 		ItemType   int64  `json:"ItemType,omitempty"`
+	// 		FullName   string `json:"FullName"`
+	// 		IDRegion   int64  `json:"IDRegion"`
+	// 		IDDistrict int64  `json:"IDDistrict"`
+	// 		IDCity     int64  `json:"IDCity"`
+	// 		IDPlace    int64  `json:"IDPlace"`
+	// 		Region     string `json:"Region,omitempty"`
+	// 		District   string `json:"District,omitempty"`
+	// 		City       string `json:"City"`
+	// 		Place      string `json:"Place,omitempty"`
+	// 	} `json:"rows"`
+	// }
+	log.Println("FA return empty address")
+	return FastAddress{}
 }

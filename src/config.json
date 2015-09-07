@@ -1,13 +1,20 @@
 {
 	"main" : {
 		"port" : 9191,
-		"callback_addr" : "foo.bar.baz"
-		},
+		"callback_addr" : "foo.bar.baz",
+		"dict_url" : "foo", 
+		"test" : true
+	},
 
 	"infinity" : {
 			"login" : "test1",
 			"password" : "test1",
-			"conn_string" : "http://109.202.25.248:8080/WebAPITaxi/",
+			"connection_string" : "http://109.202.25.248:8080/WebAPITaxi/",
 			"host" : "109.202.25.248:8080"
-			}	
-	}
+	},
+
+	"database" : {
+				"name":"bot",
+				"connection_string":"localhost:27017"
+	}			
+}
