@@ -1322,7 +1322,7 @@ func StreetsSearchHandler(w http.ResponseWriter, r *http.Request, i Infinity) {
 				var item DictItem
 				var err error
 				t, err := json.Marshal(nitem)
-				item.Value = string(t)
+				item.Value = "0"
 				warn(err)
 				item.Text = fmt.Sprintf("%+v %+v", nitem.Name, nitem.ShortName)
 				results = append(results, item)
