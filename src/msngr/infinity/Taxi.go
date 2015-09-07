@@ -88,22 +88,30 @@ type InfinityMixin struct {
 	API TaxiInterface
 }
 
+func initInfinity(conn_str, host, login, password string) *infinity {
+	result := &infinity{}
+	result.ConnString = conn_str
+	result.Host = host
+	result.Login(login, password)
+	return result
+}
+
 func GetInfinityAPI(iap InfinityApiParams, isTest bool) TaxiInterface {
 	if isTest {
 		log.Println("return test API")
 		once.Do(func() {
 			fakeInstance = &FakeInfinity{}
 		})
-
 		return fakeInstance
 	} else {
 		log.Println("return REAL API AHTUNG!!!")
 		once.Do(func() {
-			instance = &infinity{}
-			instance.ConnString = iap.ConnectionsString
-			instance.Host = iap.Host
-			instance.Login(iap.Login, iap.Password)
+			instance = initInfinity(iap.ConnectionsString, iap.Host, iap.Login, iap.Login)
 		})
+		//todo this is coprocode realise with your brains!!!
+		if instance == nil {
+			instance = initInfinity(iap.ConnectionsString, iap.Host, iap.Login, iap.Login)
+		}
 		return instance
 	}
 }
@@ -216,6 +224,7 @@ func (p *infinity) Login(login, password string) bool {
 	warnp(err)
 	err = json.Unmarshal(body, &p.LoginResponse)
 	warnp(err)
+	log.Printf("[login] self: %+q\n", p)
 	if p.LoginResponse.Success {
 		log.Println("[login] JSESSIONID: ", p.LoginResponse.SessionID)
 		// log.Printf("[login] self: %+q\n", p)
@@ -339,9 +348,6 @@ func (p *infinity) GetCarsInfo() []InfinityCarInfo {
 	return tmp[0].Rows
 }
 
-//////////////////////////////////////////////////////////////////////////////////////////////////////
-////////////////////////////////////////U N S T A B L E///////////////////////////////////////////////
-//////////////////////////////////////////////////////////////////////////////////////////////////////
 func (p *infinity) NewOrder(order NewOrder) (Answer, error) {
 	client := &http.Client{}
 	req, err := http.NewRequest("GET", p.ConnString+"RemoteCall", nil)
@@ -387,51 +393,6 @@ func (p *infinity) CalcOrderCost(order NewOrder) (int, string) {
 	values := req.URL.Query()
 	values.Add("method", "Taxi.WebAPI.CalcOrderCost")
 
-	/*var temp NewOrder
-
-	temp.Phone = "89261234567"
-	temp.DeliveryTime = "2015-07-15 07:00:00"
-	temp.DeliveryMinutes = 60
-	temp.IdService = 5001753333
-	temp.Notes = "Хочется комфортную машину"
-	//tMarkups := [2]int64{7002780031, 7004760103}
-	tAttributes := [2]int64{1000113000, 1000113002}
-	//temp.Markups = tMarkups
-	temp.Attributes = tAttributes
-
-	//temp.Delivery.Lat = null
-	//temp.Delivery.Lon = null
-	//temp.Delivery.IdAddres = null
-	temp.Delivery.IdRegion = 7006803034
-	//temp.Delivery.IdDistrict = null
-	//temp.Delivery.IdCity = null
-	//temp.Delivery.IdPlace = null
-	//temp.Delivery.IdStreet = 7006804169
-	temp.Delivery.House = "1"
-	//temp.Delivery.Building = null
-	temp.Delivery.Fracion = "1"
-	temp.Delivery.Entrance = "2"
-	temp.Delivery.Apartament = "30"
-	//temp.Delivery.IdFastAddres = null
-
-	var t Dest
-	t.Lat = 55.807898
-	t.Lon = 37.785449
-	//temp.Destinations.IdAddres = null
-	t.IdRegion = 7006803034
-	//temp.Destinations.IdDistrict = null
-	//temp.Destinations.IdCity = null
-	t.IdPlace = 7006803054
-	t.IdStreet = 7006803054
-	t.House = "12"
-	//temp.Destinations.Building = null
-	//temp.Destinations.Fracion = null
-	t.Entrance = "2"
-	t.Apartament = "30"
-	//temp.Destinations.IdFastAddress = null
-	temp.Destinations = append(temp.Destinations, t)
-	// http://109.202.25.248:8080/WebAPITaxi/RemoteCall?method=Taxi.WebAPI.NewOrder&params={"phone":"89261234567","deliveryTime":"2015-07-15+07:00:00","deliveryMinutes":60,"idService":5001753333,"notes":"Хочется+комфортную+машину","markups":[7002780031,7004760103],"attributes":[1000113000,1000113002],"delivery":{"idRegion":7006803034,"idStreet":0,"house":"1","fraction":"1","entrance":"2","apartment":"30"},"destinations":[{"lat":55.807898,"lon":37.785449},{"idRegion":7006803034,"idPlace":7006803054,"idStreet":7006803054,"house":"12","entrance":"2","apartment":"30"}]}
-	*/
 	param, err := json.Marshal(order)
 	warn(err)
 	values.Add("params", string(param))
