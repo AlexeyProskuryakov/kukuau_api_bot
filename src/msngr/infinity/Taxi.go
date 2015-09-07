@@ -1324,7 +1324,7 @@ func StreetsSearchHandler(w http.ResponseWriter, r *http.Request, i Infinity) {
 				t, err := json.Marshal(nitem)
 				item.Value = string(t)
 				warn(err)
-				item.Text = nitem.Name
+				item.Text = fmt.Sprintf("%+v %+v", nitem.Name, nitem.ShortName)
 				results = append(results, item)
 			}
 		}
