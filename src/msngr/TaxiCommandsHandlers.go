@@ -143,8 +143,8 @@ func _form_order(fields []InField) (new_order inf.NewOrder) {
 
 		case "time": //todo see time! with exceptions
 			when = field.Data.Value
-
-			if when == "0" {
+			log.Println("!time of order: ", when)
+			if when == "0" || when == "" {
 				new_order.DeliveryMinutes = 0
 			} else {
 				new_order.DeliveryTime = _get_time_from_timestamp(when).Format(timeFormat)
