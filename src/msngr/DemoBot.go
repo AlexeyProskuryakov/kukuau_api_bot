@@ -1,6 +1,7 @@
 package msngr
 
 import (
+	"bytes"
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
@@ -24,7 +25,7 @@ func NewNotifier(addr string) *Notifier {
 
 func (n Notifier) Notify(order_id int64, state int) {
 	log.Println("Notifier notifying at:", n.address, "that order id:", order_id, "have state: ", state)
-	http.Post(n.address, "string", fmt.Sprintf("to order %v i have state %v", order_id, state))
+	http.Post(n.address, "text", bytes.NewBufferString(fmt.Sprintf("to order %v i have state %v", order_id, state)))
 }
 
 func getInPackage(r *http.Request) (InPkg, error) {
