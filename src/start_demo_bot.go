@@ -101,8 +101,9 @@ func main() {
 	http.HandleFunc("/taxi", taxi_controller_handler)
 	http.HandleFunc("/shop", shop_controller_handler)
 
+	realInfApi := ia.GetInifinityAPI(conf.Infinity, false)
 	http.HandleFunc("/_streets", func(w http.ResponseWriter, r *http.Request) {
-		ia.StreetsSearchHandler(w, r, infApi)
+		ia.StreetsSearchHandler(w, r, realInfApi)
 	})
 
 	addr := fmt.Sprintf(":%v", conf.Main.Port)
