@@ -48,11 +48,15 @@ type InRequest struct {
 	} `json:"query"`
 }
 
+type InUserData struct {
+	Phone string `json:"phone"`
+}
+
 type InPkg struct {
-	From     string     `json:"from"`
-	UserData *string    `json:"user_data,omitempty"`
-	Message  *InMessage `json:"message"`
-	Request  *InRequest `json:"request"`
+	From     string      `json:"from"`
+	UserData *InUserData `json:"userdata,omitempty"`
+	Message  *InMessage  `json:"message"`
+	Request  *InRequest  `json:"request"`
 }
 
 type OutField struct {
@@ -77,6 +81,8 @@ type Command struct {
 	Title    string   `json:"title"`
 	Action   string   `json:"action"`
 	Position int      `json:"position"`
+	Fixed    bool     `json:"fixed"`
+	Repeated bool     `json:"repeated"`
 	Form     *OutForm `json:"form,omitempty"`
 }
 

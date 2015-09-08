@@ -41,7 +41,7 @@ func read_config() config {
 	return conf
 }
 
-func form_taxi_commands(im ia.InfinityMixin, oh ia.OrderHandlerMixin) (map[string]m.RequestCommandProcessor, map[string]m.MessageCommandProcessor) {
+func form_taxi_commands(im ia.InfinityMixin, oh m.OrderHandlerMixin) (map[string]m.RequestCommandProcessor, map[string]m.MessageCommandProcessor) {
 	var TaxiRequestCommands = map[string]m.RequestCommandProcessor{
 		"commands": m.TaxiCommandsHandler{},
 	}
@@ -55,7 +55,7 @@ func form_taxi_commands(im ia.InfinityMixin, oh ia.OrderHandlerMixin) (map[strin
 	return TaxiRequestCommands, TaxiMessageCommands
 }
 
-func order_watch(ohm ia.OrderHandlerMixin, im ia.InfinityMixin, n *m.Notifier) {
+func order_watch(ohm m.OrderHandlerMixin, im ia.InfinityMixin, carsCache *ia.CarsCache, n *m.Notifier) {
 	for {
 		api_orders := im.API.Orders()
 		// log.Printf("OW api have %v orders", len(api_orders))
@@ -69,8 +69,8 @@ func order_watch(ohm ia.OrderHandlerMixin, im ia.InfinityMixin, n *m.Notifier) {
 			}
 			if order.State != order_state {
 				log.Printf("state of %v will persist", order)
-				ohm.Orders.SetState(order.ID, order.State)
-				n.Notify(order.ID, order.State)
+				ohm.Orders.SetState(order.ID, order.State, order)
+				n.Notify(m.FormNotification(order.ID, order.State, ohm, carsCache))
 			}
 		}
 		time.Sleep(1000 * time.Millisecond)
@@ -81,19 +81,16 @@ func main() {
 	conf := read_config()
 	url := &m.DictUrl
 	*url = conf.Main.DictUrl
-
 	infApi := ia.GetInfinityAPI(conf.Infinity, conf.Main.Test)
 	im := ia.InfinityMixin{API: infApi}
 
-	orderHandler := ia.NewOrderHandler(conf.Database.ConnString, conf.Database.Name)
-	ohm := ia.OrderHandlerMixin{Orders: orderHandler}
+	orderHandler := m.NewOrderHandler(conf.Database.ConnString, conf.Database.Name)
+	ohm := m.OrderHandlerMixin{Orders: orderHandler}
 
 	// watch_oh := ia.NewOrderHandler(conf.Database.ConnString, conf.Database.Name)
 	// wstatch_ohm := ia.OrderHandlerMixin{Orders: watch_oh}
 
 	n := m.NewNotifier(conf.Main.CallbackAddr)
-
-	go order_watch(ohm, im, n)
 
 	taxi_controller_handler := m.FormBotControllerHandler(form_taxi_commands(im, ohm))
 	shop_controller_handler := m.FormBotControllerHandler(m.ShopRequestCommands, m.ShopMessageCommands)
@@ -101,7 +98,7 @@ func main() {
 	http.HandleFunc("/taxi", taxi_controller_handler)
 	http.HandleFunc("/shop", shop_controller_handler)
 
-	realInfApi := ia.GetInfinityAPI(conf.Infinity, false)
+	realInfApi := ia.GetRealInfinityAPI(conf.Infinity)
 	http.HandleFunc("/_streets", func(w http.ResponseWriter, r *http.Request) {
 		ia.StreetsSearchHandler(w, r, realInfApi)
 	})
@@ -112,6 +109,9 @@ func main() {
 	serv := &http.Server{
 		Addr: addr,
 	}
+
+	carsCache := ia.NewCarsCache(realInfApi)
+	go order_watch(ohm, im, carsCache, n)
 
 	log.Fatal(serv.ListenAndServe())
 }

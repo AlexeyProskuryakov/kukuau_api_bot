@@ -24,6 +24,7 @@ var commands_at_created_order = []Command{
 		Title:    "Отменить заказ",
 		Action:   "cancel_order",
 		Position: 0,
+		Repeated: true,
 	},
 }
 var commands_at_not_created_order = []Command{
@@ -166,12 +167,12 @@ func _form_order(fields []InField) (new_order inf.NewOrder) {
 
 type TaxiNewOrderHandler struct {
 	inf.InfinityMixin
-	inf.OrderHandlerMixin
+	OrderHandlerMixin
 }
 
 func (noh TaxiNewOrderHandler) ProcessMessage(in InPkg) (string, *[]Command, error) {
-	order_id := noh.Orders.GetOrderIdByOwner(in.From)
-	if order_id == -1 || (noh.Orders.GetState(order_id) == 7) {
+	order_wrapper := noh.Orders.GetByOwner(in.From)
+	if order_wrapper == nil || inf.IsOrderNotAvaliable(order_wrapper.OrderState) {
 		new_order := _form_order(in.Message.Command.Form.Fields)
 		ans, ord_error := noh.API.NewOrder(new_order)
 		if ord_error != nil {
@@ -187,13 +188,13 @@ func (noh TaxiNewOrderHandler) ProcessMessage(in InPkg) (string, *[]Command, err
 
 type TaxiCancelOrderHandler struct {
 	inf.InfinityMixin
-	inf.OrderHandlerMixin
+	OrderHandlerMixin
 }
 
 func (coh TaxiCancelOrderHandler) ProcessMessage(in InPkg) (string, *[]Command, error) {
-	order_id := coh.Orders.GetOrderIdByOwner(in.From)
-	if order_id != -1 {
-		ok, info := coh.API.CancelOrder(order_id)
+	order_wrapper := coh.Orders.GetByOwner(in.From)
+	if order_wrapper != nil {
+		ok, info := coh.API.CancelOrder(order_wrapper.OrderId)
 		if !ok {
 			err_str := fmt.Sprintf("Какие-то проблемы с отменой заказа %+v", info)
 			return err_str, nil, errors.New(err_str)

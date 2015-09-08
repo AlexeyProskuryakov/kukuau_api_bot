@@ -1,7 +1,6 @@
 package msngr
 
 import (
-	"bytes"
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
@@ -13,19 +12,6 @@ import (
 func genId() string {
 	//не привязывайся ко времени, может бть в 1 микросекуну много сообщений и ид долэны ыть разными
 	return fmt.Sprintf("%d", time.Now().UnixNano()/int64(time.Millisecond))
-}
-
-type Notifier struct {
-	address string
-}
-
-func NewNotifier(addr string) *Notifier {
-	return &Notifier{address: addr}
-}
-
-func (n Notifier) Notify(order_id int64, state int) {
-	log.Println("Notifier notifying at:", n.address, "that order id:", order_id, "have state: ", state)
-	http.Post(n.address, "text", bytes.NewBufferString(fmt.Sprintf("to order %v i have state %v", order_id, state)))
 }
 
 func getInPackage(r *http.Request) (InPkg, error) {
