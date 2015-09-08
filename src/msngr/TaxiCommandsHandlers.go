@@ -24,7 +24,6 @@ var commands_at_created_order = []Command{
 		Title:    "Отменить заказ",
 		Action:   "cancel_order",
 		Position: 0,
-		Repeated: true,
 	},
 }
 var commands_at_not_created_order = []Command{
@@ -32,6 +31,7 @@ var commands_at_not_created_order = []Command{
 		Title:    "Вызвать такси",
 		Action:   "new_order",
 		Position: 0,
+		Repeated: true,
 		Form:     taxi_call_form,
 	},
 
