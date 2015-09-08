@@ -1,9 +1,8 @@
 package main
 
 import (
-	"fmt"
-	// "gopkg.in/yaml.v2"
 	"encoding/json"
+	"fmt"
 	"io/ioutil"
 	"log"
 	m "msngr"
@@ -19,6 +18,7 @@ type config struct {
 		CallbackAddr string `json:"callback_addr"`
 		DictUrl      string `json:"dict_url"`
 		Test         bool   `json:"test"`
+		TaxiKey      string `json:"taxi_key"`
 	} `json:"main"`
 	Database struct {
 		ConnString string `json:"connection_string"`
@@ -87,11 +87,6 @@ func main() {
 	orderHandler := m.NewOrderHandler(conf.Database.ConnString, conf.Database.Name)
 	ohm := m.OrderHandlerMixin{Orders: orderHandler}
 
-	// watch_oh := ia.NewOrderHandler(conf.Database.ConnString, conf.Database.Name)
-	// wstatch_ohm := ia.OrderHandlerMixin{Orders: watch_oh}
-
-	n := m.NewNotifier(conf.Main.CallbackAddr)
-
 	taxi_controller_handler := m.FormBotControllerHandler(form_taxi_commands(im, ohm))
 	shop_controller_handler := m.FormBotControllerHandler(m.ShopRequestCommands, m.ShopMessageCommands)
 
@@ -110,8 +105,10 @@ func main() {
 		Addr: addr,
 	}
 
+	//////////////////////////////////////////////////////////////////
+	n_taxi := m.NewNotifier(conf.Main.CallbackAddr, conf.Main.TaxiKey)
 	carsCache := ia.NewCarsCache(realInfApi)
-	go order_watch(ohm, im, carsCache, n)
+	go order_watch(ohm, im, carsCache, n_taxi)
 
 	log.Fatal(serv.ListenAndServe())
 }

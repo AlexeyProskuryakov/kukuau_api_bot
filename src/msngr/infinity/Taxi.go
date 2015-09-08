@@ -19,7 +19,6 @@ type TaxiInterface interface {
 	NewOrder(order NewOrder) (Answer, error)
 	CancelOrder(order_id int64) (bool, string)
 	CalcOrderCost(order NewOrder) (int, string)
-	AddressesSearch(text string) FastAddress
 	Orders() []Order
 }
 
@@ -228,7 +227,6 @@ func (p *infinity) Login(login, password string) bool {
 	values.Add("p", password)
 	values.Add("app", "CxTaxiClient")
 	req.URL.RawQuery = values.Encode()
-	log.Println(req.URL)
 	res, err := client.Do(req)
 	warnp(err)
 	defer res.Body.Close()
@@ -397,7 +395,6 @@ func (p *infinity) NewOrder(order NewOrder) (Answer, error) {
 
 	req.URL.RawQuery = values.Encode()
 
-	log.Println(req.URL)
 	log.Printf("[New Order] inf cookie: %+v \n[%+v]", p.Cookie, p)
 	req.AddCookie(p.Cookie)
 	//log.Println("Cookies in request? ", req.Cookies())
@@ -410,8 +407,6 @@ func (p *infinity) NewOrder(order NewOrder) (Answer, error) {
 	defer res.Body.Close()
 	body, err := ioutil.ReadAll(res.Body)
 	warnp(err)
-
-	log.Println(string(body))
 
 	var ans Answer
 	err = json.Unmarshal(body, &ans)
@@ -999,7 +994,6 @@ func (p *infinity) Orders() []Order {
 
 	var temp []Order
 	err = json.Unmarshal(body, &temp)
-	log.Println(body)
 	warnp(err)
 	return temp
 }
@@ -1283,9 +1277,9 @@ func StreetsSearchHandler(w http.ResponseWriter, r *http.Request, i *infinity) {
 	if r.Method == "GET" {
 		params := url.Values{}
 		params = r.URL.Query()
-		log.Println(params)
+		// log.Println(params)
 		query := params.Get("q")
-		log.Println(query)
+		// log.Println(query)
 		var results []DictItem
 		if query != "" {
 			rows := i.AddressesSearch(query).Rows
@@ -1334,6 +1328,7 @@ func _create_cars_map(i *infinity) map[int64]InfinityCarInfo {
 	for _, info := range cars_info {
 		cars_map[info.ID] = info
 	}
+
 	return cars_map
 }
 
@@ -1355,57 +1350,6 @@ func (ch *CarsCache) CarInfo(car_id int64) *InfinityCarInfo {
 	return &key
 }
 
-//////////////////////////////////////////////////////////////////////////
-///////THIS IS FAKE API FOR TEST//////////////////////////////////////////
-//////////////////////////////////////////////////////////////////////////
-
-type FakeInfinity struct {
-	orders []Order
-}
-
-func (inf *FakeInfinity) NewOrder(order NewOrder) (ans Answer, e error) {
-	saved_order := Order{
-		ID:    int64(len(inf.orders) + 1),
-		State: 0,
-		Cost:  100500,
-	}
-
-	inf.orders = append(inf.orders, saved_order)
-
-	ans = Answer{
-		IsSuccess: true,
-		Message:   "test order was formed",
-	}
-	ans.Content.Id = saved_order.ID
-	log.Println("FA now i have orders: ", len(inf.orders))
-	return
-}
-
-func (inf *FakeInfinity) Orders() []Order {
-	return inf.orders
-}
-
-func (inf *FakeInfinity) CancelOrder(order_id int64) (bool, string) {
-	log.Println("FA order was canceled", order_id)
-	for i, order := range inf.orders {
-		if order.ID == order_id {
-			inf.orders[i].State = 7
-			return true, "test order was cancelled"
-		}
-	}
-	return false, "order not found :( "
-}
-
-func (p *FakeInfinity) CalcOrderCost(order NewOrder) (int, string) {
-	log.Println("FA calulate cost for order: ", order)
-	return 100500, "Good cost!"
-}
-
-func (p *FakeInfinity) AddressesSearch(text string) FastAddress {
-	log.Println("FA return empty address")
-	return FastAddress{}
-}
-
 var StatusesMap = map[int]string{
 	1:  "Не распределен",
 	2:  "Назначен",
@@ -1424,9 +1368,8 @@ var StatusesMap = map[int]string{
 }
 
 func IsOrderNotAvaliable(state int) bool {
-	if state == 9 || state == 13 {
+	if state == 9 || state == 13 || state == 7 {
 		return true
 	}
 	return false
-
 }

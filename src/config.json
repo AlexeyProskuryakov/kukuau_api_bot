@@ -3,7 +3,8 @@
 		"port" : 9191,
 		"callback_addr" : "foo.bar.baz",
 		"dict_url" : "foo", 
-		"test" : true
+		"test" : true,
+		"taxi_key": "Kuku demo_taxi_key"
 	},
 
 	"infinity" : {

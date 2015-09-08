@@ -39,9 +39,8 @@ func (odbh *ordersDbHandler) reConnect(conn string, dbname string) {
 	collection := session.DB(dbname).C("orders")
 	orders_index := mgo.Index{
 		Key:        []string{"order_id", "order_state"},
-		Unique:     true,
-		DropDups:   true,
 		Background: true,
+		Unique:     false,
 	}
 	collection.EnsureIndex(orders_index)
 
@@ -57,7 +56,6 @@ func (odbh *ordersDbHandler) reConnect(conn string, dbname string) {
 		Background: true,
 		Unique:     false,
 	}
-
 	collection.EnsureIndex(when_index)
 
 	odbh.collection = collection

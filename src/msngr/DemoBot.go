@@ -36,7 +36,7 @@ func setOutPackage(w http.ResponseWriter, out OutPkg) {
 
 	jsoned_out, err := json.Marshal(&out)
 	if err != nil {
-		log.Println(jsoned_out, err)
+		log.Println("set out package: ", jsoned_out, err)
 	}
 	w.Header().Set("Content-type", "application/json")
 	w.WriteHeader(http.StatusOK)
@@ -83,7 +83,7 @@ func FormBotControllerHandler(request_cmds map[string]RequestCommandProcessor, m
 			}
 
 		}
-		log.Printf("%+v\n", out)
+		log.Printf("out >>> %+v\n", out)
 
 		if err != nil {
 			out.Message = &OutMessage{Type: "error", Thread: "0", ID: genId(), Body: fmt.Sprintf("%+v", err)}

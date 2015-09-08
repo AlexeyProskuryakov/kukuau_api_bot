@@ -179,8 +179,8 @@ func (noh TaxiNewOrderHandler) ProcessMessage(in InPkg) (string, *[]Command, err
 			panic(ord_error)
 		}
 		noh.Orders.AddOrder(ans.Content.Id, in.From)
-		result := fmt.Sprintf("Ваш заказ создан! Вот так: %+v и ответ таков: %+v ", new_order, ans)
-		return result, &commands_at_created_order, nil
+		//todo check at infinity orders
+		return "Ваш заказ создан!", &commands_at_created_order, nil
 	} else {
 		return "Заказ уже создан!", nil, errors.New("Заказ уже создан!")
 	}
@@ -199,6 +199,7 @@ func (coh TaxiCancelOrderHandler) ProcessMessage(in InPkg) (string, *[]Command, 
 			err_str := fmt.Sprintf("Какие-то проблемы с отменой заказа %+v", info)
 			return err_str, nil, errors.New(err_str)
 		}
+		//todo check at infinity orders
 		return fmt.Sprintf("Ваш заказ отменен (%+v)", info), &commands_at_not_created_order, nil
 	}
 	return "У вас нет заказов!", &commands_at_not_created_order, errors.New("У вас нет заказов!")
