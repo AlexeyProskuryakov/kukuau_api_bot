@@ -36,14 +36,18 @@ func (n Notifier) Notify(outPkg OutPkg) {
 
 	body := bytes.NewBufferString(string(jsoned_out))
 	req, err := http.NewRequest("POST", n.address, body)
-	req.Header.Add("ContentType", "application/json")
-	req.Header.Add("Authorization", n.key)
-	req.Header.Add("Authorization", n.key)
 	warnp(err)
 
+	req.Header.Add("ContentType", "application/json")
+	req.Header.Add("Accept", "application/json")
+	req.Header.Add("Authorization", n.key)
+
+	log.Printf("N >> %+v", req)
+
 	client := &http.Client{}
-	_, err = client.Do(req)
+	resp, err := client.Do(req)
 	warn(err)
+	log.Printf("N << %+v", resp)
 }
 
 func FormNotification(order_id int64, state int, ohm OrderHandlerMixin, carCache *inf.CarsCache) OutPkg {
