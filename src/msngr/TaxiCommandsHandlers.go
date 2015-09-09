@@ -19,15 +19,16 @@ const (
 //settings of this module
 var DictUrl string
 
-var commands_at_created_order = []Command{
-	Command{
+var commands_at_created_order = []OutCommand{
+	OutCommand{
 		Title:    "Отменить заказ",
 		Action:   "cancel_order",
 		Position: 0,
 	},
 }
-var commands_at_not_created_order = []Command{
-	Command{
+
+var commands_at_not_created_order = []OutCommand{
+	OutCommand{
 		Title:    "Вызвать такси",
 		Action:   "new_order",
 		Position: 0,
@@ -35,13 +36,14 @@ var commands_at_not_created_order = []Command{
 		Form:     taxi_call_form,
 	},
 
-	Command{
+	OutCommand{
 		Title:    "Рассчитать цену",
 		Action:   "calculate_price",
 		Position: 1,
 		Form:     taxi_call_form,
 	},
 }
+
 var taxi_call_form = &OutForm{
 	Title: "Форма вызова такси",
 	Type:  "form",
@@ -100,12 +102,11 @@ var taxi_call_form = &OutForm{
 		},
 	},
 }
-
 var _taxi_db = GetUserHandler()
 
 type TaxiCommandsHandler struct{}
 
-func (s TaxiCommandsHandler) ProcessRequest(in InPkg) ([]Command, error) {
+func (s TaxiCommandsHandler) ProcessRequest(in InPkg) ([]OutCommand, error) {
 	state := _taxi_db.GetUserState(in.From)
 	if state == ORDER_CREATE {
 		return commands_at_created_order, nil
@@ -116,7 +117,7 @@ func (s TaxiCommandsHandler) ProcessRequest(in InPkg) ([]Command, error) {
 
 type TaxiInformationHandler struct{}
 
-func (ih TaxiInformationHandler) ProcessMessage(in InPkg) (string, *[]Command, error) {
+func (ih TaxiInformationHandler) ProcessMessage(in InPkg) (string, *[]OutCommand, error) {
 	return "Срочный заказ такси в Новосибирске. Быстрая подача. Оплата наличными или картой. ", nil, nil
 }
 
@@ -170,10 +171,11 @@ type TaxiNewOrderHandler struct {
 	OrderHandlerMixin
 }
 
-func (noh TaxiNewOrderHandler) ProcessMessage(in InPkg) (string, *[]Command, error) {
+func (noh TaxiNewOrderHandler) ProcessMessage(in InPkg) (string, *[]OutCommand, error) {
 	order_wrapper := noh.Orders.GetByOwner(in.From)
 	if order_wrapper == nil || inf.IsOrderNotAvaliable(order_wrapper.OrderState) {
-		new_order := _form_order(in.Message.Command.Form.Fields)
+		commands := *in.Message.Commands
+		new_order := _form_order(commands[0].Form.Fields)
 		ans, ord_error := noh.API.NewOrder(new_order)
 		if ord_error != nil {
 			panic(ord_error)
@@ -191,7 +193,7 @@ type TaxiCancelOrderHandler struct {
 	OrderHandlerMixin
 }
 
-func (coh TaxiCancelOrderHandler) ProcessMessage(in InPkg) (string, *[]Command, error) {
+func (coh TaxiCancelOrderHandler) ProcessMessage(in InPkg) (string, *[]OutCommand, error) {
 	order_wrapper := coh.Orders.GetByOwner(in.From)
 	if order_wrapper != nil {
 		ok, info := coh.API.CancelOrder(order_wrapper.OrderId)
@@ -209,10 +211,11 @@ type TaxiCalculatePriceHandler struct {
 	inf.InfinityMixin
 }
 
-func (cph TaxiCalculatePriceHandler) ProcessMessage(in InPkg) (string, *[]Command, error) {
-	order := _form_order(in.Message.Command.Form.Fields)
+func (cph TaxiCalculatePriceHandler) ProcessMessage(in InPkg) (string, *[]OutCommand, error) {
+	commands := *in.Message.Commands
+	order := _form_order(commands[0].Form.Fields)
 	s, details := cph.API.CalcOrderCost(order)
-	log.Println(details)
+	log.Println("calculated order cost details: ", details)
 	cost := strconv.Itoa(s)
 	return fmt.Sprintf("Стоймость будет всего лишь %v рублей! \nА детали таковы: %v", cost, details), nil, nil
 }

@@ -9,13 +9,13 @@ import (
 
 var shop_db = GetUserHandler()
 
-var authorised_commands = []Command{
-	Command{
+var authorised_commands = []OutCommand{
+	OutCommand{
 		Title:    "Мои заказы",
 		Action:   "orders_state",
 		Position: 0,
 	},
-	Command{
+	OutCommand{
 		Title:    "Написать в тех. поддержку",
 		Action:   "support_message",
 		Position: 1,
@@ -35,14 +35,14 @@ var authorised_commands = []Command{
 			},
 		},
 	},
-	Command{
+	OutCommand{
 		Title:    "Выйти",
 		Action:   "log_out",
 		Position: 2,
 	},
 }
-var not_authorised_commands = []Command{
-	Command{
+var not_authorised_commands = []OutCommand{
+	OutCommand{
 		Title:    "Авторизоваться",
 		Action:   "authorise",
 		Position: 0,
@@ -98,9 +98,9 @@ func _get_user_and_password(fields []InField) (string, string) {
 	return user, password
 }
 
-func (ch ShopCommandsHandler) ProcessRequest(in InPkg) ([]Command, error) {
+func (ch ShopCommandsHandler) ProcessRequest(in InPkg) ([]OutCommand, error) {
 	user_state := shop_db.GetUserState(in.From)
-	commands := []Command{}
+	commands := []OutCommand{}
 	if user_state == USER_AUTHORISED {
 		commands = authorised_commands
 	} else {
@@ -111,8 +111,9 @@ func (ch ShopCommandsHandler) ProcessRequest(in InPkg) ([]Command, error) {
 
 type ShopAuthoriseHandler struct{}
 
-func (s ShopAuthoriseHandler) ProcessMessage(in InPkg) (string, *[]Command, error) {
-	user, password := _get_user_and_password(in.Message.Command.Form.Fields)
+func (s ShopAuthoriseHandler) ProcessMessage(in InPkg) (string, *[]OutCommand, error) {
+	command := *in.Message.Commands
+	user, password := _get_user_and_password(command[0].Form.Fields)
 	log.Println("user, pass: ", user, password)
 	if shop_db.CheckUserPassword(user, password) {
 		log.Println("was auth...")
@@ -136,7 +137,7 @@ func __choiceString(choices []string) string {
 
 var order_states = [3]string{"обработан", "создан", "отправлен"}
 
-func (os ShopOrderStateHandler) ProcessMessage(in InPkg) (string, *[]Command, error) {
+func (os ShopOrderStateHandler) ProcessMessage(in InPkg) (string, *[]OutCommand, error) {
 	if shop_db.GetUserState(in.From) == USER_AUTHORISED {
 		result := fmt.Sprintf("Ваш заказ с номером %v %v", rand.Int31n(10000), __choiceString(order_states[:]))
 		return result, &authorised_commands, nil
@@ -146,19 +147,19 @@ func (os ShopOrderStateHandler) ProcessMessage(in InPkg) (string, *[]Command, er
 
 type ShopSupportMessageHandler struct{}
 
-func (sm ShopSupportMessageHandler) ProcessMessage(in InPkg) (string, *[]Command, error) {
+func (sm ShopSupportMessageHandler) ProcessMessage(in InPkg) (string, *[]OutCommand, error) {
 	return "Ваш отзыв важен для нас, спасибо.", nil, nil
 }
 
 type ShopInformationHandler struct{}
 
-func (ih ShopInformationHandler) ProcessMessage(in InPkg) (string, *[]Command, error) {
+func (ih ShopInformationHandler) ProcessMessage(in InPkg) (string, *[]OutCommand, error) {
 	return "Покупки в тысячах проверенных магазинов! (тестовый логин: test, пароль: 123)", nil, nil
 }
 
 type ShopLogOutMessageHandler struct{}
 
-func (lo ShopLogOutMessageHandler) ProcessMessage(in InPkg) (string, *[]Command, error) {
+func (lo ShopLogOutMessageHandler) ProcessMessage(in InPkg) (string, *[]OutCommand, error) {
 	shop_db.RemoveUserState(in.From)
 	return "Вы вышли. Ура!", &not_authorised_commands, nil //todo
 }

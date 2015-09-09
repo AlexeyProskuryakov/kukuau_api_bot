@@ -75,11 +75,13 @@ func FormBotControllerHandler(request_cmds map[string]RequestCommandProcessor, m
 		} else if in.Message != nil {
 			log.Printf("processing message %+v", in)
 			out.Message = &OutMessage{Type: in.Message.Type, Thread: in.Message.Thread, ID: genId()}
-			action := in.Message.Command.Action
-			if commandProcessor, ok := message_cmds[action]; ok {
-				out.Message.Body, out.Message.Commands, err = commandProcessor.ProcessMessage(in)
-			} else {
-				out.Message.Body = "Команда не поддерживается."
+			for _, command := range *in.Message.Commands {
+				action := command.Action
+				if commandProcessor, ok := message_cmds[action]; ok {
+					out.Message.Body, out.Message.Commands, err = commandProcessor.ProcessMessage(in)
+				} else {
+					out.Message.Body = "Команда не поддерживается."
+				}
 			}
 
 		}

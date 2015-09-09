@@ -31,11 +31,11 @@ type InCommand struct {
 	Form   InForm `json:"form"`
 }
 type InMessage struct {
-	ID      string     `json:"id"`
-	Type    string     `json:"type"`
-	Thread  string     `json:"thread"`
-	Body    *string    `json:"body"`
-	Command *InCommand `json:"command"`
+	ID       string       `json:"id"`
+	Type     string       `json:"type"`
+	Thread   string       `json:"thread"`
+	Body     *string      `json:"body"`
+	Commands *[]InCommand `json:"commands"`
 }
 
 type InRequest struct {
@@ -77,7 +77,7 @@ type OutForm struct {
 	Fields []OutField `json:"fields,omitempty"`
 }
 
-type Command struct {
+type OutCommand struct {
 	Title    string   `json:"title"`
 	Action   string   `json:"action"`
 	Position int      `json:"position"`
@@ -87,22 +87,22 @@ type Command struct {
 }
 
 type OutMessage struct {
-	ID       string     `json:"id"`
-	Type     string     `json:"type,omitempty"`
-	Thread   string     `json:"thread,omitempty"`
-	Body     string     `json:"body"`
-	Commands *[]Command `json:"commands,omitempty"`
+	ID       string        `json:"id"`
+	Type     string        `json:"type,omitempty"`
+	Thread   string        `json:"thread,omitempty"`
+	Body     string        `json:"body"`
+	Commands *[]OutCommand `json:"commands,omitempty"`
 }
 
 type OutRequest struct {
 	ID    string `json:"id,omitempty"`
 	Type  string `json:"type,omitempty"`
 	Query struct {
-		Title  string    `json:"title,omitempty"`
-		Action string    `json:"action"`
-		Text   string    `json:"text,omitempty"`
-		Form   *OutForm  `json:"form,omitempty"`
-		Result []Command `json:"result,omitempty"`
+		Title  string       `json:"title,omitempty"`
+		Action string       `json:"action"`
+		Text   string       `json:"text,omitempty"`
+		Form   *OutForm     `json:"form,omitempty"`
+		Result []OutCommand `json:"result,omitempty"`
 	} `json:"query"`
 }
 

@@ -9,7 +9,7 @@ import (
 	"log"
 	"net/http"
 	"net/url"
-	"os"
+	// "os"
 	// "strconv"
 	"sync"
 	"time"
@@ -92,7 +92,7 @@ type InfinityMixin struct {
 	API TaxiInterface
 }
 
-func initInfinity(conn_str, host, login, password string) *infinity {
+func _initInfinity(conn_str, host, login, password string) *infinity {
 	result := &infinity{}
 	result.ConnString = conn_str
 	result.Host = host
@@ -110,11 +110,11 @@ func GetInfinityAPI(iap InfinityApiParams, isTest bool) TaxiInterface {
 	} else {
 		log.Println("return REAL API AHTUNG!!!")
 		once.Do(func() {
-			instance = initInfinity(iap.ConnectionsString, iap.Host, iap.Login, iap.Login)
+			instance = _initInfinity(iap.ConnectionsString, iap.Host, iap.Login, iap.Login)
 		})
 		//todo this is coprocode realise with your brains!!!
 		if instance == nil {
-			instance = initInfinity(iap.ConnectionsString, iap.Host, iap.Login, iap.Login)
+			instance = _initInfinity(iap.ConnectionsString, iap.Host, iap.Login, iap.Login)
 		}
 		return instance
 	}
@@ -122,7 +122,7 @@ func GetInfinityAPI(iap InfinityApiParams, isTest bool) TaxiInterface {
 
 func GetRealInfinityAPI(iap InfinityApiParams) *infinity {
 	if instance == nil {
-		instance = initInfinity(iap.ConnectionsString, iap.Host, iap.Login, iap.Login)
+		instance = _initInfinity(iap.ConnectionsString, iap.Host, iap.Login, iap.Login)
 	}
 	return instance
 }
@@ -183,13 +183,10 @@ type NewOrder struct {
 	IdService       int64  `json:"idService"`       //<Идентификатор услуги заказа (не может быть пустым)>
 	Notes           string `json:"notes"`           // <Комментарий к заказу>
 	//Markups           [2]int64 `json:"markups"`           // <Массив идентификаторов наценок заказа>
-	Attributes [2]int64 `json:"attributes"` // <Массив идентификаторов дополнительных атрибутов заказа>
-	// Инфомация о месте подачи машины
-	Delivery Delivery `json:"delivery"`
-	// Пункты назначения заказа (массив, не может быть пустым)
-	Destinations []Destination `json:"destinations"`
-	// Флаг безналичного заказа
-	IsNotCash bool `json:"isNotCash"` //: <true или false (bool)>
+	Attributes   [2]int64      `json:"attributes"`   // <Массив идентификаторов дополнительных атрибутов заказа>
+	Delivery     Delivery      `json:"delivery"`     // Инфомация о месте подачи машины
+	Destinations []Destination `json:"destinations"` // Пункты назначения заказа (массив, не может быть пустым)
+	IsNotCash    bool          `json:"isNotCash"`    //: // Флаг безналичного заказа <true или false (bool)>
 }
 
 type Order struct {
@@ -324,19 +321,18 @@ type InfinityCarInfo struct {
 	Lon      float64 `json:"Lon"`
 }
 
-// GetServices возвращает информацию об услугах доступных для заказа (filterField is set to true!)
-func (p *infinity) GetServices() []InfinityService {
-	var tmp []InfinityServices
+func (p *infinity) _request(conn_suffix string, url_values map[string]string) []byte {
 	client := &http.Client{}
-	req, err := http.NewRequest("GET", p.ConnString+"GetViewData", nil)
+	req, err := http.NewRequest("GET", p.ConnString+conn_suffix, nil)
 	warnp(err)
 	req.Header.Add("ContentType", "text/html;charset=UTF-8")
 	values := req.URL.Query()
-	values.Add("params", "[{\"viewName\":\"Taxi.Services\",\"filterField\":{\"n\":\"AvailableToClients\",\"v\":true}}]")
+	for k, v := range url_values {
+		values.Add(k, v)
+	}
+
 	req.URL.RawQuery = values.Encode()
-	//log.Println(values)
 	req.AddCookie(p.Cookie)
-	//log.Println("Cookies in request? ", req.Cookies())
 	res, err := client.Do(req)
 	if res.Status == "403 Forbidden" {
 		err = errors.New("Ошибка авторизации infinity! (Возможно не установлены cookies)")
@@ -345,9 +341,16 @@ func (p *infinity) GetServices() []InfinityService {
 	warnp(err)
 	defer res.Body.Close()
 	body, err := ioutil.ReadAll(res.Body)
-	//log.Println(string(body))
 	warnp(err)
-	err = json.Unmarshal(body, &tmp)
+	return body
+}
+
+// GetServices возвращает информацию об услугах доступных для заказа (filterField is set to true!)
+func (p *infinity) GetServices() []InfinityService {
+	var tmp []InfinityServices
+
+	body := p._request("GetViewData", map[string]string{"params": "[{\"viewName\":\"Taxi.Services\",\"filterField\":{\"n\":\"AvailableToClients\",\"v\":true}}]"})
+	err := json.Unmarshal(body, &tmp)
 	warnp(err)
 	return tmp[0].Rows
 }
@@ -355,59 +358,16 @@ func (p *infinity) GetServices() []InfinityService {
 // GetCarsInfo возвращает информацию о машинах
 func (p *infinity) GetCarsInfo() []InfinityCarInfo {
 	var tmp []InfinityCarsInfo
-	client := &http.Client{}
-	req, err := http.NewRequest("GET", p.ConnString+"GetViewData", nil)
-	warnp(err)
-	req.Header.Add("ContentType", "text/html;charset=UTF-8")
-	values := req.URL.Query()
-	values.Add("params", "[{\"viewName\":\"Taxi.Cars.InfoEx\"}]")
-	req.URL.RawQuery = values.Encode()
-	req.AddCookie(p.Cookie)
-	//log.Println("Cookies in request? ", req.Cookies())
-	res, err := client.Do(req)
-	if res.Status == "403 Forbidden" {
-		err = errors.New("Ошибка авторизации infinity! (Возможно не установлены cookies)")
-		p.reconnect()
-	}
-	warnp(err)
-	defer res.Body.Close()
-	body, err := ioutil.ReadAll(res.Body)
-	//log.Println(string(body))
-	warnp(err)
-	err = json.Unmarshal(body, &tmp)
+	body := p._request("GetViewData", map[string]string{"params": "[{\"viewName\":\"Taxi.Cars.InfoEx\"}]"})
+	err := json.Unmarshal(body, &tmp)
 	warnp(err)
 	return tmp[0].Rows
 }
 
 func (p *infinity) NewOrder(order NewOrder) (Answer, error) {
-	client := &http.Client{}
-	req, err := http.NewRequest("GET", p.ConnString+"RemoteCall", nil)
-	warnp(err)
-	req.Header.Add("ContentType", "text/html;charset=UTF-8")
-	values := req.URL.Query()
-	values.Add("method", "Taxi.WebAPI.NewOrder")
-
 	param, err := json.Marshal(order)
-	warn(err)
-	values.Add("params", string(param))
-
-	//log.Println(string(param), err)
-
-	req.URL.RawQuery = values.Encode()
-
-	log.Printf("[New Order] inf cookie: %+v \n[%+v]", p.Cookie, p)
-	req.AddCookie(p.Cookie)
-	//log.Println("Cookies in request? ", req.Cookies())
-	res, err := client.Do(req)
-	if res.Status == "403 Forbidden" {
-		err = errors.New("Ошибка авторизации infinity! (Возможно не установлены cookies)")
-		p.reconnect()
-	}
 	warnp(err)
-	defer res.Body.Close()
-	body, err := ioutil.ReadAll(res.Body)
-	warnp(err)
-
+	body := p._request("RemoteCall", map[string]string{"params": string(param), "method": "Taxi.WebAPI.NewOrder"})
 	var ans Answer
 	err = json.Unmarshal(body, &ans)
 	warnp(err)
@@ -415,40 +375,11 @@ func (p *infinity) NewOrder(order NewOrder) (Answer, error) {
 }
 
 func (p *infinity) CalcOrderCost(order NewOrder) (int, string) {
-	client := &http.Client{}
-	req, err := http.NewRequest("GET", p.ConnString+"RemoteCall", nil)
-	warnp(err)
-	req.Header.Add("ContentType", "text/html;charset=UTF-8")
-	values := req.URL.Query()
-	values.Add("method", "Taxi.WebAPI.CalcOrderCost")
-
 	param, err := json.Marshal(order)
-	warn(err)
-	values.Add("params", string(param))
-
-	//log.Println(string(param), err)
-
-	req.URL.RawQuery = values.Encode()
-
-	log.Println(req.URL)
-
-	req.AddCookie(p.Cookie)
-	//log.Println("Cookies in request? ", req.Cookies())
-	res, err := client.Do(req)
-	if res.Status == "403 Forbidden" {
-		err = errors.New("Ошибка авторизации infinity! (Возможно не установлены cookies)")
-		p.reconnect()
-	}
 	warnp(err)
-	defer res.Body.Close()
-	body, err := ioutil.ReadAll(res.Body)
-	warnp(err)
-
-	log.Println(string(body))
-
+	body := p._request("RemoteCall", map[string]string{"params": string(param), "method": "Taxi.WebAPI.CalcOrderCost"})
 	var tmp Answer
 	err = json.Unmarshal(body, &tmp)
-	//log.Println(tmp)
 	warnp(err)
 	return tmp.Content.Cost, tmp.Content.Details
 }
@@ -464,30 +395,11 @@ type PrivateParams struct {
 //Контент:
 //Параметры личного кабинета клиента в виде JSON объекта: { "name" : <Имя клиента>, "login" : <Логин клиента> }
 func (p *infinity) GetPrivateParams() (bool, string, string) {
-	client := &http.Client{}
-	req, err := http.NewRequest("GET", p.ConnString+"RemoteCall", nil)
-	warnp(err)
-	req.Header.Add("ContentType", "text/html;charset=UTF-8")
-	values := req.URL.Query()
-	values.Add("method", "Taxi.WebAPI.Client.GetPrivateParams")
-	req.URL.RawQuery = values.Encode()
-	//log.Println(req.URL)
 
-	req.AddCookie(p.Cookie)
-	//log.Println("Cookies in request? ", req.Cookies())
-	res, err := client.Do(req)
-	if res.Status == "403 Forbidden" {
-		err = errors.New("Ошибка авторизации infinity! (Возможно не установлены cookies)")
-		p.reconnect()
-	}
-	warnp(err)
-	defer res.Body.Close()
-	body, err := ioutil.ReadAll(res.Body)
-	warnp(err)
-
+	body := p._request("RemoteCall", map[string]string{"method": "Taxi.WebAPI.Client.GetPrivateParams"})
 	var temp Answer
-
-	err = json.Unmarshal(body, &temp)
+	err := json.Unmarshal(body, &temp)
+	warnp(err)
 	return temp.IsSuccess, temp.Content.Name, temp.Content.Login
 }
 
@@ -499,31 +411,9 @@ func (p *infinity) GetPrivateParams() (bool, string, string) {
 //Параметры:
 //Новый пароль (строка)
 func (p *infinity) ChangePassword(password string) (bool, string) {
-	client := &http.Client{}
-	req, err := http.NewRequest("GET", p.ConnString+"RemoteCall", nil)
-	warnp(err)
-	req.Header.Add("ContentType", "text/html;charset=UTF-8")
-	values := req.URL.Query()
-	values.Add("method", "Taxi.WebAPI.Client.ChangePassword")
 	tmp, err := json.Marshal(password)
 	warnp(err)
-	values.Add("params", string(tmp))
-	req.URL.RawQuery = values.Encode()
-
-	//log.Println(req.URL)
-
-	req.AddCookie(p.Cookie)
-	//log.Println("Cookies in request? ", req.Cookies())
-	res, err := client.Do(req)
-	if res.Status == "403 Forbidden" {
-		err = errors.New("Ошибка авторизации infinity! (Возможно не установлены cookies)")
-		p.reconnect()
-	}
-	warnp(err)
-	defer res.Body.Close()
-	body, err := ioutil.ReadAll(res.Body)
-	warnp(err)
-
+	body := p._request("RemoteCall", map[string]string{"params": string(tmp), "method": "Taxi.WebAPI.Client.ChangePassword"})
 	var temp Answer
 	err = json.Unmarshal(body, &temp)
 	warnp(err)
@@ -534,30 +424,11 @@ func (p *infinity) ChangePassword(password string) (bool, string) {
 //Параметры:
 //Новое имя клиента (строка)
 func (p *infinity) ChangeName(name string) (bool, string) {
-	client := &http.Client{}
-	req, err := http.NewRequest("GET", p.ConnString+"RemoteCall", nil)
-	warnp(err)
-	req.Header.Add("ContentType", "text/html;charset=UTF-8")
-	values := req.URL.Query()
-	values.Add("method", "Taxi.WebAPI.Client.ChangeName")
+
 	tmp, err := json.Marshal(name)
 	warnp(err)
-	values.Add("params", string(tmp))
-	req.URL.RawQuery = values.Encode()
 
-	//log.Println(req.URL)
-
-	req.AddCookie(p.Cookie)
-	//log.Println("Cookies in request? ", req.Cookies())
-	res, err := client.Do(req)
-	if res.Status == "403 Forbidden" {
-		err = errors.New("Ошибка авторизации infinity! (Возможно не установлены cookies)")
-		p.reconnect()
-	}
-	warnp(err)
-	defer res.Body.Close()
-	body, err := ioutil.ReadAll(res.Body)
-	warnp(err)
+	body := p._request("RemoteCall", map[string]string{"params": string(tmp), "method": "Taxi.WebAPI.Client.ChangeName"})
 
 	var temp Answer
 	err = json.Unmarshal(body, &temp)
@@ -569,30 +440,10 @@ func (p *infinity) ChangeName(name string) (bool, string) {
 //Параметры:
 //Текст сообщения (строка)
 func (p *infinity) SendMessage(message string) (bool, string /*, string*/) {
-	client := &http.Client{}
-	req, err := http.NewRequest("GET", p.ConnString+"RemoteCall", nil)
-	warnp(err)
-	req.Header.Add("ContentType", "text/html;charset=UTF-8")
-	values := req.URL.Query()
-	values.Add("method", "Taxi.WebAPI.Client.SendMessage")
 	tmp, err := json.Marshal(message)
 	warnp(err)
-	values.Add("params", string(tmp))
-	req.URL.RawQuery = values.Encode()
 
-	//log.Println(req.URL)
-
-	req.AddCookie(p.Cookie)
-	//log.Println("Cookies in request? ", req.Cookies())
-	res, err := client.Do(req)
-	if res.Status == "403 Forbidden" {
-		err = errors.New("Ошибка авторизации infinity! (Возможно не установлены cookies)")
-		p.reconnect()
-	}
-	warnp(err)
-	defer res.Body.Close()
-	body, err := ioutil.ReadAll(res.Body)
-	warnp(err)
+	body := p._request("RemoteCall", map[string]string{"params": string(tmp), "method": "Taxi.WebAPI.Client.SendMessage"})
 
 	var temp Answer
 	err = json.Unmarshal(body, &temp)
@@ -601,31 +452,9 @@ func (p *infinity) SendMessage(message string) (bool, string /*, string*/) {
 }
 
 func (p *infinity) CallbackRequest(phone string) (bool, string) {
-	client := &http.Client{}
-	req, err := http.NewRequest("GET", p.ConnString+"RemoteCall", nil)
-	warnp(err)
-	req.Header.Add("ContentType", "text/html;charset=UTF-8")
-	values := req.URL.Query()
-	values.Add("method", "Taxi.WebAPI.Client.CallbackRequest")
 	tmp, err := json.Marshal(phone)
 	warnp(err)
-	values.Add("params", string(tmp))
-	req.URL.RawQuery = values.Encode()
-
-	//log.Println(req.URL)
-
-	req.AddCookie(p.Cookie)
-	//log.Println("Cookies in request? ", req.Cookies())
-	res, err := client.Do(req)
-	if res.Status == "403 Forbidden" {
-		err = errors.New("Ошибка авторизации infinity! (Возможно не установлены cookies)")
-		p.reconnect()
-	}
-	warnp(err)
-	defer res.Body.Close()
-	body, err := ioutil.ReadAll(res.Body)
-	warnp(err)
-
+	body := p._request("RemoteCall", map[string]string{"params": string(tmp), "method": "Taxi.WebAPI.Client.CallbackRequest"})
 	var temp Answer
 	err = json.Unmarshal(body, &temp)
 	warnp(err)
@@ -635,30 +464,10 @@ func (p *infinity) CallbackRequest(phone string) (bool, string) {
 //Taxi.WebAPI.Client.ClearHistory (Очистка истории заказов клиента)
 //Отмечает закрытые заказы клиента как не видимые для личного кабинета (т.е. сама информация о заказе не удаляется)
 func (p *infinity) ClearHistory() (bool, string) {
-	client := &http.Client{}
-	req, err := http.NewRequest("GET", p.ConnString+"RemoteCall", nil)
-	warnp(err)
-	req.Header.Add("ContentType", "text/html;charset=UTF-8")
-	values := req.URL.Query()
-	values.Add("method", "Taxi.WebAPI.Client.ClearHistory")
-	req.URL.RawQuery = values.Encode()
-
-	//log.Println(req.URL)
-
-	req.AddCookie(p.Cookie)
-	//log.Println("Cookies in request? ", req.Cookies())
-	res, err := client.Do(req)
-	if res.Status == "403 Forbidden" {
-		err = errors.New("Ошибка авторизации infinity! (Возможно не установлены cookies)")
-		p.reconnect()
-	}
-	warnp(err)
-	defer res.Body.Close()
-	body, err := ioutil.ReadAll(res.Body)
-	warnp(err)
+	body := p._request("RemoteCall", map[string]string{"method": "Taxi.WebAPI.Client.ClearHistory"})
 
 	var temp Answer
-	err = json.Unmarshal(body, &temp)
+	err := json.Unmarshal(body, &temp)
 	warnp(err)
 	return temp.IsSuccess, temp.Message
 }
@@ -667,32 +476,10 @@ func (p *infinity) ClearHistory() (bool, string) {
 //Параметры:
 //Идентификатор заказа (Int64)
 func (p *infinity) CancelOrder(order int64) (bool, string) {
-	client := &http.Client{}
-	req, err := http.NewRequest("GET", p.ConnString+"RemoteCall", nil)
-	warnp(err)
-	req.Header.Add("ContentType", "text/html;charset=UTF-8")
-	values := req.URL.Query()
-	values.Add("method", "Taxi.WebAPI.Client.CancelOrder")
-
 	tmp, err := json.Marshal(order)
 	warnp(err)
-	values.Add("params", string(tmp))
 
-	req.URL.RawQuery = values.Encode()
-
-	//log.Println(req.URL)
-
-	req.AddCookie(p.Cookie)
-	//log.Println("Cookies in request? ", req.Cookies())
-	res, err := client.Do(req)
-	if res.Status == "403 Forbidden" {
-		err = errors.New("Ошибка авторизации infinity! (Возможно не установлены cookies)")
-		p.reconnect()
-	}
-	warnp(err)
-	defer res.Body.Close()
-	body, err := ioutil.ReadAll(res.Body)
-	warnp(err)
+	body := p._request("RemoteCall", map[string]string{"params": string(tmp), "method": "Taxi.WebAPI.Client.CancelOrder"})
 
 	var temp Answer
 	err = json.Unmarshal(body, &temp)
@@ -716,32 +503,10 @@ type feedback struct {
 }
 
 func (p *infinity) Feedback(inf feedback) (bool, string) {
-	client := &http.Client{}
-	req, err := http.NewRequest("GET", p.ConnString+"RemoteCall", nil)
-	warnp(err)
-	req.Header.Add("ContentType", "text/html;charset=UTF-8")
-	values := req.URL.Query()
-	values.Add("method", "Taxi.WebAPI.Client.Feedback")
-
 	tmp, err := json.Marshal(inf)
 	warnp(err)
-	values.Add("params", string(tmp))
 
-	req.URL.RawQuery = values.Encode()
-
-	//log.Println(req.URL)
-
-	req.AddCookie(p.Cookie)
-	//log.Println("Cookies in request? ", req.Cookies())
-	res, err := client.Do(req)
-	if res.Status == "403 Forbidden" {
-		err = errors.New("Ошибка авторизации infinity! (Возможно не установлены cookies)")
-		p.reconnect()
-	}
-	warnp(err)
-	defer res.Body.Close()
-	body, err := ioutil.ReadAll(res.Body)
-	warnp(err)
+	body := p._request("RemoteCall", map[string]string{"params": string(tmp), "method": "Taxi.WebAPI.Client.Feedback"})
 
 	var temp Answer
 	err = json.Unmarshal(body, &temp)
@@ -754,32 +519,10 @@ func (p *infinity) Feedback(inf feedback) (bool, string) {
 //Параметры:
 //Идентификатор заказа (Int64)
 func (p *infinity) WhereIT(ID int64) (bool, string) {
-	client := &http.Client{}
-	req, err := http.NewRequest("GET", p.ConnString+"RemoteCall", nil)
-	warnp(err)
-	req.Header.Add("ContentType", "text/html;charset=UTF-8")
-	values := req.URL.Query()
-	values.Add("method", "Taxi.WebAPI.Client.WhereIT")
-
 	tmp, err := json.Marshal(ID)
 	warnp(err)
-	values.Add("params", string(tmp))
 
-	req.URL.RawQuery = values.Encode()
-
-	//log.Println(req.URL)
-
-	req.AddCookie(p.Cookie)
-	//log.Println("Cookies in request? ", req.Cookies())
-	res, err := client.Do(req)
-	if res.Status == "403 Forbidden" {
-		err = errors.New("Ошибка авторизации infinity! (Возможно не установлены cookies)")
-		p.reconnect()
-	}
-	warnp(err)
-	defer res.Body.Close()
-	body, err := ioutil.ReadAll(res.Body)
-	warnp(err)
+	body := p._request("RemoteCall", map[string]string{"params": string(tmp), "method": "Taxi.WebAPI.Client.WhereIT"})
 
 	var temp Answer
 	err = json.Unmarshal(body, &temp)
@@ -803,35 +546,10 @@ type phonesEdit struct {
 }
 
 func (p *infinity) PhonesEdit(phone phonesEdit) (bool, string) {
-	client := &http.Client{}
-	req, err := http.NewRequest("GET", p.ConnString+"RemoteCall", nil)
-	warnp(err)
-	req.Header.Add("ContentType", "text/html;charset=UTF-8")
-	values := req.URL.Query()
-	values.Add("method", "Taxi.WebAPI.Client.Phones.Edit")
-
 	tmp, err := json.Marshal(phone)
 	warnp(err)
-	values.Add("params", string(tmp))
-
-	req.URL.RawQuery = values.Encode()
-
-	//log.Println(req.URL)
-
-	req.AddCookie(p.Cookie)
-	//log.Println("Cookies in request? ", req.Cookies())
-	res, err := client.Do(req)
-	if res.Status == "403 Forbidden" {
-		err = errors.New("Ошибка авторизации infinity! (Возможно не установлены cookies)")
-		p.reconnect()
-	}
-	warnp(err)
-	defer res.Body.Close()
-	body, err := ioutil.ReadAll(res.Body)
-	warnp(err)
-
+	body := p._request("RemoteCall", map[string]string{"params": string(tmp), "method": "Taxi.WebAPI.Client.Phones.Edit"})
 	var temp Answer
-	//log.Println(string(body))
 	err = json.Unmarshal(body, &temp)
 	warnp(err)
 	return temp.IsSuccess, temp.Message
@@ -841,33 +559,9 @@ func (p *infinity) PhonesEdit(phone phonesEdit) (bool, string) {
 //Параметры:
 //Идентификатор телефона клиента (Int64)
 func (p *infinity) PhonesRemove(phone int64) (bool, string) {
-	client := &http.Client{}
-	req, err := http.NewRequest("GET", p.ConnString+"RemoteCall", nil)
-	warnp(err)
-	req.Header.Add("ContentType", "text/html;charset=UTF-8")
-	values := req.URL.Query()
-	values.Add("method", "Taxi.WebAPI.Client.Phones.Remove")
-
 	tmp, err := json.Marshal(phone)
 	warnp(err)
-	values.Add("params", string(tmp))
-
-	req.URL.RawQuery = values.Encode()
-
-	//log.Println(req.URL)
-
-	req.AddCookie(p.Cookie)
-	//log.Println("Cookies in request? ", req.Cookies())
-	res, err := client.Do(req)
-	if res.Status == "403 Forbidden" {
-		err = errors.New("Ошибка авторизации infinity! (Возможно не установлены cookies)")
-		p.reconnect()
-	}
-	warnp(err)
-	defer res.Body.Close()
-	body, err := ioutil.ReadAll(res.Body)
-	warnp(err)
-
+	body := p._request("RemoteCall", map[string]string{"params": string(tmp), "method": "Taxi.WebAPI.Client.Phones.Remove"})
 	var temp Answer
 	err = json.Unmarshal(body, &temp)
 	warnp(err)
@@ -897,67 +591,23 @@ type favorite struct {
 //Параметры idRegion, idDistrict, idCity, idStreet, house, building, fraction используются для создания нового
 //описания адреса и не анализируются при указании параметра idAddress.
 func (p *infinity) AddressesEdit(f favorite) (bool, string) {
-	client := &http.Client{}
-	req, err := http.NewRequest("GET", p.ConnString+"RemoteCall", nil)
-	warnp(err)
-	req.Header.Add("ContentType", "text/html;charset=UTF-8")
-	values := req.URL.Query()
-	values.Add("method", "Taxi.WebAPI.Client.Addresses.Edit")
 
 	tmp, err := json.Marshal(f)
 	warnp(err)
-	values.Add("params", string(tmp))
 
-	req.URL.RawQuery = values.Encode()
-
-	//log.Println(req.URL)
-
-	req.AddCookie(p.Cookie)
-	//log.Println("Cookies in request? ", req.Cookies())
-	res, err := client.Do(req)
-	if res.Status == "403 Forbidden" {
-		err = errors.New("Ошибка авторизации infinity! (Возможно не установлены cookies)")
-		p.reconnect()
-	}
-	warnp(err)
-	defer res.Body.Close()
-	body, err := ioutil.ReadAll(res.Body)
-	warnp(err)
-
+	body := p._request("RemoteCall", map[string]string{"params": string(tmp), "method": "Taxi.WebAPI.Client.Addresses.Edit"})
 	var temp Answer
 	err = json.Unmarshal(body, &temp)
 	warnp(err)
+
 	return temp.IsSuccess, temp.Message
 }
 
 func (p *infinity) AddressesRemove(id int64) (bool, string) {
-	client := &http.Client{}
-	req, err := http.NewRequest("GET", p.ConnString+"RemoteCall", nil)
-	warnp(err)
-	req.Header.Add("ContentType", "text/html;charset=UTF-8")
-	values := req.URL.Query()
-	values.Add("method", "Taxi.WebAPI.Client.Addresses.Remove")
-
 	tmp, err := json.Marshal(id)
 	warnp(err)
-	values.Add("params", string(tmp))
 
-	req.URL.RawQuery = values.Encode()
-
-	//log.Println(req.URL)
-
-	req.AddCookie(p.Cookie)
-	//log.Println("Cookies in request? ", req.Cookies())
-	res, err := client.Do(req)
-	if res.Status == "403 Forbidden" {
-		err = errors.New("Ошибка авторизации infinity! (Возможно не установлены cookies)")
-		p.reconnect()
-	}
-	warnp(err)
-	defer res.Body.Close()
-	body, err := ioutil.ReadAll(res.Body)
-	warnp(err)
-
+	body := p._request("RemoteCall", map[string]string{"params": string(tmp), "method": "Taxi.WebAPI.Client.Addresses.Remove"})
 	var temp Answer
 	err = json.Unmarshal(body, &temp)
 	warnp(err)
@@ -968,98 +618,30 @@ func (p *infinity) AddressesRemove(id int64) (bool, string) {
 
 //Taxi.Orders (Заказы: активные и предварительные)
 func (p *infinity) Orders() []Order {
-	client := &http.Client{}
-	req, err := http.NewRequest("GET", p.ConnString+"GetViewData", nil)
-	warnp(err)
-	req.Header.Add("ContentType", "text/html;charset=UTF-8")
-	values := req.URL.Query()
-
-	values.Add("params", "[{\"viewName\": \"Taxi.Orders\"}]")
-
-	req.URL.RawQuery = values.Encode()
-
-	log.Println(req.URL)
-
-	req.AddCookie(p.Cookie)
-	//log.Println("Cookies in request? ", req.Cookies())
-	res, err := client.Do(req)
-	if res.Status == "403 Forbidden" {
-		err = errors.New("Ошибка авторизации infinity! (Возможно не установлены cookies)")
-		p.reconnect()
-	}
-	warnp(err)
-	defer res.Body.Close()
-	body, err := ioutil.ReadAll(res.Body)
-	warnp(err)
+	body := p._request("GetViewData", map[string]string{"params": "[{\"viewName\": \"Taxi.Orders\"}]"})
 
 	var temp []Order
-	err = json.Unmarshal(body, &temp)
+	err := json.Unmarshal(body, &temp)
 	warnp(err)
 	return temp
 }
 
 //Taxi.Orders.Closed.ByDates (История заказов: По датам)
 func (p *infinity) OrdersClosedByDates() []Order {
-	client := &http.Client{}
-	req, err := http.NewRequest("GET", p.ConnString+"GetViewData", nil)
-	warnp(err)
-	req.Header.Add("ContentType", "text/html;charset=UTF-8")
-	values := req.URL.Query()
-
-	values.Add("params", "[{\"viewName\": \"Taxi.Orders.Closed.ByDates\"}]")
-
-	req.URL.RawQuery = values.Encode()
-
-	log.Println(req.URL)
-
-	req.AddCookie(p.Cookie)
-	//log.Println("Cookies in request? ", req.Cookies())
-	res, err := client.Do(req)
-	if res.Status == "403 Forbidden" {
-		err = errors.New("Ошибка авторизации infinity! (Возможно не установлены cookies)")
-		p.reconnect()
-	}
-	warnp(err)
-	defer res.Body.Close()
-	body, err := ioutil.ReadAll(res.Body)
-	warnp(err)
+	body := p._request("GetViewData", map[string]string{"params": "[{\"viewName\": \"Taxi.Orders.Closed.ByDates\"}]"})
 
 	var temp []Order
-	log.Println(body)
-	err = json.Unmarshal(body, &temp)
+	err := json.Unmarshal(body, &temp)
 	warnp(err)
 	return temp
 }
 
 //Taxi.Orders.Closed.LastN (История заказов: Последние)
 func (p *infinity) OrdersClosedlastN() []Order {
-	client := &http.Client{}
-	req, err := http.NewRequest("GET", p.ConnString+"GetViewData", nil)
-	warnp(err)
-	req.Header.Add("ContentType", "text/html;charset=UTF-8")
-	values := req.URL.Query()
-
-	values.Add("params", "[{\"viewName\": \"Taxi.Orders.Closed.LastN\"}]")
-
-	req.URL.RawQuery = values.Encode()
-
-	log.Println(req.URL)
-
-	req.AddCookie(p.Cookie)
-	//log.Println("Cookies in request? ", req.Cookies())
-	res, err := client.Do(req)
-	if res.Status == "403 Forbidden" {
-		err = errors.New("Ошибка авторизации infinity! (Возможно не установлены cookies)")
-		p.reconnect()
-	}
-	warnp(err)
-	defer res.Body.Close()
-	body, err := ioutil.ReadAll(res.Body)
-	warnp(err)
+	body := p._request("GetViewData", map[string]string{"params": "[{\"viewName\": \"Taxi.Orders.Closed.LastN\"}]"})
 
 	var temp []Order
-	log.Println(body)
-	err = json.Unmarshal(body, &temp)
+	err := json.Unmarshal(body, &temp)
 	warnp(err)
 	return temp
 }
@@ -1069,33 +651,10 @@ func (p *infinity) OrdersClosedlastN() []Order {
 
 //Taxi.Markups (Список доступных наценок)
 func (p *infinity) Markups() []Order {
-	client := &http.Client{}
-	req, err := http.NewRequest("GET", p.ConnString+"GetViewData", nil)
-	warnp(err)
-	req.Header.Add("ContentType", "text/html;charset=UTF-8")
-	values := req.URL.Query()
-
-	values.Add("params", "[{\"viewName\": \"Taxi.Markups\"}]")
-
-	req.URL.RawQuery = values.Encode()
-
-	log.Println(req.URL)
-
-	req.AddCookie(p.Cookie)
-	//log.Println("Cookies in request? ", req.Cookies())
-	res, err := client.Do(req)
-	if res.Status == "403 Forbidden" {
-		err = errors.New("Ошибка авторизации infinity! (Возможно не установлены cookies)")
-		p.reconnect()
-	}
-	warnp(err)
-	defer res.Body.Close()
-	body, err := ioutil.ReadAll(res.Body)
-	warnp(err)
+	body := p._request("GetViewData", map[string]string{"params": "[{\"viewName\": \"Taxi.Markups\"}]"})
 
 	var temp []Order
-	log.Println(body)
-	err = json.Unmarshal(body, &temp)
+	err := json.Unmarshal(body, &temp)
 	warnp(err)
 	return temp
 }
@@ -1156,67 +715,20 @@ type Address struct {
 }
 
 func (p *infinity) AddressesSearch(text string) FastAddress {
-	client := &http.Client{}
-	req, err := http.NewRequest("GET", p.ConnString+"GetViewData", nil)
-	warnp(err)
-	req.Header.Add("ContentType", "text/html;charset=UTF-8")
-	values := req.URL.Query()
 
-	values.Add("params", "[{\"viewName\": \"Taxi.Addresses.Search\", \"params\": [{\"n\": \"SearchText\", \"v\": \""+text+"\"}]}]")
-
-	req.URL.RawQuery = values.Encode()
-
-	log.Println(req.URL)
-
-	req.AddCookie(p.Cookie)
-	//log.Println("Cookies in request? ", req.Cookies())
-	res, err := client.Do(req)
-	if res.Status == "403 Forbidden" {
-		err = errors.New("Ошибка авторизации infinity! (Возможно не установлены cookies)")
-	}
-	warnp(err)
-	defer res.Body.Close()
-	body, err := ioutil.ReadAll(res.Body)
-	warnp(err)
+	body := p._request("GetViewData", map[string]string{"params": "[{\"viewName\": \"Taxi.Addresses.Search\", \"params\": [{\"n\": \"SearchText\", \"v\": \"" + text + "\"}]}]"})
 
 	var temp []FastAddress
-	log.Println(string(body))
-	err = json.Unmarshal(body, &temp)
-
-	//log.Println(temp)
+	err := json.Unmarshal(body, &temp)
 	warnp(err)
 	return temp[0]
 }
 
 //Taxi.ClientAddresses (Адреса клиента)
 func (p *infinity) ClientAddresses() FastAddress {
-	client := &http.Client{}
-	req, err := http.NewRequest("GET", p.ConnString+"GetViewData", nil)
-	warnp(err)
-	req.Header.Add("ContentType", "text/html;charset=UTF-8")
-	values := req.URL.Query()
-
-	values.Add("params", "[{\"viewName\": \"Taxi.ClientAddresses\"}]")
-
-	//109.202.25.248:8080/WebAPITaxi/GetViewData?params=[{"viewName": "Taxi.Addresses.Search", "params": [{"n": "SearchText", "v": "Никола"}]}]
-	req.URL.RawQuery = values.Encode()
-
-	log.Println(values)
-
-	req.AddCookie(p.Cookie)
-	//log.Println("Cookies in request? ", req.Cookies())
-	res, err := client.Do(req)
-	if res.Status == "403 Forbidden" {
-		err = errors.New("Ошибка авторизации infinity! (Возможно не установлены cookies)")
-		p.reconnect()
-	}
-	warnp(err)
-	defer res.Body.Close()
-	body, err := ioutil.ReadAll(res.Body)
-	warnp(err)
-
+	body := p._request("GetViewData", map[string]string{"params": "[{\"viewName\": \"Taxi.ClientAddresses\"}]"})
 	var temp []FastAddress
-	err = json.Unmarshal(body, &temp)
+	err := json.Unmarshal(body, &temp)
 	warnp(err)
 	return temp[0]
 }
@@ -1233,37 +745,6 @@ func (p *infinity) ClientAddresses() FastAddress {
 //////////////////////////////////////////////////////////////////////////////////////////////////////
 //////////////////////////////////////////////////////////////////////////////////////////////////////
 //////////////////////////////////////////////////////////////////////////////////////////////////////
-
-type logfile struct {
-	m sync.Mutex
-	t time.Time
-	f *os.File
-	n string
-}
-
-func (l *logfile) SetName() *os.File {
-	l.m.Lock()
-	if l.n != "" {
-		l.f.Close()
-	}
-	l.t = time.Now()
-	l.n = fmt.Sprintf("%d_%d_%d.log", l.t.Day(), int(l.t.Month()), l.t.Year())
-	l.m.Unlock()
-	f, err := os.OpenFile(l.n, os.O_RDWR|os.O_CREATE|os.O_APPEND, 0666)
-	if err != nil {
-		panic(err)
-	}
-	log.SetOutput(f)
-	log.Println("Log start point")
-	l.f = f
-	return f
-}
-func (l *logfile) Close() {
-	l.m.Lock()
-	l.f.Close()
-	l.m.Unlock()
-}
-
 type DictItem struct {
 	Value string `json:"value"`
 	Text  string `json:"text"`
