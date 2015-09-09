@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
+	"io/ioutil"
 	"log"
 	inf "msngr/infinity"
 	"net/http"
@@ -34,7 +35,7 @@ func (n Notifier) Notify(outPkg OutPkg) {
 	jsoned_out, err := json.Marshal(&outPkg)
 	warn(err)
 
-	body := bytes.NewBufferString(string(jsoned_out))
+	body := bytes.NewBuffer(jsoned_out)
 	req, err := http.NewRequest("POST", n.address, body)
 	warnp(err)
 
@@ -47,7 +48,16 @@ func (n Notifier) Notify(outPkg OutPkg) {
 	client := &http.Client{}
 	resp, err := client.Do(req)
 	warn(err)
-	log.Printf("N << %+v", resp)
+
+	defer resp.Body.Close()
+
+	body, _ := ioutil.ReadAll(resp.Body)
+
+	log.Printf("N << %+v", string(resp))
+
+	fmt.Println("N response Status:", resp.Status)
+	fmt.Println("N response Headers:", resp.Header)
+	fmt.Println("N response Body:", string(body))
 }
 
 func FormNotification(order_id int64, state int, ohm OrderHandlerMixin, carCache *inf.CarsCache) OutPkg {
