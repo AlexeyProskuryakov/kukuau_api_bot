@@ -49,15 +49,14 @@ func (n Notifier) Notify(outPkg OutPkg) {
 	resp, err := client.Do(req)
 	warn(err)
 
-	defer resp.Body.Close()
+	if resp != nil {
+		defer resp.Body.Close()
+		fmt.Println("N response Status:", resp.Status)
+		fmt.Println("N response Headers:", resp.Header)
+		resp_body, _ := ioutil.ReadAll(resp.Body)
+		fmt.Println("N response Body:", string(resp_body))
+	}
 
-	body, _ := ioutil.ReadAll(resp.Body)
-
-	log.Printf("N << %+v", string(resp))
-
-	fmt.Println("N response Status:", resp.Status)
-	fmt.Println("N response Headers:", resp.Header)
-	fmt.Println("N response Body:", string(body))
 }
 
 func FormNotification(order_id int64, state int, ohm OrderHandlerMixin, carCache *inf.CarsCache) OutPkg {
