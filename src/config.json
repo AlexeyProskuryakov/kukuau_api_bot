@@ -1,8 +1,8 @@
 {
 	"main" : {
 		"port" : 9191,
-		"callback_addr" : "foo.bar.baz",
-		"dict_url" : "foo", 
+		"callback_addr" : "http://localhost:9876/notify",
+		"dict_url" : "http://localhost:9191/_streets", 
 		"test" : true,
 		"taxi_key": "Kuku demo_taxi_key"
 	},

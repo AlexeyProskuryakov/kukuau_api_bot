@@ -196,6 +196,7 @@ type TaxiCancelOrderHandler struct {
 func (coh TaxiCancelOrderHandler) ProcessMessage(in InPkg) (string, *[]OutCommand, error) {
 	order_wrapper := coh.Orders.GetByOwner(in.From)
 	if order_wrapper != nil {
+		coh.Orders.SetState(order_wrapper.OrderId, 9, nil)
 		ok, info := coh.API.CancelOrder(order_wrapper.OrderId)
 		if !ok {
 			err_str := fmt.Sprintf("Какие-то проблемы с отменой заказа %+v", info)

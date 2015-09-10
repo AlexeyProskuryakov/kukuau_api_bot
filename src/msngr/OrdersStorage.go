@@ -76,7 +76,7 @@ func (odbh *ordersDbHandler) GetState(order_id int64) int {
 	return result.OrderState
 }
 
-func (odbh *ordersDbHandler) SetState(order_id int64, new_state int, order inf.Order) {
+func (odbh *ordersDbHandler) SetState(order_id int64, new_state int, order *inf.Order) {
 	change := bson.M{"$set": bson.M{"order_state": new_state, "when": time.Now(), "order_object": order}}
 	err := odbh.collection.Update(bson.M{"order_id": order_id}, change)
 	except(err)

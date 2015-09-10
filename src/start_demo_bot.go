@@ -37,7 +37,7 @@ func order_watch(ohm m.OrderHandlerMixin, im ia.InfinityMixin, carsCache *ia.Car
 			}
 			if order.State != order_state {
 				log.Printf("state of %v will persist", order)
-				ohm.Orders.SetState(order.ID, order.State, order)
+				ohm.Orders.SetState(order.ID, order.State, &order)
 				n.Notify(m.FormNotification(order.ID, order.State, ohm, carsCache))
 			}
 		}
