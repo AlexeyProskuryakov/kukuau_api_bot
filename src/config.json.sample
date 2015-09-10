@@ -1,0 +1,21 @@
+{
+	"main" : {
+		"port" : 9191,
+		"callback_addr" : "http://localhost:9876/notify",
+		"dict_url" : "http://localhost:9191/_streets", 
+		"test" : true,
+		"taxi_key": "Kuku demo_taxi_key"
+	},
+
+	"infinity" : {
+			"login" : "test1",
+			"password" : "test1",
+			"connection_string" : "http://109.202.25.248:8080/WebAPITaxi/",
+			"host" : "109.202.25.248:8080"
+	},
+
+	"database" : {
+				"name":"bot",
+				"connection_string":"localhost:27017"
+	}			
+}
