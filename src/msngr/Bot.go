@@ -71,6 +71,7 @@ func FormBotControllerHandler(request_cmds map[string]RequestCommandProcessor, m
 			} else {
 				out.Request.Query.Text = "Команда не поддерживается."
 			}
+
 		} else if in.Message != nil {
 			log.Printf("processing message %+v", in)
 			out.Message = &OutMessage{Type: in.Message.Type, Thread: in.Message.Thread, ID: genId()}

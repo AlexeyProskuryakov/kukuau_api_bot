@@ -39,7 +39,7 @@ func (n Notifier) Notify(outPkg OutPkg) {
 	req, err := http.NewRequest("POST", n.address, body)
 	warnp(err)
 
-	req.Header.Add("ContentType", "application/json")
+	req.Header.Add("Content-Type", "application/json")
 	req.Header.Add("Accept", "application/json")
 	req.Header.Add("Authorization", n.key)
 

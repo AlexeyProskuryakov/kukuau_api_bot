@@ -17,7 +17,7 @@ func main() {
 		log.Printf("ths < headers %+v", r.Header)
 
 		body, err := ioutil.ReadAll(r.Body)
-		log.Printf("ths < data: %+v", body)
+		log.Printf("ths < data: %+v", string(body))
 
 		var pkg m.OutPkg
 		err = json.Unmarshal(body, &pkg)
