@@ -1,10 +1,13 @@
-github.com
 bin
 logs
 pkg
 *.pid
-gopkg.in
+
 config.json
-#src/9fans.net/go
-#src/golang.org/x/tools
+
+github.com
+gopkg.in
+9fans.net
+golang.org
+
 test_foo.go
