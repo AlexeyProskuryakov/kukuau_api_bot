@@ -46,7 +46,7 @@ func setOutPackage(w http.ResponseWriter, out OutPkg) {
 
 type controllerHandler func(w http.ResponseWriter, r *http.Request)
 
-func FormBotControllerHandler(request_cmds map[string]RequestCommandProcessor, message_cmds map[string]MessageCommandProcessor) controllerHandler {
+func FormBotController(request_cmds map[string]RequestCommandProcessor, message_cmds map[string]MessageCommandProcessor) controllerHandler {
 
 	return func(w http.ResponseWriter, r *http.Request) {
 		if r.Method != "POST" {

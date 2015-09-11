@@ -16,9 +16,11 @@ type FakeInfinity struct {
 
 func send_states(order_id int64, inf *FakeInfinity) {
 	log.Printf("FA will send fake states for order %v", order_id)
-	for i := range []int{2, 3, 4} {
+	for _, i := range []int{2, 3, 4, 5, 6, 7} {
+		log.Println("FA send state: ", i)
 		inf.set_order_state(order_id, i)
-		time.Sleep(time.Duration(rand.Intn(5)) * time.Second)
+		time.Sleep(time.Duration(rand.Intn(10)) * time.Second)
+
 	}
 }
 
@@ -34,7 +36,7 @@ func (inf *FakeInfinity) NewOrder(order NewOrder) (ans Answer, e error) {
 	saved_order := Order{
 		ID:    int64(len(inf.orders) + 1),
 		State: 1,
-		Cost:  100500,
+		Cost:  150,
 		IDCar: 5033615557,
 	}
 
@@ -64,10 +66,14 @@ func (inf *FakeInfinity) CancelOrder(order_id int64) (bool, string) {
 			return true, "test order was cancelled"
 		}
 	}
-	return false, "order not found :( "
+	return true, "Test order not found :( "
 }
 
 func (p *FakeInfinity) CalcOrderCost(order NewOrder) (int, string) {
 	log.Println("FA calulate cost for order: ", order)
 	return 100500, "Good cost!"
+}
+
+func (p *FakeInfinity) Feedback(f Feedback) (bool, string) {
+	return true, "Test feedback was received! Thanks!"
 }

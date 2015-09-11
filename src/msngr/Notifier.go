@@ -59,7 +59,7 @@ func (n Notifier) Notify(outPkg OutPkg) {
 
 }
 
-func FormNotification(order_id int64, state int, ohm OrderHandlerMixin, carCache *inf.CarsCache) OutPkg {
+func FormNotification(order_id int64, state int, ohm DbHandlerMixin, carCache *inf.CarsCache) OutPkg {
 	order_wrapper := ohm.Orders.GetByOrderId(order_id)
 	state_text, ok := inf.StatusesMap[order_wrapper.OrderState]
 	if !ok {

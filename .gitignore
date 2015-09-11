@@ -4,3 +4,5 @@ logs
 pkg
 *.pid
 gopkg.in
+config.json
+src/*[org,net]

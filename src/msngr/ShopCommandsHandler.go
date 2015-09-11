@@ -2,12 +2,11 @@ package msngr
 
 import (
 	"fmt"
-	"log"
 	"math/rand"
 	"time"
 )
 
-var shop_db = GetUserHandler()
+// var shop_db = GetUserHandler()
 
 var authorised_commands = []OutCommand{
 	OutCommand{
@@ -72,20 +71,6 @@ var not_authorised_commands = []OutCommand{
 	},
 }
 
-var ShopRequestCommands = map[string]RequestCommandProcessor{
-	"commands": ShopCommandsHandler{},
-}
-
-var ShopMessageCommands = map[string]MessageCommandProcessor{
-	"information":     ShopInformationHandler{},
-	"authorise":       ShopAuthoriseHandler{},
-	"orders_state":    ShopOrderStateHandler{},
-	"support_message": ShopSupportMessageHandler{},
-	"log_out":         ShopLogOutMessageHandler{},
-}
-
-type ShopCommandsHandler struct{}
-
 func _get_user_and_password(fields []InField) (string, string) {
 	var user, password string
 	for _, field := range fields {
@@ -98,10 +83,17 @@ func _get_user_and_password(fields []InField) (string, string) {
 	return user, password
 }
 
-func (ch ShopCommandsHandler) ProcessRequest(in InPkg) ([]OutCommand, error) {
-	user_state := shop_db.GetUserState(in.From)
+type ShopCommandsProcessor struct {
+	DbHandlerMixin
+}
+
+func (cp ShopCommandsProcessor) ProcessRequest(in InPkg) ([]OutCommand, error) {
+	user_state, err := cp.Users.GetUserState(in.From)
+	if err != nil {
+		cp.Users.AddUser(in.From, in.UserData.Phone)
+	}
 	commands := []OutCommand{}
-	if user_state == USER_AUTHORISED {
+	if user_state == LOGIN {
 		commands = authorised_commands
 	} else {
 		commands = not_authorised_commands
@@ -109,22 +101,24 @@ func (ch ShopCommandsHandler) ProcessRequest(in InPkg) ([]OutCommand, error) {
 	return commands, nil
 }
 
-type ShopAuthoriseHandler struct{}
+type ShopAuthoriseProcessor struct {
+	DbHandlerMixin
+}
 
-func (s ShopAuthoriseHandler) ProcessMessage(in InPkg) (string, *[]OutCommand, error) {
+func (sap ShopAuthoriseProcessor) ProcessMessage(in InPkg) (string, *[]OutCommand, error) {
 	command := *in.Message.Commands
 	user, password := _get_user_and_password(command[0].Form.Fields)
-	log.Println("user, pass: ", user, password)
-	if shop_db.CheckUserPassword(user, password) {
-		log.Println("was auth...")
-		shop_db.SetUserState(in.From, USER_AUTHORISED)
+	if sap.Users.CheckUserPassword(user, password) {
+		sap.Users.SetUserState(in.From, LOGIN)
 		return "Вы авторизовались. Ура!", &authorised_commands, nil
 	}
 	return "Не правильные логин или пароль :(", nil, nil
 
 }
 
-type ShopOrderStateHandler struct{}
+type ShopOrderStateProcessor struct {
+	DbHandlerMixin
+}
 
 func __choiceString(choices []string) string {
 	var winner string
@@ -137,29 +131,33 @@ func __choiceString(choices []string) string {
 
 var order_states = [3]string{"обработан", "создан", "отправлен"}
 
-func (os ShopOrderStateHandler) ProcessMessage(in InPkg) (string, *[]OutCommand, error) {
-	if shop_db.GetUserState(in.From) == USER_AUTHORISED {
+func (osp ShopOrderStateProcessor) ProcessMessage(in InPkg) (string, *[]OutCommand, error) {
+	user_state, err := osp.Users.GetUserState(in.From)
+	_check(err)
+	if user_state == LOGIN {
 		result := fmt.Sprintf("Ваш заказ с номером %v %v", rand.Int31n(10000), __choiceString(order_states[:]))
 		return result, &authorised_commands, nil
 	}
 	return "Авторизуйтесь пожалуйста!", nil, nil
 }
 
-type ShopSupportMessageHandler struct{}
+type SupportMessageProcessor struct{}
 
-func (sm ShopSupportMessageHandler) ProcessMessage(in InPkg) (string, *[]OutCommand, error) {
+func (sm SupportMessageProcessor) ProcessMessage(in InPkg) (string, *[]OutCommand, error) {
 	return "Ваш отзыв важен для нас, спасибо.", nil, nil
 }
 
-type ShopInformationHandler struct{}
+type ShopInformationProcessor struct{}
 
-func (ih ShopInformationHandler) ProcessMessage(in InPkg) (string, *[]OutCommand, error) {
+func (ih ShopInformationProcessor) ProcessMessage(in InPkg) (string, *[]OutCommand, error) {
 	return "Покупки в тысячах проверенных магазинов! (тестовый логин: test, пароль: 123)", nil, nil
 }
 
-type ShopLogOutMessageHandler struct{}
+type ShopLogOutMessageProcessor struct {
+	DbHandlerMixin
+}
 
-func (lo ShopLogOutMessageHandler) ProcessMessage(in InPkg) (string, *[]OutCommand, error) {
-	shop_db.RemoveUserState(in.From)
+func (lop ShopLogOutMessageProcessor) ProcessMessage(in InPkg) (string, *[]OutCommand, error) {
+	lop.Users.SetUserState(in.From, LOGOUT)
 	return "Вы вышли. Ура!", &not_authorised_commands, nil //todo
 }

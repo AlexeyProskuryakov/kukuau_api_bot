@@ -20,6 +20,7 @@ type TaxiInterface interface {
 	CancelOrder(order_id int64) (bool, string)
 	CalcOrderCost(order NewOrder) (int, string)
 	Orders() []Order
+	Feedback(f Feedback) (bool, string)
 }
 
 func warn(err error) {
@@ -496,13 +497,13 @@ func (p *infinity) CancelOrder(order int64) (bool, string) {
 //"notes" : <Текст отзыва>
 //}
 
-type feedback struct {
+type Feedback struct {
 	IdOrder int64  `json:"idOrder"`
 	Rating  int    `json:"rating"`
 	Notes   string `json:"notes"`
 }
 
-func (p *infinity) Feedback(inf feedback) (bool, string) {
+func (p *infinity) Feedback(inf Feedback) (bool, string) {
 	tmp, err := json.Marshal(inf)
 	warnp(err)
 
@@ -750,7 +751,7 @@ type DictItem struct {
 	Text  string `json:"text"`
 }
 
-func StreetsSearchHandler(w http.ResponseWriter, r *http.Request, i *infinity) {
+func StreetsSearchController(w http.ResponseWriter, r *http.Request, i *infinity) {
 	w.Header().Set("Content-type", "application/json")
 	w.WriteHeader(http.StatusOK)
 
@@ -854,3 +855,8 @@ func IsOrderNotAvaliable(state int) bool {
 	}
 	return false
 }
+
+const (
+	ORDER_PAYED    = 7
+	ORDER_CANCELED = 9
+)
