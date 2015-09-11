@@ -5,6 +5,6 @@ pkg
 *.pid
 gopkg.in
 config.json
-src/9fans.net/go
-src/golang.org/x/tools
+#src/9fans.net/go
+#src/golang.org/x/tools
 test_foo.go
