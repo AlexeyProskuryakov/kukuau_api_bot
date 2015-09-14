@@ -129,7 +129,7 @@ func (sap ShopAuthoriseProcessor) ProcessMessage(in InPkg) (string, *[]OutComman
 	user, password := _get_user_and_password(command[0].Form.Fields)
 	if sap.Users.CheckUserPassword(user, password) {
 		sap.Users.SetUserState(in.From, LOGIN)
-		return "Добро пожаловать в интернет магазин", &authorised_commands, nil
+		return "Добро пожаловать в интернет магазин DespriceMarkt", &authorised_commands, nil
 	}
 	return "Не правильные логин или пароль :(", nil, nil
 
@@ -148,7 +148,7 @@ func __choiceString(choices []string) string {
 	return winner
 }
 
-var order_states = [3]string{"обработан", "создан", "отправлен"}
+var order_states = [5]string{"обработан", "доставляется", "отправлен", "поступил в пункт выдачи", "в обработке"}
 var order_products = [4]string{"Ноутбук Apple MacBook Air", "Электрочайник BORK K 515", "Аудиосистема Westlake Tower SM-1", "Микроволновая печь Bosch HMT85ML23"}
 
 func (osp ShopOrderStateProcessor) ProcessMessage(in InPkg) (string, *[]OutCommand, error) {

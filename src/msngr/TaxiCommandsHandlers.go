@@ -326,7 +326,7 @@ func (cpp TaxiCalculatePriceProcessor) ProcessMessage(in InPkg) (string, *[]OutC
 	order := _form_order(commands[0].Form.Fields)
 	s, details := cpp.API.CalcOrderCost(order)
 	cost := strconv.Itoa(s)
-	return fmt.Sprintf("Стоймость будет всего лишь %v рублей! \nА детали таковы: %v", cost, details), nil, nil
+	return fmt.Sprintf("Стоймость будет всего лишь %v рублей!", cost), nil, nil
 }
 
 type TaxiFeedbackProcessor struct {
