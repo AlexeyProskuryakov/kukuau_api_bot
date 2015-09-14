@@ -9,6 +9,12 @@ import (
 	"time"
 )
 
+func _check(e error) {
+	if e != nil {
+		panic(e)
+	}
+}
+
 func genId() string {
 	//не привязывайся ко времени, может бть в 1 микросекуну много сообщений и ид долэны ыть разными
 	return fmt.Sprintf("%d", time.Now().UnixNano()/int64(time.Millisecond))

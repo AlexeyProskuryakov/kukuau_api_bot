@@ -220,6 +220,7 @@ type TaxiCommandsProcessor struct {
 }
 
 func (cp TaxiCommandsProcessor) ProcessRequest(in InPkg) ([]OutCommand, error) {
+	cp.Users.AddUser(in.From, in.UserData.Phone)
 	result := FormCommands(in.From, cp.DbHandlerMixin)
 	return *result, nil
 }
@@ -232,9 +233,7 @@ func (ih TaxiInformationProcessor) ProcessMessage(in InPkg) (string, *[]OutComma
 
 func _get_time_from_timestamp(tst string) time.Time {
 	i, err := strconv.ParseInt(tst, 10, 64)
-	if err != nil {
-		panic(err)
-	}
+	_check(err)
 	dst := time.Unix(i, 0)
 	return dst
 }
@@ -278,12 +277,30 @@ type TaxiNewOrderProcessor struct {
 	DbHandlerMixin
 }
 
+func _get_phone(in InPkg, nop TaxiNewOrderProcessor) (phone string, err error) {
+	if user_data := in.UserData; user_data != nil {
+		if phone := user_data.Phone; phone != "" {
+			return phone, nil
+		}
+	}
+	user_info, err := nop.Users.GetById(in.From)
+	if user_info == nil {
+		return "", err
+	}
+	return user_info.Phone, nil
+}
+
 func (nop TaxiNewOrderProcessor) ProcessMessage(in InPkg) (string, *[]OutCommand, error) {
 	order_wrapper := nop.Orders.GetByOwner(in.From)
 	if order_wrapper == nil || inf.IsOrderNotAvaliable(order_wrapper.OrderState) {
 		commands := *in.Message.Commands
 		new_order := _form_order(commands[0].Form.Fields)
-		new_order.Phone = in.UserData.Phone
+		phone, err := _get_phone(in, nop)
+		if err != nil {
+			return "Error of user data", nil, errors.New("You must provide phone of user (at user data in this message or in `commands` message)")
+		} else {
+			new_order.Phone = phone
+		}
 		ans, ord_error := nop.API.NewOrder(new_order)
 		if ord_error != nil {
 			panic(ord_error)
