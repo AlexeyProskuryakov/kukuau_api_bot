@@ -4,15 +4,20 @@
 		"callback_addr" : "http://localhost:9876/notify",
 		"dict_url" : "http://localhost:9191/_streets", 
 		"test" : true,
-		"taxi_key": "Kuku demo_taxi_key"
 	},
-
-	"infinity" : {
+	"taxi":{
+		"API" : {
 			"login" : "test1",
 			"password" : "test1",
 			"connection_string" : "http://109.202.25.248:8080/WebAPITaxi/",
 			"host" : "109.202.25.248:8080"
+		},
+		key: "Kuku demo_taxi_key"
 	},
+	
+	"shop":{
+		key: "Kuku demo_shop_key"
+	}
 
 	"database" : {
 				"name":"bot",

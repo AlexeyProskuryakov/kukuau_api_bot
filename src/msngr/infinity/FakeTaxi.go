@@ -2,7 +2,6 @@ package infinity
 
 import (
 	"log"
-	"math/rand"
 	"time"
 )
 
@@ -16,11 +15,10 @@ type FakeInfinity struct {
 
 func send_states(order_id int64, inf *FakeInfinity) {
 	log.Printf("FA will send fake states for order %v", order_id)
-	for _, i := range []int{2, 3, 4, 5, 6, 7} {
+	for _, i := range []int{2, 4} {
+		time.Sleep(3 * time.Second)
 		log.Println("FA send state: ", i)
 		inf.set_order_state(order_id, i)
-		time.Sleep(time.Duration(rand.Intn(10)) * time.Second)
-
 	}
 }
 
@@ -32,7 +30,7 @@ func (inf *FakeInfinity) set_order_state(order_id int64, new_state int) {
 	}
 }
 
-func (inf *FakeInfinity) NewOrder(order NewOrder) (ans Answer, e error) {
+func (inf *FakeInfinity) NewOrder(order NewOrder) (Answer, error) {
 	saved_order := Order{
 		ID:    int64(len(inf.orders) + 1),
 		State: 1,
@@ -42,16 +40,17 @@ func (inf *FakeInfinity) NewOrder(order NewOrder) (ans Answer, e error) {
 
 	inf.orders = append(inf.orders, saved_order)
 
-	ans = Answer{
+	ans := Answer{
 		IsSuccess: true,
 		Message:   "test order was formed",
 	}
 	ans.Content.Id = saved_order.ID
+	ans.Content.Cost = 150
 	log.Println("FA now i have orders: ", len(inf.orders))
 
 	go send_states(saved_order.ID, inf)
 
-	return
+	return ans, nil
 }
 
 func (inf *FakeInfinity) Orders() []Order {

@@ -15,6 +15,11 @@ func _check(e error) {
 	}
 }
 
+func get_time_after(d time.Duration, format string) string {
+	result := time.Now().Add(d)
+	return result.Format(format)
+}
+
 func genId() string {
 	//не привязывайся ко времени, может бть в 1 микросекуну много сообщений и ид долэны ыть разными
 	return fmt.Sprintf("%d", time.Now().UnixNano()/int64(time.Millisecond))

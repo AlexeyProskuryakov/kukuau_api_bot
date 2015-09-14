@@ -85,10 +85,23 @@ var commands_at_created_order = []OutCommand{
 
 var commands_for_order_feedback = []OutCommand{
 	OutCommand{
-		Title:    "Было круто?",
+		Title:    "Отзыв о поездке",
 		Action:   "feedback",
 		Position: 0,
-		Form:     feedback_form,
+		Form: &OutForm{
+			Type: "form",
+			Text: "?(text)",
+			Fields: []OutField{
+				OutField{
+					Name: "text",
+					Type: "text",
+					Attributes: FieldAttribute{
+						Label:    "Ваш отзыв",
+						Required: true,
+					},
+				},
+			},
+		},
 	},
 	OutCommand{
 		Title:    "Вызвать такси",
@@ -97,12 +110,12 @@ var commands_for_order_feedback = []OutCommand{
 		Repeated: true,
 		Form:     taxi_call_form,
 	},
-	OutCommand{
-		Title:    "Рассчитать цену",
-		Action:   "calculate_price",
-		Position: 2,
-		Form:     taxi_call_form,
-	},
+	// OutCommand{
+	// 	Title:    "Рассчитать цену",
+	// 	Action:   "calculate_price",
+	// 	Position: 2,
+	// 	Form:     taxi_call_form,
+	// },
 }
 
 var commands_at_not_created_order = []OutCommand{
@@ -113,44 +126,44 @@ var commands_at_not_created_order = []OutCommand{
 		Repeated: true,
 		Form:     taxi_call_form,
 	},
-	OutCommand{
-		Title:    "Рассчитать цену",
-		Action:   "calculate_price",
-		Position: 1,
-		Form:     taxi_call_form,
-	},
+	// OutCommand{
+	// 	Title:    "Рассчитать цену",
+	// 	Action:   "calculate_price",
+	// 	Position: 1,
+	// 	Form:     taxi_call_form,
+	// },
 }
 
-var feedback_form = &OutForm{
-	Title: "Форма крутоты",
-	Type:  "form",
-	Name:  "feedback_form",
-	Text:  "?(yes) ?(no)",
-	Fields: []OutField{
-		OutField{
-			Name: "yes",
-			Type: "text",
-			Attributes: FieldAttribute{
-				Label:    "ДА :)",
-				Required: false,
-			},
-		},
-		OutField{
-			Name: "no",
-			Type: "text",
-			Attributes: FieldAttribute{
-				Label:    "Нет :(",
-				Required: false,
-			},
-		},
-	},
-}
+// var feedback_form = &OutForm{
+// 	Title: "Форма крутоты",
+// 	Type:  "form",
+// 	Name:  "feedback_form",
+// 	Text:  "?(yes) ?(no)",
+// 	Fields: []OutField{
+// 		OutField{
+// 			Name: "yes",
+// 			Type: "text",
+// 			Attributes: FieldAttribute{
+// 				Label:    "ДА :)",
+// 				Required: false,
+// 			},
+// 		},
+// 		OutField{
+// 			Name: "no",
+// 			Type: "text",
+// 			Attributes: FieldAttribute{
+// 				Label:    "Нет :(",
+// 				Required: false,
+// 			},
+// 		},
+// 	},
+// }
 
 var taxi_call_form = &OutForm{
 	Title: "Форма вызова такси",
 	Type:  "form",
 	Name:  "call_taxi",
-	Text:  "Откуда: ?(street_from), ?(house_from), ?(entrance). Куда: ?(street_to), ?(house_to). Когда: ?(time)",
+	Text:  "Откуда: ?(street_from), ?(house_from), ?(entrance). Куда: ?(street_to), ?(house_to).",
 	Fields: []OutField{
 		OutField{
 			Name: "street_from",
@@ -181,7 +194,7 @@ var taxi_call_form = &OutForm{
 			Name: "street_to",
 			Type: "dict",
 			Attributes: FieldAttribute{
-				Label:    "улица/район",
+				Label:    "улицa",
 				Required: true,
 				URL:      &DictUrl,
 			},
@@ -329,7 +342,7 @@ func (nop TaxiNewOrderProcessor) ProcessMessage(in InPkg) (string, *[]OutCommand
 		}
 		nop.Orders.AddOrder(ans.Content.Id, in.From)
 		//todo check at infinity orders
-		text := fmt.Sprintf("Ваш заказ создан! Стоймость всего лишь %+v рублей", ans.Content.Cost)
+		text := fmt.Sprintf("Ваш заказ создан! Стоймость поездки составит %+v рублей", ans.Content.Cost)
 		return text, &commands_at_created_order, nil
 	} else {
 		return "Заказ уже создан!", &commands_at_created_order, errors.New("Заказ уже создан!")
@@ -346,10 +359,10 @@ func (cop TaxiCancelOrderProcessor) ProcessMessage(in InPkg) (string, *[]OutComm
 	if order_wrapper != nil {
 		ok, info := cop.API.CancelOrder(order_wrapper.OrderId)
 		if ok {
-			return fmt.Sprintf("Ваш заказ отменен (%+v)", info), FormCommands(in.From, cop.DbHandlerMixin), nil
+			return "", FormCommands(in.From, cop.DbHandlerMixin), nil
 		} else {
 			err_str := fmt.Sprintf("Какие-то проблемы с отменой заказа %+v", info) //todo send alarm command
-			return err_str, FormCommands(in.From, cop.DbHandlerMixin), errors.New(err_str)
+			return "", FormCommands(in.From, cop.DbHandlerMixin), errors.New(err_str)
 		}
 		//todo check at infinity orders
 	}

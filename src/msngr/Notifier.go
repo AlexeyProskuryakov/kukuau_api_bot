@@ -8,6 +8,7 @@ import (
 	"log"
 	inf "msngr/infinity"
 	"net/http"
+	"time"
 )
 
 func warn(err error) {
@@ -59,16 +60,23 @@ func (n Notifier) Notify(outPkg OutPkg) {
 
 }
 
+//todo notifier must be more flexiability. you can notify different messages for different engines (shop, taxi)
+//you must think about it
 func FormNotification(order_id int64, state int, ohm DbHandlerMixin, carCache *inf.CarsCache) OutPkg {
 	order_wrapper := ohm.Orders.GetByOrderId(order_id)
-	state_text, ok := inf.StatusesMap[order_wrapper.OrderState]
-	if !ok {
-		state_text = "не опознанно"
-	}
 	car_id := order_wrapper.OrderObject.IDCar
 	car_info := carCache.CarInfo(car_id)
 
-	text := fmt.Sprintf("%v %v с номером %v %v", car_info.Color, car_info.Model, car_info.Number, state_text)
+	var text string
+	switch state := order_wrapper.OrderState; state {
+	case 2:
+		text = fmt.Sprintf("Вам назначен %v %v c номером %v, время подачи %v", car_info.Color, car_info.Model, car_info.Number, get_time_after(5*time.Minute, "15:04"))
+	case 4:
+		text = "Машина на месте. Приятной Вам поездки!"
+	case 7:
+		text = "Заказ успешно отменен"
+	}
+
 	out := OutPkg{To: order_wrapper.Whom, Message: &OutMessage{ID: genId(), Type: "chat", Body: text}}
 	return out
 }
