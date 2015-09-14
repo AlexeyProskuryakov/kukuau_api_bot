@@ -75,7 +75,7 @@ func FormNotification(order_id int64, state int, ohm DbHandlerMixin, carCache *i
 		text = "Машина на месте. Приятной Вам поездки!"
 	case 7:
 		text = "Заказ выполнен. Спасибо что воспользовались услугами нашей компании."
-		commands = commands_for_order_feedback
+		commands = &commands_for_order_feedback
 	}
 
 	if text != "" {
