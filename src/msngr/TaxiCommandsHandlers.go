@@ -345,7 +345,7 @@ func (nop TaxiNewOrderProcessor) ProcessMessage(in InPkg) (string, *[]OutCommand
 		}
 		nop.Orders.AddOrder(ans.Content.Id, in.From)
 		//todo check at infinity orders
-		text := fmt.Sprintf("Ваш заказ создан! Стоймость поездки составит %+v рублей", ans.Content.Cost)
+		text := fmt.Sprintf("Ваш заказ создан! Стоймость поездки составит %+v рублей.", ans.Content.Cost)
 		return text, &commands_at_created_order, nil
 	} else {
 		return "Заказ уже создан!", &commands_at_created_order, errors.New("Заказ уже создан!")
