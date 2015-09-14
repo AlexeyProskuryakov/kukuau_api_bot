@@ -15,7 +15,7 @@ type FakeInfinity struct {
 
 func send_states(order_id int64, inf *FakeInfinity) {
 	log.Printf("FA will send fake states for order %v", order_id)
-	for _, i := range []int{2, 4} {
+	for _, i := range []int{2, 4, 7} {
 		time.Sleep(5 * time.Second)
 		log.Println("FA send state: ", i)
 		inf.set_order_state(order_id, i)
