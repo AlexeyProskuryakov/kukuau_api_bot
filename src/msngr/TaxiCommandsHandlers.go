@@ -220,7 +220,11 @@ type TaxiCommandsProcessor struct {
 }
 
 func (cp TaxiCommandsProcessor) ProcessRequest(in InPkg) ([]OutCommand, error) {
-	cp.Users.AddUser(in.From, in.UserData.Phone)
+	phone, err := _get_phone(in)
+	if err != nil {
+		return nil, err
+	}
+	cp.Users.AddUser(in.From, *phone)
 	result := FormCommands(in.From, cp.DbHandlerMixin)
 	return *result, nil
 }
@@ -277,17 +281,13 @@ type TaxiNewOrderProcessor struct {
 	DbHandlerMixin
 }
 
-func _get_phone(in InPkg, nop TaxiNewOrderProcessor) (phone string, err error) {
+func _get_phone(in InPkg) (phone *string, err error) {
 	if user_data := in.UserData; user_data != nil {
 		if phone := user_data.Phone; phone != "" {
-			return phone, nil
+			return &phone, nil
 		}
 	}
-	user_info, err := nop.Users.GetById(in.From)
-	if user_info == nil {
-		return "", err
-	}
-	return user_info.Phone, nil
+	return nil, errors.New("no row at message.UserData.Phone")
 }
 
 func (nop TaxiNewOrderProcessor) ProcessMessage(in InPkg) (string, *[]OutCommand, error) {
@@ -295,11 +295,17 @@ func (nop TaxiNewOrderProcessor) ProcessMessage(in InPkg) (string, *[]OutCommand
 	if order_wrapper == nil || inf.IsOrderNotAvaliable(order_wrapper.OrderState) {
 		commands := *in.Message.Commands
 		new_order := _form_order(commands[0].Form.Fields)
-		phone, err := _get_phone(in, nop)
+		phone, err := _get_phone(in)
 		if err != nil {
-			return "Error of user data", nil, errors.New("You must provide phone of user (at user data in this message or in `commands` message)")
+			uwrpr, err := nop.Users.GetById(in.From)
+			if err != nil {
+				return "Error of user data", nil, errors.New("You must provide phone of user (at user data in this message or in `commands` message)")
+			} else {
+				phone = &(uwrpr.Phone)
+			}
+
 		} else {
-			new_order.Phone = phone
+			new_order.Phone = *phone
 		}
 		ans, ord_error := nop.API.NewOrder(new_order)
 		if ord_error != nil {
