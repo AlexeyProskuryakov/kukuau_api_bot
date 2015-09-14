@@ -15,6 +15,44 @@ const (
 	timeFormat = "2006-01-02 15:04:05"
 )
 
+func FormTaxiCommands(im inf.InfinityMixin, db DbHandlerMixin) (map[string]RequestCommandProcessor, map[string]MessageCommandProcessor) {
+	var TaxiRequestCommands = map[string]RequestCommandProcessor{
+		"commands": TaxiCommandsProcessor{DbHandlerMixin: db},
+	}
+
+	var TaxiMessageCommands = map[string]MessageCommandProcessor{
+		"information":      TaxiInformationProcessor{},
+		"new_order":        TaxiNewOrderProcessor{InfinityMixin: im, DbHandlerMixin: db},
+		"cancel_order":     TaxiCancelOrderProcessor{InfinityMixin: im, DbHandlerMixin: db},
+		"calculate_price":  TaxiCalculatePriceProcessor{InfinityMixin: im},
+		"feedback":         TaxiFeedbackProcessor{InfinityMixin: im, DbHandlerMixin: db},
+		"write_dispatcher": SupportMessageProcessor{},
+	}
+	return TaxiRequestCommands, TaxiMessageCommands
+}
+
+func TaxiOrderWatch(db DbHandlerMixin, im inf.InfinityMixin, carsCache *inf.CarsCache, n *Notifier) {
+	for {
+		api_orders := im.API.Orders()
+		// log.Printf("OW api have %v orders", len(api_orders))
+		for _, order := range api_orders {
+			order_state := db.Orders.GetState(order.ID)
+			// log.Printf("state of %+v is: %v\n", order, order_state)
+
+			if order_state == -1 {
+				log.Printf("order %+v is not present in system :(\n", order)
+				continue
+			}
+			if order.State != order_state {
+				log.Printf("state of %v will persist", order)
+				db.Orders.SetState(order.ID, order.State, &order)
+				n.Notify(FormNotification(order.ID, order.State, db, carsCache))
+			}
+		}
+		time.Sleep(500 * time.Millisecond)
+	}
+}
+
 var DictUrl string
 
 var commands_at_created_order = []OutCommand{
@@ -104,7 +142,7 @@ var taxi_call_form = &OutForm{
 			Name: "street_from",
 			Type: "dict",
 			Attributes: FieldAttribute{
-				Label:    "улица/район",
+				Label:    "улица",
 				Required: true,
 				URL:      &DictUrl,
 			},
@@ -142,14 +180,14 @@ var taxi_call_form = &OutForm{
 				Required: true,
 			},
 		},
-		OutField{
-			Name: "time",
-			Type: "datetime",
-			Attributes: FieldAttribute{
-				Label:    "время",
-				Required: false,
-			},
-		},
+		// OutField{
+		// 	Name: "time",
+		// 	Type: "datetime",
+		// 	Attributes: FieldAttribute{
+		// 		Label:    "время",
+		// 		Required: false,
+		// 	},
+		// },
 	},
 }
 
@@ -202,7 +240,7 @@ func _get_time_from_timestamp(tst string) time.Time {
 }
 
 func _form_order(fields []InField) (new_order inf.NewOrder) {
-	var from_info, to_info, hf, ht, when string
+	var from_info, to_info, hf, ht string
 	for _, field := range fields {
 		switch fn := field.Name; fn {
 		case "street_from":
@@ -213,18 +251,17 @@ func _form_order(fields []InField) (new_order inf.NewOrder) {
 			ht = field.Data.Value
 		case "house_from":
 			hf = field.Data.Value
-		case "time": //todo see time! with exceptions
-			when = field.Data.Value
-			log.Println("!time of order: ", when)
-			if when == "0" || when == "" {
-				new_order.DeliveryMinutes = 0
-			} else {
-				new_order.DeliveryTime = _get_time_from_timestamp(when).Format(timeFormat)
-			}
+			// case "time": //todo see time! with exceptions
+			// 	when = field.Data.Value
+			// 	log.Println("!time of order: ", when)
+			// 	if when == "0" || when == "" {
+			// 		new_order.DeliveryMinutes = 0
+			// 	} else {
+			// 		new_order.DeliveryTime = _get_time_from_timestamp(when).Format(timeFormat)
+			// 	}
 		}
 	}
 	//fucking hardcode //todo refactor
-	new_order.Phone = "89537631628"
 	new_order.IdService = 5001753333
 	new_order.Notes = "Хочется комфортную машину"
 	new_order.Attributes = [2]int64{1000113000, 1000113002}
@@ -246,6 +283,7 @@ func (nop TaxiNewOrderProcessor) ProcessMessage(in InPkg) (string, *[]OutCommand
 	if order_wrapper == nil || inf.IsOrderNotAvaliable(order_wrapper.OrderState) {
 		commands := *in.Message.Commands
 		new_order := _form_order(commands[0].Form.Fields)
+		new_order.Phone = in.UserData.Phone
 		ans, ord_error := nop.API.NewOrder(new_order)
 		if ord_error != nil {
 			panic(ord_error)

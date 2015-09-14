@@ -6,7 +6,21 @@ import (
 	"time"
 )
 
-// var shop_db = GetUserHandler()
+func FormShopCommands(db DbHandlerMixin) (map[string]RequestCommandProcessor, map[string]MessageCommandProcessor) {
+	var ShopRequestCommands = map[string]RequestCommandProcessor{
+		"commands": ShopCommandsProcessor{DbHandlerMixin: db},
+	}
+
+	var ShopMessageCommands = map[string]MessageCommandProcessor{
+		"information":     ShopInformationProcessor{},
+		"authorise":       ShopAuthoriseProcessor{DbHandlerMixin: db},
+		"log_out":         ShopLogOutMessageProcessor{DbHandlerMixin: db},
+		"orders_state":    ShopOrderStateProcessor{DbHandlerMixin: db},
+		"support_message": SupportMessageProcessor{},
+		"balance":         ShopBalanceProcessor{},
+	}
+	return ShopRequestCommands, ShopMessageCommands
+}
 
 var authorised_commands = []OutCommand{
 	OutCommand{
@@ -15,9 +29,14 @@ var authorised_commands = []OutCommand{
 		Position: 0,
 	},
 	OutCommand{
-		Title:    "Написать в тех. поддержку",
-		Action:   "support_message",
+		Title:    "Мой баланс",
+		Action:   "balance",
 		Position: 1,
+	},
+	OutCommand{
+		Title:    "Оставить отзыв",
+		Action:   "support_message",
+		Position: 2,
 		Fixed:    true,
 		Form: &OutForm{
 			Type: "form",
@@ -37,7 +56,7 @@ var authorised_commands = []OutCommand{
 	OutCommand{
 		Title:    "Выйти",
 		Action:   "log_out",
-		Position: 2,
+		Position: 3,
 	},
 }
 var not_authorised_commands = []OutCommand{
@@ -48,13 +67,13 @@ var not_authorised_commands = []OutCommand{
 		Form: &OutForm{
 			Name: "Форма ввода данных пользователя",
 			Type: "form",
-			Text: "Пользователь: ?(username), пароль ?(password)",
+			Text: "Пользователь: ?(username), пароль: ?(password)",
 			Fields: []OutField{
 				OutField{
 					Name: "username",
 					Type: "text",
 					Attributes: FieldAttribute{
-						Label:    "имя пользователя",
+						Label:    "имя",
 						Required: true,
 					},
 				},
@@ -110,7 +129,7 @@ func (sap ShopAuthoriseProcessor) ProcessMessage(in InPkg) (string, *[]OutComman
 	user, password := _get_user_and_password(command[0].Form.Fields)
 	if sap.Users.CheckUserPassword(user, password) {
 		sap.Users.SetUserState(in.From, LOGIN)
-		return "Вы авторизовались. Ура!", &authorised_commands, nil
+		return "Добро пожаловать в интернет магазин", &authorised_commands, nil
 	}
 	return "Не правильные логин или пароль :(", nil, nil
 
@@ -130,12 +149,13 @@ func __choiceString(choices []string) string {
 }
 
 var order_states = [3]string{"обработан", "создан", "отправлен"}
+var order_products = [4]string{"Ноутбук Apple MacBook Air", "Электрочайник BORK K 515", "Аудиосистема Westlake Tower SM-1", "Микроволновая печь Bosch HMT85ML23"}
 
 func (osp ShopOrderStateProcessor) ProcessMessage(in InPkg) (string, *[]OutCommand, error) {
 	user_state, err := osp.Users.GetUserState(in.From)
 	_check(err)
 	if user_state == LOGIN {
-		result := fmt.Sprintf("Ваш заказ с номером %v %v", rand.Int31n(10000), __choiceString(order_states[:]))
+		result := fmt.Sprintf("Ваш заказ с номером %v (%v) %v", rand.Int31n(10000), __choiceString(order_products[:]), __choiceString(order_states[:]))
 		return result, &authorised_commands, nil
 	}
 	return "Авторизуйтесь пожалуйста!", nil, nil
@@ -159,5 +179,12 @@ type ShopLogOutMessageProcessor struct {
 
 func (lop ShopLogOutMessageProcessor) ProcessMessage(in InPkg) (string, *[]OutCommand, error) {
 	lop.Users.SetUserState(in.From, LOGOUT)
-	return "Вы вышли. Ура!", &not_authorised_commands, nil //todo
+	return "До свидания! ", &not_authorised_commands, nil
+}
+
+type ShopBalanceProcessor struct {
+}
+
+func (sbp ShopBalanceProcessor) ProcessMessage(in InPkg) (string, *[]OutCommand, error) {
+	return fmt.Sprintf("Ваш баланс на %v составляет %v бонусных баллов", time.Now().Format("01.02.2006"), rand.Int31n(1000)+10), nil, nil
 }

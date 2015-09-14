@@ -111,10 +111,10 @@ func (odbh *orderHandler) GetState(order_id int64) int {
 	return result.OrderState
 }
 
-func (odbh *orderHandler) SetState(order_id int64, new_state int, order *inf.Order) {
+func (odbh *orderHandler) SetState(order_id int64, new_state int, order *inf.Order) error {
 	change := bson.M{"$set": bson.M{"order_state": new_state, "when": time.Now(), "order_object": order}}
 	err := odbh.collection.Update(bson.M{"order_id": order_id}, change)
-	_check(err)
+	return err
 }
 
 func (oh *orderHandler) SetFeedback(whom, feedback string) (order_id int64) {
@@ -223,4 +223,10 @@ func (uh *userHandler) CheckUserPassword(username, password string) bool {
 	tmp := UserWrapper{}
 	err := uh.collection.Find(bson.M{"user_name": username, "password": phash(password)}).One(&tmp)
 	return err != nil
+}
+
+func (uh *userHandler) GetById(user_id string) (*UserWrapper, error) {
+	result := UserWrapper{}
+	err := uh.collection.Find(bson.M{"user_id": user_id}).One(&result)
+	return &result, err
 }
