@@ -7,12 +7,6 @@ import (
 	ia "msngr/infinity"
 )
 
-func _check(e error) {
-	if e != nil {
-		panic(e)
-	}
-}
-
 type config struct {
 	Infinity ia.InfinityApiParams `json:"infinity"`
 	Main     struct {
