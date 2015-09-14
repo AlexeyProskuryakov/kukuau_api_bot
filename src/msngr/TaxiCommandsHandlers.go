@@ -66,6 +66,20 @@ var commands_at_created_order = []OutCommand{
 		Action:   "write_dispatcher",
 		Position: 1,
 		Fixed:    true,
+		Form: &OutForm{
+			Type: "form",
+			Text: "?(text)",
+			Fields: []OutField{
+				OutField{
+					Name: "text",
+					Type: "text",
+					Attributes: FieldAttribute{
+						Label:    "Текст сообщения",
+						Required: true,
+					},
+				},
+			},
+		},
 	},
 }
 

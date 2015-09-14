@@ -1,10 +1,7 @@
 package main
 
 import (
-	"encoding/json"
 	"gopkg.in/mgo.v2"
-	"io/ioutil"
-	"log"
 	m "msngr"
 )
 
