@@ -129,7 +129,7 @@ func (sap ShopAuthoriseProcessor) ProcessMessage(in InPkg) (string, *[]OutComman
 	user, password := _get_user_and_password(command[0].Form.Fields)
 	if sap.Users.CheckUserPassword(user, password) {
 		sap.Users.SetUserState(in.From, LOGIN)
-		return "Добро пожаловать в интернет магазин", &authorised_commands, nil
+		return "Добро пожаловать в ДЕМО интернет магазин", &authorised_commands, nil
 	}
 	return "Не правильные логин или пароль :(", nil, nil
 
