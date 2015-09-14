@@ -46,7 +46,10 @@ func TaxiOrderWatch(db DbHandlerMixin, im inf.InfinityMixin, carsCache *inf.Cars
 			if order.State != order_state {
 				log.Printf("state of %v will persist", order)
 				db.Orders.SetState(order.ID, order.State, &order)
-				n.Notify(FormNotification(order.ID, order.State, db, carsCache))
+				notification_data := FormNotification(order.ID, order.State, db, carsCache)
+				if notification_data != nil {
+					n.Notify(*notification_data)
+				}
 			}
 		}
 		time.Sleep(500 * time.Millisecond)
@@ -357,13 +360,8 @@ type TaxiCancelOrderProcessor struct {
 func (cop TaxiCancelOrderProcessor) ProcessMessage(in InPkg) (string, *[]OutCommand, error) {
 	order_wrapper := cop.Orders.GetByOwner(in.From)
 	if order_wrapper != nil {
-		ok, info := cop.API.CancelOrder(order_wrapper.OrderId)
-		if ok {
-			return "", FormCommands(in.From, cop.DbHandlerMixin), nil
-		} else {
-			err_str := fmt.Sprintf("Какие-то проблемы с отменой заказа %+v", info) //todo send alarm command
-			return "", FormCommands(in.From, cop.DbHandlerMixin), errors.New(err_str)
-		}
+		cop.API.CancelOrder(order_wrapper.OrderId)
+		return "Ваш заказ отменен!", &commands_at_not_created_order, nil
 		//todo check at infinity orders
 	}
 	return "У вас нет заказов!", FormCommands(in.From, cop.DbHandlerMixin), errors.New("У вас нет заказов!")
