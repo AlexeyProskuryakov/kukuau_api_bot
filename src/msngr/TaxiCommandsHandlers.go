@@ -21,7 +21,7 @@ func FormTaxiCommands(im inf.InfinityMixin, db DbHandlerMixin) (map[string]Reque
 	}
 
 	var TaxiMessageCommands = map[string]MessageCommandProcessor{
-		"information":      TaxiInformationProcessor{},
+		"information":      TaxiInformationProcessor{DbHandlerMixin: db},
 		"new_order":        TaxiNewOrderProcessor{InfinityMixin: im, DbHandlerMixin: db},
 		"cancel_order":     TaxiCancelOrderProcessor{InfinityMixin: im, DbHandlerMixin: db},
 		"calculate_price":  TaxiCalculatePriceProcessor{InfinityMixin: im},
@@ -229,10 +229,12 @@ func (cp TaxiCommandsProcessor) ProcessRequest(in InPkg) ([]OutCommand, error) {
 	return *result, nil
 }
 
-type TaxiInformationProcessor struct{}
+type TaxiInformationProcessor struct {
+	DbHandlerMixin
+}
 
 func (ih TaxiInformationProcessor) ProcessMessage(in InPkg) (string, *[]OutCommand, error) {
-	return "Срочный заказ такси в Новосибирске. Быстрая подача. Оплата наличными или картой. ", nil, nil
+	return "Срочный заказ такси в Новосибирске. Быстрая подача. Оплата наличными или картой. ", FormCommands(in.From, ih.DbHandlerMixin), nil
 }
 
 func _get_time_from_timestamp(tst string) time.Time {
