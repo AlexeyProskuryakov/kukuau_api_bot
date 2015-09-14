@@ -2,6 +2,7 @@ package infinity
 
 import (
 	"log"
+	"math/rand"
 	"time"
 )
 
@@ -32,7 +33,7 @@ func (inf *FakeInfinity) set_order_state(order_id int64, new_state int) {
 
 func (inf *FakeInfinity) NewOrder(order NewOrder) (Answer, error) {
 	saved_order := Order{
-		ID:    int64(len(inf.orders) + 1),
+		ID:    rand.Int63(),
 		State: 1,
 		Cost:  150,
 		IDCar: 5033615557,

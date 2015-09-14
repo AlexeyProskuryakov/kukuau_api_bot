@@ -21,25 +21,21 @@ func get_time_after(d time.Duration, format string) string {
 }
 
 func genId() string {
-	//не привязывайся ко времени, может бть в 1 микросекуну много сообщений и ид долэны ыть разными
+	//не привязывайся ко времени, может бть в 1 микросекуну много сообщений и ид должны ыть разными
 	return fmt.Sprintf("%d", time.Now().UnixNano()/int64(time.Millisecond))
 }
 
 func getInPackage(r *http.Request) (InPkg, error) {
-
 	var in InPkg
-
 	body, err := ioutil.ReadAll(r.Body)
 	if err != nil {
 		log.Printf("error at reading: %q \n", err)
 	}
-
+	log.Printf("<<<:%s", string(body))
 	err = json.Unmarshal(body, &in)
 	if err != nil {
 		log.Printf("error at unmarshal: %q \n", err)
 	}
-
-	log.Printf("request data is:\n%+v\n", in)
 	return in, err
 }
 
@@ -51,7 +47,7 @@ func setOutPackage(w http.ResponseWriter, out OutPkg) {
 	}
 	w.Header().Set("Content-type", "application/json")
 	w.WriteHeader(http.StatusOK)
-
+	log.Printf(">>> %s\n", string(jsoned_out))
 	fmt.Fprintf(w, "%s", string(jsoned_out))
 }
 
@@ -103,8 +99,6 @@ func FormBotController(request_cmds map[string]RequestCommandProcessor, message_
 			}
 
 		}
-		log.Printf("out >>> %+v\n", out)
-
 		if err != nil {
 			out.Message = &OutMessage{Type: "error", Thread: "0", ID: genId(), Body: fmt.Sprintf("%+v", err)}
 		}

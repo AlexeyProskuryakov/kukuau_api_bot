@@ -31,22 +31,45 @@ func FormTaxiCommands(im inf.InfinityMixin, db DbHandlerMixin) (map[string]Reque
 	return TaxiRequestCommands, TaxiMessageCommands
 }
 
+func FormNotification(order_id int64, state int, ohm DbHandlerMixin, carCache *inf.CarsCache) *OutPkg {
+	order_wrapper := ohm.Orders.GetByOrderId(order_id)
+	car_id := order_wrapper.OrderObject.IDCar
+	car_info := carCache.CarInfo(car_id)
+	var commands *[]OutCommand
+	var text string
+	switch state := order_wrapper.OrderState; state {
+	case 2:
+		text = fmt.Sprintf("Вам назначен %v %v c номером %v, время подачи %v.", car_info.Color, car_info.Model, car_info.Number, get_time_after(5*time.Minute, "15:04"))
+	case 4:
+		text = "Машина на месте. Приятной Вам поездки!"
+	case 7:
+		text = "Заказ выполнен! Спасибо что воспользовались услугами нашей компании."
+		commands = &commands_for_order_feedback
+	}
+
+	if text != "" {
+		out := OutPkg{To: order_wrapper.Whom, Message: &OutMessage{ID: genId(), Type: "chat", Body: text, Commands: commands}}
+		return &out
+	}
+	return nil
+}
+
 func TaxiOrderWatch(db DbHandlerMixin, im inf.InfinityMixin, carsCache *inf.CarsCache, n *Notifier) {
 	for {
 		api_orders := im.API.Orders()
 		// log.Printf("OW api have %v orders", len(api_orders))
-		for _, order := range api_orders {
-			order_state := db.Orders.GetState(order.ID)
-			// log.Printf("state of %+v is: %v\n", order, order_state)
-
-			if order_state == -1 {
-				log.Printf("order %+v is not present in system :(\n", order)
+		for _, api_order := range api_orders {
+			db_order_state := db.Orders.GetState(api_order.ID)
+			// log.Printf("OW state of %+v is: %v\n", order, order_state)
+			if db_order_state == -1 {
+				log.Printf("OW order %+v is not present in system :(\n", api_order)
 				continue
 			}
-			if order.State != order_state {
-				log.Printf("state of %v will persist", order)
-				db.Orders.SetState(order.ID, order.State, &order)
-				notification_data := FormNotification(order.ID, order.State, db, carsCache)
+			if api_order.State != db_order_state {
+				log.Printf("OW state of %+v is updated (api: %v != db: %v)", api_order, api_order.State, db_order_state)
+				err := db.Orders.SetState(api_order.ID, api_order.State, &api_order)
+				_check(err)
+				notification_data := FormNotification(api_order.ID, api_order.State, db, carsCache)
 				if notification_data != nil {
 					n.Notify(*notification_data)
 				}
@@ -324,6 +347,7 @@ func _get_phone(in InPkg) (phone *string, err error) {
 
 func (nop TaxiNewOrderProcessor) ProcessMessage(in InPkg) (string, *[]OutCommand, error) {
 	order_wrapper := nop.Orders.GetByOwner(in.From)
+	log.Printf("NOP order_wrapper: %+v\n", order_wrapper)
 	if order_wrapper == nil || inf.IsOrderNotAvaliable(order_wrapper.OrderState) {
 		commands := *in.Message.Commands
 		new_order := _form_order(commands[0].Form.Fields)

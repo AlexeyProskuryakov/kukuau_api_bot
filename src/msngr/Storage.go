@@ -119,7 +119,7 @@ func (odbh *orderHandler) SetState(order_id int64, new_state int, order *inf.Ord
 
 func (oh *orderHandler) SetFeedback(whom, feedback string) (order_id int64) {
 	order := OrderWrapper{}
-	oh.collection.Find(bson.M{"whom": whom, "order_state": inf.ORDER_PAYED}).Sort("when").One(&order)
+	oh.collection.Find(bson.M{"whom": whom, "order_state": inf.ORDER_PAYED}).Sort("-when").One(&order)
 	oh.collection.Update(bson.M{"order_id": order.OrderId}, bson.M{"$set": bson.M{"feedback": feedback}})
 	order_id = order.OrderId
 	return
@@ -138,7 +138,7 @@ func (odbh *orderHandler) AddOrder(order_id int64, whom string) {
 
 func (odbh *orderHandler) GetByOwner(whom string) *OrderWrapper {
 	result := OrderWrapper{}
-	err := odbh.collection.Find(bson.M{"whom": whom}).Sort("when").One(&result)
+	err := odbh.collection.Find(bson.M{"whom": whom}).Sort("-when").One(&result)
 	if err != nil {
 		return nil
 	}

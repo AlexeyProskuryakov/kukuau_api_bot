@@ -6,9 +6,19 @@ import (
 	m "msngr"
 	ia "msngr/infinity"
 	"net/http"
+	"os"
 )
 
 func main() {
+	f, err := os.OpenFile("demo_bot.log", os.O_RDWR|os.O_CREATE|os.O_TRUNC, 0666)
+	if err != nil {
+		log.Fatalf("error opening file: %v", err)
+	}
+	defer f.Close()
+
+	log.SetOutput(f)
+	log.Println("This is a test log entry")
+
 	conf := m.ReadConfig()
 
 	url := &m.DictUrl
