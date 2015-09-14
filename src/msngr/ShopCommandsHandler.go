@@ -158,7 +158,7 @@ func (osp ShopOrderStateProcessor) ProcessMessage(in InPkg) (string, *[]OutComma
 		result := fmt.Sprintf("Ваш заказ с номером %v (%v) %v", rand.Int31n(10000), __choiceString(order_products[:]), __choiceString(order_states[:]))
 		return result, &authorised_commands, nil
 	}
-	return "Авторизуйтесь пожалуйста!", nil, nil
+	return "Авторизуйтесь пожалуйста!", &not_authorised_commands, nil
 }
 
 type SupportMessageProcessor struct{}
@@ -186,5 +186,5 @@ type ShopBalanceProcessor struct {
 }
 
 func (sbp ShopBalanceProcessor) ProcessMessage(in InPkg) (string, *[]OutCommand, error) {
-	return fmt.Sprintf("Ваш баланс на %v составляет %v бонусных баллов", time.Now().Format("01.02.2006"), rand.Int31n(1000)+10), nil, nil
+	return fmt.Sprintf("Ваш баланс на %v составляет %v бонусных баллов", time.Now().Format("01.02.2006"), rand.Int31n(1000)+10), &authorised_commands, nil
 }
