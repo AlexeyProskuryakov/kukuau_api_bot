@@ -2,6 +2,7 @@ package msngr
 
 import (
 	"fmt"
+	"log"
 	"math/rand"
 	"time"
 )
@@ -127,6 +128,7 @@ type ShopAuthoriseProcessor struct {
 func (sap ShopAuthoriseProcessor) ProcessMessage(in InPkg) (string, *[]OutCommand, error) {
 	command := *in.Message.Commands
 	user, password := _get_user_and_password(command[0].Form.Fields)
+	log.Println("SCH user and password ", user, password)
 	if sap.Users.CheckUserPassword(user, password) {
 		sap.Users.SetUserState(in.From, LOGIN)
 		return "Добро пожаловать в интернет магазин DespriceMarkt", &authorised_commands, nil
@@ -170,7 +172,7 @@ func (sm SupportMessageProcessor) ProcessMessage(in InPkg) (string, *[]OutComman
 type ShopInformationProcessor struct{}
 
 func (ih ShopInformationProcessor) ProcessMessage(in InPkg) (string, *[]OutCommand, error) {
-	return "Покупки в тысячах проверенных магазинов! (тестовый логин: test, пароль: 123)", nil, nil
+	return "Desprice Markt - интернет-магазин бытовой техники и электроники в Новосибирске и других городах России. Каталог товаров мировых брендов", nil, nil
 }
 
 type ShopLogOutMessageProcessor struct {

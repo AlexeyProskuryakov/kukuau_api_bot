@@ -222,6 +222,7 @@ func (uh *userHandler) GetUserState(user_id string) (string, error) {
 func (uh *userHandler) CheckUserPassword(username, password string) bool {
 	tmp := UserWrapper{}
 	err := uh.collection.Find(bson.M{"user_name": username, "password": phash(password)}).One(&tmp)
+	log.Println("ST checking user password", tmp, err)
 	return err != nil
 }
 
