@@ -68,7 +68,10 @@ func TaxiOrderWatch(db DbHandlerMixin, im inf.InfinityMixin, carsCache *inf.Cars
 			if api_order.State != db_order_state {
 				log.Printf("OW state of %+v is updated (api: %v != db: %v)", api_order, api_order.State, db_order_state)
 				err := db.Orders.SetState(api_order.ID, api_order.State, &api_order)
-				_check(err)
+				if err != nil {
+					log.Printf("for order %+v can not update status %+v", api_order.ID, api_order.State)
+					continue
+				}
 				notification_data := FormNotification(api_order.ID, api_order.State, db, carsCache)
 				if notification_data != nil {
 					n.Notify(*notification_data)
