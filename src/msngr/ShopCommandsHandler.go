@@ -35,7 +35,7 @@ var authorised_commands = []OutCommand{
 		Position: 1,
 	},
 	OutCommand{
-		Title:    "Оставить отзыв",
+		Title:    "Задать вопрос",
 		Action:   "support_message",
 		Position: 2,
 		Fixed:    true,
@@ -47,7 +47,7 @@ var authorised_commands = []OutCommand{
 					Name: "text",
 					Type: "text",
 					Attributes: FieldAttribute{
-						Label:    "Текст сообщения",
+						Label:    "Текст вопроса",
 						Required: true,
 					},
 				},
@@ -131,7 +131,7 @@ func (sap ShopAuthoriseProcessor) ProcessMessage(in InPkg) (string, *[]OutComman
 	log.Println("SCH user and password ", user, password)
 	if sap.Users.CheckUserPassword(user, password) {
 		sap.Users.SetUserState(in.From, LOGIN)
-		return "Добро пожаловать в интернет магазин DespriceMarkt", &authorised_commands, nil
+		return "Добро пожаловать в интернет магазин Desprice Markt!", &authorised_commands, nil
 	}
 	return "Не правильные логин или пароль :(", nil, nil
 
@@ -157,7 +157,7 @@ func (osp ShopOrderStateProcessor) ProcessMessage(in InPkg) (string, *[]OutComma
 	user_state, err := osp.Users.GetUserState(in.From)
 	_check(err)
 	if user_state == LOGIN {
-		result := fmt.Sprintf("Ваш заказ с номером %v (%v) %v", rand.Int31n(10000), __choiceString(order_products[:]), __choiceString(order_states[:]))
+		result := fmt.Sprintf("Ваш заказ #%v (%v) %v.", rand.Int31n(10000), __choiceString(order_products[:]), __choiceString(order_states[:]))
 		return result, &authorised_commands, nil
 	}
 	return "Авторизуйтесь пожалуйста!", &not_authorised_commands, nil
@@ -166,13 +166,13 @@ func (osp ShopOrderStateProcessor) ProcessMessage(in InPkg) (string, *[]OutComma
 type SupportMessageProcessor struct{}
 
 func (sm SupportMessageProcessor) ProcessMessage(in InPkg) (string, *[]OutCommand, error) {
-	return "Ваш отзыв важен для нас, спасибо.", nil, nil
+	return "Спасибо за вопрос. Мы ответим Вам в ближайшее время.", nil, nil
 }
 
 type ShopInformationProcessor struct{}
 
 func (ih ShopInformationProcessor) ProcessMessage(in InPkg) (string, *[]OutCommand, error) {
-	return "Desprice Markt - интернет-магазин бытовой техники и электроники в Новосибирске и других городах России. Каталог товаров мировых брендов", nil, nil
+	return "Desprice Markt - интернет-магазин бытовой техники и электроники в Новосибирске и других городах России. Каталог товаров мировых брендов.", nil, nil
 }
 
 type ShopLogOutMessageProcessor struct {
@@ -188,5 +188,5 @@ type ShopBalanceProcessor struct {
 }
 
 func (sbp ShopBalanceProcessor) ProcessMessage(in InPkg) (string, *[]OutCommand, error) {
-	return fmt.Sprintf("Ваш баланс на %v составляет %v бонусных баллов", time.Now().Format("01.02.2006"), rand.Int31n(1000)+10), &authorised_commands, nil
+	return fmt.Sprintf("Ваш баланс на %v составляет %v бонусных баллов.", time.Now().Format("01.02.2006"), rand.Int31n(1000)+10), &authorised_commands, nil
 }
