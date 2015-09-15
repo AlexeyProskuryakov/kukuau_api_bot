@@ -1,6 +1,6 @@
 bin
 logs
-*/*.log
+src/demo_bot.log
 pkg
 *.pid
 

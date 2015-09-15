@@ -1,9 +1,12 @@
 package msngr
 
 import (
+	"bytes"
 	"fmt"
 	"log"
 	"math/rand"
+	"regexp"
+	"strings"
 	"time"
 )
 
@@ -165,7 +168,41 @@ func (osp ShopOrderStateProcessor) ProcessMessage(in InPkg) (string, *[]OutComma
 
 type SupportMessageProcessor struct{}
 
+func contains(container string, elements []string) bool {
+	container_elements := regexp.MustCompile("[a-zA-Zа-яА-Я]+").FindAllString(container, -1)
+	log.Printf("SCH splitted: %v", strings.Join(container_elements, ","))
+	// container_elements = strings.Fields(container)
+	// log.Printf("SCH splitted: %v", strings.Join(container_elements, ","))
+	ce_map := make(map[string]bool)
+	for _, ce_element := range container_elements {
+		ce_map[strings.ToLower(ce_element)] = true
+	}
+	result := true
+	for _, element := range elements {
+		_, ok := ce_map[element]
+		result = result && ok
+		log.Printf("SCH element: %+v, contains? : %+v => %+v", element, ok, result)
+	}
+	return result
+}
+
+func make_one_string(fields []InField) string {
+	var buffer bytes.Buffer
+	for _, field := range fields {
+		buffer.WriteString(field.Data.Value)
+		buffer.WriteString(field.Data.Text)
+	}
+	return buffer.String()
+}
+
 func (sm SupportMessageProcessor) ProcessMessage(in InPkg) (string, *[]OutCommand, error) {
+	commands := *in.Message.Commands
+	if commands != nil {
+		log.Printf("SCH: commands: %+v, fields: %+v", commands, commands[0].Form.Fields)
+		if contains(make_one_string(commands[0].Form.Fields), []string{"где", "забрать", "заказ"}) {
+			return "Ваш заказ вы можете забрать по адресу: ул Николаева д 11", nil, nil
+		}
+	}
 	return "Спасибо за вопрос. Мы ответим Вам в ближайшее время.", nil, nil
 }
 
