@@ -200,7 +200,7 @@ func (sm SupportMessageProcessor) ProcessMessage(in InPkg) (string, *[]OutComman
 	if commands != nil {
 		log.Printf("SCH: commands: %+v, fields: %+v", commands, commands[0].Form.Fields)
 		if contains(make_one_string(commands[0].Form.Fields), []string{"где", "забрать", "заказ"}) {
-			return "Ваш заказ вы можете забрать по адресу: ул Николаева д 11", nil, nil
+			return "Ваш заказ вы можете забрать по адресу: ул. Николаева д. 11.", nil, nil
 		}
 	}
 	return "Спасибо за вопрос. Мы ответим Вам в ближайшее время.", nil, nil
