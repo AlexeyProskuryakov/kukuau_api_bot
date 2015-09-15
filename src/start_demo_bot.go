@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"log"
 	m "msngr"
-	ia "msngr/infinity"
+	taxi "msngr/taxi"
 	"net/http"
 	"os"
 )
@@ -23,8 +23,8 @@ func main() {
 
 	url := &m.DictUrl
 	*url = conf.Main.DictUrl
-	infApi := ia.GetInfinityAPI(conf.Infinity, conf.Main.Test)
-	im := ia.InfinityMixin{API: infApi}
+	infApi := taxi.GetInfinityAPI(conf.Infinity, conf.Main.Test)
+	im := taxi.InfinityMixin{API: infApi}
 
 	db := m.NewDbHandler(conf.Database.ConnString, conf.Database.Name)
 	db.Users.SetUserPassword("test", "123")
@@ -35,9 +35,9 @@ func main() {
 	http.HandleFunc("/taxi", taxi_controller)
 	http.HandleFunc("/shop", shop_controller)
 
-	realInfApi := ia.GetRealInfinityAPI(conf.Infinity)
+	realInfApi := taxi.GetRealInfinityAPI(conf.Infinity)
 	http.HandleFunc("/_streets", func(w http.ResponseWriter, r *http.Request) {
-		ia.StreetsSearchController(w, r, realInfApi)
+		taxi.StreetsSearchController(w, r, realInfApi)
 	})
 
 	addr := fmt.Sprintf(":%v", conf.Main.Port)
@@ -49,7 +49,7 @@ func main() {
 
 	//////////////////////////////////////////////////////////////////
 	n_taxi := m.NewNotifier(conf.Main.CallbackAddr, conf.Main.TaxiKey)
-	carsCache := ia.NewCarsCache(realInfApi)
+	carsCache := taxi.NewCarsCache(realInfApi)
 	go m.TaxiOrderWatch(*db, im, carsCache, n_taxi)
 
 	log.Fatal(serv.ListenAndServe())

@@ -1,9 +1,9 @@
 bin
 logs
-src/demo_bot.log
+demo_bot.log
 pkg
 *.pid
-
+.idea
 config.json
 
 github.com

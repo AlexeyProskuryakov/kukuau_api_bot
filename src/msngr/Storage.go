@@ -5,7 +5,7 @@ import (
 	"gopkg.in/mgo.v2"
 	"gopkg.in/mgo.v2/bson"
 	"log"
-	inf "msngr/infinity"
+	taxi "msngr/taxi"
 	"time"
 )
 
@@ -18,7 +18,7 @@ type OrderWrapper struct {
 	OrderId     int64 `bson:"order_id"`
 	When        time.Time
 	Whom        string
-	OrderObject *inf.Order `bson:"order_object"`
+	OrderObject *taxi.Order `bson:"order_object"`
 	Feedback    string
 }
 
@@ -111,7 +111,7 @@ func (odbh *orderHandler) GetState(order_id int64) int {
 	return result.OrderState
 }
 
-func (odbh *orderHandler) SetState(order_id int64, new_state int, order *inf.Order) error {
+func (odbh *orderHandler) SetState(order_id int64, new_state int, order *taxi.Order) error {
 	change := bson.M{"$set": bson.M{"order_state": new_state, "when": time.Now(), "order_object": order}}
 	err := odbh.collection.Update(bson.M{"order_id": order_id}, change)
 	return err
@@ -119,7 +119,7 @@ func (odbh *orderHandler) SetState(order_id int64, new_state int, order *inf.Ord
 
 func (oh *orderHandler) SetFeedback(whom, feedback string) (order_id int64) {
 	order := OrderWrapper{}
-	oh.collection.Find(bson.M{"whom": whom, "order_state": inf.ORDER_PAYED}).Sort("-when").One(&order)
+	oh.collection.Find(bson.M{"whom": whom, "order_state": taxi.ORDER_PAYED}).Sort("-when").One(&order)
 	oh.collection.Update(bson.M{"order_id": order.OrderId}, bson.M{"$set": bson.M{"feedback": feedback}})
 	order_id = order.OrderId
 	return

@@ -4,7 +4,7 @@ import (
 	"encoding/json"
 	"io/ioutil"
 	"log"
-	ia "msngr/infinity"
+	ia "msngr/taxi"
 )
 
 type config struct {
