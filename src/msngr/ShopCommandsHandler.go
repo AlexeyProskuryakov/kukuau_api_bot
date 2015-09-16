@@ -115,7 +115,7 @@ type ShopCommandsProcessor struct {
 	DbHandlerMixin
 }
 
-func (cp ShopCommandsProcessor) ProcessRequest(in InPkg) ([]OutCommand, error) {
+func (cp ShopCommandsProcessor) ProcessRequest(in InPkg) RequestResult {
 	user_state, err := cp.Users.GetUserState(in.From)
 	if err != nil {
 		cp.Users.AddUser(in.From, in.UserData.Phone)
@@ -126,22 +126,29 @@ func (cp ShopCommandsProcessor) ProcessRequest(in InPkg) ([]OutCommand, error) {
 	} else {
 		commands = not_authorised_commands
 	}
-	return commands, nil
+	return RequestResult{Commands:&commands}
 }
 
 type ShopAuthoriseProcessor struct {
 	DbHandlerMixin
 }
 
-func (sap ShopAuthoriseProcessor) ProcessMessage(in InPkg) (string, *[]OutCommand, error) {
+func (sap ShopAuthoriseProcessor) ProcessMessage(in InPkg) MessageResult {
 	command := *in.Message.Commands
 	user, password := _get_user_and_password(command[0].Form.Fields)
-	log.Println("SCH user and password ", user, password)
+
+	var body string
+	var commands []OutCommand
+
 	if sap.Users.CheckUserPassword(user, password) {
 		sap.Users.SetUserState(in.From, LOGIN)
-		return "Добро пожаловать в интернет магазин Desprice Markt!", &authorised_commands, nil
+		body = "Добро пожаловать в интернет магазин Desprice Markt!"
+		commands = authorised_commands
+	}else {
+		body = "Не правильные логин или пароль :("
+		commands = not_authorised_commands
 	}
-	return "Не правильные логин или пароль :(", nil, nil
+	return MessageResult{Body:body, Commands:&commands}
 
 }
 
@@ -161,17 +168,22 @@ func __choiceString(choices []string) string {
 var order_states = [5]string{"обработан", "доставляется", "отправлен", "поступил в пункт выдачи", "в обработке"}
 var order_products = [4]string{"Ноутбук Apple MacBook Air", "Электрочайник BORK K 515", "Аудиосистема Westlake Tower SM-1", "Микроволновая печь Bosch HMT85ML23"}
 
-func (osp ShopOrderStateProcessor) ProcessMessage(in InPkg) (string, *[]OutCommand, error) {
+func (osp ShopOrderStateProcessor) ProcessMessage(in InPkg) MessageResult {
 	user_state, err := osp.Users.GetUserState(in.From)
 	_check(err)
+	var result string
+	var commands []OutCommand
 	if user_state == LOGIN {
-		result := fmt.Sprintf("Ваш заказ #%v (%v) %v.", rand.Int31n(10000), __choiceString(order_products[:]), __choiceString(order_states[:]))
-		return result, &authorised_commands, nil
+		result = fmt.Sprintf("Ваш заказ #%v (%v) %v.", rand.Int31n(10000), __choiceString(order_products[:]), __choiceString(order_states[:]))
+		commands = authorised_commands
+	} else {
+		result = "Авторизуйтесь пожалуйста!"
+		commands = not_authorised_commands
 	}
-	return "Авторизуйтесь пожалуйста!", &not_authorised_commands, nil
+	return MessageResult{Body:result, Commands:&commands}
 }
 
-type SupportMessageProcessor struct{}
+type SupportMessageProcessor struct {}
 
 func contains(container string, elements []string) bool {
 	container_elements := regexp.MustCompile("[a-zA-Zа-яА-Я]+").FindAllString(container, -1)
@@ -200,35 +212,41 @@ func make_one_string(fields []InField) string {
 	return buffer.String()
 }
 
-func (sm SupportMessageProcessor) ProcessMessage(in InPkg) (string, *[]OutCommand, error) {
+func (sm SupportMessageProcessor) ProcessMessage(in InPkg) MessageResult {
 	commands := *in.Message.Commands
+	var body string
+
 	if commands != nil {
 		log.Printf("SCH: commands: %+v, fields: %+v", commands, commands[0].Form.Fields)
 		if contains(make_one_string(commands[0].Form.Fields), []string{"где", "забрать", "заказ"}) {
-			return "Ваш заказ вы можете забрать по адресу: ул. Николаева д. 11.", nil, nil
+			body = "Ваш заказ вы можете забрать по адресу: ул. Николаева д. 11."
+		} else {
+			body = "Спасибо за вопрос. Мы ответим Вам в ближайшее время."
 		}
+	} else {
+		body = "Спасибо за вопрос. Мы ответим Вам в ближайшее время."
 	}
-	return "Спасибо за вопрос. Мы ответим Вам в ближайшее время.", nil, nil
+	return MessageResult{Body:body}
 }
 
-type ShopInformationProcessor struct{}
+type ShopInformationProcessor struct {}
 
-func (ih ShopInformationProcessor) ProcessMessage(in InPkg) (string, *[]OutCommand, error) {
-	return "Desprice Markt - интернет-магазин бытовой техники и электроники в Новосибирске и других городах России. Каталог товаров мировых брендов.", nil, nil
+func (ih ShopInformationProcessor) ProcessMessage(in InPkg) MessageResult {
+	return MessageResult{Body:"Desprice Markt - интернет-магазин бытовой техники и электроники в Новосибирске и других городах России. Каталог товаров мировых брендов."}
 }
 
 type ShopLogOutMessageProcessor struct {
 	DbHandlerMixin
 }
 
-func (lop ShopLogOutMessageProcessor) ProcessMessage(in InPkg) (string, *[]OutCommand, error) {
+func (lop ShopLogOutMessageProcessor) ProcessMessage(in InPkg) MessageResult {
 	lop.Users.SetUserState(in.From, LOGOUT)
-	return "До свидания! ", &not_authorised_commands, nil
+	return MessageResult{Body:"До свидания! ", Commands:&not_authorised_commands}
 }
 
 type ShopBalanceProcessor struct {
 }
 
-func (sbp ShopBalanceProcessor) ProcessMessage(in InPkg) (string, *[]OutCommand, error) {
-	return fmt.Sprintf("Ваш баланс на %v составляет %v бонусных баллов.", time.Now().Format("01.02.2006"), rand.Int31n(1000)+10), &authorised_commands, nil
+func (sbp ShopBalanceProcessor) ProcessMessage(in InPkg) MessageResult {
+	return MessageResult{Body: fmt.Sprintf("Ваш баланс на %v составляет %v бонусных баллов.", time.Now().Format("01.02.2006"), rand.Int31n(1000) + 10), Commands: &authorised_commands}
 }

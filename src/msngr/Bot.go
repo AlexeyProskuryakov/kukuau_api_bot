@@ -7,6 +7,7 @@ import (
 	"log"
 	"net/http"
 	"time"
+	"errors"
 )
 
 func _check(e error) {
@@ -39,15 +40,25 @@ func getInPackage(r *http.Request) (InPkg, error) {
 	return in, err
 }
 
-func setOutPackage(w http.ResponseWriter, out OutPkg) {
+func setOutPackage(w http.ResponseWriter, out OutPkg, isError bool, isDeferred bool) {
 
 	jsoned_out, err := json.Marshal(&out)
 	if err != nil {
 		log.Println("set out package: ", jsoned_out, err)
 	}
 	w.Header().Set("Content-type", "application/json")
-	w.WriteHeader(http.StatusOK)
+
 	log.Printf(">>> %s\n", string(jsoned_out))
+
+	if isError{
+		w.WriteHeader(http.StatusBadRequest)
+	} else if isDeferred{
+		w.WriteHeader(http.StatusNoContent)
+		return
+	}else{
+		w.WriteHeader(http.StatusOK)
+	}
+
 	fmt.Fprintf(w, "%s", string(jsoned_out))
 }
 
@@ -70,14 +81,18 @@ func FormBotController(context *BotContext) controllerHandler {
 			return
 		}
 
-		out := new(OutPkg)
+		out := &OutPkg{}
+		var in InPkg
+		var isError, isDeferred bool
+		var global_error, request_error, message_error error
+
 		if detail, ok := context.Check(); !ok{
 			out.Message = &OutMessage{Type: "error", Thread: "0", ID: genId(), Body: fmt.Sprintln(detail)}
-			setOutPackage(w, *out)
+			setOutPackage(w, *out, true, isDeferred)
 			return
 		}
 
-		in, err := getInPackage(r)
+		in, global_error = getInPackage(r)
 
 		out.To = in.From
 
@@ -87,9 +102,14 @@ func FormBotController(context *BotContext) controllerHandler {
 			out.Request = &OutRequest{ID: genId(), Type: "result"}
 			out.Request.Query.Action = action
 			if commandProcessor, ok := context.Request_commands[action]; ok {
-				out.Request.Query.Result, err = commandProcessor.ProcessRequest(in)
+				requestResult := commandProcessor.ProcessRequest(in)
+				if requestResult.Error != nil {
+					request_error = requestResult.Error
+				}else{
+					out.Request.Query.Result = *requestResult.Commands
+				}
 			} else {
-				out.Request.Query.Text = "Команда не поддерживается."
+				request_error = errors.New("Команда не поддерживается.")
 			}
 
 		} else if in.Message != nil {
@@ -99,24 +119,44 @@ func FormBotController(context *BotContext) controllerHandler {
 			in_commands := in.Message.Commands
 
 			if in_commands == nil {
-				out.Message.Body = "Команд не найдено"
+				message_error = errors.New("Команд не найдено.")
 			} else {
 				for _, command := range *in_commands {
 					action := command.Action
 					if commandProcessor, ok := context.Message_commands[action]; ok {
-						out.Message.Body, out.Message.Commands, err = commandProcessor.ProcessMessage(in)
+						messageResult := commandProcessor.ProcessMessage(in)
+						if messageResult.Error != nil {
+							message_error = messageResult.Error
+						}else{
+							out.Message.Body = messageResult.Body
+							out.Message.Commands = messageResult.Commands
+
+						}
 					} else {
-						out.Message.Body = "Команда не поддерживается."
+						message_error = errors.New("Команда не поддерживается.")
 					}
 				}
 			}
-
-		}
-		if err != nil {
-			out.Message = &OutMessage{Type: "error", Thread: "0", ID: genId(), Body: fmt.Sprintf("%+v", err)}
+		} else {
+			global_error = errors.New("Ничего не понятно!")
 		}
 
-		setOutPackage(w, *out)
+		if message_error != nil {
+			out = &OutPkg{}
+			out.Message = &OutMessage{Type: "error", Thread: "0", ID: genId(), Body: fmt.Sprintf("%+v", message_error)}
+			isError = true
+		} else if global_error != nil {
+			out = &OutPkg{}
+			out.Message = &OutMessage{Type: "error", Thread: "0", ID: genId(), Body: fmt.Sprintf("%+v", global_error)}
+			isError = true
+		} else if request_error != nil {
+			out = &OutPkg{}
+			out.Request = &OutRequest{Type: "error", ID: genId()}
+			out.Request.Query.Text = fmt.Sprintf("%+v", request_error)
+			isError = true
+		}
+
+		setOutPackage(w, *out, isError, isDeferred)
 	}
 
 }

@@ -866,8 +866,8 @@ var StatusesMap = map[int]string{
 	15: "Не подтвержден",
 }
 
-func IsOrderNotAvaliable(state int) bool {
-	if state == 9 || state == 13 || state == 7 {
+func IsOrderNotAvailable(state int) bool {
+	if state == 9 || state == 13 || state == 7 || state == 0 {
 		return true
 	}
 	return false

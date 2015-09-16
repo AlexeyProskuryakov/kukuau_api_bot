@@ -62,7 +62,7 @@ func (inf *FakeInfinity) CancelOrder(order_id int64) (bool, string) {
 	log.Println("FA order was canceled", order_id)
 	for i, order := range inf.orders {
 		if order.ID == order_id {
-			inf.orders[i].State = 7
+			inf.orders[i].State = ORDER_CANCELED
 			return true, "test order was cancelled"
 		}
 	}

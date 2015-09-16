@@ -53,12 +53,15 @@ func FormNotification(order_id int64, state int, ohm DbHandlerMixin, carCache *t
 	var text string
 	switch state := order_wrapper.OrderState; state {
 	case 2:
-		text = fmt.Sprintf("Вам назначен %v %v c номером %v, время подачи %v.", car_info.Color, car_info.Model, car_info.Number, get_time_after(5*time.Minute, "15:04"))
+		text = fmt.Sprintf("Вам назначен %v %v c номером %v, время подачи %v.", car_info.Color, car_info.Model, car_info.Number, get_time_after(5 * time.Minute, "15:04"))
 	case 4:
 		text = "Машина на месте. Приятной Вам поездки!"
 	case 7:
 		text = "Заказ выполнен! Спасибо что воспользовались услугами нашей компании."
 		commands = &commands_for_order_feedback
+	default:
+		status := taxi.StatusesMap[state]
+		text = fmt.Sprintf("Машина %v %v c номером %v перешла в состояние [%v]", car_info.Color, car_info.Model, car_info.Number, status)
 	}
 
 	if text != "" {
@@ -71,10 +74,8 @@ func FormNotification(order_id int64, state int, ohm DbHandlerMixin, carCache *t
 func TaxiOrderWatch(db DbHandlerMixin, im taxi.InfinityMixin, carsCache *taxi.CarsCache, n *Notifier) {
 	for {
 		api_orders := im.API.Orders()
-		// log.Printf("OW api have %v orders", len(api_orders))
 		for _, api_order := range api_orders {
 			db_order_state := db.Orders.GetState(api_order.ID)
-			// log.Printf("OW state of %+v is: %v\n", order, order_state)
 			if db_order_state == -1 {
 				log.Printf("OW order %+v is not present in system :(\n", api_order)
 				continue
@@ -289,22 +290,22 @@ type TaxiCommandsProcessor struct {
 	DbHandlerMixin
 }
 
-func (cp TaxiCommandsProcessor) ProcessRequest(in InPkg) ([]OutCommand, error) {
+func (cp TaxiCommandsProcessor) ProcessRequest(in InPkg) RequestResult {
 	phone, err := _get_phone(in)
 	if err != nil {
-		return nil, err
+		return RequestResult{Commands:nil, Error:err}
 	}
 	cp.Users.AddUser(in.From, *phone)
 	result := FormCommands(in.From, cp.DbHandlerMixin)
-	return *result, nil
+	return RequestResult{Commands:result}
 }
 
 type TaxiInformationProcessor struct {
 	DbHandlerMixin
 }
 
-func (ih TaxiInformationProcessor) ProcessMessage(in InPkg) (string, *[]OutCommand, error) {
-	return "Срочный заказ такси в Новосибирске. Быстрая подача. Оплата наличными или картой. ", FormCommands(in.From, ih.DbHandlerMixin), nil
+func (ih TaxiInformationProcessor) ProcessMessage(in InPkg) MessageResult {
+	return MessageResult{Body: "Срочный заказ такси в Новосибирске. Быстрая подача. Оплата наличными или картой. ", Commands:FormCommands(in.From, ih.DbHandlerMixin)}
 }
 
 func _get_time_from_timestamp(tst string) time.Time {
@@ -326,14 +327,14 @@ func _form_order(fields []InField) (new_order taxi.NewOrder) {
 			ht = field.Data.Value
 		case "house_from":
 			hf = field.Data.Value
-			// case "time": //todo see time! with exceptions
-			// 	when = field.Data.Value
-			// 	log.Println("!time of order: ", when)
-			// 	if when == "0" || when == "" {
-			// 		new_order.DeliveryMinutes = 0
-			// 	} else {
-			// 		new_order.DeliveryTime = _get_time_from_timestamp(when).Format(timeFormat)
-			// 	}
+		// case "time": //todo see time! with exceptions
+		// 	when = field.Data.Value
+		// 	log.Println("!time of order: ", when)
+		// 	if when == "0" || when == "" {
+		// 		new_order.DeliveryMinutes = 0
+		// 	} else {
+		// 		new_order.DeliveryTime = _get_time_from_timestamp(when).Format(timeFormat)
+		// 	}
 		}
 	}
 	//fucking hardcode //todo refactor
@@ -362,17 +363,17 @@ func _get_phone(in InPkg) (phone *string, err error) {
 	return nil, errors.New("no row at message.UserData.Phone")
 }
 
-func (nop TaxiNewOrderProcessor) ProcessMessage(in InPkg) (string, *[]OutCommand, error) {
+func (nop TaxiNewOrderProcessor) ProcessMessage(in InPkg) MessageResult {
 	order_wrapper := nop.Orders.GetByOwner(in.From)
 	log.Printf("NOP order_wrapper: %+v\n", order_wrapper)
-	if order_wrapper == nil || taxi.IsOrderNotAvaliable(order_wrapper.OrderState) {
+	if order_wrapper == nil || taxi.IsOrderNotAvailable(order_wrapper.OrderState) {
 		commands := *in.Message.Commands
 		new_order := _form_order(commands[0].Form.Fields)
 		phone, err := _get_phone(in)
 		if err != nil {
 			uwrpr, err := nop.Users.GetById(in.From)
 			if err != nil {
-				return "Error of user data", nil, errors.New("You must provide phone of user (at user data in this message or in `commands` message)")
+				return MessageResult{Body: "Error of user data", Commands:nil, Error:errors.New("You must provide phone of user (at user data in this message or in `commands` message)")}
 			} else {
 				phone = &(uwrpr.Phone)
 			}
@@ -386,10 +387,9 @@ func (nop TaxiNewOrderProcessor) ProcessMessage(in InPkg) (string, *[]OutCommand
 		}
 		nop.Orders.AddOrder(ans.Content.Id, in.From)
 		text := fmt.Sprintf("Ваш заказ создан! Стоймость поездки составит %+v рублей.", ans.Content.Cost)
-		return text, &commands_at_created_order, nil
-	} else {
-		return "Заказ уже создан!", &commands_at_created_order, errors.New("Заказ уже создан!")
+		return MessageResult{Body:text, Commands:&commands_at_created_order}
 	}
+	return MessageResult{Body: "Заказ уже создан!", Commands: &commands_at_created_order, Error: errors.New("Заказ уже создан!")}
 }
 
 type TaxiCancelOrderProcessor struct {
@@ -397,26 +397,29 @@ type TaxiCancelOrderProcessor struct {
 	DbHandlerMixin
 }
 
-func (cop TaxiCancelOrderProcessor) ProcessMessage(in InPkg) (string, *[]OutCommand, error) {
+func (cop TaxiCancelOrderProcessor) ProcessMessage(in InPkg) MessageResult {
 	order_wrapper := cop.Orders.GetByOwner(in.From)
-	if order_wrapper != nil {
-		cop.API.CancelOrder(order_wrapper.OrderId)
-		return "Ваш заказ отменен!", &commands_at_not_created_order, nil
-		//todo check at infinity orders
+	if order_wrapper != nil && !taxi.IsOrderNotAvailable(order_wrapper.OrderState) {
+		is_success, message := cop.API.CancelOrder(order_wrapper.OrderId)
+		if is_success {
+			return MessageResult{Body:"Ваш заказ отменен!", Commands: &commands_at_not_created_order}
+		} else {
+			return MessageResult{Body:fmt.Sprintf("Проблемы с отменом заказа %v", message), Error: errors.New("Звони скорее: 123456")}
+		}
 	}
-	return "У вас нет заказов!", FormCommands(in.From, cop.DbHandlerMixin), errors.New("У вас нет заказов!")
+	return MessageResult{Body: "У вас нет активных заказов!", Commands:FormCommands(in.From, cop.DbHandlerMixin), Error: errors.New("У вас нет активных заказов!")}
 }
 
 type TaxiCalculatePriceProcessor struct {
 	taxi.InfinityMixin
 }
 
-func (cpp TaxiCalculatePriceProcessor) ProcessMessage(in InPkg) (string, *[]OutCommand, error) {
+func (cpp TaxiCalculatePriceProcessor) ProcessMessage(in InPkg) MessageResult {
 	commands := *in.Message.Commands
 	order := _form_order(commands[0].Form.Fields)
 	s, _ := cpp.API.CalcOrderCost(order)
 	cost := strconv.Itoa(s)
-	return fmt.Sprintf("Стоймость будет всего лишь %v рублей!", cost), nil, nil
+	return MessageResult{Body: fmt.Sprintf("Стоймость будет всего лишь %v рублей!", cost)}
 }
 
 type TaxiFeedbackProcessor struct {
@@ -433,12 +436,12 @@ func _get_feedback(fields []InField) (int, string) {
 	return 10, "Cool"
 }
 
-func (fp TaxiFeedbackProcessor) ProcessMessage(in InPkg) (string, *[]OutCommand, error) {
+func (fp TaxiFeedbackProcessor) ProcessMessage(in InPkg) MessageResult {
 	commands := *in.Message.Commands
 	rating, fdbk := _get_feedback(commands[0].Form.Fields)
 	order_id := fp.Orders.SetFeedback(in.From, fdbk)
 	f := taxi.Feedback{IdOrder: order_id, Rating: rating, Notes: fdbk}
 	fp.API.Feedback(f)
 
-	return "Спасибо! Ваш отзыв очень важен для нас:)", FormCommands(in.From, fp.DbHandlerMixin), nil
+	return MessageResult{Body: "Спасибо! Ваш отзыв очень важен для нас:)", Commands: FormCommands(in.From, fp.DbHandlerMixin)}
 }
