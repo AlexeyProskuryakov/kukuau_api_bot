@@ -130,7 +130,7 @@ func FormBotController(context *BotContext) controllerHandler {
 						}else{
 							out.Message.Body = messageResult.Body
 							out.Message.Commands = messageResult.Commands
-
+							isDeferred = messageResult.IsDeferred
 						}
 					} else {
 						message_error = errors.New("Команда не поддерживается.")
