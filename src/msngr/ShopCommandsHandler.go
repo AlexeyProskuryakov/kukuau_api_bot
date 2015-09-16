@@ -10,7 +10,7 @@ import (
 	"time"
 )
 
-func FormShopCommands(db DbHandlerMixin) (map[string]RequestCommandProcessor, map[string]MessageCommandProcessor) {
+func FormShopCommands(db DbHandlerMixin) *BotContext {
 	var ShopRequestCommands = map[string]RequestCommandProcessor{
 		"commands": ShopCommandsProcessor{DbHandlerMixin: db},
 	}
@@ -23,7 +23,12 @@ func FormShopCommands(db DbHandlerMixin) (map[string]RequestCommandProcessor, ma
 		"support_message": SupportMessageProcessor{},
 		"balance":         ShopBalanceProcessor{},
 	}
-	return ShopRequestCommands, ShopMessageCommands
+
+	context := BotContext{}
+	context.Check = func() (string, bool) { return "", true }
+	context.Message_commands = ShopMessageCommands
+	context.Request_commands = ShopRequestCommands
+	return &context
 }
 
 var authorised_commands = []OutCommand{

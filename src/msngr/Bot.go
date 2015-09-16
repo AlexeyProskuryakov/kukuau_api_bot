@@ -22,7 +22,7 @@ func get_time_after(d time.Duration, format string) string {
 
 func genId() string {
 	//не привязывайся ко времени, может бть в 1 микросекуну много сообщений и ид должны ыть разными
-	return fmt.Sprintf("%d", time.Now().UnixNano()/int64(time.Millisecond))
+	return fmt.Sprintf("%d", time.Now().UnixNano() / int64(time.Millisecond))
 }
 
 func getInPackage(r *http.Request) (InPkg, error) {
@@ -51,9 +51,18 @@ func setOutPackage(w http.ResponseWriter, out OutPkg) {
 	fmt.Fprintf(w, "%s", string(jsoned_out))
 }
 
+type checkFunc func() (string, bool)
+
+type BotContext struct {
+	Check checkFunc
+	Request_commands map[string]RequestCommandProcessor
+	Message_commands map[string]MessageCommandProcessor
+}
+
+
 type controllerHandler func(w http.ResponseWriter, r *http.Request)
 
-func FormBotController(request_cmds map[string]RequestCommandProcessor, message_cmds map[string]MessageCommandProcessor) controllerHandler {
+func FormBotController(context *BotContext) controllerHandler {
 
 	return func(w http.ResponseWriter, r *http.Request) {
 		if r.Method != "POST" {
@@ -61,10 +70,14 @@ func FormBotController(request_cmds map[string]RequestCommandProcessor, message_
 			return
 		}
 
-		in, err := getInPackage(r)
 		out := new(OutPkg)
+		if detail, ok := context.Check(); !ok{
+			out.Message = &OutMessage{Type: "error", Thread: "0", ID: genId(), Body: fmt.Sprintln(detail)}
+			setOutPackage(w, *out)
+			return
+		}
 
-		log.Println("forming response...")
+		in, err := getInPackage(r)
 
 		out.To = in.From
 
@@ -73,7 +86,7 @@ func FormBotController(request_cmds map[string]RequestCommandProcessor, message_
 			action := in.Request.Query.Action
 			out.Request = &OutRequest{ID: genId(), Type: "result"}
 			out.Request.Query.Action = action
-			if commandProcessor, ok := request_cmds[action]; ok {
+			if commandProcessor, ok := context.Request_commands[action]; ok {
 				out.Request.Query.Result, err = commandProcessor.ProcessRequest(in)
 			} else {
 				out.Request.Query.Text = "Команда не поддерживается."
@@ -90,7 +103,7 @@ func FormBotController(request_cmds map[string]RequestCommandProcessor, message_
 			} else {
 				for _, command := range *in_commands {
 					action := command.Action
-					if commandProcessor, ok := message_cmds[action]; ok {
+					if commandProcessor, ok := context.Message_commands[action]; ok {
 						out.Message.Body, out.Message.Commands, err = commandProcessor.ProcessMessage(in)
 					} else {
 						out.Message.Body = "Команда не поддерживается."

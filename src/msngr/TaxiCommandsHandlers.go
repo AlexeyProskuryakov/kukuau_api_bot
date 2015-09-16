@@ -15,20 +15,34 @@ const (
 	timeFormat = "2006-01-02 15:04:05"
 )
 
-func FormTaxiCommands(im taxi.InfinityMixin, db DbHandlerMixin) (map[string]RequestCommandProcessor, map[string]MessageCommandProcessor) {
-	var TaxiRequestCommands = map[string]RequestCommandProcessor{
+func FormTaxiCommands(im *taxi.InfinityMixin, db DbHandlerMixin) *BotContext {
+	context := BotContext{}
+
+	context.Check = func() (string, bool) {
+		var ok bool
+		var detail string
+		ok = im.API.IsConnected()
+		log.Printf("CHECK api: %+v, ok: %v", im.API, ok)
+		if !ok {
+			detail = "Ошибка в подключении к сервису"
+		}
+		return detail, ok
+	}
+
+	context.Request_commands = map[string]RequestCommandProcessor{
 		"commands": TaxiCommandsProcessor{DbHandlerMixin: db},
 	}
 
-	var TaxiMessageCommands = map[string]MessageCommandProcessor{
+	context.Message_commands = map[string]MessageCommandProcessor{
 		"information":      TaxiInformationProcessor{DbHandlerMixin: db},
-		"new_order":        TaxiNewOrderProcessor{InfinityMixin: im, DbHandlerMixin: db},
-		"cancel_order":     TaxiCancelOrderProcessor{InfinityMixin: im, DbHandlerMixin: db},
-		"calculate_price":  TaxiCalculatePriceProcessor{InfinityMixin: im},
-		"feedback":         TaxiFeedbackProcessor{InfinityMixin: im, DbHandlerMixin: db},
+		"new_order":        TaxiNewOrderProcessor{InfinityMixin: *im, DbHandlerMixin: db},
+		"cancel_order":     TaxiCancelOrderProcessor{InfinityMixin: *im, DbHandlerMixin: db},
+		"calculate_price":  TaxiCalculatePriceProcessor{InfinityMixin: *im},
+		"feedback":         TaxiFeedbackProcessor{InfinityMixin: *im, DbHandlerMixin: db},
 		"write_dispatcher": SupportMessageProcessor{},
 	}
-	return TaxiRequestCommands, TaxiMessageCommands
+
+	return &context
 }
 
 func FormNotification(order_id int64, state int, ohm DbHandlerMixin, carCache *taxi.CarsCache) *OutPkg {
@@ -371,7 +385,6 @@ func (nop TaxiNewOrderProcessor) ProcessMessage(in InPkg) (string, *[]OutCommand
 			panic(ord_error)
 		}
 		nop.Orders.AddOrder(ans.Content.Id, in.From)
-		//todo check at infinity orders
 		text := fmt.Sprintf("Ваш заказ создан! Стоймость поездки составит %+v рублей.", ans.Content.Cost)
 		return text, &commands_at_created_order, nil
 	} else {

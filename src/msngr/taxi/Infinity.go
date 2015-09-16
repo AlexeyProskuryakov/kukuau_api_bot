@@ -8,7 +8,6 @@ import (
 	"io/ioutil"
 	"log"
 	"net/http"
-	"net/url"
 	// "os"
 	// "strconv"
 	"sync"
@@ -21,6 +20,7 @@ type TaxiInterface interface {
 	CalcOrderCost(order NewOrder) (int, string)
 	Orders() []Order
 	Feedback(f Feedback) (bool, string)
+	IsConnected() bool
 }
 
 func warn(err error) {
@@ -97,23 +97,23 @@ func _initInfinity(conn_str, host, login, password string) *infinity {
 	result := &infinity{}
 	result.ConnString = conn_str
 	result.Host = host
-	result.Login(login, password)
+
+	logon := result.Login(login, password)
+	if !logon {
+		go result.reconnect()
+	}
 	return result
 }
 
 func GetInfinityAPI(iap InfinityApiParams, isTest bool) TaxiInterface {
 	if isTest {
-		log.Println("return test API")
+		log.Println("GIA return test API")
 		once.Do(func() {
 			fakeInstance = &FakeInfinity{}
 		})
 		return fakeInstance
 	} else {
-		log.Println("return REAL API AHTUNG!!!")
-		once.Do(func() {
-			instance = _initInfinity(iap.ConnectionsString, iap.Host, iap.Login, iap.Login)
-		})
-		//todo this is coprocode realise with your brains!!!
+		log.Println("GIA return REAL API AHTUNG!!!")
 		if instance == nil {
 			instance = _initInfinity(iap.ConnectionsString, iap.Host, iap.Login, iap.Login)
 		}
@@ -214,7 +214,10 @@ type Order struct {
 // Возвращает true, если авторизация прошла успешно, false иначе.
 // Устанавливает время авторизации в infinity.LoginTime при успешной авторизации.
 func (p *infinity) Login(login, password string) bool {
+	p.curent_credentials.login = login
+	p.curent_credentials.password = password
 	p.LoginResponse.Success = false
+
 	client := &http.Client{}
 	req, err := http.NewRequest("GET", p.ConnString+"Login", nil)
 	warnp(err)
@@ -226,7 +229,12 @@ func (p *infinity) Login(login, password string) bool {
 	values.Add("app", "CxTaxiClient")
 	req.URL.RawQuery = values.Encode()
 	res, err := client.Do(req)
-	warnp(err)
+
+	//если нет соединения с infinity то выходим
+	if err!=nil{
+		return false
+	}
+
 	defer res.Body.Close()
 	body, err := ioutil.ReadAll(res.Body)
 	warnp(err)
@@ -243,11 +251,15 @@ func (p *infinity) Login(login, password string) bool {
 			Domain: "109.202.25.248",
 		}
 		p.LoginTime = time.Now()
-		p.curent_credentials.login = login
-		p.curent_credentials.password = password
+
 		return true
 	}
 	return false
+}
+
+func (p *infinity) IsConnected() bool {
+	log.Println("INF IS connected:",p)
+	return p.LoginResponse.Success
 }
 
 func (p *infinity) reconnect() {
@@ -260,6 +272,7 @@ func (p *infinity) reconnect() {
 		if result {
 			break
 		} else {
+			log.Printf("IR: reconnect is fail trying next after %+v", sleep_time)
 			time.Sleep(sleep_time * time.Millisecond)
 			sleep_time = time.Duration(float32(sleep_time) * 1.4)
 		}
@@ -324,7 +337,7 @@ type InfinityCarInfo struct {
 
 func (p *infinity) _request(conn_suffix string, url_values map[string]string) []byte {
 	client := &http.Client{}
-	req, err := http.NewRequest("GET", p.ConnString+conn_suffix, nil)
+ 	req, err := http.NewRequest("GET", p.ConnString+conn_suffix, nil)
 	warnp(err)
 	req.Header.Add("ContentType", "text/html;charset=UTF-8")
 	values := req.URL.Query()
@@ -757,13 +770,17 @@ func StreetsSearchController(w http.ResponseWriter, r *http.Request, i *infinity
 
 	log.Println("Searching address...")
 	if r.Method == "GET" {
-		params := url.Values{}
-		params = r.URL.Query()
-		// log.Println(params)
+		params := r.URL.Query()
 		query := params.Get("q")
-		// log.Println(query)
 		var results []DictItem
 		if query != "" {
+
+			if !i.IsConnected() {
+				ans, _ :=json.Marshal(map[string]string{"error":"true", "details":"service is not avaliable"})
+				fmt.Fprintf(w, "%s", string(ans))
+				return
+			}
+
 			rows := i.AddressesSearch(query).Rows
 			for _, nitem := range rows {
 				var item DictItem

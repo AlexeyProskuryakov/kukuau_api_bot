@@ -77,3 +77,7 @@ func (p *FakeInfinity) CalcOrderCost(order NewOrder) (int, string) {
 func (p *FakeInfinity) Feedback(f Feedback) (bool, string) {
 	return true, "Test feedback was received! Thanks!"
 }
+
+func (p *FakeInfinity) IsConnected() bool{
+	return true
+}
