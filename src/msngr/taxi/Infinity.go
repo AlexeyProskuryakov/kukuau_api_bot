@@ -3,15 +3,16 @@ package taxi
 import (
 	"encoding/json"
 	"errors"
-	// "flag"
+
 	"fmt"
 	"io/ioutil"
 	"log"
 	"net/http"
-	// "os"
-	// "strconv"
+
 	"sync"
 	"time"
+	"msngr/db"
+	"msngr/utils"
 )
 
 type TaxiInterface interface {
@@ -44,44 +45,44 @@ type InfinityApiParams struct {
 
 // infinity - Структура для работы с API infinity.
 type infinity struct {
-	Host       string
-	ConnString string // Строка подключения к infinity API
-	// default: http://109.202.25.248:8080/WebAPITaxi/
-	LoginTime     time.Time
-	Cookie        *http.Cookie
-	LoginResponse struct {
-		Success  bool  `json:"success"`
-		IDClient int64 `json:"idClient"`
-		Params   struct {
-			ProtocolVersion            int    `json:"ProtocolVersion"`
-			RefreshOrdersSeconds       int    `json:"RefreshOrdersSeconds"`
-			LoginRegEx                 string `json:"LoginRegEx"`
-			MyPhoneRegEx               string `json:"MyPhoneRegEx"`
-			OurPhoneDisplay            string `json:"OurPhoneDisplay"`
-			OurPhoneNumber             string `json:"OurPhoneNumber"`
-			DefaultInfinityServiceID   int64  `json:"DefaultInfinityServiceID"`
-			DefaultInfinityServiceName string `json:"DefaultInfinityServiceName"`
-			DefaultRegionID            int64  `json:"DefaultRegionID"`
-			DefaultRegionName          string `json:"DefaultRegionName"`
-			DefaultDistrictID          string `json:"DefaultDistrictID"` // Can be null, so used as string here.
-			DefaultDistrictName        string `json:"DefaultDistrictName"`
-			DefaultCityID              int64  `json:"DefaultCityID"`
-			DefaultCityName            string `json:"DefaultCityName"`
-			DefaultPlaceID             string `json:"DefaultPlaceID"` // Can be null, so used as string here.
-			DefaultPlaceName           string `json:"DefaultPlaceName"`
-		} `json:"params"`
-		SessionID string `json:"sessionid"`
-	}
-	Message struct {
-		Success bool   `json:"isSuccess"`
-		Content string `json:"content"`
-	}
-	Services []InfinityServices `json:"InfinityServices"`
-	//for
+	Host               string
+	ConnString         string // Строка подключения к infinity API
+							  // default: http://109.202.25.248:8080/WebAPITaxi/
+	LoginTime          time.Time
+	Cookie             *http.Cookie
+	LoginResponse      struct {
+						   Success   bool  `json:"success"`
+						   IDClient  int64 `json:"idClient"`
+						   Params    struct {
+										 ProtocolVersion            int    `json:"ProtocolVersion"`
+										 RefreshOrdersSeconds       int    `json:"RefreshOrdersSeconds"`
+										 LoginRegEx                 string `json:"LoginRegEx"`
+										 MyPhoneRegEx               string `json:"MyPhoneRegEx"`
+										 OurPhoneDisplay            string `json:"OurPhoneDisplay"`
+										 OurPhoneNumber             string `json:"OurPhoneNumber"`
+										 DefaultInfinityServiceID   int64  `json:"DefaultInfinityServiceID"`
+										 DefaultInfinityServiceName string `json:"DefaultInfinityServiceName"`
+										 DefaultRegionID            int64  `json:"DefaultRegionID"`
+										 DefaultRegionName          string `json:"DefaultRegionName"`
+										 DefaultDistrictID          string `json:"DefaultDistrictID"` // Can be null, so used as string here.
+										 DefaultDistrictName        string `json:"DefaultDistrictName"`
+										 DefaultCityID              int64  `json:"DefaultCityID"`
+										 DefaultCityName            string `json:"DefaultCityName"`
+										 DefaultPlaceID             string `json:"DefaultPlaceID"`    // Can be null, so used as string here.
+										 DefaultPlaceName           string `json:"DefaultPlaceName"`
+									 } `json:"params"`
+						   SessionID string `json:"sessionid"`
+					   }
+	Message            struct {
+						   Success bool   `json:"isSuccess"`
+						   Content string `json:"content"`
+					   }
+	Services           []InfinityServices `json:"InfinityServices"`
+							  //for
 	curent_credentials struct {
-		login    string
-		password string
-	}
+						   login    string
+						   password string
+					   }
 }
 
 // Global API variable
@@ -132,14 +133,14 @@ type Answer struct {
 	IsSuccess bool   `json:"isSuccess"`
 	Message   string `json:"message"`
 
-	Content struct {
-		Id      int64  `json:"id"` // :7007330031,
-		Name    string `json:"name"`
-		Login   string `json:"login"`
-		Number  int64  `json:"number"` // :406
-		Cost    int    `json:"cost"`
-		Details string `json:"details"`
-	} `json:"content"`
+	Content   struct {
+				  Id      int64  `json:"id"`     // :7007330031,
+				  Name    string `json:"name"`
+				  Login   string `json:"login"`
+				  Number  int64  `json:"number"` // :406
+				  Cost    int    `json:"cost"`
+				  Details string `json:"details"`
+			  } `json:"content"`
 }
 
 type Destination struct {
@@ -160,34 +161,34 @@ type Destination struct {
 }
 
 type Delivery struct {
-	//Lat           float64 `json:"lat"`           // : <Широта координаты адреса (при указании места на карте). Если указано, информация о адресе игнорируется>,
-	//Lon           float64 `json:"lon"`           // : <Долгота координаты адреса (при указании места на карте). Если указано, информация о адресе игнорируется>,
-	//IdAddress     string `json:"idAddress"`      // <Идентификатор существующего описания адреса (адрес дома или объекта)>,
-	IdRegion int64 `json:"idRegion"` // <Идентификатор региона (Int64)>,
-	//IdDistrict    int64  `json:"idDistrict"`    // : <Идентификатор района (Int64)>,
-	//IdCity        int64  `json:"idCity"`        // : <Идентификатор города (Int64)>,
-	//IdPlace       int64  `json:"idPlace"`       //: <Идентификатор поселения (Int64)>,
-	IdStreet int64  `json:"idStreet"` // : <Идентификатор улицы (Int64)>,
-	House    string `json:"house"`    // : <№ дома (строка)>,
-	//Building      string `json:"building"`      // : <Строение (строка)>,
+										 //Lat           float64 `json:"lat"`           // : <Широта координаты адреса (при указании места на карте). Если указано, информация о адресе игнорируется>,
+										 //Lon           float64 `json:"lon"`           // : <Долгота координаты адреса (при указании места на карте). Если указано, информация о адресе игнорируется>,
+										 //IdAddress     string `json:"idAddress"`      // <Идентификатор существующего описания адреса (адрес дома или объекта)>,
+	IdRegion   int64 `json:"idRegion"`   // <Идентификатор региона (Int64)>,
+										 //IdDistrict    int64  `json:"idDistrict"`    // : <Идентификатор района (Int64)>,
+										 //IdCity        int64  `json:"idCity"`        // : <Идентификатор города (Int64)>,
+										 //IdPlace       int64  `json:"idPlace"`       //: <Идентификатор поселения (Int64)>,
+	IdStreet   int64  `json:"idStreet"`  // : <Идентификатор улицы (Int64)>,
+	House      string `json:"house"`     // : <№ дома (строка)>,
+										 //Building      string `json:"building"`      // : <Строение (строка)>,
 	Fracion    string `json:"fraction"`  // : <Корпус (строка)>,
 	Entrance   string `json:"entrance"`  // : <Подъезд (строка)>,
 	Apartament string `json:"apartment"` // : <№ квартиры (строка)>,
-	//IdFastAddress string `json:"idFastAddress"` //: <ID быстрого адреса. Дополнительное информационное поле, описывающее быстрый адрес, связанный с указанным адресом. Значение учитывается только при указании idAddress>
+										 //IdFastAddress string `json:"idFastAddress"` //: <ID быстрого адреса. Дополнительное информационное поле, описывающее быстрый адрес, связанный с указанным адресом. Значение учитывается только при указании idAddress>
 }
 
 type NewOrder struct {
-	//request
+														//request
 	Phone           string `json:"phone"`
-	DeliveryTime    string `json:"deliveryTime"`    //<Время подачи в формате yyyy-MM-dd HH:mm:ss>
-	DeliveryMinutes int64  `json:"deliveryMinutes"` // <Количество минут до подачи (0-сейчас, но не менее минимального времени на подачу, указанного в настройках системы), не анализируется если задано поле deliveryTime >
-	IdService       int64  `json:"idService"`       //<Идентификатор услуги заказа (не может быть пустым)>
-	Notes           string `json:"notes"`           // <Комментарий к заказу>
-	//Markups           [2]int64 `json:"markups"`           // <Массив идентификаторов наценок заказа>
-	Attributes   [2]int64      `json:"attributes"`   // <Массив идентификаторов дополнительных атрибутов заказа>
-	Delivery     Delivery      `json:"delivery"`     // Инфомация о месте подачи машины
-	Destinations []Destination `json:"destinations"` // Пункты назначения заказа (массив, не может быть пустым)
-	IsNotCash    bool          `json:"isNotCash"`    //: // Флаг безналичного заказа <true или false (bool)>
+	DeliveryTime    string `json:"deliveryTime"`        //<Время подачи в формате yyyy-MM-dd HH:mm:ss>
+	DeliveryMinutes int64  `json:"deliveryMinutes"`     // <Количество минут до подачи (0-сейчас, но не менее минимального времени на подачу, указанного в настройках системы), не анализируется если задано поле deliveryTime >
+	IdService       int64  `json:"idService"`           //<Идентификатор услуги заказа (не может быть пустым)>
+	Notes           string `json:"notes"`               // <Комментарий к заказу>
+														//Markups           [2]int64 `json:"markups"`           // <Массив идентификаторов наценок заказа>
+	Attributes      [2]int64      `json:"attributes"`   // <Массив идентификаторов дополнительных атрибутов заказа>
+	Delivery        Delivery      `json:"delivery"`     // Инфомация о месте подачи машины
+	Destinations    []Destination `json:"destinations"` // Пункты назначения заказа (массив, не может быть пустым)
+	IsNotCash       bool          `json:"isNotCash"`    //: // Флаг безналичного заказа <true или false (bool)>
 }
 
 type Order struct {
@@ -210,6 +211,11 @@ type Order struct {
 	Drivers           string `json:"Drivers"`           //ФИО Водителя
 }
 
+func (o *Order) ToOrderData()  db.OrderData {
+	odc,_ := utils.ToMap(o, "json")
+	return db.NewOrderData(odc)
+}
+
 // Login - Авторизация в сервисе infinity. Входные параметры: login:string; password:string.
 // Возвращает true, если авторизация прошла успешно, false иначе.
 // Устанавливает время авторизации в infinity.LoginTime при успешной авторизации.
@@ -219,7 +225,7 @@ func (p *infinity) Login(login, password string) bool {
 	p.LoginResponse.Success = false
 
 	client := &http.Client{}
-	req, err := http.NewRequest("GET", p.ConnString+"Login", nil)
+	req, err := http.NewRequest("GET", p.ConnString + "Login", nil)
 	warnp(err)
 	req.Header.Add("ContentType", "text/html;charset=UTF-8")
 
@@ -231,7 +237,7 @@ func (p *infinity) Login(login, password string) bool {
 	res, err := client.Do(req)
 
 	//если нет соединения с infinity то выходим
-	if err!=nil{
+	if err != nil {
 		return false
 	}
 
@@ -258,7 +264,7 @@ func (p *infinity) Login(login, password string) bool {
 }
 
 func (p *infinity) IsConnected() bool {
-	log.Println("INF IS connected:",p)
+//	log.Println("INF IS connected:", p)
 	return p.LoginResponse.Success
 }
 
@@ -284,7 +290,7 @@ func (p *infinity) reconnect() {
 // Условие: пользователь должен быть авторизован.
 func (p *infinity) Ping() (bool, string) {
 	client := &http.Client{}
-	req, err := http.NewRequest("GET", p.ConnString+"RemoteCall", nil)
+	req, err := http.NewRequest("GET", p.ConnString + "RemoteCall", nil)
 	warnp(err)
 	req.Header.Add("ContentType", "text/html;charset=UTF-8")
 	values := req.URL.Query()
@@ -337,7 +343,7 @@ type InfinityCarInfo struct {
 
 func (p *infinity) _request(conn_suffix string, url_values map[string]string) []byte {
 	client := &http.Client{}
- 	req, err := http.NewRequest("GET", p.ConnString+conn_suffix, nil)
+	req, err := http.NewRequest("GET", p.ConnString + conn_suffix, nil)
 	warnp(err)
 	req.Header.Add("ContentType", "text/html;charset=UTF-8")
 	values := req.URL.Query()
@@ -776,7 +782,7 @@ func StreetsSearchController(w http.ResponseWriter, r *http.Request, i *infinity
 		if query != "" {
 
 			if !i.IsConnected() {
-				ans, _ :=json.Marshal(map[string]string{"error":"true", "details":"service is not avaliable"})
+				ans, _ := json.Marshal(map[string]string{"error":"true", "details":"service is not avaliable"})
 				fmt.Fprintf(w, "%s", string(ans))
 				return
 			}
@@ -874,6 +880,6 @@ func IsOrderNotAvailable(state int) bool {
 }
 
 const (
-	ORDER_PAYED    = 7
+	ORDER_PAYED = 7
 	ORDER_CANCELED = 9
 )

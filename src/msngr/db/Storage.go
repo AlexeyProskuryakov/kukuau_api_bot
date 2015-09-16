@@ -1,25 +1,47 @@
-package msngr
+package db
 
 import (
 	"crypto/md5"
 	"gopkg.in/mgo.v2"
 	"gopkg.in/mgo.v2/bson"
 	"log"
-	taxi "msngr/taxi"
 	"time"
 )
+
+func _check(e error) {
+	if e != nil {
+		panic(e)
+	}
+}
 
 type orderHandler struct {
 	collection *mgo.Collection
 }
 
+type OrderData struct {
+	content map[string]interface{} `bson:"content"`
+}
+func NewOrderData(content map[string]interface{}) OrderData{
+	return OrderData{content:content}
+}
+
+func (odh *OrderData) Get(key string) interface{} {
+	log.Println("my content is: ", odh.content)
+	val, ok := odh.content[key]
+	if ok {
+		return val
+	}else {
+		return nil
+	}
+}
+
 type OrderWrapper struct {
-	OrderState  int   `bson:"order_state"`
-	OrderId     int64 `bson:"order_id"`
-	When        time.Time
-	Whom        string
-	OrderObject *taxi.Order `bson:"order_object"`
-	Feedback    string
+	OrderState int   `bson:"order_state"`
+	OrderId    int64 `bson:"order_id"`
+	When       time.Time
+	Whom       string
+	OrderData OrderData `bson:"order_data"`
+	Feedback   string
 }
 
 type userHandler struct {
@@ -27,11 +49,11 @@ type userHandler struct {
 }
 
 type UserWrapper struct {
-	State    string `bson:"user_state"`
-	UserId   string `bson:"user_id"`
-	UserName string `bson:"user_name"`
-	Password string
-	Phone    string
+	State      string `bson:"user_state"`
+	UserId     string `bson:"user_id"`
+	UserName   string `bson:"user_name"`
+	Password   string
+	Phone      string
 
 	LastUpdate time.Time `bson:"last_update"`
 }
@@ -39,9 +61,10 @@ type UserWrapper struct {
 type DbHandlerMixin struct {
 	session *mgo.Session
 
-	Orders *orderHandler
-	Users  *userHandler
+	Orders  *orderHandler
+	Users   *userHandler
 }
+
 
 func (odbh *DbHandlerMixin) reConnect(conn string, dbname string) {
 	session, err := mgo.Dial(conn)
@@ -111,15 +134,16 @@ func (odbh *orderHandler) GetState(order_id int64) int {
 	return result.OrderState
 }
 
-func (odbh *orderHandler) SetState(order_id int64, new_state int, order *taxi.Order) error {
-	change := bson.M{"$set": bson.M{"order_state": new_state, "when": time.Now(), "order_object": order}}
+func (odbh *orderHandler) SetState(order_id int64, new_state int, order_data OrderData) error {
+	change := bson.M{"$set": bson.M{"order_state": new_state, "when": time.Now(), "order_data": order_data}}
+	log.Println(change["$set"])
 	err := odbh.collection.Update(bson.M{"order_id": order_id}, change)
 	return err
 }
 
-func (oh *orderHandler) SetFeedback(whom, feedback string) (order_id int64) {
+func (oh *orderHandler) SetFeedback(for_whom string, for_state int, feedback string) (order_id int64) {
 	order := OrderWrapper{}
-	oh.collection.Find(bson.M{"whom": whom, "order_state": taxi.ORDER_PAYED}).Sort("-when").One(&order)
+	oh.collection.Find(bson.M{"whom": for_whom, "order_state": for_state}).Sort("-when").One(&order)
 	oh.collection.Update(bson.M{"order_id": order.OrderId}, bson.M{"$set": bson.M{"feedback": feedback}})
 	order_id = order.OrderId
 	return
@@ -155,8 +179,8 @@ func (odbh *orderHandler) GetByOrderId(order_id int64) *OrderWrapper {
 }
 
 const (
-	LOGOUT     = "LOGOUT"
-	LOGIN      = "LOGIN"
+	LOGOUT = "LOGOUT"
+	LOGIN = "LOGIN"
 	REGISTERED = "REGISTERED"
 )
 
@@ -168,10 +192,9 @@ func phash(pwd string) (res string) {
 }
 
 func (uh *userHandler) CheckUser(req bson.M) *UserWrapper {
-	log.Printf("checking user by: %+v", req)
 	tmp := UserWrapper{}
 	err := uh.collection.Find(req).One(&tmp)
-	log.Printf("checking result is: %+v [%+v]", tmp, err)
+	log.Printf("Checking User result is: %+v [%+v]", tmp, err)
 	if err != nil {
 		return nil
 	}

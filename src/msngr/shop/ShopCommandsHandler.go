@@ -1,4 +1,4 @@
-package msngr
+package shop
 
 import (
 	"bytes"
@@ -8,53 +8,56 @@ import (
 	"regexp"
 	"strings"
 	"time"
+
+	d "msngr/db"
+	s "msngr/structs"
 )
 
-func FormShopCommands(db DbHandlerMixin) *BotContext {
-	var ShopRequestCommands = map[string]RequestCommandProcessor{
+func FormShopCommands(db d.DbHandlerMixin) *s.BotContext {
+	var ShopRequestCommands = map[string]s.RequestCommandProcessor{
 		"commands": ShopCommandsProcessor{DbHandlerMixin: db},
 	}
 
-	var ShopMessageCommands = map[string]MessageCommandProcessor{
+	var ShopMessageCommands = map[string]s.MessageCommandProcessor{
 		"information":     ShopInformationProcessor{},
 		"authorise":       ShopAuthoriseProcessor{DbHandlerMixin: db},
 		"log_out":         ShopLogOutMessageProcessor{DbHandlerMixin: db},
 		"orders_state":    ShopOrderStateProcessor{DbHandlerMixin: db},
-		"support_message": SupportMessageProcessor{},
+		"support_message": ShopSupportMessageProcessor{},
 		"balance":         ShopBalanceProcessor{},
 	}
 
-	context := BotContext{}
+	context := s.BotContext{}
 	context.Check = func() (string, bool) { return "", true }
 	context.Message_commands = ShopMessageCommands
 	context.Request_commands = ShopRequestCommands
 	return &context
 }
 
-var authorised_commands = []OutCommand{
-	OutCommand{
+var authorised_commands = []s.OutCommand{
+	s.OutCommand{
 		Title:    "Мои заказы",
 		Action:   "orders_state",
 		Position: 0,
 	},
-	OutCommand{
+	s.OutCommand{
 		Title:    "Мой баланс",
 		Action:   "balance",
 		Position: 1,
 	},
-	OutCommand{
+	s.OutCommand{
 		Title:    "Задать вопрос",
 		Action:   "support_message",
 		Position: 2,
 		Fixed:    true,
-		Form: &OutForm{
+		Form: &s.OutForm{
 			Type: "form",
 			Text: "?(text)",
-			Fields: []OutField{
-				OutField{
+			Fields: []s.OutField{
+				s.OutField{
 					Name: "text",
 					Type: "text",
-					Attributes: FieldAttribute{
+					Attributes: s.FieldAttribute{
 						Label:    "Текст вопроса",
 						Required: true,
 					},
@@ -62,34 +65,34 @@ var authorised_commands = []OutCommand{
 			},
 		},
 	},
-	OutCommand{
+	s.OutCommand{
 		Title:    "Выйти",
 		Action:   "log_out",
 		Position: 3,
 	},
 }
-var not_authorised_commands = []OutCommand{
-	OutCommand{
+var not_authorised_commands = []s.OutCommand{
+	s.OutCommand{
 		Title:    "Авторизоваться",
 		Action:   "authorise",
 		Position: 0,
-		Form: &OutForm{
+		Form: &s.OutForm{
 			Name: "Форма ввода данных пользователя",
 			Type: "form",
 			Text: "Пользователь: ?(username), пароль: ?(password)",
-			Fields: []OutField{
-				OutField{
+			Fields: []s.OutField{
+				s.OutField{
 					Name: "username",
 					Type: "text",
-					Attributes: FieldAttribute{
+					Attributes: s.FieldAttribute{
 						Label:    "имя",
 						Required: true,
 					},
 				},
-				OutField{
+				s.OutField{
 					Name: "password",
 					Type: "password",
-					Attributes: FieldAttribute{
+					Attributes: s.FieldAttribute{
 						Label:    "пароль",
 						Required: true,
 					},
@@ -99,7 +102,7 @@ var not_authorised_commands = []OutCommand{
 	},
 }
 
-func _get_user_and_password(fields []InField) (string, string) {
+func _get_user_and_password(fields []s.InField) (string, string) {
 	var user, password string
 	for _, field := range fields {
 		if field.Name == "username" {
@@ -112,48 +115,48 @@ func _get_user_and_password(fields []InField) (string, string) {
 }
 
 type ShopCommandsProcessor struct {
-	DbHandlerMixin
+	d.DbHandlerMixin
 }
 
-func (cp ShopCommandsProcessor) ProcessRequest(in InPkg) RequestResult {
+func (cp ShopCommandsProcessor) ProcessRequest(in s.InPkg) s.RequestResult {
 	user_state, err := cp.Users.GetUserState(in.From)
 	if err != nil {
 		cp.Users.AddUser(in.From, in.UserData.Phone)
 	}
-	commands := []OutCommand{}
-	if user_state == LOGIN {
+	commands := []s.OutCommand{}
+	if user_state == d.LOGIN {
 		commands = authorised_commands
 	} else {
 		commands = not_authorised_commands
 	}
-	return RequestResult{Commands:&commands}
+	return s.RequestResult{Commands:&commands}
 }
 
 type ShopAuthoriseProcessor struct {
-	DbHandlerMixin
+	d.DbHandlerMixin
 }
 
-func (sap ShopAuthoriseProcessor) ProcessMessage(in InPkg) MessageResult {
+func (sap ShopAuthoriseProcessor) ProcessMessage(in s.InPkg) s.MessageResult {
 	command := *in.Message.Commands
 	user, password := _get_user_and_password(command[0].Form.Fields)
 
 	var body string
-	var commands []OutCommand
+	var commands []s.OutCommand
 
 	if sap.Users.CheckUserPassword(user, password) {
-		sap.Users.SetUserState(in.From, LOGIN)
+		sap.Users.SetUserState(in.From, d.LOGIN)
 		body = "Добро пожаловать в интернет магазин Desprice Markt!"
 		commands = authorised_commands
 	}else {
 		body = "Не правильные логин или пароль :("
 		commands = not_authorised_commands
 	}
-	return MessageResult{Body:body, Commands:&commands}
+	return s.MessageResult{Body:body, Commands:&commands}
 
 }
 
 type ShopOrderStateProcessor struct {
-	DbHandlerMixin
+	d.DbHandlerMixin
 }
 
 func __choiceString(choices []string) string {
@@ -168,28 +171,25 @@ func __choiceString(choices []string) string {
 var order_states = [5]string{"обработан", "доставляется", "отправлен", "поступил в пункт выдачи", "в обработке"}
 var order_products = [4]string{"Ноутбук Apple MacBook Air", "Электрочайник BORK K 515", "Аудиосистема Westlake Tower SM-1", "Микроволновая печь Bosch HMT85ML23"}
 
-func (osp ShopOrderStateProcessor) ProcessMessage(in InPkg) MessageResult {
-	user_state, err := osp.Users.GetUserState(in.From)
-	_check(err)
+func (osp ShopOrderStateProcessor) ProcessMessage(in s.InPkg) s.MessageResult {
+	user_state, _ := osp.Users.GetUserState(in.From)
 	var result string
-	var commands []OutCommand
-	if user_state == LOGIN {
+	var commands []s.OutCommand
+	if user_state == d.LOGIN {
 		result = fmt.Sprintf("Ваш заказ #%v (%v) %v.", rand.Int31n(10000), __choiceString(order_products[:]), __choiceString(order_states[:]))
 		commands = authorised_commands
 	} else {
 		result = "Авторизуйтесь пожалуйста!"
 		commands = not_authorised_commands
 	}
-	return MessageResult{Body:result, Commands:&commands}
+	return s.MessageResult{Body:result, Commands:&commands}
 }
 
-type SupportMessageProcessor struct {}
+type ShopSupportMessageProcessor struct {}
 
 func contains(container string, elements []string) bool {
 	container_elements := regexp.MustCompile("[a-zA-Zа-яА-Я]+").FindAllString(container, -1)
 	log.Printf("SCH splitted: %v", strings.Join(container_elements, ","))
-	// container_elements = strings.Fields(container)
-	// log.Printf("SCH splitted: %v", strings.Join(container_elements, ","))
 	ce_map := make(map[string]bool)
 	for _, ce_element := range container_elements {
 		ce_map[strings.ToLower(ce_element)] = true
@@ -203,7 +203,7 @@ func contains(container string, elements []string) bool {
 	return result
 }
 
-func make_one_string(fields []InField) string {
+func make_one_string(fields []s.InField) string {
 	var buffer bytes.Buffer
 	for _, field := range fields {
 		buffer.WriteString(field.Data.Value)
@@ -212,7 +212,7 @@ func make_one_string(fields []InField) string {
 	return buffer.String()
 }
 
-func (sm SupportMessageProcessor) ProcessMessage(in InPkg) MessageResult {
+func (sm ShopSupportMessageProcessor) ProcessMessage(in s.InPkg) s.MessageResult {
 	commands := *in.Message.Commands
 	var body string
 
@@ -226,27 +226,27 @@ func (sm SupportMessageProcessor) ProcessMessage(in InPkg) MessageResult {
 	} else {
 		body = "Спасибо за вопрос. Мы ответим Вам в ближайшее время."
 	}
-	return MessageResult{Body:body}
+	return s.MessageResult{Body:body}
 }
 
 type ShopInformationProcessor struct {}
 
-func (ih ShopInformationProcessor) ProcessMessage(in InPkg) MessageResult {
-	return MessageResult{Body:"Desprice Markt - интернет-магазин бытовой техники и электроники в Новосибирске и других городах России. Каталог товаров мировых брендов."}
+func (ih ShopInformationProcessor) ProcessMessage(in s.InPkg) s.MessageResult {
+	return s.MessageResult{Body:"Desprice Markt - интернет-магазин бытовой техники и электроники в Новосибирске и других городах России. Каталог товаров мировых брендов."}
 }
 
 type ShopLogOutMessageProcessor struct {
-	DbHandlerMixin
+	d.DbHandlerMixin
 }
 
-func (lop ShopLogOutMessageProcessor) ProcessMessage(in InPkg) MessageResult {
-	lop.Users.SetUserState(in.From, LOGOUT)
-	return MessageResult{Body:"До свидания! ", Commands:&not_authorised_commands}
+func (lop ShopLogOutMessageProcessor) ProcessMessage(in s.InPkg) s.MessageResult {
+	lop.Users.SetUserState(in.From, d.LOGOUT)
+	return s.MessageResult{Body:"До свидания! ", Commands:&not_authorised_commands}
 }
 
 type ShopBalanceProcessor struct {
 }
 
-func (sbp ShopBalanceProcessor) ProcessMessage(in InPkg) MessageResult {
-	return MessageResult{Body: fmt.Sprintf("Ваш баланс на %v составляет %v бонусных баллов.", time.Now().Format("01.02.2006"), rand.Int31n(1000) + 10), Commands: &authorised_commands}
+func (sbp ShopBalanceProcessor) ProcessMessage(in s.InPkg) s.MessageResult {
+	return s.MessageResult{Body: fmt.Sprintf("Ваш баланс на %v составляет %v бонусных баллов.", time.Now().Format("01.02.2006"), rand.Int31n(1000) + 10), Commands: &authorised_commands}
 }

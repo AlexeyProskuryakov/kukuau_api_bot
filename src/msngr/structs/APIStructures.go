@@ -1,4 +1,4 @@
-package msngr
+package structs
 
 type FieldAttribute struct {
 	Label    string  `json:"label"`
@@ -110,4 +110,33 @@ type OutPkg struct {
 	To      string      `json:"to"`
 	Message *OutMessage `json:"message,omitempty"`
 	Request *OutRequest `json:"request,omitempty"`
+}
+
+
+type checkFunc func() (string, bool)
+
+type BotContext struct {
+	Check checkFunc
+	Request_commands map[string]RequestCommandProcessor
+	Message_commands map[string]MessageCommandProcessor
+}
+
+type MessageResult struct {
+	Commands *[]OutCommand
+	Body string
+	Error error
+	IsDeferred bool
+}
+
+type RequestResult struct {
+	Commands *[]OutCommand
+	Error error
+}
+
+type RequestCommandProcessor interface {
+	ProcessRequest(in InPkg) RequestResult
+}
+
+type MessageCommandProcessor interface {
+	ProcessMessage(in InPkg) MessageResult
 }

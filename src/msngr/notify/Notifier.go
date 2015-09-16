@@ -3,9 +3,9 @@ package msngr
 import (
 	"bytes"
 	"encoding/json"
-	// "io/ioutil"
 	"log"
 	"net/http"
+	s "msngr/structs"
 )
 
 func warn(err error) {
@@ -25,14 +25,12 @@ type Notifier struct {
 	key     string
 }
 
-//todo notifier must be more flexiability. you can notify different messages for different engines (shop, taxi)
-//you must think about it
 
 func NewNotifier(addr, key string) *Notifier {
 	return &Notifier{address: addr, key: key}
 }
 
-func (n Notifier) Notify(outPkg OutPkg) {
+func (n Notifier) Notify(outPkg s.OutPkg) {
 	jsoned_out, err := json.Marshal(&outPkg)
 	warn(err)
 
@@ -52,10 +50,6 @@ func (n Notifier) Notify(outPkg OutPkg) {
 
 	if resp != nil {
 		defer resp.Body.Close()
-		// log.Println("N response Status:", resp.Status)
-		// log.Println("N response Headers:", resp.Header)
-		// resp_body, _ := ioutil.ReadAll(resp.Body)
-		// log.Println("N response Body:", string(resp_body))
 	}
 
 }

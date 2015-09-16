@@ -6,8 +6,9 @@ import (
 	"io/ioutil"
 	"log"
 	"net/http"
-	"time"
 	"errors"
+	s "msngr/structs"
+	u "msngr/utils"
 )
 
 func _check(e error) {
@@ -16,23 +17,14 @@ func _check(e error) {
 	}
 }
 
-func get_time_after(d time.Duration, format string) string {
-	result := time.Now().Add(d)
-	return result.Format(format)
-}
 
-func genId() string {
-	//не привязывайся ко времени, может бть в 1 микросекуну много сообщений и ид должны ыть разными
-	return fmt.Sprintf("%d", time.Now().UnixNano() / int64(time.Millisecond))
-}
-
-func getInPackage(r *http.Request) (InPkg, error) {
-	var in InPkg
+func getInPackage(r *http.Request) (s.InPkg, error) {
+	var in s.InPkg
 	body, err := ioutil.ReadAll(r.Body)
 	if err != nil {
 		log.Printf("error at reading: %q \n", err)
 	}
-	log.Printf("<<<:%s", string(body))
+//	log.Printf("<<<:%s", string(body))
 	err = json.Unmarshal(body, &in)
 	if err != nil {
 		log.Printf("error at unmarshal: %q \n", err)
@@ -40,7 +32,7 @@ func getInPackage(r *http.Request) (InPkg, error) {
 	return in, err
 }
 
-func setOutPackage(w http.ResponseWriter, out OutPkg, isError bool, isDeferred bool) {
+func setOutPackage(w http.ResponseWriter, out s.OutPkg, isError bool, isDeferred bool) {
 
 	jsoned_out, err := json.Marshal(&out)
 	if err != nil {
@@ -48,7 +40,7 @@ func setOutPackage(w http.ResponseWriter, out OutPkg, isError bool, isDeferred b
 	}
 	w.Header().Set("Content-type", "application/json")
 
-	log.Printf(">>> %s\n", string(jsoned_out))
+//	log.Printf(">>> %s\n", string(jsoned_out))
 
 	if isError{
 		w.WriteHeader(http.StatusBadRequest)
@@ -62,18 +54,9 @@ func setOutPackage(w http.ResponseWriter, out OutPkg, isError bool, isDeferred b
 	fmt.Fprintf(w, "%s", string(jsoned_out))
 }
 
-type checkFunc func() (string, bool)
-
-type BotContext struct {
-	Check checkFunc
-	Request_commands map[string]RequestCommandProcessor
-	Message_commands map[string]MessageCommandProcessor
-}
-
-
 type controllerHandler func(w http.ResponseWriter, r *http.Request)
 
-func FormBotController(context *BotContext) controllerHandler {
+func FormBotController(context *s.BotContext) controllerHandler {
 
 	return func(w http.ResponseWriter, r *http.Request) {
 		if r.Method != "POST" {
@@ -81,14 +64,14 @@ func FormBotController(context *BotContext) controllerHandler {
 			return
 		}
 
-		out := &OutPkg{}
-		var in InPkg
+		out := &s.OutPkg{}
+		var in s.InPkg
 		var isError, isDeferred bool
 		var global_error, request_error, message_error error
 
 		if detail, ok := context.Check(); !ok{
-			out.Message = &OutMessage{Type: "error", Thread: "0", ID: genId(), Body: fmt.Sprintln(detail)}
-			setOutPackage(w, *out, true, isDeferred)
+			out.Message = &s.OutMessage{Type: "error", Thread: "0", ID: u.GenId(), Body: fmt.Sprintln(detail)}
+			setOutPackage(w, *out, true, false)
 			return
 		}
 
@@ -97,9 +80,8 @@ func FormBotController(context *BotContext) controllerHandler {
 		out.To = in.From
 
 		if in.Request != nil {
-			log.Printf("processing request %+v", in)
 			action := in.Request.Query.Action
-			out.Request = &OutRequest{ID: genId(), Type: "result"}
+			out.Request = &s.OutRequest{ID: u.GenId(), Type: "result"}
 			out.Request.Query.Action = action
 			if commandProcessor, ok := context.Request_commands[action]; ok {
 				requestResult := commandProcessor.ProcessRequest(in)
@@ -113,8 +95,7 @@ func FormBotController(context *BotContext) controllerHandler {
 			}
 
 		} else if in.Message != nil {
-			log.Printf("processing message %+v", in)
-			out.Message = &OutMessage{Type: in.Message.Type, Thread: in.Message.Thread, ID: genId()}
+			out.Message = &s.OutMessage{Type: in.Message.Type, Thread: in.Message.Thread, ID: u.GenId()}
 
 			in_commands := in.Message.Commands
 
@@ -142,16 +123,16 @@ func FormBotController(context *BotContext) controllerHandler {
 		}
 
 		if message_error != nil {
-			out = &OutPkg{}
-			out.Message = &OutMessage{Type: "error", Thread: "0", ID: genId(), Body: fmt.Sprintf("%+v", message_error)}
+			out = &s.OutPkg{}
+			out.Message = &s.OutMessage{Type: "error", Thread: "0", ID: u.GenId(), Body: fmt.Sprintf("%+v", message_error)}
 			isError = true
 		} else if global_error != nil {
-			out = &OutPkg{}
-			out.Message = &OutMessage{Type: "error", Thread: "0", ID: genId(), Body: fmt.Sprintf("%+v", global_error)}
+			out = &s.OutPkg{}
+			out.Message = &s.OutMessage{Type: "error", Thread: "0", ID: u.GenId(), Body: fmt.Sprintf("%+v", global_error)}
 			isError = true
 		} else if request_error != nil {
-			out = &OutPkg{}
-			out.Request = &OutRequest{Type: "error", ID: genId()}
+			out = &s.OutPkg{}
+			out.Request = &s.OutRequest{Type: "error", ID: u.GenId()}
 			out.Request.Query.Text = fmt.Sprintf("%+v", request_error)
 			isError = true
 		}

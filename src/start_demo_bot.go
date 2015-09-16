@@ -4,7 +4,10 @@ import (
 	"fmt"
 	"log"
 	m "msngr"
-	taxi "msngr/taxi"
+	t "msngr/taxi"
+	sh "msngr/shop"
+	d "msngr/db"
+	n "msngr/notify"
 	"net/http"
 	"os"
 
@@ -24,28 +27,30 @@ func main() {
 		log.Println("This is a test log entry")
 	}
 
-	url := &m.DictUrl
+	url := &t.DictUrl
 	*url = conf.Main.DictUrl
-	infApi := taxi.GetInfinityAPI(conf.Infinity, conf.Main.Test)
+	infApi := t.GetInfinityAPI(conf.Infinity, conf.Main.Test)
 
-	im := taxi.InfinityMixin{API: infApi}
+	im := t.InfinityMixin{API: infApi}
 
-	db := m.NewDbHandler(conf.Database.ConnString, conf.Database.Name)
+	db := d.NewDbHandler(conf.Database.ConnString, conf.Database.Name)
 	db.Users.SetUserPassword("test", "123")
 
-	taxi_controller := m.FormBotController(m.FormTaxiCommands(&im, *db))
-	shop_controller := m.FormBotController(m.FormShopCommands(*db))
+	taxi_controller := m.FormBotController(t.FormTaxiCommands(&im, *db))
+	shop_controller := m.FormBotController(sh.FormShopCommands(*db))
 
 	http.HandleFunc("/taxi", taxi_controller)
 	http.HandleFunc("/shop", shop_controller)
 
-	realInfApi := taxi.GetRealInfinityAPI(conf.Infinity)
+	realInfApi := t.GetRealInfinityAPI(conf.Infinity)
 
 	http.HandleFunc("/_streets", func(w http.ResponseWriter, r *http.Request) {
-		taxi.StreetsSearchController(w, r, realInfApi)
+		t.StreetsSearchController(w, r, realInfApi)
 	})
 
-	//////////////////////////////////////////////////////////////////
+	n_taxi := n.NewNotifier(conf.Main.CallbackAddr, conf.Main.TaxiKey)
+
+	//start watching
 	go func() {
 		for {
 			if realInfApi.IsConnected(){
@@ -54,19 +59,16 @@ func main() {
 				time.Sleep(5*time.Second)
 			}
 		}
-		n_taxi := m.NewNotifier(conf.Main.CallbackAddr, conf.Main.TaxiKey)
-		carsCache := taxi.NewCarsCache(realInfApi)
-		go m.TaxiOrderWatch(*db, im, carsCache, n_taxi)
+
+		carsCache := t.NewCarsCache(realInfApi)
+		go t.TaxiOrderWatch(*db, im, carsCache, n_taxi)
 	}()
 
-
-
-	addr := fmt.Sprintf(":%v", conf.Main.Port)
-
-	log.Printf("\nStart listen and serving at: %v\n", addr)
-	serv := &http.Server{
-		Addr: addr,
+	server_address := fmt.Sprintf(":%v", conf.Main.Port)
+	log.Printf("\nStart listen and serving at: %v\n", server_address)
+	server := &http.Server{
+		Addr: server_address,
 	}
 
-	log.Fatal(serv.ListenAndServe())
+	log.Fatal(server.ListenAndServe())
 }
