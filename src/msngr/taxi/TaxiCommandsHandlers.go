@@ -46,14 +46,21 @@ func FormTaxiCommands(im *InfinityMixin, db_handler d.DbHandlerMixin) *s.BotCont
 	return &context
 }
 
-func FormNotification(whom string, order_id int64, state int, car_info InfinityCarInfo) *s.OutPkg {
+func FormNotification(whom string, order_id int64, state int, previous_state int, car_info InfinityCarInfo) *s.OutPkg {
 	var commands *[]s.OutCommand
 	var text string
+
 	switch state {
 	case 2:
 		text = fmt.Sprintf("Вам назначен %v %v c номером %v, время подачи %v.", car_info.Color, car_info.Model, car_info.Number, u.GetTimeAfter(5 * time.Minute, "15:04"))
 	case 4:
 		text = "Машина на месте. Приятной Вам поездки!"
+	case 5:
+		if previous_state == 4 {
+			return nil
+		} else if previous_state < 4{
+			text = "Машина на месте. Приятной Вам поездки!"
+		}
 	case 7:
 		text = "Заказ выполнен! Спасибо что воспользовались услугами нашей компании."
 		commands = &commands_for_order_feedback
@@ -70,6 +77,7 @@ func FormNotification(whom string, order_id int64, state int, car_info InfinityC
 }
 
 func TaxiOrderWatch(db d.DbHandlerMixin, im InfinityMixin, carsCache *CarsCache, notifier *n.Notifier) {
+	previous_states := map[int]int{}
 	for {
 		api_orders := im.API.Orders()
 		for _, api_order := range api_orders {
@@ -94,10 +102,17 @@ func TaxiOrderWatch(db d.DbHandlerMixin, im InfinityMixin, carsCache *CarsCache,
 				car_info := carsCache.CarInfo(api_order.IDCar)
 				log.Println("OW interseted car info", car_info)
 				if car_info != nil {
-					notification_data := FormNotification(order_wrapper.Whom, api_order.ID, api_order.State, *car_info)
+					var notification_data *s.OutPkg
+					prev_state, ok := previous_states[api_order.ID]
+					if ok {
+						notification_data = FormNotification(order_wrapper.Whom, api_order.ID, api_order.State, prev_state, *car_info)
+					} else {
+						notification_data = FormNotification(order_wrapper.Whom, api_order.ID, api_order.State, -1, *car_info)
+					}
 					if notification_data != nil {
 						notifier.Notify(*notification_data)
 					}
+					previous_states[api_order.ID] = api_order.State
 				}
 
 
@@ -361,8 +376,8 @@ func _form_order(fields []s.InField) (new_order NewOrder) {
 	new_order.Attributes = [2]int64{1000113000, 1000113002}
 	//end fucking hardcode
 
-	new_order.Delivery = H_get_delivery(from_info, hf)
-	new_order.Destinations = []Destination{H_get_destination(to_info, ht)}
+	new_order.Delivery = GetDeliveryHelper(from_info, hf)
+	new_order.Destinations = []Destination{GetDestinationHelper(to_info, ht)}
 
 	return
 }

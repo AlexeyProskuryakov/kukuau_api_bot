@@ -766,8 +766,10 @@ func (p *infinity) ClientAddresses() FastAddress {
 //////////////////////////////////////////////////////////////////////////////////////////////////////
 //////////////////////////////////////////////////////////////////////////////////////////////////////
 type DictItem struct {
-	Value string `json:"value"`
-	Text  string `json:"text"`
+	Key string `json:"key"`
+	Title  string `json:"title"`
+	SubTitle  string `json:"subtitle"`
+
 }
 
 func StreetsSearchController(w http.ResponseWriter, r *http.Request, i *infinity) {
@@ -792,9 +794,10 @@ func StreetsSearchController(w http.ResponseWriter, r *http.Request, i *infinity
 				var item DictItem
 				var err error
 				t, err := json.Marshal(nitem)
-				item.Value = string(t)
+				item.Key = string(t)
 				warn(err)
-				item.Text = fmt.Sprintf("%v %v", nitem.Name, nitem.ShortName)
+				item.Title = fmt.Sprintf("%v %v", nitem.Name, nitem.ShortName)
+				item.SubTitle = fmt.Sprintf("%v", nitem.Place)
 				results = append(results, item)
 			}
 		}
@@ -805,7 +808,7 @@ func StreetsSearchController(w http.ResponseWriter, r *http.Request, i *infinity
 }
 
 //helpers for forming destionation and delivery on infinity results after street search request
-func H_get_delivery(info string, house string) (d Delivery) {
+func GetDeliveryHelper(info string, house string) (d Delivery) {
 	//"{\"ID\":5009756374,\"IDParent\":5009755360,\"Name\":\"Николаева\",\"ShortName\":\"ул\",\"ItemType\":5,\"FullName\":\" ул Николаева\",\"IDRegion\":5009755359,\"IDDistrict\":0,\"IDCity\":5009755360,\"IDPlace\":0,\"Region\":\"обл Новосибирская\",\"City\":\"г Новосибирск\"}"
 	err := json.Unmarshal([]byte(info), &d)
 	warn(err)
@@ -813,7 +816,7 @@ func H_get_delivery(info string, house string) (d Delivery) {
 	return
 }
 
-func H_get_destination(info string, house string) (d Destination) {
+func GetDestinationHelper(info string, house string) (d Destination) {
 	err := json.Unmarshal([]byte(info), &d)
 	warn(err)
 	d.House = house
