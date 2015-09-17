@@ -45,3 +45,12 @@ func ToMap(in interface{}, tag string) (map[string]interface{}, error) {
 	}
 	return out, nil
 }
+
+func Priority(data ...interface{}) interface{} {
+	for _, data_el := range data {
+		if data_el != ""{
+			return data_el
+		}
+	}
+	return ""
+}

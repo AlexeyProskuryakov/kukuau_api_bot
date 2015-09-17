@@ -772,6 +772,7 @@ type DictItem struct {
 
 }
 
+
 func StreetsSearchController(w http.ResponseWriter, r *http.Request, i *infinity) {
 	w.Header().Set("Content-type", "application/json")
 	w.WriteHeader(http.StatusOK)
@@ -797,7 +798,7 @@ func StreetsSearchController(w http.ResponseWriter, r *http.Request, i *infinity
 				item.Key = string(t)
 				warn(err)
 				item.Title = fmt.Sprintf("%v %v", nitem.Name, nitem.ShortName)
-				item.SubTitle = fmt.Sprintf("%v", nitem.Place)
+				item.SubTitle = fmt.Sprintf("%v", utils.Priority(nitem.Place, nitem.District, nitem.Region) )
 				results = append(results, item)
 			}
 		}
