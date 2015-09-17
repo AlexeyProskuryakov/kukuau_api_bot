@@ -412,6 +412,7 @@ func (nop TaxiNewOrderProcessor) ProcessMessage(in s.InPkg) s.MessageResult {
 		} else {
 			new_order.Phone = *phone
 		}
+		log.Printf("2 NO new order: %+v", new_order)
 		ans, ord_error := nop.API.NewOrder(new_order)
 		if ord_error != nil {
 			panic(ord_error)

@@ -813,16 +813,20 @@ func StreetsSearchController(w http.ResponseWriter, r *http.Request, i *infinity
 //helpers for forming destionation and delivery on infinity results after street search request
 func GetDeliveryHelper(info string, house string) (d Delivery) {
 	//"{\"ID\":5009756374,\"IDParent\":5009755360,\"Name\":\"Николаева\",\"ShortName\":\"ул\",\"ItemType\":5,\"FullName\":\" ул Николаева\",\"IDRegion\":5009755359,\"IDDistrict\":0,\"IDCity\":5009755360,\"IDPlace\":0,\"Region\":\"обл Новосибирская\",\"City\":\"г Новосибирск\"}"
+	log.Printf("0 NO delivery marshalled: %+v", info)
 	err := json.Unmarshal([]byte(info), &d)
 	warn(err)
 	d.House = house
+	log.Printf("1 NO delivery: %+v", d)
 	return
 }
 
 func GetDestinationHelper(info string, house string) (d Destination) {
+	log.Printf("0 NO destination marshalled: %+v", info)
 	err := json.Unmarshal([]byte(info), &d)
 	warn(err)
 	d.House = house
+	log.Printf("1 NO destination: %+v", d)
 	return
 }
 
