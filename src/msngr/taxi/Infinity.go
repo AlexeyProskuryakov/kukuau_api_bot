@@ -144,37 +144,46 @@ type Answer struct {
 }
 
 type Destination struct {
-	Lat          float64 `json:"lat"`           // : <Широта координаты адреса (при указании места на карте). Если указано, информация о доставке по указанию и адресе игнорируется>,
-	Lon          float64 `json:"lon"`           // : <Долгота координаты адреса (при указании места на карте). Если указано, информация о доставке по указанию и адресе игнорируется>,"isByDirection" : <Заказ машины с указанием пункта назначения при подаче (если задано в true,информация о адресе игнонрируются)>,
-	IdAddres     string  `json:"idAddress"`     // : <Идентификатор существующего описания адреса (адрес дома или объекта)>,
-	IdRegion     int64   `json:"idRegion"`      // : <Идентификатор региона (Int64)>,
-	IdDistrict   int64   `json:"idDistrict"`    // : <Идентификатор района (Int64)>,
-	IdCity       int64   `json:"idCity"`        // : <Идентификатор города (Int64)>,
-	IdPlace      int64   `json:"idPlace"`       // : <Идентификатор поселения (Int64)>,
-	IdStreet     int64   `json:"idStreet"`      // : <Идентификатор улицы (Int64)>,
-	House        string  `json:"house"`         // : <№ дома (строка)>,
-	Building     string  `json:"building"`      // : <Строение (строка)>,
-	Fraction     string  `json:"fraction"`      // : <Корпус (строка)>,
-	Entrance     string  `json:"entrance"`      // : <Подъезд (строка)>,
-	Apartament   string  `json:"apartment"`     // : <№ квартиры (строка)> ,
-	IdFastAddres string  `json:"idFastAddress"` // // : <ID быстрого адреса. Дополнительное информационное поле, описывающее быстрый адрес, связанный с указанным адресом. Значение учитывается только при указании idAddress>
+	IdRegion      int64   `json:"idRegion"`       // : <Идентификатор региона (Int64)>,
+	IdStreet      int64   `json:"idStreet"`       // : <Идентификатор улицы (Int64)>,
+	House         string  `json:"house"`          // : <№ дома (строка)>,
+
+	Lat           *float64 `json:"lat,omitempty"` // : <Широта координаты адреса (при указании места на карте). Если указано, информация о доставке по указанию и адресе игнорируется>,
+	Lon           *float64 `json:"lon,omitempty"` // : <Долгота координаты адреса (при указании места на карте). Если указано, информация о доставке по указанию и адресе игнорируется>,"isByDirection" : <Заказ машины с указанием пункта назначения при подаче (если задано в true,информация о адресе игнонрируются)>,
+
+	IdAddress     *string  `json:"idAddress"`     // : <Идентификатор существующего описания адреса (адрес дома или объекта)>,
+	IdDistrict    *int64   `json:"idDistrict"`    // : <Идентификатор района (Int64)>,
+	IdCity        *int64   `json:"idCity"`        // : <Идентификатор города (Int64)>,
+	IdPlace       *int64   `json:"idPlace"`       // : <Идентификатор поселения (Int64)>,
+	Building      *string  `json:"building"`      // : <Строение (строка)>,
+	Fraction      *string  `json:"fraction"`      // : <Корпус (строка)>,
+	Entrance      *string  `json:"entrance"`      // : <Подъезд (строка)>,
+	Apartment     *string  `json:"apartment"`     // : <№ квартиры (строка)> ,
+	IdFastAddress *string  `json:"idFastAddress"` // : <ID быстрого адреса. Дополнительное информационное поле, описывающее быстрый адрес, связанный с указанным адресом. Значение учитывается только при указании idAddress>
 }
 
 type Delivery struct {
-										 //Lat           float64 `json:"lat"`           // : <Широта координаты адреса (при указании места на карте). Если указано, информация о адресе игнорируется>,
-										 //Lon           float64 `json:"lon"`           // : <Долгота координаты адреса (при указании места на карте). Если указано, информация о адресе игнорируется>,
-										 //IdAddress     string `json:"idAddress"`      // <Идентификатор существующего описания адреса (адрес дома или объекта)>,
-	IdRegion   int64 `json:"idRegion"`   // <Идентификатор региона (Int64)>,
-										 //IdDistrict    int64  `json:"idDistrict"`    // : <Идентификатор района (Int64)>,
-										 //IdCity        int64  `json:"idCity"`        // : <Идентификатор города (Int64)>,
-										 //IdPlace       int64  `json:"idPlace"`       //: <Идентификатор поселения (Int64)>,
-	IdStreet   int64  `json:"idStreet"`  // : <Идентификатор улицы (Int64)>,
-	House      string `json:"house"`     // : <№ дома (строка)>,
-										 //Building      string `json:"building"`      // : <Строение (строка)>,
-	Fracion    string `json:"fraction"`  // : <Корпус (строка)>,
-	Entrance   string `json:"entrance"`  // : <Подъезд (строка)>,
-	Apartament string `json:"apartment"` // : <№ квартиры (строка)>,
-										 //IdFastAddress string `json:"idFastAddress"` //: <ID быстрого адреса. Дополнительное информационное поле, описывающее быстрый адрес, связанный с указанным адресом. Значение учитывается только при указании idAddress>
+
+	IdRegion      int64 `json:"idRegion"`         // <Идентификатор региона (Int64)>,
+	IdStreet      int64  `json:"idStreet"`        // : <Идентификатор улицы (Int64)>,
+	House         string `json:"house"`           // : <№ дома (строка)>,
+
+	Lat           *float64 `json:"lat"`           // : <Широта координаты адреса (при указании места на карте). Если указано, информация о адресе игнорируется>,
+	Lon           *float64 `json:"lon"`           // : <Долгота координаты адреса (при указании места на карте). Если указано, информация о адресе игнорируется>,
+	IdAddress     *string `json:"idAddress"`      // <Идентификатор существующего описания адреса (адрес дома или объекта)>,
+
+	Building      *string `json:"building"`       // : <Строение (строка)>,
+	Fraction      *string `json:"fraction"`       // : <Корпус (строка)>,
+	Entrance      *string `json:"entrance"`       // : <Подъезд (строка)>,
+	Apartment     *string `json:"apartment"`      // : <№ квартиры (строка)>,
+
+
+	IdPlace       *int64 `json:"idPlace"`         //IdPlace       int64  `json:"idPlace"`       //: <Идентификатор поселения (Int64)>,
+	IdCity        *int64 `json:"idCity"`          //IdCity        int64  `json:"idCity"`        // : <Идентификатор города (Int64)>,
+	IdDistrict    *int64 `json:"idDistrict"`      //IdDistrict    int64  `json:"idDistrict"`    // : <Идентификатор района (Int64)>,
+
+	IdFastAddress *string  `json:"idFastAddress"` //: <ID быстрого адреса. Дополнительное информационное поле, описывающее быстрый адрес, связанный с указанным адресом. Значение учитывается только при указании idAddress>
+
 }
 
 type NewOrder struct {
@@ -810,24 +819,42 @@ func StreetsSearchController(w http.ResponseWriter, r *http.Request, i *infinity
 	}
 }
 
-//helpers for forming destionation and delivery on infinity results after street search request
-func GetDeliveryHelper(info string, house string) (d Delivery) {
-	//"{\"ID\":5009756374,\"IDParent\":5009755360,\"Name\":\"Николаева\",\"ShortName\":\"ул\",\"ItemType\":5,\"FullName\":\" ул Николаева\",\"IDRegion\":5009755359,\"IDDistrict\":0,\"IDCity\":5009755360,\"IDPlace\":0,\"Region\":\"обл Новосибирская\",\"City\":\"г Новосибирск\"}"
-	log.Printf("0 NO delivery marshalled: %+v", info)
-	err := json.Unmarshal([]byte(info), &d)
-	warn(err)
-	d.House = house
-	log.Printf("1 NO delivery: %+v", d)
-	return
+type InPlace struct {
+	StreetId   int64 `json:"ID"`
+	RegionId   int64 `json:"IDRegion"`
+	DistrictId *int64 `json:"IDDistrict"`
+	CityId     *int64 `json:"IDCity"`
+	PlaceId    *int64 `json:"IDPlace"`
 }
 
-func GetDestinationHelper(info string, house string) (d Destination) {
-	log.Printf("0 NO destination marshalled: %+v", info)
-	err := json.Unmarshal([]byte(info), &d)
+//helpers for forming
+// destionation and delivery on infinity results after street search request
+func GetDeliveryHelper(info string, house string, entrance string) Delivery {
+	log.Printf("0 NO delivery marshalled: %+v", info)
+	in := InPlace{}
+	err := json.Unmarshal([]byte(info), &in)
 	warn(err)
-	d.House = house
-	log.Printf("1 NO destination: %+v", d)
-	return
+	result := Delivery{IdStreet:in.StreetId, IdRegion:in.RegionId, House:house, Entrance:entrance,
+		IdCity:in.CityId,
+		IdPlace:in.PlaceId,
+		IdDistrict:in.DistrictId,
+	}
+	log.Printf("1 NO delivery: %+v", result)
+	return result
+}
+
+func GetDestinationHelper(info string, house string) Destination {
+	log.Printf("0 NO destination marshalled: %+v", info)
+	in := InPlace{}
+	err := json.Unmarshal([]byte(info), &in)
+	warn(err)
+	result := Destination{IdStreet:in.StreetId, IdRegion:in.RegionId, House:house,
+		IdCity:in.CityId,
+		IdPlace:in.PlaceId,
+		IdDistrict:in.DistrictId,
+	}
+	log.Printf("1 NO destination: %+v", result)
+	return result
 }
 
 ///////////////////////////////////////////////////////////////////////////
