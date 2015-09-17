@@ -4,6 +4,7 @@ import (
 	"log"
 	"math/rand"
 	"time"
+	"encoding/json"
 )
 
 //////////////////////////////////////////////////////////////////////////
@@ -42,6 +43,8 @@ func (inf *FakeInfinity) NewOrder(order NewOrder) (Answer, error) {
 		Cost:  150,
 		IDCar: 5033615557,
 	}
+	result, _ := json.Marshal(order)
+	log.Printf("4 END NO RESULT DATA\n%+v\n", string(result))
 
 	inf.orders = append(inf.orders, saved_order)
 
@@ -82,6 +85,6 @@ func (p *FakeInfinity) Feedback(f Feedback) (bool, string) {
 	return true, "Test feedback was received! Thanks!"
 }
 
-func (p *FakeInfinity) IsConnected() bool{
+func (p *FakeInfinity) IsConnected() bool {
 	return true
 }
