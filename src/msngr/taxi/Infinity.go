@@ -798,7 +798,7 @@ func StreetsSearchController(w http.ResponseWriter, r *http.Request, i *infinity
 				item.Key = string(t)
 				warn(err)
 				item.Title = fmt.Sprintf("%v %v", nitem.Name, nitem.ShortName)
-				item.SubTitle = fmt.Sprintf("%v", utils.Priority(nitem.Place, nitem.District, nitem.Region) )
+				item.SubTitle = fmt.Sprintf("%v", utils.Priority(nitem.Place, nitem.District, nitem.City, nitem.Region) )
 				results = append(results, item)
 			}
 		}
