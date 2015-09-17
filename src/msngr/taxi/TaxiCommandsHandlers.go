@@ -77,6 +77,7 @@ func FormNotification(whom string, order_id int64, state int, previous_state int
 }
 
 func TaxiOrderWatch(db d.DbHandlerMixin, im InfinityMixin, carsCache *CarsCache, notifier *n.Notifier) {
+	//interested....
 	previous_states := map[int64]int{}
 	for {
 		api_orders := im.API.Orders()
