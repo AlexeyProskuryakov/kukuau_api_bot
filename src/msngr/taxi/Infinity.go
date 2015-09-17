@@ -211,8 +211,8 @@ type Order struct {
 	Drivers           string `json:"Drivers"`           //ФИО Водителя
 }
 
-func (o *Order) ToOrderData()  db.OrderData {
-	odc,_ := utils.ToMap(o, "json")
+func (o *Order) ToOrderData() db.OrderData {
+	odc, _ := utils.ToMap(o, "json")
 	return db.NewOrderData(odc)
 }
 
@@ -264,7 +264,7 @@ func (p *infinity) Login(login, password string) bool {
 }
 
 func (p *infinity) IsConnected() bool {
-//	log.Println("INF IS connected:", p)
+	//	log.Println("INF IS connected:", p)
 	return p.LoginResponse.Success
 }
 
@@ -385,7 +385,9 @@ func (p *infinity) GetCarsInfo() []InfinityCarInfo {
 }
 
 func (p *infinity) NewOrder(order NewOrder) (Answer, error) {
+	log.Printf("INF NO: %+v", order)
 	param, err := json.Marshal(order)
+	log.Printf("INF NO jsonified: %+v", string(param))
 	warnp(err)
 	body := p._request("RemoteCall", map[string]string{"params": string(param), "method": "Taxi.WebAPI.NewOrder"})
 	var ans Answer
@@ -766,9 +768,9 @@ func (p *infinity) ClientAddresses() FastAddress {
 //////////////////////////////////////////////////////////////////////////////////////////////////////
 //////////////////////////////////////////////////////////////////////////////////////////////////////
 type DictItem struct {
-	Key string `json:"key"`
-	Title  string `json:"title"`
-	SubTitle  string `json:"subtitle"`
+	Key      string `json:"key"`
+	Title    string `json:"title"`
+	SubTitle string `json:"subtitle"`
 
 }
 
@@ -798,7 +800,7 @@ func StreetsSearchController(w http.ResponseWriter, r *http.Request, i *infinity
 				item.Key = string(t)
 				warn(err)
 				item.Title = fmt.Sprintf("%v %v", nitem.Name, nitem.ShortName)
-				item.SubTitle = fmt.Sprintf("%v", utils.Priority(nitem.Place, nitem.District, nitem.City, nitem.Region) )
+				item.SubTitle = fmt.Sprintf("%v", utils.Priority(nitem.Place, nitem.District, nitem.City, nitem.Region))
 				results = append(results, item)
 			}
 		}

@@ -113,8 +113,6 @@ func TaxiOrderWatch(db d.DbHandlerMixin, im InfinityMixin, carsCache *CarsCache,
 					}
 					previous_states[api_order.ID] = api_order.State
 				}
-
-
 			}
 		}
 		time.Sleep(500 * time.Millisecond)
@@ -371,7 +369,7 @@ func _form_order(fields []s.InField) (new_order NewOrder) {
 	}
 	//fucking hardcode //todo refactor
 	new_order.IdService = 5001753333
-	new_order.Notes = "KUKU-AU"
+	new_order.Notes = "Тестирование."
 	new_order.Attributes = [2]int64{1000113000, 1000113002}
 	//end fucking hardcode
 
@@ -419,7 +417,7 @@ func (nop TaxiNewOrderProcessor) ProcessMessage(in s.InPkg) s.MessageResult {
 		}
 		nop.Orders.AddOrder(ans.Content.Id, in.From)
 		text := fmt.Sprintf("Ваш заказ создан! Стоймость поездки составит %+v рублей.", ans.Content.Cost)
-		return s.MessageResult{Body:text, Commands:&commands_at_created_order}
+		return s.MessageResult{Body:text, Commands:&commands_at_created_order, IsDeferred:true}
 	}
 	return s.MessageResult{Body: "Заказ уже создан!", Commands: &commands_at_created_order, Error: errors.New("Заказ уже создан!")}
 }
