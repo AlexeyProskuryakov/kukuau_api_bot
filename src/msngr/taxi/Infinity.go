@@ -829,7 +829,7 @@ type InPlace struct {
 
 //helpers for forming
 // destionation and delivery on infinity results after street search request
-func GetDeliveryHelper(info string, house string, entrance string) Delivery {
+func GetDeliveryHelper(info string, house string, entrance *string) Delivery {
 	log.Printf("0 NO delivery marshalled: %+v", info)
 	in := InPlace{}
 	err := json.Unmarshal([]byte(info), &in)

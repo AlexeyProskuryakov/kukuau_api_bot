@@ -347,7 +347,9 @@ func (ih TaxiInformationProcessor) ProcessMessage(in s.InPkg) s.MessageResult {
 //}
 
 func _form_order(fields []s.InField) (new_order NewOrder) {
-	var from_info, to_info, hf, ht, entrance string
+	var from_info, to_info, hf, ht string
+	var entrance *string
+
 	for _, field := range fields {
 		switch fn := field.Name; fn {
 		case "street_from":
@@ -359,7 +361,7 @@ func _form_order(fields []s.InField) (new_order NewOrder) {
 		case "house_from":
 			hf = field.Data.Value
 		case "entrance":
-			entrance = field.Data.Value
+			entrance = &field.Data.Value
 
 		// case "time": //todo see time! with exceptions
 		// 	when = field.Data.Value
