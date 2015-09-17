@@ -144,8 +144,14 @@ func (odbh *orderHandler) GetState(order_id int64) int {
 	return result.OrderState
 }
 
-func (odbh *orderHandler) SetState(order_id int64, new_state int, order_data OrderData) error {
-	change := bson.M{"$set": bson.M{"order_state": new_state, "when": time.Now(), "data": order_data}}
+func (odbh *orderHandler) SetState(order_id int64, new_state int, order_data *OrderData) error {
+	var to_set bson.M
+	if order_data!=nil{
+		to_set = bson.M{"order_state": new_state, "when": time.Now(), "data": order_data}
+	} else{
+		to_set = bson.M{"order_state": new_state, "when": time.Now()}
+	}
+	change := bson.M{"$set": to_set}
 	log.Println("change:",change["$set"])
 	err := odbh.collection.Update(bson.M{"order_id": order_id}, change)
 	return err

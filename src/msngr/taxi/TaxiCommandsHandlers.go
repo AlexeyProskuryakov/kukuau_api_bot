@@ -58,7 +58,7 @@ func FormNotification(whom string, order_id int64, state int, previous_state int
 	case 5:
 		if previous_state == 4 {
 			return nil
-		} else if previous_state < 4{
+		} else if previous_state < 4 {
 			text = "Машина на месте. Приятной Вам поездки!"
 		}
 	case 7:
@@ -77,9 +77,7 @@ func FormNotification(whom string, order_id int64, state int, previous_state int
 }
 
 func TaxiOrderWatch(db d.DbHandlerMixin, im InfinityMixin, carsCache *CarsCache, notifier *n.Notifier) {
-	//interested....
 	previous_states := map[int64]int{}
-
 	for {
 		api_orders := im.API.Orders()
 		for _, api_order := range api_orders {
@@ -91,12 +89,11 @@ func TaxiOrderWatch(db d.DbHandlerMixin, im InfinityMixin, carsCache *CarsCache,
 			if api_order.State != db_order_state {
 				log.Printf("OW state of:\n%+v \nis updated (api: %v != db: %v)", api_order, api_order.State, db_order_state)
 				order_data := api_order.ToOrderData()
-				err := db.Orders.SetState(api_order.ID, api_order.State, order_data)
+				err := db.Orders.SetState(api_order.ID, api_order.State, &order_data)
 				if err != nil {
 					log.Printf("OW for order %+v can not update status %+v", api_order.ID, api_order.State)
 					continue
 				}
-
 				order_wrapper := db.Orders.GetByOrderId(api_order.ID)
 				log.Printf("OW updated order: %+v", order_wrapper)
 				car_info := carsCache.CarInfo(api_order.IDCar)
@@ -349,19 +346,20 @@ func (ih TaxiInformationProcessor) ProcessMessage(in s.InPkg) s.MessageResult {
 func _form_order(fields []s.InField) (new_order NewOrder) {
 	var from_info, to_info, hf, ht string
 	var entrance *string
-
+	log.Printf("-1 NO fields: %+v", fields)
 	for _, field := range fields {
 		switch fn := field.Name; fn {
 		case "street_from":
-			from_info = field.Data.Value
+			from_info = u.FirstOf(field.Data.Value, field.Data.Text).(string)
 		case "street_to":
-			to_info = field.Data.Value
+			to_info = u.FirstOf(field.Data.Value, field.Data.Text).(string)
 		case "house_to":
-			ht = field.Data.Value
+			ht = u.FirstOf(field.Data.Value, field.Data.Text).(string)
 		case "house_from":
-			hf = field.Data.Value
+			hf = u.FirstOf(field.Data.Value, field.Data.Text).(string)
 		case "entrance":
-			entrance = &field.Data.Value
+			entrance_ := u.FirstOf(field.Data.Value, field.Data.Text).(string)
+			entrance = &entrance_
 
 		// case "time": //todo see time! with exceptions
 		// 	when = field.Data.Value
@@ -439,6 +437,7 @@ func (cop TaxiCancelOrderProcessor) ProcessMessage(in s.InPkg) s.MessageResult {
 	if order_wrapper != nil && !IsOrderNotAvailable(order_wrapper.OrderState) {
 		is_success, message := cop.API.CancelOrder(order_wrapper.OrderId)
 		if is_success {
+			cop.Orders.SetState(order_wrapper.OrderId, ORDER_CANCELED, nil)
 			return s.MessageResult{Body:"Ваш заказ отменен!", Commands: &commands_at_not_created_order}
 		} else {
 			return s.MessageResult{Body:fmt.Sprintf("Проблемы с отменом заказа %v", message), Error: errors.New("Звони скорее: 123456")}
@@ -481,7 +480,7 @@ func (fp TaxiFeedbackProcessor) ProcessMessage(in s.InPkg) s.MessageResult {
 		f := Feedback{IdOrder: order_id, Rating: rating, Notes: fdbk}
 		fp.API.Feedback(f)
 		return s.MessageResult{Body: "Спасибо! Ваш отзыв очень важен для нас:)", Commands: FormCommands(in.From, fp.DbHandlerMixin)}
-	} else{
+	} else {
 		return s.MessageResult{Error:errors.New("Оплаченный заказ не найден :( Отзывы могут быть только для оплаченных заказов")}
 	}
 }

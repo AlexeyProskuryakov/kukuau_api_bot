@@ -168,8 +168,8 @@ type Delivery struct {
 	IdStreet      int64  `json:"idStreet"`        // : <Идентификатор улицы (Int64)>,
 	House         string `json:"house"`           // : <№ дома (строка)>,
 
-	Lat           *float64 `json:"lat"`           // : <Широта координаты адреса (при указании места на карте). Если указано, информация о адресе игнорируется>,
-	Lon           *float64 `json:"lon"`           // : <Долгота координаты адреса (при указании места на карте). Если указано, информация о адресе игнорируется>,
+	Lat           *float64 `json:"lat,omitempty"` // : <Широта координаты адреса (при указании места на карте). Если указано, информация о адресе игнорируется>,
+	Lon           *float64 `json:"lon,omitempty"` // : <Долгота координаты адреса (при указании места на карте). Если указано, информация о адресе игнорируется>,
 	IdAddress     *string `json:"idAddress"`      // <Идентификатор существующего описания адреса (адрес дома или объекта)>,
 
 	Building      *string `json:"building"`       // : <Строение (строка)>,
@@ -187,17 +187,17 @@ type Delivery struct {
 }
 
 type NewOrder struct {
-														//request
+															   //request
 	Phone           string `json:"phone"`
-	DeliveryTime    string `json:"deliveryTime"`        //<Время подачи в формате yyyy-MM-dd HH:mm:ss>
-	DeliveryMinutes int64  `json:"deliveryMinutes"`     // <Количество минут до подачи (0-сейчас, но не менее минимального времени на подачу, указанного в настройках системы), не анализируется если задано поле deliveryTime >
-	IdService       int64  `json:"idService"`           //<Идентификатор услуги заказа (не может быть пустым)>
-	Notes           string `json:"notes"`               // <Комментарий к заказу>
-														//Markups           [2]int64 `json:"markups"`           // <Массив идентификаторов наценок заказа>
-	Attributes      [2]int64      `json:"attributes"`   // <Массив идентификаторов дополнительных атрибутов заказа>
-	Delivery        Delivery      `json:"delivery"`     // Инфомация о месте подачи машины
-	Destinations    []Destination `json:"destinations"` // Пункты назначения заказа (массив, не может быть пустым)
-	IsNotCash       bool          `json:"isNotCash"`    //: // Флаг безналичного заказа <true или false (bool)>
+	DeliveryTime    *string `json:"deliveryTime,omitempty"`    //<Время подачи в формате yyyy-MM-dd HH:mm:ss>
+	DeliveryMinutes *int64  `json:"deliveryMinutes,omitempty"` // <Количество минут до подачи (0-сейчас, но не менее минимального времени на подачу, указанного в настройках системы), не анализируется если задано поле deliveryTime >
+	IdService       int64  `json:"idService"`                  //<Идентификатор услуги заказа (не может быть пустым)>
+	Notes           string `json:"notes"`                      // <Комментарий к заказу>
+															   //Markups           [2]int64 `json:"markups"`           // <Массив идентификаторов наценок заказа>
+	Attributes      [2]int64      `json:"attributes"`          // <Массив идентификаторов дополнительных атрибутов заказа>
+	Delivery        Delivery      `json:"delivery"`            // Инфомация о месте подачи машины
+	Destinations    []Destination `json:"destinations"`        // Пункты назначения заказа (массив, не может быть пустым)
+	IsNotCash       bool          `json:"isNotCash"`           //: // Флаг безналичного заказа <true или false (bool)>
 }
 
 type Order struct {
@@ -809,7 +809,7 @@ func StreetsSearchController(w http.ResponseWriter, r *http.Request, i *infinity
 				item.Key = string(t)
 				warn(err)
 				item.Title = fmt.Sprintf("%v %v", nitem.Name, nitem.ShortName)
-				item.SubTitle = fmt.Sprintf("%v", utils.Priority(nitem.Place, nitem.District, nitem.City, nitem.Region))
+				item.SubTitle = fmt.Sprintf("%v", utils.FirstOf(nitem.Place, nitem.District, nitem.City, nitem.Region))
 				results = append(results, item)
 			}
 		}
@@ -830,7 +830,7 @@ type InPlace struct {
 //helpers for forming
 // destionation and delivery on infinity results after street search request
 func GetDeliveryHelper(info string, house string, entrance *string) Delivery {
-	log.Printf("0 NO delivery marshalled: %+v", info)
+	log.Printf("0 NO delivery marshalled: %+v\n and parameters: house: %+v, entrance: %q", info, house, entrance)
 	in := InPlace{}
 	err := json.Unmarshal([]byte(info), &in)
 	warn(err)

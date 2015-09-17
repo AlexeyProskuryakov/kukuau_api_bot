@@ -10,6 +10,6 @@ func main() {
 	if 3 < i && i < 7 {
 		log.Println("foo")
 	}
-	log.Println(u.Priority("", "", 1234))
+	log.Println(u.FirstOf("", "", 1234))
 
 }
