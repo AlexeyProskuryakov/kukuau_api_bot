@@ -19,15 +19,14 @@ type orderHandler struct {
 }
 
 type OrderData struct {
-	content map[string]interface{} `bson:"content"`
+	Content map[string]interface{}
 }
 func NewOrderData(content map[string]interface{}) OrderData{
-	return OrderData{content:content}
+	return OrderData{Content:content}
 }
 
 func (odh *OrderData) Get(key string) interface{} {
-	log.Println("my content is: ", odh.content)
-	val, ok := odh.content[key]
+	val, ok := odh.Content[key]
 	if ok {
 		return val
 	}else {
@@ -40,7 +39,7 @@ type OrderWrapper struct {
 	OrderId    int64 `bson:"order_id"`
 	When       time.Time
 	Whom       string
-	OrderData OrderData `bson:"order_data"`
+	OrderData OrderData `bson:"data"`
 	Feedback   string
 }
 
@@ -73,25 +72,36 @@ func (odbh *DbHandlerMixin) reConnect(conn string, dbname string) {
 	odbh.session = session
 
 	orders_collection := session.DB(dbname).C("orders")
+
 	orders_index := mgo.Index{
-		Key:        []string{"order_id", "order_state"},
+		Key:        []string{"order_id"},
 		Background: true,
 		Unique:     true,
 		DropDups:   true,
 	}
 	orders_collection.EnsureIndex(orders_index)
+
+	state_index := mgo.Index{
+		Key:        []string{"order_state"},
+		Background: true,
+		Unique:     false,
+	}
+	orders_collection.EnsureIndex(state_index)
+
 	owners_index := mgo.Index{
 		Key:        []string{"whom"},
 		Background: true,
 		Unique:     false,
 	}
 	orders_collection.EnsureIndex(owners_index)
+
 	when_index := mgo.Index{
 		Key:        []string{"when"},
 		Background: true,
 		Unique:     false,
 	}
 	orders_collection.EnsureIndex(when_index)
+
 	odbh.Orders = &orderHandler{collection: orders_collection}
 
 	users_collection := session.DB(dbname).C("users")
@@ -135,18 +145,21 @@ func (odbh *orderHandler) GetState(order_id int64) int {
 }
 
 func (odbh *orderHandler) SetState(order_id int64, new_state int, order_data OrderData) error {
-	change := bson.M{"$set": bson.M{"order_state": new_state, "when": time.Now(), "order_data": order_data}}
-	log.Println(change["$set"])
+	change := bson.M{"$set": bson.M{"order_state": new_state, "when": time.Now(), "data": order_data}}
+	log.Println("change:",change["$set"])
 	err := odbh.collection.Update(bson.M{"order_id": order_id}, change)
 	return err
 }
 
-func (oh *orderHandler) SetFeedback(for_whom string, for_state int, feedback string) (order_id int64) {
+func (oh *orderHandler) SetFeedback(for_whom string, for_state int, feedback string) int64 {
 	order := OrderWrapper{}
-	oh.collection.Find(bson.M{"whom": for_whom, "order_state": for_state}).Sort("-when").One(&order)
+	err := oh.collection.Find(bson.M{"whom": for_whom, "order_state": for_state}).Sort("-when").One(&order)
+	if err!=nil{
+		return -1
+	}
 	oh.collection.Update(bson.M{"order_id": order.OrderId}, bson.M{"$set": bson.M{"feedback": feedback}})
-	order_id = order.OrderId
-	return
+	order_id := order.OrderId
+	return order_id
 }
 
 func (odbh *orderHandler) AddOrder(order_id int64, whom string) {
@@ -157,7 +170,9 @@ func (odbh *orderHandler) AddOrder(order_id int64, whom string) {
 		OrderState: 0,
 	}
 	err := odbh.collection.Insert(&wrapper)
-	_check(err)
+	if err != nil{
+		log.Println(err)
+	}
 }
 
 func (odbh *orderHandler) GetByOwner(whom string) *OrderWrapper {

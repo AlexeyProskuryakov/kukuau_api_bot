@@ -77,7 +77,7 @@ func FormNotification(whom string, order_id int64, state int, previous_state int
 }
 
 func TaxiOrderWatch(db d.DbHandlerMixin, im InfinityMixin, carsCache *CarsCache, notifier *n.Notifier) {
-	previous_states := map[int]int{}
+	previous_states := map[int64]int{}
 	for {
 		api_orders := im.API.Orders()
 		for _, api_order := range api_orders {
@@ -87,20 +87,18 @@ func TaxiOrderWatch(db d.DbHandlerMixin, im InfinityMixin, carsCache *CarsCache,
 				continue
 			}
 			if api_order.State != db_order_state {
-				log.Printf("OW state of %+v \nis updated (api: %v != db: %v)", api_order, api_order.State, db_order_state)
+				log.Printf("OW state of:\n%+v \nis updated (api: %v != db: %v)", api_order, api_order.State, db_order_state)
 				order_data := api_order.ToOrderData()
-				log.Println("OW order data", order_data)
 				err := db.Orders.SetState(api_order.ID, api_order.State, order_data)
-				log.Printf("OW saved order data %+v", order_data)
 				if err != nil {
 					log.Printf("OW for order %+v can not update status %+v", api_order.ID, api_order.State)
 					continue
 				}
 
 				order_wrapper := db.Orders.GetByOrderId(api_order.ID)
-				log.Println("OW updated order", order_wrapper)
+				log.Printf("OW updated order: %+v", order_wrapper)
 				car_info := carsCache.CarInfo(api_order.IDCar)
-				log.Println("OW interseted car info", car_info)
+
 				if car_info != nil {
 					var notification_data *s.OutPkg
 					prev_state, ok := previous_states[api_order.ID]
@@ -473,8 +471,11 @@ func (fp TaxiFeedbackProcessor) ProcessMessage(in s.InPkg) s.MessageResult {
 	commands := *in.Message.Commands
 	rating, fdbk := _get_feedback(commands[0].Form.Fields)
 	order_id := fp.Orders.SetFeedback(in.From, ORDER_PAYED, fdbk)
-	f := Feedback{IdOrder: order_id, Rating: rating, Notes: fdbk}
-	fp.API.Feedback(f)
-
-	return s.MessageResult{Body: "Спасибо! Ваш отзыв очень важен для нас:)", Commands: FormCommands(in.From, fp.DbHandlerMixin)}
+	if order_id != -1 {
+		f := Feedback{IdOrder: order_id, Rating: rating, Notes: fdbk}
+		fp.API.Feedback(f)
+		return s.MessageResult{Body: "Спасибо! Ваш отзыв очень важен для нас:)", Commands: FormCommands(in.From, fp.DbHandlerMixin)}
+	} else{
+		return s.MessageResult{Error:errors.New("Оплаченный заказ не найден :( Отзывы могут быть только для оплаченных заказов")}
+	}
 }
