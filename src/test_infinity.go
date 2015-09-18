@@ -3,16 +3,20 @@ package main
 import (
 	"log"
 	m "msngr"
-	inf "msngr/infinity"
+	taxi "msngr/taxi"
 )
 
 func main() {
 	conf := m.ReadConfig()
 
-	realInfApi := inf.GetRealInfinityAPI(conf.Infinity)
+	realInfApi := taxi.GetRealInfinityAPI(conf.Infinity)
 
 	services := realInfApi.GetServices()
+	log.Printf("services: %+v", services)
 
-	log.Println(services)
+	orders := realInfApi.Orders()
+	log.Printf("orders: %+v", orders)
+
+
 
 }

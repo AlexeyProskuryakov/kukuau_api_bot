@@ -113,7 +113,7 @@ func TaxiOrderWatch(db d.DbHandlerMixin, im InfinityMixin, carsCache *CarsCache,
 				}
 			}
 		}
-		time.Sleep(10 * time.Second)
+		time.Sleep(3 * time.Second)
 	}
 }
 

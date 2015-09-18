@@ -4,7 +4,7 @@ import (
 	"encoding/json"
 	"io/ioutil"
 	"log"
-	m "msngr"
+	s "msngr/structs"
 	"net/http"
 )
 
@@ -19,7 +19,7 @@ func main() {
 		body, err := ioutil.ReadAll(r.Body)
 		log.Printf("ths < data: %+v", string(body))
 
-		var pkg m.OutPkg
+		var pkg s.OutPkg
 		err = json.Unmarshal(body, &pkg)
 		if err != nil {
 			log.Printf("ths err: %+v", err)

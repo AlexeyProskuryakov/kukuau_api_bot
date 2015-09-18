@@ -648,25 +648,28 @@ func (p *infinity) AddressesRemove(id int64) (bool, string) {
 }
 
 /////////////////////////////
+type Orders struct {
+	Rows []Order `json:"rows"`
+}
 
 //Taxi.Orders (Заказы: активные и предварительные)
 func (p *infinity) Orders() []Order {
 	body := p._request("GetViewData", map[string]string{"params": "[{\"viewName\": \"Taxi.Orders\"}]"})
-
-	var temp []Order
+	temp := []Orders{}
+//	log.Println(">>>", string(body))
 	err := json.Unmarshal(body, &temp)
 	warnp(err)
-	return temp
+//	log.Printf(">>> umshld len:%v,\n %+v,", len(temp[0].Rows), temp[0].Rows)
+	return temp[0].Rows
 }
 
 //Taxi.Orders.Closed.ByDates (История заказов: По датам)
 func (p *infinity) OrdersClosedByDates() []Order {
 	body := p._request("GetViewData", map[string]string{"params": "[{\"viewName\": \"Taxi.Orders.Closed.ByDates\"}]"})
-
-	var temp []Order
+	temp := []Orders{}
 	err := json.Unmarshal(body, &temp)
 	warnp(err)
-	return temp
+	return temp[0].Rows
 }
 
 //Taxi.Orders.Closed.LastN (История заказов: Последние)
