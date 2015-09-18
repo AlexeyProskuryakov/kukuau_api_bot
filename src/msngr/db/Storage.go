@@ -21,7 +21,7 @@ type orderHandler struct {
 type OrderData struct {
 	Content map[string]interface{}
 }
-func NewOrderData(content map[string]interface{}) OrderData{
+func NewOrderData(content map[string]interface{}) OrderData {
 	return OrderData{Content:content}
 }
 
@@ -39,7 +39,7 @@ type OrderWrapper struct {
 	OrderId    int64 `bson:"order_id"`
 	When       time.Time
 	Whom       string
-	OrderData OrderData `bson:"data"`
+	OrderData  OrderData `bson:"data"`
 	Feedback   string
 }
 
@@ -57,11 +57,23 @@ type UserWrapper struct {
 	LastUpdate time.Time `bson:"last_update"`
 }
 
+type ErrorWrapper struct {
+	Username string
+	Error    string
+	Time     time.Time
+}
+
+type errorHandler struct {
+	collection *mgo.Collection
+}
+
 type DbHandlerMixin struct {
 	session *mgo.Session
 
 	Orders  *orderHandler
 	Users   *userHandler
+
+	Errors  *errorHandler
 }
 
 
@@ -126,7 +138,21 @@ func (odbh *DbHandlerMixin) reConnect(conn string, dbname string) {
 		Unique:     false,
 		Background: true,
 	})
+
 	odbh.Users = &userHandler{collection: users_collection}
+
+	error_collection := session.DB(dbname).C("errors")
+
+	error_collection.EnsureIndex(mgo.Index{
+		Key: []string{"username"},
+		Unique:false,
+	})
+	error_collection.EnsureIndex(mgo.Index{
+		Key:[]string{"time"},
+		Unique:false,
+	})
+	odbh.Errors = &errorHandler{collection:error_collection}
+
 }
 
 func NewDbHandler(conn string, dbname string) *DbHandlerMixin {
@@ -146,13 +172,13 @@ func (odbh *orderHandler) GetState(order_id int64) int {
 
 func (odbh *orderHandler) SetState(order_id int64, new_state int, order_data *OrderData) error {
 	var to_set bson.M
-	if order_data!=nil{
+	if order_data != nil {
 		to_set = bson.M{"order_state": new_state, "when": time.Now(), "data": order_data}
-	} else{
+	} else {
 		to_set = bson.M{"order_state": new_state, "when": time.Now()}
 	}
 	change := bson.M{"$set": to_set}
-	log.Println("change:",change["$set"])
+	log.Println("change:", change["$set"])
 	err := odbh.collection.Update(bson.M{"order_id": order_id}, change)
 	return err
 }
@@ -160,7 +186,7 @@ func (odbh *orderHandler) SetState(order_id int64, new_state int, order_data *Or
 func (oh *orderHandler) SetFeedback(for_whom string, for_state int, feedback string) int64 {
 	order := OrderWrapper{}
 	err := oh.collection.Find(bson.M{"whom": for_whom, "order_state": for_state}).Sort("-when").One(&order)
-	if err!=nil{
+	if err != nil {
 		return -1
 	}
 	oh.collection.Update(bson.M{"order_id": order.OrderId}, bson.M{"$set": bson.M{"feedback": feedback}})
@@ -173,10 +199,17 @@ func (odbh *orderHandler) AddOrder(order_id int64, whom string) {
 		When:       time.Now(),
 		Whom:       whom,
 		OrderId:    order_id,
-		OrderState: 0,
+		OrderState: 1,
 	}
 	err := odbh.collection.Insert(&wrapper)
-	if err != nil{
+	if err != nil {
+		log.Println(err)
+	}
+}
+func (odbh *orderHandler) AddOrderObject(order *OrderWrapper) {
+	order.When = time.Now()
+	err := odbh.collection.Insert(order)
+	if err != nil {
 		log.Println(err)
 	}
 }
@@ -274,4 +307,11 @@ func (uh *userHandler) GetById(user_id string) (*UserWrapper, error) {
 	result := UserWrapper{}
 	err := uh.collection.Find(bson.M{"user_id": user_id}).One(&result)
 	return &result, err
+}
+
+
+func (eh *errorHandler) StoreError(username, error string) {
+	result := ErrorWrapper{Username:username, Error:error, Time:time.Now()}
+	_ = eh.collection.Insert(&result)
+
 }

@@ -15,6 +15,15 @@ import (
 	"msngr/utils"
 )
 
+const (
+	ORDER_PAYED = 7
+	ORDER_CANCELED = 9
+	ORDER_CREATED = 1
+	ID_SERVICE = 5001753333
+)
+
+
+
 type TaxiInterface interface {
 	NewOrder(order NewOrder) Answer
 	CancelOrder(order_id int64) (bool, string)
@@ -350,6 +359,10 @@ type InfinityCarInfo struct {
 	Driver   string  `json:"Driver"`
 	Lat      float64 `json:"Lat"`
 	Lon      float64 `json:"Lon"`
+}
+
+func (car InfinityCarInfo) String() string{
+	return fmt.Sprintf("%v %v с номером %v", car.Color, car.Model, car.Number)
 }
 
 func (p *infinity) _request(conn_suffix string, url_values map[string]string) []byte {
@@ -920,8 +933,3 @@ func IsOrderNotAvailable(state int) bool {
 	return false
 }
 
-const (
-	ORDER_PAYED = 7
-	ORDER_CANCELED = 9
-	ID_SERVICE = 5001753333
-)
