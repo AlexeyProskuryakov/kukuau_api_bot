@@ -32,7 +32,7 @@ func (inf *FakeInfinity) set_order_state(order_id int64, new_state int) {
 	}
 }
 
-func (inf *FakeInfinity) NewOrder(order NewOrder) (Answer, error) {
+func (inf *FakeInfinity) NewOrder(order NewOrder) Answer {
 	log.Printf("3 NO delivery: %+v", order.Delivery)
 	log.Printf("3 NO destination: %+v", order.Destinations)
 	log.Printf("3 NO order all: %+v", order)
@@ -58,7 +58,7 @@ func (inf *FakeInfinity) NewOrder(order NewOrder) (Answer, error) {
 
 	go send_states(saved_order.ID, inf)
 
-	return ans, nil
+	return ans
 }
 
 func (inf *FakeInfinity) Orders() []Order {

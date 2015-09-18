@@ -411,17 +411,17 @@ func (nop TaxiNewOrderProcessor) ProcessMessage(in s.InPkg) s.MessageResult {
 			} else {
 				phone = &(uwrpr.Phone)
 			}
-
 		} else {
 			new_order.Phone = *phone
 		}
 		log.Printf("2 NO new order: %+v", new_order)
-		ans, ord_error := nop.API.NewOrder(new_order)
-		if ord_error != nil {
-			panic(ord_error)
-		}
+		ans := nop.API.NewOrder(new_order)
 		nop.Orders.AddOrder(ans.Content.Id, in.From)
 		text := fmt.Sprintf("Ваш заказ создан! Стоймость поездки составит %+v рублей.", ans.Content.Cost)
+
+		if !ans.IsSuccess{
+			return s.MessageResult{Body:text, Commands:&commands_at_created_order, IsDeferred:false, Error:errors.New(ans.Message)}
+		}
 		return s.MessageResult{Body:text, Commands:&commands_at_created_order, IsDeferred:true}
 	}
 	return s.MessageResult{Body: "Заказ уже создан!", Commands: &commands_at_created_order, Error: errors.New("Заказ уже создан!")}

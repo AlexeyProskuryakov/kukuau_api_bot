@@ -16,7 +16,7 @@ import (
 )
 
 type TaxiInterface interface {
-	NewOrder(order NewOrder) (Answer, error)
+	NewOrder(order NewOrder) Answer
 	CancelOrder(order_id int64) (bool, string)
 	CalcOrderCost(order NewOrder) (int, string)
 	Orders() []Order
@@ -395,16 +395,16 @@ func (p *infinity) GetCarsInfo() []InfinityCarInfo {
 	return tmp[0].Rows
 }
 
-func (p *infinity) NewOrder(order NewOrder) (Answer, error) {
+func (p *infinity) NewOrder(order NewOrder) Answer {
 	log.Printf("INF NO: %+v", order)
 	param, err := json.Marshal(order)
-	log.Printf("INF NO jsonified: %+v", string(param))
 	warnp(err)
+	log.Printf("INF NO jsonified: %+v", string(param))
 	body := p._request("RemoteCall", map[string]string{"params": string(param), "method": "Taxi.WebAPI.NewOrder"})
 	var ans Answer
 	err = json.Unmarshal(body, &ans)
 	warnp(err)
-	return ans, err
+	return ans
 }
 
 func (p *infinity) CalcOrderCost(order NewOrder) (int, string) {
@@ -830,7 +830,7 @@ type InPlace struct {
 }
 
 //helpers for forming
-// destionation and delivery on infinity results after street search request
+// destination and delivery on infinity results after street search request
 func GetDeliveryHelper(info string, house string, entrance *string) Delivery {
 	log.Printf("0 NO delivery marshalled: %+v\n and parameters: house: %+v, entrance: %q", info, house, entrance)
 	in := InPlace{}
@@ -872,7 +872,6 @@ func _create_cars_map(i *infinity) map[int64]InfinityCarInfo {
 	for _, info := range cars_info {
 		cars_map[info.ID] = info
 	}
-
 	return cars_map
 }
 
