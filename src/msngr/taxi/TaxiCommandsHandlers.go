@@ -86,7 +86,7 @@ var commands_for_order_feedback = []s.OutCommand{
 			Text: "?(text)",
 			Fields: []s.OutField{
 				s.OutField{
-					Name: "fdbck",
+					Name: "text",
 					Type: "text",
 					Attributes: s.FieldAttribute{
 						Label:    "Ваш отзыв",
@@ -350,7 +350,7 @@ type TaxiFeedbackProcessor struct {
 
 func _get_feedback(fields []s.InField) string {
 	for _, v := range fields {
-		if v.Name == "fdbck"  {
+		if v.Name == "text"  {
 			return u.FirstOf(v.Data.Value, v.Data.Text).(string)
 		}
 	}
