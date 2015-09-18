@@ -187,17 +187,17 @@ type Delivery struct {
 }
 
 type NewOrder struct {
-															   //request
+															//request
 	Phone           string `json:"phone"`
-	DeliveryTime    *string `json:"deliveryTime,omitempty"`    //<Время подачи в формате yyyy-MM-dd HH:mm:ss>
-	DeliveryMinutes *int64  `json:"deliveryMinutes,omitempty"` // <Количество минут до подачи (0-сейчас, но не менее минимального времени на подачу, указанного в настройках системы), не анализируется если задано поле deliveryTime >
-	IdService       int64  `json:"idService"`                  //<Идентификатор услуги заказа (не может быть пустым)>
-	Notes           string `json:"notes"`                      // <Комментарий к заказу>
-															   //Markups           [2]int64 `json:"markups"`           // <Массив идентификаторов наценок заказа>
-	Attributes      [2]int64      `json:"attributes"`          // <Массив идентификаторов дополнительных атрибутов заказа>
-	Delivery        Delivery      `json:"delivery"`            // Инфомация о месте подачи машины
-	Destinations    []Destination `json:"destinations"`        // Пункты назначения заказа (массив, не может быть пустым)
-	IsNotCash       bool          `json:"isNotCash"`           //: // Флаг безналичного заказа <true или false (bool)>
+	DeliveryTime    *string `json:"deliveryTime,omitempty"` //<Время подачи в формате yyyy-MM-dd HH:mm:ss>
+	DeliveryMinutes int64  `json:"deliveryMinutes"`         // <Количество минут до подачи (0-сейчас, но не менее минимального времени на подачу, указанного в настройках системы), не анализируется если задано поле deliveryTime >
+	IdService       int64  `json:"idService"`               //<Идентификатор услуги заказа (не может быть пустым)>
+	Notes           string `json:"notes"`                   // <Комментарий к заказу>
+															//Markups           [2]int64 `json:"markups"`           // <Массив идентификаторов наценок заказа>
+	Attributes      [2]int64      `json:"attributes"`       // <Массив идентификаторов дополнительных атрибутов заказа>
+	Delivery        Delivery      `json:"delivery"`         // Инфомация о месте подачи машины
+	Destinations    []Destination `json:"destinations"`     // Пункты назначения заказа (массив, не может быть пустым)
+	IsNotCash       bool          `json:"isNotCash"`        //: // Флаг безналичного заказа <true или false (bool)>
 }
 
 type Order struct {

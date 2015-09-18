@@ -11,4 +11,5 @@ gopkg.in
 9fans.net
 golang.org
 
+/temp.json
 test_foo.go
