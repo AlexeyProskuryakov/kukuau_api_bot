@@ -42,9 +42,9 @@ func FormNotification(whom string, order_id int64, state int, previous_state int
 		}
 	case 7:
 		text = "Заказ выполнен! Спасибо что воспользовались услугами нашей компании."
-//	default:
-//		status, _ := StatusesMap[state]
-//		text = fmt.Sprintf("Машина %v %v c номером %v перешла в состояние [%v]", car_info.Color, car_info.Model, car_info.Number, status)
+	//	default:
+	//		status, _ := StatusesMap[state]
+	//		text = fmt.Sprintf("Машина %v %v c номером %v перешла в состояние [%v]", car_info.Color, car_info.Model, car_info.Number, status)
 	}
 	if text != "" {
 		out := s.OutPkg{To: whom, Message: &s.OutMessage{ID: u.GenId(), Type: "chat", Body: text}}
@@ -87,9 +87,11 @@ func TaxiOrderWatch(db d.DbHandlerMixin, im InfinityMixin, carsCache *CarsCache,
 						notification_data.Message.Commands = form_commands_for_current_order(order_wrapper)
 						notifier.Notify(*notification_data)
 					}
-					previous_states[api_order.ID] = api_order.State
 				}
 			}
+
+			previous_states[api_order.ID] = api_order.State
+
 		}
 		time.Sleep(3 * time.Second)
 	}
