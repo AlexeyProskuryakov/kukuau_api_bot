@@ -151,15 +151,17 @@ type Destination struct {
 	Lat           *float64 `json:"lat,omitempty"` // : <Широта координаты адреса (при указании места на карте). Если указано, информация о доставке по указанию и адресе игнорируется>,
 	Lon           *float64 `json:"lon,omitempty"` // : <Долгота координаты адреса (при указании места на карте). Если указано, информация о доставке по указанию и адресе игнорируется>,"isByDirection" : <Заказ машины с указанием пункта назначения при подаче (если задано в true,информация о адресе игнонрируются)>,
 
-	IdAddress     *string  `json:"idAddress"`     // : <Идентификатор существующего описания адреса (адрес дома или объекта)>,
 	IdDistrict    *int64   `json:"idDistrict"`    // : <Идентификатор района (Int64)>,
 	IdCity        *int64   `json:"idCity"`        // : <Идентификатор города (Int64)>,
 	IdPlace       *int64   `json:"idPlace"`       // : <Идентификатор поселения (Int64)>,
-	Building      *string  `json:"building"`      // : <Строение (строка)>,
-	Fraction      *string  `json:"fraction"`      // : <Корпус (строка)>,
-	Entrance      *string  `json:"entrance"`      // : <Подъезд (строка)>,
-	Apartment     *string  `json:"apartment"`     // : <№ квартиры (строка)> ,
-	IdFastAddress *string  `json:"idFastAddress"` // : <ID быстрого адреса. Дополнительное информационное поле, описывающее быстрый адрес, связанный с указанным адресом. Значение учитывается только при указании idAddress>
+
+	Building      *string  `json:"building,omitempty"`      // : <Строение (строка)>,
+	Fraction      *string  `json:"fraction,omitempty"`      // : <Корпус (строка)>,
+	Entrance      *string  `json:"entrance,omitempty"`      // : <Подъезд (строка)>,
+	Apartment     *string  `json:"apartment,omitempty"`     // : <№ квартиры (строка)> ,
+
+	IdAddress     *string  `json:"idAddress,omitempty"`     // : <Идентификатор существующего описания адреса (адрес дома или объекта)>,
+	IdFastAddress *string  `json:"idFastAddress,omitempty"` // : <ID быстрого адреса. Дополнительное информационное поле, описывающее быстрый адрес, связанный с указанным адресом. Значение учитывается только при указании idAddress>
 }
 
 type Delivery struct {
@@ -170,19 +172,19 @@ type Delivery struct {
 
 	Lat           *float64 `json:"lat,omitempty"` // : <Широта координаты адреса (при указании места на карте). Если указано, информация о адресе игнорируется>,
 	Lon           *float64 `json:"lon,omitempty"` // : <Долгота координаты адреса (при указании места на карте). Если указано, информация о адресе игнорируется>,
-	IdAddress     *string `json:"idAddress"`      // <Идентификатор существующего описания адреса (адрес дома или объекта)>,
 
-	Building      *string `json:"building"`       // : <Строение (строка)>,
-	Fraction      *string `json:"fraction"`       // : <Корпус (строка)>,
-	Entrance      *string `json:"entrance"`       // : <Подъезд (строка)>,
-	Apartment     *string `json:"apartment"`      // : <№ квартиры (строка)>,
+	Building      *string `json:"building,omitempty"`       // : <Строение (строка)>,
+	Fraction      *string `json:"fraction,omitempty"`       // : <Корпус (строка)>,
+	Entrance      *string `json:"entrance,omitempty"`       // : <Подъезд (строка)>,
+	Apartment     *string `json:"apartment,omitempty"`      // : <№ квартиры (строка)>,
 
 
 	IdPlace       *int64 `json:"idPlace"`         //IdPlace       int64  `json:"idPlace"`       //: <Идентификатор поселения (Int64)>,
 	IdCity        *int64 `json:"idCity"`          //IdCity        int64  `json:"idCity"`        // : <Идентификатор города (Int64)>,
 	IdDistrict    *int64 `json:"idDistrict"`      //IdDistrict    int64  `json:"idDistrict"`    // : <Идентификатор района (Int64)>,
 
-	IdFastAddress *string  `json:"idFastAddress"` //: <ID быстрого адреса. Дополнительное информационное поле, описывающее быстрый адрес, связанный с указанным адресом. Значение учитывается только при указании idAddress>
+	IdAddress     *string `json:"idAddress,omitempty"`      // <Идентификатор существующего описания адреса (адрес дома или объекта)>,
+	IdFastAddress *string  `json:"idFastAddress,omitempty"` //: <ID быстрого адреса. Дополнительное информационное поле, описывающее быстрый адрес, связанный с указанным адресом. Значение учитывается только при указании idAddress>
 
 }
 
@@ -192,12 +194,12 @@ type NewOrder struct {
 	DeliveryTime    *string `json:"deliveryTime,omitempty"` //<Время подачи в формате yyyy-MM-dd HH:mm:ss>
 	DeliveryMinutes int64  `json:"deliveryMinutes"`         // <Количество минут до подачи (0-сейчас, но не менее минимального времени на подачу, указанного в настройках системы), не анализируется если задано поле deliveryTime >
 	IdService       int64  `json:"idService"`               //<Идентификатор услуги заказа (не может быть пустым)>
-	Notes           string `json:"notes"`                   // <Комментарий к заказу>
+	Notes           *string `json:"notes,omitempty"`                   // <Комментарий к заказу>
 															//Markups           [2]int64 `json:"markups"`           // <Массив идентификаторов наценок заказа>
-	Attributes      [2]int64      `json:"attributes"`       // <Массив идентификаторов дополнительных атрибутов заказа>
+	Attributes      *[2]int64      `json:"attributes,omitempty"`       // <Массив идентификаторов дополнительных атрибутов заказа>
 	Delivery        Delivery      `json:"delivery"`         // Инфомация о месте подачи машины
 	Destinations    []Destination `json:"destinations"`     // Пункты назначения заказа (массив, не может быть пустым)
-	IsNotCash       bool          `json:"isNotCash"`        //: // Флаг безналичного заказа <true или false (bool)>
+	IsNotCash       *bool          `json:"isNotCash,omitempty"`        //: // Флаг безналичного заказа <true или false (bool)>
 }
 
 type Order struct {
@@ -919,4 +921,5 @@ func IsOrderNotAvailable(state int) bool {
 const (
 	ORDER_PAYED = 7
 	ORDER_CANCELED = 9
+	ID_SERVICE = 5001753333
 )
