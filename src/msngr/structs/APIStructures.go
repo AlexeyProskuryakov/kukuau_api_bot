@@ -134,9 +134,9 @@ type RequestResult struct {
 }
 
 type RequestCommandProcessor interface {
-	ProcessRequest(in InPkg) RequestResult
+	ProcessRequest(in *InPkg) *RequestResult
 }
 
 type MessageCommandProcessor interface {
-	ProcessMessage(in InPkg) MessageResult
+	ProcessMessage(in *InPkg) *MessageResult
 }

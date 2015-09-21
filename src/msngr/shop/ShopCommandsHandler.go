@@ -118,7 +118,7 @@ type ShopCommandsProcessor struct {
 	d.DbHandlerMixin
 }
 
-func (cp ShopCommandsProcessor) ProcessRequest(in s.InPkg) s.RequestResult {
+func (cp ShopCommandsProcessor) ProcessRequest(in *s.InPkg) *s.RequestResult {
 	user_state, err := cp.Users.GetUserState(in.From)
 	if err != nil {
 		cp.Users.AddUser(in.From, in.UserData.Phone)
@@ -129,14 +129,14 @@ func (cp ShopCommandsProcessor) ProcessRequest(in s.InPkg) s.RequestResult {
 	} else {
 		commands = not_authorised_commands
 	}
-	return s.RequestResult{Commands:&commands}
+	return &s.RequestResult{Commands:&commands}
 }
 
 type ShopAuthoriseProcessor struct {
 	d.DbHandlerMixin
 }
 
-func (sap ShopAuthoriseProcessor) ProcessMessage(in s.InPkg) s.MessageResult {
+func (sap ShopAuthoriseProcessor) ProcessMessage(in *s.InPkg) *s.MessageResult {
 	command := *in.Message.Commands
 	user, password := _get_user_and_password(command[0].Form.Fields)
 
@@ -151,7 +151,7 @@ func (sap ShopAuthoriseProcessor) ProcessMessage(in s.InPkg) s.MessageResult {
 		body = "Не правильные логин или пароль :("
 		commands = not_authorised_commands
 	}
-	return s.MessageResult{Body:body, Commands:&commands}
+	return &s.MessageResult{Body:body, Commands:&commands}
 
 }
 
@@ -171,7 +171,7 @@ func __choiceString(choices []string) string {
 var order_states = [5]string{"обработан", "доставляется", "отправлен", "поступил в пункт выдачи", "в обработке"}
 var order_products = [4]string{"Ноутбук Apple MacBook Air", "Электрочайник BORK K 515", "Аудиосистема Westlake Tower SM-1", "Микроволновая печь Bosch HMT85ML23"}
 
-func (osp ShopOrderStateProcessor) ProcessMessage(in s.InPkg) s.MessageResult {
+func (osp ShopOrderStateProcessor) ProcessMessage(in *s.InPkg) *s.MessageResult {
 	user_state, _ := osp.Users.GetUserState(in.From)
 	var result string
 	var commands []s.OutCommand
@@ -182,7 +182,7 @@ func (osp ShopOrderStateProcessor) ProcessMessage(in s.InPkg) s.MessageResult {
 		result = "Авторизуйтесь пожалуйста!"
 		commands = not_authorised_commands
 	}
-	return s.MessageResult{Body:result, Commands:&commands}
+	return &s.MessageResult{Body:result, Commands:&commands}
 }
 
 type ShopSupportMessageProcessor struct {}
@@ -212,7 +212,7 @@ func make_one_string(fields []s.InField) string {
 	return buffer.String()
 }
 
-func (sm ShopSupportMessageProcessor) ProcessMessage(in s.InPkg) s.MessageResult {
+func (sm ShopSupportMessageProcessor) ProcessMessage(in *s.InPkg) *s.MessageResult {
 	commands := *in.Message.Commands
 	var body string
 
@@ -226,27 +226,27 @@ func (sm ShopSupportMessageProcessor) ProcessMessage(in s.InPkg) s.MessageResult
 	} else {
 		body = "Спасибо за вопрос. Мы ответим Вам в ближайшее время."
 	}
-	return s.MessageResult{Body:body}
+	return &s.MessageResult{Body:body}
 }
 
 type ShopInformationProcessor struct {}
 
-func (ih ShopInformationProcessor) ProcessMessage(in s.InPkg) s.MessageResult {
-	return s.MessageResult{Body:"Desprice Markt - интернет-магазин бытовой техники и электроники в Новосибирске и других городах России. Каталог товаров мировых брендов."}
+func (ih ShopInformationProcessor) ProcessMessage(in *s.InPkg) *s.MessageResult {
+	return &s.MessageResult{Body:"Desprice Markt - интернет-магазин бытовой техники и электроники в Новосибирске и других городах России. Каталог товаров мировых брендов."}
 }
 
 type ShopLogOutMessageProcessor struct {
 	d.DbHandlerMixin
 }
 
-func (lop ShopLogOutMessageProcessor) ProcessMessage(in s.InPkg) s.MessageResult {
+func (lop ShopLogOutMessageProcessor) ProcessMessage(in *s.InPkg) *s.MessageResult {
 	lop.Users.SetUserState(in.From, d.LOGOUT)
-	return s.MessageResult{Body:"До свидания! ", Commands:&not_authorised_commands}
+	return &s.MessageResult{Body:"До свидания! ", Commands:&not_authorised_commands}
 }
 
 type ShopBalanceProcessor struct {
 }
 
-func (sbp ShopBalanceProcessor) ProcessMessage(in s.InPkg) s.MessageResult {
-	return s.MessageResult{Body: fmt.Sprintf("Ваш баланс на %v составляет %v бонусных баллов.", time.Now().Format("01.02.2006"), rand.Int31n(1000) + 10), Commands: &authorised_commands}
+func (sbp ShopBalanceProcessor) ProcessMessage(in *s.InPkg) *s.MessageResult {
+	return &s.MessageResult{Body: fmt.Sprintf("Ваш баланс на %v составляет %v бонусных баллов.", time.Now().Format("01.02.2006"), rand.Int31n(1000) + 10), Commands: &authorised_commands}
 }

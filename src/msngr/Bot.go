@@ -18,23 +18,23 @@ func _check(e error) {
 }
 
 
-func getInPackage(r *http.Request) (s.InPkg, error) {
-	var in s.InPkg
+func getInPackage(r *http.Request) (*s.InPkg, error) {
+	var in *s.InPkg
 	body, err := ioutil.ReadAll(r.Body)
 	if err != nil {
 		log.Printf("error at reading: %q \n", err)
 	}
 //	log.Printf("<<<:%s", string(body))
-	err = json.Unmarshal(body, &in)
+	err = json.Unmarshal(body, in)
 	if err != nil {
 		log.Printf("error at unmarshal: %q \n", err)
 	}
 	return in, err
 }
 
-func setOutPackage(w http.ResponseWriter, out s.OutPkg, isError bool, isDeferred bool) {
+func setOutPackage(w http.ResponseWriter, out *s.OutPkg, isError bool, isDeferred bool) {
 
-	jsoned_out, err := json.Marshal(&out)
+	jsoned_out, err := json.Marshal(out)
 	if err != nil {
 		log.Println("set out package: ", jsoned_out, err)
 	}
@@ -65,13 +65,13 @@ func FormBotController(context *s.BotContext) controllerHandler {
 		}
 
 		out := &s.OutPkg{}
-		var in s.InPkg
+		var in *s.InPkg
 		var isError, isDeferred bool
 		var global_error, request_error, message_error error
 
 		if detail, ok := context.Check(); !ok{
 			out.Message = &s.OutMessage{Type: "error", Thread: "0", ID: u.GenId(), Body: fmt.Sprintln(detail)}
-			setOutPackage(w, *out, true, false)
+			setOutPackage(w, out, true, false)
 			return
 		}
 
@@ -137,7 +137,7 @@ func FormBotController(context *s.BotContext) controllerHandler {
 			isError = true
 		}
 
-		setOutPackage(w, *out, isError, isDeferred)
+		setOutPackage(w, out, isError, isDeferred)
 	}
 
 }
