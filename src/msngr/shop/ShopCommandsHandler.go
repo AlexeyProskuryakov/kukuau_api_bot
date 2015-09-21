@@ -13,16 +13,16 @@ import (
 	s "msngr/structs"
 )
 
-func FormShopCommands(db d.DbHandlerMixin) *s.BotContext {
+func FormShopCommands(db *d.DbHandlerMixin) *s.BotContext {
 	var ShopRequestCommands = map[string]s.RequestCommandProcessor{
-		"commands": ShopCommandsProcessor{DbHandlerMixin: db},
+		"commands": ShopCommandsProcessor{DbHandlerMixin: *db},
 	}
 
 	var ShopMessageCommands = map[string]s.MessageCommandProcessor{
 		"information":     ShopInformationProcessor{},
-		"authorise":       ShopAuthoriseProcessor{DbHandlerMixin: db},
-		"log_out":         ShopLogOutMessageProcessor{DbHandlerMixin: db},
-		"orders_state":    ShopOrderStateProcessor{DbHandlerMixin: db},
+		"authorise":       ShopAuthoriseProcessor{DbHandlerMixin: *db},
+		"log_out":         ShopLogOutMessageProcessor{DbHandlerMixin: *db},
+		"orders_state":    ShopOrderStateProcessor{DbHandlerMixin: *db},
 		"support_message": ShopSupportMessageProcessor{},
 		"balance":         ShopBalanceProcessor{},
 	}

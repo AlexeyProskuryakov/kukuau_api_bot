@@ -15,7 +15,7 @@ const (
 	timeFormat = "2006-01-02 15:04:05"
 )
 
-func FormTaxiCommands(im *InfinityMixin, db_handler d.DbHandlerMixin) *s.BotContext {
+func FormTaxiCommands(im *InfinityMixin, db_handler *d.DbHandlerMixin) *s.BotContext {
 	context := s.BotContext{}
 
 	context.Check = func() (string, bool) {
@@ -30,15 +30,15 @@ func FormTaxiCommands(im *InfinityMixin, db_handler d.DbHandlerMixin) *s.BotCont
 	}
 
 	context.Request_commands = map[string]s.RequestCommandProcessor{
-		"commands": TaxiCommandsProcessor{DbHandlerMixin: db_handler},
+		"commands": TaxiCommandsProcessor{DbHandlerMixin: *db_handler},
 	}
 
 	context.Message_commands = map[string]s.MessageCommandProcessor{
-		"information":      TaxiInformationProcessor{DbHandlerMixin: db_handler},
-		"new_order":        TaxiNewOrderProcessor{InfinityMixin: *im, DbHandlerMixin: db_handler},
-		"cancel_order":     TaxiCancelOrderProcessor{InfinityMixin: *im, DbHandlerMixin: db_handler},
+		"information":      TaxiInformationProcessor{DbHandlerMixin: *db_handler},
+		"new_order":        TaxiNewOrderProcessor{InfinityMixin: *im, DbHandlerMixin: *db_handler},
+		"cancel_order":     TaxiCancelOrderProcessor{InfinityMixin: *im, DbHandlerMixin: *db_handler},
 		"calculate_price":  TaxiCalculatePriceProcessor{InfinityMixin: *im},
-		"feedback":         TaxiFeedbackProcessor{InfinityMixin: *im, DbHandlerMixin: db_handler},
+		"feedback":         TaxiFeedbackProcessor{InfinityMixin: *im, DbHandlerMixin: *db_handler},
 		"write_dispatcher": TaxiSupportMessageProcessor{},
 	}
 
@@ -185,7 +185,7 @@ func (smp TaxiSupportMessageProcessor) ProcessMessage(in s.InPkg) s.MessageResul
 	return s.MessageResult{Body:"Спасибо за ваш отзыв!", }
 }
 
-func form_commands_for_current_order(order_wrapper *d.OrderWrapper) *[]s.OutCommand{
+func form_commands_for_current_order(order_wrapper *d.OrderWrapper) *[]s.OutCommand {
 	if order_wrapper != nil {
 		if order_wrapper.OrderState == ORDER_PAYED && time.Now().Sub(order_wrapper.When) < time.Hour && order_wrapper.Feedback == "" {
 			return &commands_for_order_feedback
@@ -255,8 +255,8 @@ func _form_order(fields []s.InField) (new_order NewOrder) {
 	}
 	//	fucking hardcode //todo refactor
 	new_order.IdService = ID_SERVICE
-//	new_order.Notes = "Тестирование."
-//	new_order.Attributes = [2]int64{1000113000, 1000113002}
+	//	new_order.Notes = "Тестирование."
+	//	new_order.Attributes = [2]int64{1000113000, 1000113002}
 	//	end fucking hardcode
 
 	new_order.Delivery = GetDeliveryHelper(from_info, hf, entrance)
@@ -302,7 +302,7 @@ func (nop TaxiNewOrderProcessor) ProcessMessage(in s.InPkg) s.MessageResult {
 
 		text := fmt.Sprintf("Ваш заказ создан! Стоймость поездки составит %+v рублей.", ans.Content.Cost)
 
-		if !ans.IsSuccess{
+		if !ans.IsSuccess {
 			nop.Errors.StoreError(in.From, ans.Message)
 			return s.MessageResult{Body:text, Error:errors.New(ans.Message)}
 		}
@@ -350,7 +350,7 @@ type TaxiFeedbackProcessor struct {
 
 func _get_feedback(fields []s.InField) string {
 	for _, v := range fields {
-		if v.Name == "text"  {
+		if v.Name == "text" {
 			return u.FirstOf(v.Data.Value, v.Data.Text).(string)
 		}
 	}

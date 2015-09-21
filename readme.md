@@ -4,3 +4,5 @@ after first start run this command:
 ---
 go get gopkg.in/mgo.v2
 
+See update of config! 
+May be also add difference at auth key?

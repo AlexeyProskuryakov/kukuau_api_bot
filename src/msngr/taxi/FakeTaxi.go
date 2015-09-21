@@ -11,13 +11,23 @@ import (
 ///////THIS IS FAKE API FOR TEST//////////////////////////////////////////
 //////////////////////////////////////////////////////////////////////////
 
+var fakeInstance *FakeInfinity
+
+func GetFakeInfinityAPI() TaxiInterface {
+	if fakeInstance == nil {
+		fakeInstance = &FakeInfinity{}
+	}
+	return fakeInstance
+}
+
+
 type FakeInfinity struct {
 	orders []Order
 }
 
 func send_states(order_id int64, inf *FakeInfinity) {
 	log.Printf("FA will send fake states for order %v", order_id)
-	for _, i := range []int{2, 4, 7} {
+	for _, i := range []int{2, 3, 4, 5, 6, 12, 7 } {
 		time.Sleep(5 * time.Second)
 		log.Println("FA send state: ", i)
 		inf.set_order_state(order_id, i)

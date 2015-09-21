@@ -2,19 +2,28 @@
   "main": {
     "port": 9191,
     "callback_addr": "http://localhost:9876/notify",
+    "log_file": "",
+    "database": {
+      "name": "bot",
+      "connection_string": "localhost:27017"
+    }
+  },
+  "taxi": {
+    "infinity": {
+      "login": "test1",
+      "password": "test1",
+      "connection_string": "http://109.202.25.248:8080/WebAPITaxi/",
+      "host": "109.202.25.248:8080"
+    },
     "dict_url": "http://localhost:9191/_streets",
-    "test": true,
-    "taxi_key": "Kuku demo_taxi_key",
-    "log_file":""
+    "key": "Kuku demo_taxi_key"
   },
-  "infinity": {
-    "login": "test1",
-    "password": "test1",
-    "connection_string": "http://109.202.25.248:8080/WebAPITaxi/",
-    "host": "109.202.25.248:8080"
+
+  "fake_taxi": {
+    "key": "Kuku demo_taxi_key"
   },
-  "database": {
-    "name": "bot",
-    "connection_string": "localhost:27017"
+
+  "shop": {
+    "key": "Kuku demo_shop_key"
   }
 }

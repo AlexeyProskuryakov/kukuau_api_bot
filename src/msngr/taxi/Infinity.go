@@ -9,7 +9,6 @@ import (
 	"log"
 	"net/http"
 
-	"sync"
 	"time"
 	"msngr/db"
 	"msngr/utils"
@@ -96,8 +95,6 @@ type infinity struct {
 
 // Global API variable
 var instance *infinity
-var fakeInstance *FakeInfinity
-var once sync.Once
 
 type InfinityMixin struct {
 	API TaxiInterface
@@ -115,28 +112,20 @@ func _initInfinity(conn_str, host, login, password string) *infinity {
 	return result
 }
 
-func GetInfinityAPI(iap InfinityApiParams, isTest bool) TaxiInterface {
-	if isTest {
-		log.Println("GIA return test API")
-		once.Do(func() {
-			fakeInstance = &FakeInfinity{}
-		})
-		return fakeInstance
-	} else {
-		log.Println("GIA return REAL API AHTUNG!!!")
-		if instance == nil {
-			instance = _initInfinity(iap.ConnectionsString, iap.Host, iap.Login, iap.Login)
-		}
-		return instance
-	}
-}
-
-func GetRealInfinityAPI(iap InfinityApiParams) *infinity {
+func GetRealInfinityAPI(iap InfinityApiParams, ) TaxiInterface {
 	if instance == nil {
 		instance = _initInfinity(iap.ConnectionsString, iap.Host, iap.Login, iap.Login)
 	}
 	return instance
 }
+
+func GetInfinity(iap InfinityApiParams) *infinity {
+	if instance == nil {
+		instance = _initInfinity(iap.ConnectionsString, iap.Host, iap.Login, iap.Login)
+	}
+	return instance
+}
+
 
 type Answer struct {
 	IsSuccess bool   `json:"isSuccess"`
@@ -153,16 +142,16 @@ type Answer struct {
 }
 
 type Destination struct {
-	IdRegion      int64   `json:"idRegion"`       // : <Идентификатор региона (Int64)>,
-	IdStreet      int64   `json:"idStreet"`       // : <Идентификатор улицы (Int64)>,
-	House         string  `json:"house"`          // : <№ дома (строка)>,
+	IdRegion      int64   `json:"idRegion"`                 // : <Идентификатор региона (Int64)>,
+	IdStreet      int64   `json:"idStreet"`                 // : <Идентификатор улицы (Int64)>,
+	House         string  `json:"house"`                    // : <№ дома (строка)>,
 
-	Lat           *float64 `json:"lat,omitempty"` // : <Широта координаты адреса (при указании места на карте). Если указано, информация о доставке по указанию и адресе игнорируется>,
-	Lon           *float64 `json:"lon,omitempty"` // : <Долгота координаты адреса (при указании места на карте). Если указано, информация о доставке по указанию и адресе игнорируется>,"isByDirection" : <Заказ машины с указанием пункта назначения при подаче (если задано в true,информация о адресе игнонрируются)>,
+	Lat           *float64 `json:"lat,omitempty"`           // : <Широта координаты адреса (при указании места на карте). Если указано, информация о доставке по указанию и адресе игнорируется>,
+	Lon           *float64 `json:"lon,omitempty"`           // : <Долгота координаты адреса (при указании места на карте). Если указано, информация о доставке по указанию и адресе игнорируется>,"isByDirection" : <Заказ машины с указанием пункта назначения при подаче (если задано в true,информация о адресе игнонрируются)>,
 
-	IdDistrict    *int64   `json:"idDistrict"`    // : <Идентификатор района (Int64)>,
-	IdCity        *int64   `json:"idCity"`        // : <Идентификатор города (Int64)>,
-	IdPlace       *int64   `json:"idPlace"`       // : <Идентификатор поселения (Int64)>,
+	IdDistrict    *int64   `json:"idDistrict"`              // : <Идентификатор района (Int64)>,
+	IdCity        *int64   `json:"idCity"`                  // : <Идентификатор города (Int64)>,
+	IdPlace       *int64   `json:"idPlace"`                 // : <Идентификатор поселения (Int64)>,
 
 	Building      *string  `json:"building,omitempty"`      // : <Строение (строка)>,
 	Fraction      *string  `json:"fraction,omitempty"`      // : <Корпус (строка)>,
@@ -175,12 +164,12 @@ type Destination struct {
 
 type Delivery struct {
 
-	IdRegion      int64 `json:"idRegion"`         // <Идентификатор региона (Int64)>,
-	IdStreet      int64  `json:"idStreet"`        // : <Идентификатор улицы (Int64)>,
-	House         string `json:"house"`           // : <№ дома (строка)>,
+	IdRegion      int64 `json:"idRegion"`                   // <Идентификатор региона (Int64)>,
+	IdStreet      int64  `json:"idStreet"`                  // : <Идентификатор улицы (Int64)>,
+	House         string `json:"house"`                     // : <№ дома (строка)>,
 
-	Lat           *float64 `json:"lat,omitempty"` // : <Широта координаты адреса (при указании места на карте). Если указано, информация о адресе игнорируется>,
-	Lon           *float64 `json:"lon,omitempty"` // : <Долгота координаты адреса (при указании места на карте). Если указано, информация о адресе игнорируется>,
+	Lat           *float64 `json:"lat,omitempty"`           // : <Широта координаты адреса (при указании места на карте). Если указано, информация о адресе игнорируется>,
+	Lon           *float64 `json:"lon,omitempty"`           // : <Долгота координаты адреса (при указании места на карте). Если указано, информация о адресе игнорируется>,
 
 	Building      *string `json:"building,omitempty"`       // : <Строение (строка)>,
 	Fraction      *string `json:"fraction,omitempty"`       // : <Корпус (строка)>,
@@ -188,9 +177,9 @@ type Delivery struct {
 	Apartment     *string `json:"apartment,omitempty"`      // : <№ квартиры (строка)>,
 
 
-	IdPlace       *int64 `json:"idPlace"`         //IdPlace       int64  `json:"idPlace"`       //: <Идентификатор поселения (Int64)>,
-	IdCity        *int64 `json:"idCity"`          //IdCity        int64  `json:"idCity"`        // : <Идентификатор города (Int64)>,
-	IdDistrict    *int64 `json:"idDistrict"`      //IdDistrict    int64  `json:"idDistrict"`    // : <Идентификатор района (Int64)>,
+	IdPlace       *int64 `json:"idPlace"`                   //IdPlace       int64  `json:"idPlace"`       //: <Идентификатор поселения (Int64)>,
+	IdCity        *int64 `json:"idCity"`                    //IdCity        int64  `json:"idCity"`        // : <Идентификатор города (Int64)>,
+	IdDistrict    *int64 `json:"idDistrict"`                //IdDistrict    int64  `json:"idDistrict"`    // : <Идентификатор района (Int64)>,
 
 	IdAddress     *string `json:"idAddress,omitempty"`      // <Идентификатор существующего описания адреса (адрес дома или объекта)>,
 	IdFastAddress *string  `json:"idFastAddress,omitempty"` //: <ID быстрого адреса. Дополнительное информационное поле, описывающее быстрый адрес, связанный с указанным адресом. Значение учитывается только при указании idAddress>
@@ -198,17 +187,17 @@ type Delivery struct {
 }
 
 type NewOrder struct {
-															//request
+																 //request
 	Phone           string `json:"phone"`
-	DeliveryTime    *string `json:"deliveryTime,omitempty"` //<Время подачи в формате yyyy-MM-dd HH:mm:ss>
-	DeliveryMinutes int64  `json:"deliveryMinutes"`         // <Количество минут до подачи (0-сейчас, но не менее минимального времени на подачу, указанного в настройках системы), не анализируется если задано поле deliveryTime >
-	IdService       int64  `json:"idService"`               //<Идентификатор услуги заказа (не может быть пустым)>
-	Notes           *string `json:"notes,omitempty"`                   // <Комментарий к заказу>
-															//Markups           [2]int64 `json:"markups"`           // <Массив идентификаторов наценок заказа>
-	Attributes      *[2]int64      `json:"attributes,omitempty"`       // <Массив идентификаторов дополнительных атрибутов заказа>
-	Delivery        Delivery      `json:"delivery"`         // Инфомация о месте подачи машины
-	Destinations    []Destination `json:"destinations"`     // Пункты назначения заказа (массив, не может быть пустым)
-	IsNotCash       *bool          `json:"isNotCash,omitempty"`        //: // Флаг безналичного заказа <true или false (bool)>
+	DeliveryTime    *string `json:"deliveryTime,omitempty"`      //<Время подачи в формате yyyy-MM-dd HH:mm:ss>
+	DeliveryMinutes int64  `json:"deliveryMinutes"`              // <Количество минут до подачи (0-сейчас, но не менее минимального времени на подачу, указанного в настройках системы), не анализируется если задано поле deliveryTime >
+	IdService       int64  `json:"idService"`                    //<Идентификатор услуги заказа (не может быть пустым)>
+	Notes           *string `json:"notes,omitempty"`             // <Комментарий к заказу>
+																 //Markups           [2]int64 `json:"markups"`           // <Массив идентификаторов наценок заказа>
+	Attributes      *[2]int64      `json:"attributes,omitempty"` // <Массив идентификаторов дополнительных атрибутов заказа>
+	Delivery        Delivery      `json:"delivery"`              // Инфомация о месте подачи машины
+	Destinations    []Destination `json:"destinations"`          // Пункты назначения заказа (массив, не может быть пустым)
+	IsNotCash       *bool          `json:"isNotCash,omitempty"`  //: // Флаг безналичного заказа <true или false (bool)>
 }
 
 type Order struct {
@@ -361,7 +350,7 @@ type InfinityCarInfo struct {
 	Lon      float64 `json:"Lon"`
 }
 
-func (car InfinityCarInfo) String() string{
+func (car InfinityCarInfo) String() string {
 	return fmt.Sprintf("%v %v с номером %v", car.Color, car.Model, car.Number)
 }
 
@@ -669,10 +658,10 @@ type Orders struct {
 func (p *infinity) Orders() []Order {
 	body := p._request("GetViewData", map[string]string{"params": "[{\"viewName\": \"Taxi.Orders\"}]"})
 	temp := []Orders{}
-//	log.Println(">>>", string(body))
+	//	log.Println(">>>", string(body))
 	err := json.Unmarshal(body, &temp)
 	warnp(err)
-//	log.Printf(">>> umshld len:%v,\n %+v,", len(temp[0].Rows), temp[0].Rows)
+	//	log.Printf(">>> umshld len:%v,\n %+v,", len(temp[0].Rows), temp[0].Rows)
 	return temp[0].Rows
 }
 
