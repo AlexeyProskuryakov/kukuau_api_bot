@@ -8,6 +8,31 @@ go get gopkg.in/mgo.v2
 
 See update of config! 
 
+
+```
+{
+    "taxis":[ //here is configuration for taxis extensions
+            {
+                "name": <name of taxi extension>, //will used when form urls and streets urls
+                ...
+                "api"{
+                    "name": "fake"|"infinity" //will use for logic 
+                    "data": { ... }
+                }
+            }
+    ],
+    "shops":[ //here is configuration for shops extensions
+        {
+            "name": <name of shop extension> //will used when form urls
+            ...
+        }
+    ]
+    ...    
+}
+```
+
+
+
 May be also add difference at auth key?
 
 
@@ -33,3 +58,6 @@ Lesha! Dict url now must be formed like this:
 ```
 http://<some host>/taxi/<taxi name>/streets
 ```
+
+It is very important because my server will wait requests for streets in addresses as stated above.
+

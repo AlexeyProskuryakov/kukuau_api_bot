@@ -8,22 +8,40 @@
       "connection_string": "localhost:27017"
     }
   },
-  "taxi": {
-    "infinity": {
-      "login": "test1",
-      "password": "test1",
-      "connection_string": "http://109.202.25.248:8080/WebAPITaxi/",
-      "host": "109.202.25.248:8080"
+  "taxis": [
+    {
+      "name": "marka",
+      "dict_url": "http://localhost:9191/taxi/marka/streets",
+      "key": "Kuku demo_taxi_key",
+      "api": {
+        "name": "infinity",
+        "data": {
+          "login": "test1",
+          "password": "test1",
+          "connection_string": "http://109.202.25.248:8080/WebAPITaxi/",
+          "host": "109.202.25.248:8080"
+        }
+      }
     },
-    "dict_url": "http://localhost:9191/_streets",
-    "key": "Kuku demo_taxi_key"
-  },
-
-  "fake_taxi": {
-    "key": "Kuku demo_taxi_key"
-  },
-
-  "shop": {
-    "key": "Kuku demo_shop_key"
-  }
+    {
+      "name": "fake",
+      "dict_url": "http://localhost:9191/taxi/fake/streets",
+      "key": "Kuku demo_taxi_key",
+      "api": {
+        "name": "fake",
+        "data": {
+          "login": "test1",
+          "password": "test1",
+          "connection_string": "http://109.202.25.248:8080/WebAPITaxi/",
+          "host": "109.202.25.248:8080"
+        }
+      }
+    }
+  ],
+  "shops": [
+    {
+      "name": "test_shop",
+      "key": "Kuku demo_shop_key"
+    }
+  ]
 }
