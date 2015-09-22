@@ -19,17 +19,17 @@ func _check(e error) {
 
 
 func getInPackage(r *http.Request) (*s.InPkg, error) {
-	var in *s.InPkg
+	var in s.InPkg
 	body, err := ioutil.ReadAll(r.Body)
 	if err != nil {
 		log.Printf("error at reading: %q \n", err)
 	}
-//	log.Printf("<<<:%s", string(body))
-	err = json.Unmarshal(body, in)
+	log.Printf("<<<:%s", string(body))
+	err = json.Unmarshal(body, &in)
 	if err != nil {
 		log.Printf("error at unmarshal: %q \n", err)
 	}
-	return in, err
+	return &in, err
 }
 
 func setOutPackage(w http.ResponseWriter, out *s.OutPkg, isError bool, isDeferred bool) {
@@ -40,7 +40,7 @@ func setOutPackage(w http.ResponseWriter, out *s.OutPkg, isError bool, isDeferre
 	}
 	w.Header().Set("Content-type", "application/json")
 
-//	log.Printf(">>> %s\n", string(jsoned_out))
+	log.Printf(">>> %s\n", string(jsoned_out))
 
 	if isError{
 		w.WriteHeader(http.StatusBadRequest)

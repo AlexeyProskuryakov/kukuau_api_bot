@@ -354,6 +354,12 @@ func (p *infinity) _request(conn_suffix string, url_values map[string]string) []
 	req.URL.RawQuery = values.Encode()
 	req.AddCookie(p.Cookie)
 	res, err := client.Do(req)
+	if res == nil || err != nil {
+		log.Println("INF response is: ", res, "; error is:", err, ". I will reconnect and will retrieve data again after 3s.")
+		time.Sleep(3 * time.Second)
+		p.reconnect()
+		return p._request(conn_suffix, url_values)
+	}
 	if res.Status == "403 Forbidden" {
 		err = errors.New("Ошибка авторизации infinity! (Возможно не установлены cookies)")
 		p.reconnect()
@@ -854,7 +860,7 @@ func GetDestinationHelper(info string, house string) Destination {
 
 type CarsCache struct {
 	cars map[int64]CarInfo
-	api TaxiInterface
+	api  TaxiInterface
 }
 
 func _create_cars_map(i TaxiInterface) map[int64]CarInfo {

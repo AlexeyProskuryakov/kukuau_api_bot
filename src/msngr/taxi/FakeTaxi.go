@@ -11,21 +11,21 @@ import (
 ///////THIS IS FAKE API FOR TEST//////////////////////////////////////////
 //////////////////////////////////////////////////////////////////////////
 
-var fakeInstance *FakeInfinity
+var fakeInstance *FakeTaxiAPI
 
 func GetFakeInfinityAPI() TaxiInterface {
 	if fakeInstance == nil {
-		fakeInstance = &FakeInfinity{}
+		fakeInstance = &FakeTaxiAPI{}
 	}
 	return fakeInstance
 }
 
 
-type FakeInfinity struct {
+type FakeTaxiAPI struct {
 	orders []Order
 }
 
-func send_states(order_id int64, inf *FakeInfinity) {
+func send_states(order_id int64, inf *FakeTaxiAPI) {
 	log.Printf("FA will send fake states for order %v", order_id)
 	for _, i := range []int{2, 3, 4, 5, 6, 12, 7 } {
 		time.Sleep(5 * time.Second)
@@ -34,7 +34,7 @@ func send_states(order_id int64, inf *FakeInfinity) {
 	}
 }
 
-func (inf *FakeInfinity) set_order_state(order_id int64, new_state int) {
+func (inf *FakeTaxiAPI) set_order_state(order_id int64, new_state int) {
 	for i, order := range inf.orders {
 		if order.ID == order_id {
 			inf.orders[i].State = new_state
@@ -42,7 +42,7 @@ func (inf *FakeInfinity) set_order_state(order_id int64, new_state int) {
 	}
 }
 
-func (inf *FakeInfinity) NewOrder(order NewOrder) Answer {
+func (inf *FakeTaxiAPI) NewOrder(order NewOrder) Answer {
 	log.Printf("3 NO delivery: %+v", order.Delivery)
 	log.Printf("3 NO destination: %+v", order.Destinations)
 	log.Printf("3 NO order all: %+v", order)
@@ -71,11 +71,12 @@ func (inf *FakeInfinity) NewOrder(order NewOrder) Answer {
 	return ans
 }
 
-func (inf *FakeInfinity) Orders() []Order {
+func (inf *FakeTaxiAPI) Orders() []Order {
+//	log.Println("FA orders: ", inf.orders)
 	return inf.orders
 }
 
-func (inf *FakeInfinity) CancelOrder(order_id int64) (bool, string) {
+func (inf *FakeTaxiAPI) CancelOrder(order_id int64) (bool, string) {
 	log.Println("FA order was canceled", order_id)
 	for i, order := range inf.orders {
 		if order.ID == order_id {
@@ -86,20 +87,20 @@ func (inf *FakeInfinity) CancelOrder(order_id int64) (bool, string) {
 	return true, "Test order not found :( "
 }
 
-func (p *FakeInfinity) CalcOrderCost(order NewOrder) (int, string) {
+func (p *FakeTaxiAPI) CalcOrderCost(order NewOrder) (int, string) {
 	log.Println("FA calulate cost for order: ", order)
 	return 100500, "Good cost!"
 }
 
-func (p *FakeInfinity) Feedback(f Feedback) (bool, string) {
+func (p *FakeTaxiAPI) Feedback(f Feedback) (bool, string) {
 	return true, "Test feedback was received! Thanks!"
 }
 
-func (p *FakeInfinity) IsConnected() bool {
+func (p *FakeTaxiAPI) IsConnected() bool {
 	return true
 }
 
-func (p *FakeInfinity) GetCarsInfo() []CarInfo{
+func (p *FakeTaxiAPI) GetCarsInfo() []CarInfo{
 	return []CarInfo{
 		CarInfo{
 			ID:5033615557,
