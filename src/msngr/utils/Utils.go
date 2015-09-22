@@ -54,3 +54,12 @@ func FirstOf(data ...interface{}) interface{} {
 	}
 	return ""
 }
+
+func In(p int, a []int) bool {
+	for _, v := range a {
+		if p == v {
+			return true
+		}
+	}
+	return false
+}

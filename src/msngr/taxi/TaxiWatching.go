@@ -19,7 +19,7 @@ const (
 
 )
 
-func FormNotification(whom string, order_id int64, state int, previous_state int, car_info InfinityCarInfo) *s.OutPkg {
+func FormNotification(whom string, order_id int64, state int, previous_state int, car_info CarInfo) *s.OutPkg {
 	var text string
 	switch state {
 	case 2:
@@ -53,12 +53,19 @@ func FormNotification(whom string, order_id int64, state int, previous_state int
 	return nil
 }
 
-func TaxiOrderWatch(db *d.DbHandlerMixin, im *InfinityMixin, carsCache *CarsCache, notifier *n.Notifier) {
+type TaxiContext struct {
+	API      TaxiInterface
+	DataBase *d.DbHandlerMixin
+	Cars     *CarsCache
+	Notifier *n.Notifier
+}
+
+func TaxiOrderWatch(taxiContext *TaxiContext, botContext *s.BotContext) {
 	previous_states := map[int64]int{}
 	for {
-		api_orders := im.API.Orders()
+		api_orders := taxiContext.API.Orders()
 		for _, api_order := range api_orders {
-			db_order_state := db.Orders.GetState(api_order.ID)
+			db_order_state := taxiContext.DataBase.Orders.GetState(api_order.ID)
 			if db_order_state == -1 {
 				log.Printf("OW order %+v is not present in system :(\n", api_order)
 				continue
@@ -66,14 +73,14 @@ func TaxiOrderWatch(db *d.DbHandlerMixin, im *InfinityMixin, carsCache *CarsCach
 			if api_order.State != db_order_state {
 				log.Printf("OW state of:\n%+v \nis updated (api: %v != db: %v)", api_order, api_order.State, db_order_state)
 				order_data := api_order.ToOrderData()
-				err := db.Orders.SetState(api_order.ID, api_order.State, &order_data)
+				err := taxiContext.DataBase.Orders.SetState(api_order.ID, api_order.State, &order_data)
 				if err != nil {
 					log.Printf("OW for order %+v can not update status %+v", api_order.ID, api_order.State)
 					continue
 				}
-				order_wrapper := db.Orders.GetByOrderId(api_order.ID)
+				order_wrapper := taxiContext.DataBase.Orders.GetByOrderId(api_order.ID)
 				log.Printf("OW updated order: %+v", order_wrapper)
-				car_info := carsCache.CarInfo(api_order.IDCar)
+				car_info := taxiContext.Cars.CarInfo(api_order.IDCar)
 
 				if car_info != nil {
 					var notification_data *s.OutPkg
@@ -84,14 +91,12 @@ func TaxiOrderWatch(db *d.DbHandlerMixin, im *InfinityMixin, carsCache *CarsCach
 						notification_data = FormNotification(order_wrapper.Whom, api_order.ID, api_order.State, -1, *car_info)
 					}
 					if notification_data != nil {
-						notification_data.Message.Commands = form_commands_for_current_order(order_wrapper)
-						notifier.Notify(*notification_data)
+						notification_data.Message.Commands = form_commands_for_current_order(order_wrapper, botContext.Commands)
+						taxiContext.Notifier.Notify(*notification_data)
 					}
 				}
 			}
-
 			previous_states[api_order.ID] = api_order.State
-
 		}
 		time.Sleep(3 * time.Second)
 	}

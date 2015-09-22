@@ -98,3 +98,14 @@ func (p *FakeInfinity) Feedback(f Feedback) (bool, string) {
 func (p *FakeInfinity) IsConnected() bool {
 	return true
 }
+
+func (p *FakeInfinity) GetCarsInfo() []CarInfo{
+	return []CarInfo{
+		CarInfo{
+			ID:5033615557,
+			Number:"В777ОР",
+			Color:"ультрамариновый",
+			Model:"Боливар",
+		},
+	}
+}

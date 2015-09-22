@@ -9,23 +9,26 @@ type TaxiConfig interface {
 }
 
 type ApiParams struct {
-	Name              string `json:"name"`
-	Host              *string `json:"host"`
-	Login             *string `json:"login"`
-	Password          *string `json:"password"`
-	ConnectionsString *string `json:"connection_string"`
+	Name string `json:"name"`
+	Data struct {
+			 Host              string `json:"host"`
+			 Login             string `json:"login"`
+			 Password          string `json:"password"`
+			 ConnectionsString string `json:"connection_string"`
+		 } `json:"data"`
+
 }
 
-func (api *ApiParams) GetHost() string {
-	return api.Host
+func (api ApiParams) GetHost() string {
+	return api.Data.Host
 }
-func (api *ApiParams) GetConnectionString() string {
-	return api.ConnectionsString
+func (api ApiParams) GetConnectionString() string {
+	return api.Data.ConnectionsString
 }
-func (api *ApiParams) GetLogin() string {
-	return api.Login
+func (api ApiParams) GetLogin() string {
+	return api.Data.Login
 }
-func (api *ApiParams) GetPassword() string {
-	return api.Password
+func (api ApiParams) GetPassword() string {
+	return api.Data.Password
 }
 

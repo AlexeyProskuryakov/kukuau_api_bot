@@ -8,20 +8,17 @@ import (
 	"os"
 )
 
-type taxi_config struct {
-	Infinity ia.InfinityApiParams `json:"infinity"`
-	DictUrl  string `json:"dict_url"`
-	Key string `json:"key"`
-	Collection string `json:"collection"`
-}
 
-type fake_taxi_config struct {
-	Collection string `json:"collection"`
-	Key string `json:"key"`
+type taxi_config struct {
+	Api 	ia.ApiParams `json:"api"`
+	DictUrl  string `json:"dict_url"`
+	Key      string `json:"key"`
+	Name     string `json:"name"`
 }
 
 type shop_config struct {
 	Key string `json:"key"`
+	Name string `json:"name"`
 }
 
 type config struct {
@@ -31,16 +28,13 @@ type config struct {
 				 LoggingFile  string `json:"log_file"`
 			 } `json:"main"`
 
-
 	Database struct {
 				 ConnString string `json:"connection_string"`
 				 Name       string `json:"name"`
 			 } `json:"database"`
 
-	Taxi taxi_config `json:"taxi"`
-	Shop shop_config `json:"shop"`
-	FakeTaxi taxi_config `json:"fake_taxi"`
-
+	Taxis    []taxi_config `json:"taxis"`
+	Shops     []shop_config `json:"shops"`
 }
 
 

@@ -16,6 +16,7 @@ func _check(e error) {
 
 type orderHandler struct {
 	collection *mgo.Collection
+	Source     string
 }
 
 type OrderData struct {
@@ -41,6 +42,7 @@ type OrderWrapper struct {
 	Whom       string
 	OrderData  OrderData `bson:"data"`
 	Feedback   string
+	Source     string
 }
 
 type userHandler struct {
@@ -68,6 +70,7 @@ type errorHandler struct {
 }
 
 type DbHandlerMixin struct {
+	Source  string
 	session *mgo.Session
 
 	Orders  *orderHandler
@@ -114,7 +117,7 @@ func (odbh *DbHandlerMixin) reConnect(conn string, dbname string) {
 	}
 	orders_collection.EnsureIndex(when_index)
 
-	odbh.Orders = &orderHandler{collection: orders_collection}
+	odbh.Orders = &orderHandler{collection: orders_collection, Source:odbh.Source}
 
 	users_collection := session.DB(dbname).C("users")
 	users_collection.EnsureIndex(mgo.Index{
@@ -155,8 +158,9 @@ func (odbh *DbHandlerMixin) reConnect(conn string, dbname string) {
 
 }
 
-func NewDbHandler(conn string, dbname string) *DbHandlerMixin {
+func NewDbHandler(conn, dbname, source string) *DbHandlerMixin {
 	odbh := DbHandlerMixin{}
+	odbh.Source = source
 	odbh.reConnect(conn, dbname)
 	return &odbh
 }
@@ -200,6 +204,7 @@ func (odbh *orderHandler) AddOrder(order_id int64, whom string) {
 		Whom:       whom,
 		OrderId:    order_id,
 		OrderState: 1,
+		Source: odbh.Source,
 	}
 	err := odbh.collection.Insert(&wrapper)
 	if err != nil {
@@ -207,6 +212,7 @@ func (odbh *orderHandler) AddOrder(order_id int64, whom string) {
 	}
 }
 func (odbh *orderHandler) AddOrderObject(order *OrderWrapper) {
+	order.Source = odbh.Source
 	order.When = time.Now()
 	err := odbh.collection.Insert(order)
 	if err != nil {

@@ -23,32 +23,19 @@ const (
 
 
 
-type TaxiInterface interface {
-	NewOrder(order NewOrder) Answer
-	CancelOrder(order_id int64) (bool, string)
-	CalcOrderCost(order NewOrder) (int, string)
-	Orders() []Order
-	Feedback(f Feedback) (bool, string)
-	IsConnected() bool
-}
+
 
 func warn(err error) {
 	if err != nil {
 		log.Println(err)
 	}
 }
+
 func warnp(err error) {
 	if err != nil {
 		log.Println(err)
 		panic(err)
 	}
-}
-
-type InfinityApiParams struct {
-	Host              string `json:"host"`
-	Login             string `json:"login"`
-	Password          string `json:"password"`
-	ConnectionsString string `json:"connection_string"`
 }
 
 // infinity - Структура для работы с API infinity.
@@ -96,7 +83,7 @@ type infinity struct {
 // Global API variable
 var instance *infinity
 
-type InfinityMixin struct {
+type ExternalApiMixin struct {
 	API TaxiInterface
 }
 
@@ -112,16 +99,16 @@ func _initInfinity(conn_str, host, login, password string) *infinity {
 	return result
 }
 
-func GetRealInfinityAPI(iap InfinityApiParams, ) TaxiInterface {
+func GetInfinityAPI(tc TaxiConfig) TaxiInterface {
 	if instance == nil {
-		instance = _initInfinity(iap.ConnectionsString, iap.Host, iap.Login, iap.Login)
+		instance = _initInfinity(tc.GetConnectionString(), tc.GetHost(), tc.GetLogin(), tc.GetPassword())
 	}
 	return instance
 }
 
-func GetInfinity(iap InfinityApiParams) *infinity {
+func GetInfinityAddressSupplier(tc TaxiConfig) AddressSupplier {
 	if instance == nil {
-		instance = _initInfinity(iap.ConnectionsString, iap.Host, iap.Login, iap.Login)
+		instance = _initInfinity(tc.GetConnectionString(), tc.GetHost(), tc.GetLogin(), tc.GetPassword())
 	}
 	return instance
 }
@@ -336,9 +323,9 @@ type InfinityServices struct {
 	Rows []InfinityService `json:"rows"`
 }
 type InfinityCarsInfo struct {
-	Rows []InfinityCarInfo `json:"rows"`
+	Rows []CarInfo `json:"rows"`
 }
-type InfinityCarInfo struct {
+type CarInfo struct {
 	ID       int64   `json:"id"`
 	Callsign string  `json:"Callsign"`
 	State    int     `json:"State"`
@@ -350,7 +337,7 @@ type InfinityCarInfo struct {
 	Lon      float64 `json:"Lon"`
 }
 
-func (car InfinityCarInfo) String() string {
+func (car CarInfo) String() string {
 	return fmt.Sprintf("%v %v с номером %v", car.Color, car.Model, car.Number)
 }
 
@@ -389,7 +376,7 @@ func (p *infinity) GetServices() []InfinityService {
 }
 
 // GetCarsInfo возвращает информацию о машинах
-func (p *infinity) GetCarsInfo() []InfinityCarInfo {
+func (p *infinity) GetCarsInfo() []CarInfo {
 	var tmp []InfinityCarsInfo
 	body := p._request("GetViewData", map[string]string{"params": "[{\"viewName\":\"Taxi.Cars.InfoEx\"}]"})
 	err := json.Unmarshal(body, &tmp)
@@ -790,8 +777,7 @@ type DictItem struct {
 
 }
 
-
-func StreetsSearchController(w http.ResponseWriter, r *http.Request, i *infinity) {
+func StreetsSearchController(w http.ResponseWriter, r *http.Request, i AddressSupplier) {
 	w.Header().Set("Content-type", "application/json")
 	w.WriteHeader(http.StatusOK)
 
@@ -867,12 +853,12 @@ func GetDestinationHelper(info string, house string) Destination {
 ///////////////////////////////////////////////////////////////////////////
 
 type CarsCache struct {
-	cars map[int64]InfinityCarInfo
-	api  *infinity
+	cars map[int64]CarInfo
+	api TaxiInterface
 }
 
-func _create_cars_map(i *infinity) map[int64]InfinityCarInfo {
-	cars_map := make(map[int64]InfinityCarInfo)
+func _create_cars_map(i TaxiInterface) map[int64]CarInfo {
+	cars_map := make(map[int64]CarInfo)
 	cars_info := i.GetCarsInfo()
 	for _, info := range cars_info {
 		cars_map[info.ID] = info
@@ -880,13 +866,13 @@ func _create_cars_map(i *infinity) map[int64]InfinityCarInfo {
 	return cars_map
 }
 
-func NewCarsCache(i *infinity) *CarsCache {
+func NewCarsCache(i TaxiInterface) *CarsCache {
 	cars_map := _create_cars_map(i)
 	handler := CarsCache{cars: cars_map, api: i}
 	return &handler
 }
 
-func (ch *CarsCache) CarInfo(car_id int64) *InfinityCarInfo {
+func (ch *CarsCache) CarInfo(car_id int64) *CarInfo {
 	key, ok := ch.cars[car_id]
 	if !ok {
 		ch.cars = _create_cars_map(ch.api)
@@ -921,4 +907,3 @@ func IsOrderNotAvailable(state int) bool {
 	}
 	return false
 }
-

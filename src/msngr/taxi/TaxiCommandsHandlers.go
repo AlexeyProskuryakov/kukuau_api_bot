@@ -13,9 +13,11 @@ import (
 
 const (
 	timeFormat = "2006-01-02 15:04:05"
+
 )
 
-func FormTaxiCommands(im *InfinityMixin, db_handler *d.DbHandlerMixin) *s.BotContext {
+func FormTaxiCommands(im *ExternalApiMixin, db_handler *d.DbHandlerMixin, dictUrl string, name string) *s.BotContext {
+
 	context := s.BotContext{}
 
 	context.Check = func() (string, bool) {
@@ -29,200 +31,201 @@ func FormTaxiCommands(im *InfinityMixin, db_handler *d.DbHandlerMixin) *s.BotCon
 		return detail, ok
 	}
 
+	context.Commands = GetCommands(dictUrl)
+	context.Name = name
+
 	context.Request_commands = map[string]s.RequestCommandProcessor{
-		"commands": TaxiCommandsProcessor{DbHandlerMixin: *db_handler},
+		"commands": &TaxiCommandsProcessor{DbHandlerMixin: *db_handler, context: &context},
 	}
 
 	context.Message_commands = map[string]s.MessageCommandProcessor{
-		"information":      TaxiInformationProcessor{DbHandlerMixin: *db_handler},
-		"new_order":        TaxiNewOrderProcessor{InfinityMixin: *im, DbHandlerMixin: *db_handler},
-		"cancel_order":     TaxiCancelOrderProcessor{InfinityMixin: *im, DbHandlerMixin: *db_handler},
-		"calculate_price":  TaxiCalculatePriceProcessor{InfinityMixin: *im},
-		"feedback":         TaxiFeedbackProcessor{InfinityMixin: *im, DbHandlerMixin: *db_handler},
-		"write_dispatcher": TaxiSupportMessageProcessor{},
+		"information":      &TaxiInformationProcessor{DbHandlerMixin: *db_handler, context:&context},
+		"new_order":        &TaxiNewOrderProcessor{ExternalApiMixin: *im, DbHandlerMixin: *db_handler, context:&context},
+		"cancel_order":     &TaxiCancelOrderProcessor{ExternalApiMixin: *im, DbHandlerMixin: *db_handler, context:&context},
+		"calculate_price":  &TaxiCalculatePriceProcessor{ExternalApiMixin: *im, context:&context},
+		"feedback":         &TaxiFeedbackProcessor{ExternalApiMixin: *im, DbHandlerMixin: *db_handler, context:&context},
+		"write_dispatcher": &TaxiSupportMessageProcessor{},
 	}
 
 	return &context
 }
 
+var not_point = string("не указан")
 
-var DictUrl string
+func GetCommands(dictUrl string) map[string]*[]s.OutCommand {
+	result := make(map[string]*[]s.OutCommand)
 
-var commands_at_created_order = []s.OutCommand{
-	s.OutCommand{
-		Title:    "Отменить заказ",
-		Action:   "cancel_order",
-		Position: 0,
-	},
-	s.OutCommand{
-		Title:    "Написать диспетчеру",
-		Action:   "write_dispatcher",
-		Position: 1,
-		Fixed:    true,
-		Form: &s.OutForm{
-			Type: "form",
-			Text: "?(text)",
-			Fields: []s.OutField{
-				s.OutField{
-					Name: "text",
-					Type: "text",
-					Attributes: s.FieldAttribute{
-						Label:    "Текст сообщения",
-						Required: true,
-					},
+	var taxi_call_form = &s.OutForm{
+		Title: "Форма вызова такси",
+		Type:  "form",
+		Name:  "call_taxi",
+		Text:  "Откуда: ?(street_from), ?(house_from), ?(entrance). Куда: ?(street_to), ?(house_to).",
+		Fields: []s.OutField{
+			s.OutField{
+				Name: "street_from",
+				Type: "dict",
+				Attributes: s.FieldAttribute{
+					Label:    "улица",
+					Required: true,
+					URL:      &dictUrl,
+				},
+			},
+			s.OutField{
+				Name: "house_from",
+				Type: "text",
+				Attributes: s.FieldAttribute{
+					Label:    "дом",
+					Required: true,
+				},
+			},
+			s.OutField{
+				Name: "entrance",
+				Type: "number",
+				Attributes: s.FieldAttribute{
+					Label:    "подъезд",
+					Required: false,
+					EmptyText: &not_point,
+				},
+			},
+			s.OutField{
+				Name: "street_to",
+				Type: "dict",
+				Attributes: s.FieldAttribute{
+					Label:    "улицa",
+					Required: true,
+					URL:      &dictUrl,
+				},
+			},
+			s.OutField{
+				Name: "house_to",
+				Type: "text",
+				Attributes: s.FieldAttribute{
+					Label:    "дом",
+					Required: true,
 				},
 			},
 		},
-	},
-}
-
-var commands_for_order_feedback = []s.OutCommand{
-	s.OutCommand{
-		Title:    "Отзыв о поездке",
-		Action:   "feedback",
-		Position: 0,
-		Form: &s.OutForm{
-			Type: "form",
-			Text: "?(text)",
-			Fields: []s.OutField{
-				s.OutField{
-					Name: "text",
-					Type: "text",
-					Attributes: s.FieldAttribute{
-						Label:    "Ваш отзыв",
-						Required: true,
-					},
-				},
-			},
-		},
-	},
-
-	s.OutCommand{
-		Title:    "Вызвать такси",
-		Action:   "new_order",
-		Position: 1,
-		Repeated: true,
-		Form:     taxi_call_form,
-	},
-}
-
-var commands_at_not_created_order = []s.OutCommand{
-	s.OutCommand{
-		Title:    "Вызвать такси",
-		Action:   "new_order",
-		Position: 0,
-		Repeated: true,
-		Form:     taxi_call_form,
-	},
-}
-
-
-var taxi_call_form = &s.OutForm{
-	Title: "Форма вызова такси",
-	Type:  "form",
-	Name:  "call_taxi",
-	Text:  "Откуда: ?(street_from), ?(house_from), ?(entrance). Куда: ?(street_to), ?(house_to).",
-	Fields: []s.OutField{
-		s.OutField{
-			Name: "street_from",
-			Type: "dict",
-			Attributes: s.FieldAttribute{
-				Label:    "улица",
-				Required: true,
-				URL:      &DictUrl,
-			},
-		},
-		s.OutField{
-			Name: "house_from",
-			Type: "text",
-			Attributes: s.FieldAttribute{
-				Label:    "дом",
-				Required: true,
-			},
-		},
-		s.OutField{
-			Name: "entrance",
-			Type: "number",
-			Attributes: s.FieldAttribute{
-				Label:    "подъезд",
-				Required: false,
-			},
-		},
-		s.OutField{
-			Name: "street_to",
-			Type: "dict",
-			Attributes: s.FieldAttribute{
-				Label:    "улицa",
-				Required: true,
-				URL:      &DictUrl,
-			},
-		},
-		s.OutField{
-			Name: "house_to",
-			Type: "text",
-			Attributes: s.FieldAttribute{
-				Label:    "дом",
-				Required: true,
-			},
-		},
-	},
-}
-
-func in(p int, a []int) bool {
-	for _, v := range a {
-		if p == v {
-			return true
-		}
 	}
-	return false
+	result["commands_at_created_order"] = &[]s.OutCommand{
+		s.OutCommand{
+			Title:    "Отменить заказ",
+			Action:   "cancel_order",
+			Position: 0,
+		},
+		s.OutCommand{
+			Title:    "Написать диспетчеру",
+			Action:   "write_dispatcher",
+			Position: 1,
+			Fixed:    true,
+			Form: &s.OutForm{
+				Type: "form",
+				Text: "?(text)",
+				Fields: []s.OutField{
+					s.OutField{
+						Name: "text",
+						Type: "text",
+						Attributes: s.FieldAttribute{
+							Label:    "Текст сообщения",
+							Required: true,
+						},
+					},
+				},
+			},
+		},
+	}
+	result["commands_for_order_feedback"] = &[]s.OutCommand{
+		s.OutCommand{
+			Title:    "Отзыв о поездке",
+			Action:   "feedback",
+			Position: 0,
+			Form: &s.OutForm{
+				Type: "form",
+				Text: "?(text)",
+				Fields: []s.OutField{
+					s.OutField{
+						Name: "text",
+						Type: "text",
+						Attributes: s.FieldAttribute{
+							Label:    "Ваш отзыв",
+							Required: true,
+						},
+					},
+				},
+			},
+		},
+
+		s.OutCommand{
+			Title:    "Вызвать такси",
+			Action:   "new_order",
+			Position: 1,
+			Repeated: true,
+			Form:     taxi_call_form,
+		},
+	}
+
+	result["commands_at_not_created_order"] = &[]s.OutCommand{
+		s.OutCommand{
+			Title:    "Вызвать такси",
+			Action:   "new_order",
+			Position: 0,
+			Repeated: true,
+			Form:     taxi_call_form,
+		},
+	}
+
+	return result
 }
 
 type TaxiSupportMessageProcessor struct {
-
 }
 
-func (smp TaxiSupportMessageProcessor) ProcessMessage(in *s.InPkg) *s.MessageResult {
+func (smp *TaxiSupportMessageProcessor) ProcessMessage(in *s.InPkg) *s.MessageResult {
 	return &s.MessageResult{Body:"Спасибо за ваш отзыв!", }
 }
 
-func form_commands_for_current_order(order_wrapper *d.OrderWrapper) *[]s.OutCommand {
+func form_commands_for_current_order(order_wrapper *d.OrderWrapper, commands map[string]*[]s.OutCommand) *[]s.OutCommand {
 	if order_wrapper != nil {
 		if order_wrapper.OrderState == ORDER_PAYED && time.Now().Sub(order_wrapper.When) < time.Hour && order_wrapper.Feedback == "" {
-			return &commands_for_order_feedback
-		} else if in(order_wrapper.OrderState, []int{7, 8, 9, 13, 15}) {
-			return &commands_at_not_created_order
+			return commands["commands_for_order_feedback"]
+		} else if u.In(order_wrapper.OrderState, []int{7, 8, 9, 13, 15}) {
+			return commands["commands_at_not_created_order"]
 		}
-		return &commands_at_created_order
+		return commands["commands_at_created_order"]
 	} else {
-		return &commands_at_not_created_order
+		return commands["commands_at_not_created_order"]
 	}
 }
 
-func FormCommands(username string, db d.DbHandlerMixin) *[]s.OutCommand {
+func FormCommands(username string, db d.DbHandlerMixin, commands map[string]*[]s.OutCommand) *[]s.OutCommand {
 	order_wrapper := db.Orders.GetByOwner(username)
-	return form_commands_for_current_order(order_wrapper)
+	return form_commands_for_current_order(order_wrapper, commands)
 }
 
 type TaxiCommandsProcessor struct {
 	d.DbHandlerMixin
+	context *s.BotContext
 }
 
-func (cp TaxiCommandsProcessor) ProcessRequest(in *s.InPkg) *s.RequestResult {
+func (cp *TaxiCommandsProcessor) ProcessRequest(in *s.InPkg) *s.RequestResult {
 	phone, err := _get_phone(in)
 	if err != nil {
 		return &s.RequestResult{Commands:nil, Error:err}
 	}
 	cp.Users.AddUser(in.From, *phone)
-	result := FormCommands(in.From, cp.DbHandlerMixin)
+	result := FormCommands(in.From, cp.DbHandlerMixin, cp.context.Commands)
 	return &s.RequestResult{Commands:result}
 }
 
 type TaxiInformationProcessor struct {
 	d.DbHandlerMixin
+	context *s.BotContext
 }
 
-func (ih TaxiInformationProcessor) ProcessMessage(in *s.InPkg) *s.MessageResult {
-	return &s.MessageResult{Body: "Срочный заказ такси в Новосибирске. Быстрая подача. Оплата наличными или картой. ", Commands:FormCommands(in.From, ih.DbHandlerMixin)}
+func (ih *TaxiInformationProcessor) ProcessMessage(in *s.InPkg) *s.MessageResult {
+	return &s.MessageResult{
+		Body: "Срочный заказ такси в Новосибирске. Быстрая подача. Оплата наличными или картой. ",
+		Commands:FormCommands(in.From, ih.DbHandlerMixin, ih.context.Commands),
+	}
 }
 
 func _form_order(fields []s.InField) (new_order NewOrder) {
@@ -266,8 +269,9 @@ func _form_order(fields []s.InField) (new_order NewOrder) {
 }
 
 type TaxiNewOrderProcessor struct {
-	InfinityMixin
+	ExternalApiMixin
 	d.DbHandlerMixin
+	context *s.BotContext
 }
 
 func _get_phone(in *s.InPkg) (phone *string, err error) {
@@ -279,7 +283,7 @@ func _get_phone(in *s.InPkg) (phone *string, err error) {
 	return nil, errors.New("no row at UserData.Phone")
 }
 
-func (nop TaxiNewOrderProcessor) ProcessMessage(in *s.InPkg) *s.MessageResult {
+func (nop *TaxiNewOrderProcessor) ProcessMessage(in *s.InPkg) *s.MessageResult {
 	order_wrapper := nop.Orders.GetByOwner(in.From)
 	log.Printf("NOP saved_order info: %+v\n", order_wrapper)
 
@@ -304,38 +308,41 @@ func (nop TaxiNewOrderProcessor) ProcessMessage(in *s.InPkg) *s.MessageResult {
 
 		if !ans.IsSuccess {
 			nop.Errors.StoreError(in.From, ans.Message)
-			return &s.MessageResult{Body:text, Error:errors.New(ans.Message)}
+			return &s.MessageResult{Body:"Проблемы с созданием заказа", Error:errors.New(ans.Message)}
 		}
 		nop.Orders.AddOrderObject(&d.OrderWrapper{OrderState:ORDER_CREATED, Whom:in.From, OrderId:ans.Content.Id})
-		return &s.MessageResult{Body:text, Commands:&commands_at_created_order}
+
+		return &s.MessageResult{Body:text, Commands:nop.context.Commands["commands_at_created_order"]}
 	}
-	return &s.MessageResult{Body: "Заказ уже создан!", Commands: &commands_at_created_order, Error: errors.New("Заказ уже создан!")}
+	return &s.MessageResult{Body: "Заказ уже создан!", Commands: nop.context.Commands["commands_at_created_order"], Error: errors.New("Заказ уже создан!")}
 }
 
 type TaxiCancelOrderProcessor struct {
-	InfinityMixin
+	ExternalApiMixin
 	d.DbHandlerMixin
+	context *s.BotContext
 }
 
-func (cop TaxiCancelOrderProcessor) ProcessMessage(in *s.InPkg) *s.MessageResult {
+func (cop *TaxiCancelOrderProcessor) ProcessMessage(in *s.InPkg) *s.MessageResult {
 	order_wrapper := cop.Orders.GetByOwner(in.From)
 	if order_wrapper != nil && !IsOrderNotAvailable(order_wrapper.OrderState) {
 		is_success, message := cop.API.CancelOrder(order_wrapper.OrderId)
 		if is_success {
 			cop.Orders.SetState(order_wrapper.OrderId, ORDER_CANCELED, nil)
-			return &s.MessageResult{Body:"Ваш заказ отменен!", Commands: &commands_at_not_created_order}
+			return &s.MessageResult{Body:"Ваш заказ отменен!", Commands: cop.context.Commands["commands_at_not_created_order"]}
 		} else {
 			return &s.MessageResult{Body:fmt.Sprintf("Проблемы с отменом заказа %v", message), Error: errors.New("Звони скорее: 123456")}
 		}
 	}
-	return &s.MessageResult{Body: "У вас нет активных заказов!", Commands:FormCommands(in.From, cop.DbHandlerMixin), Error: errors.New("У вас нет активных заказов!")}
+	return &s.MessageResult{Body: "У вас нет активных заказов!", Commands:FormCommands(in.From, cop.DbHandlerMixin, cop.context.Commands), Error: errors.New("У вас нет активных заказов!")}
 }
 
 type TaxiCalculatePriceProcessor struct {
-	InfinityMixin
+	ExternalApiMixin
+	context *s.BotContext
 }
 
-func (cpp TaxiCalculatePriceProcessor) ProcessMessage(in *s.InPkg) *s.MessageResult {
+func (cpp *TaxiCalculatePriceProcessor) ProcessMessage(in *s.InPkg) *s.MessageResult {
 	commands := *in.Message.Commands
 	order := _form_order(commands[0].Form.Fields)
 	cost_s, _ := cpp.API.CalcOrderCost(order)
@@ -344,8 +351,9 @@ func (cpp TaxiCalculatePriceProcessor) ProcessMessage(in *s.InPkg) *s.MessageRes
 }
 
 type TaxiFeedbackProcessor struct {
-	InfinityMixin
+	ExternalApiMixin
 	d.DbHandlerMixin
+	context *s.BotContext
 }
 
 func _get_feedback(fields []s.InField) string {
@@ -357,14 +365,14 @@ func _get_feedback(fields []s.InField) string {
 	return ""
 }
 
-func (fp TaxiFeedbackProcessor) ProcessMessage(in *s.InPkg) *s.MessageResult {
+func (fp *TaxiFeedbackProcessor) ProcessMessage(in *s.InPkg) *s.MessageResult {
 	commands := *in.Message.Commands
 	fdbk := _get_feedback(commands[0].Form.Fields)
 	order_id := fp.Orders.SetFeedback(in.From, ORDER_PAYED, fdbk)
 	if order_id != -1 {
 		f := Feedback{IdOrder: order_id, Rating: 5, Notes: fdbk}
 		fp.API.Feedback(f)
-		return &s.MessageResult{Body: "Спасибо! Ваш отзыв очень важен для нас:)", Commands: FormCommands(in.From, fp.DbHandlerMixin)}
+		return &s.MessageResult{Body: "Спасибо! Ваш отзыв очень важен для нас:)", Commands: FormCommands(in.From, fp.DbHandlerMixin, fp.context.Commands)}
 	} else {
 		return &s.MessageResult{Error:errors.New("Оплаченный заказ не найден :( Отзывы могут быть только для оплаченных заказов")}
 	}

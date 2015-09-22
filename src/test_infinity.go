@@ -9,7 +9,7 @@ import (
 func main() {
 	conf := m.ReadConfig()
 
-	realInfApi := taxi.GetRealInfinityAPI(conf.Infinity)
+	realInfApi := taxi.GetInfinityAPI(conf.Infinity)
 
 	services := realInfApi.GetServices()
 	log.Printf("services: %+v", services)

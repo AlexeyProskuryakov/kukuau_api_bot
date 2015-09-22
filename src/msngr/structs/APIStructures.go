@@ -1,10 +1,11 @@
 package structs
 
 type FieldAttribute struct {
-	Label    string  `json:"label"`
-	Required bool    `json:"required"`
-	Regex    *string `json:"regex,omitempty"`
-	URL      *string `json:"url,omitempty"`
+	Label     string  `json:"label"`
+	Required  bool    `json:"required"`
+	Regex     *string `json:"regex,omitempty"`
+	URL       *string `json:"url,omitempty"`
+	EmptyText *string `json:"empty_text,omitempty"`
 }
 
 type InForm struct {
@@ -21,9 +22,9 @@ type InField struct {
 	Name string `json:"name"`
 	Type string `json:"type,omitempty"`
 	Data struct {
-		Value string `json:"value"`
-		Text  string `json:"text"`
-	} `json:"data,omitempty"`
+			 Value string `json:"value"`
+			 Text  string `json:"text"`
+		 } `json:"data,omitempty"`
 }
 type InCommand struct {
 	Title  string `json:"title,omitempty"`
@@ -42,10 +43,10 @@ type InRequest struct {
 	ID    string `json:"id"`
 	Type  string `json:"type"`
 	Query struct {
-		Title  string `json:"title,omtempty"`
-		Action string `json:"action"`
-		Form   InForm `json:"form"`
-	} `json:"query"`
+			  Title  string `json:"title,omtempty"`
+			  Action string `json:"action"`
+			  Form   InForm `json:"form"`
+		  } `json:"query"`
 }
 
 type InUserData struct {
@@ -60,9 +61,9 @@ type InPkg struct {
 }
 
 type OutField struct {
-	Name string `json:"name"`
-	Type string `json:"type,omitempty"`
-	Data *struct {
+	Name       string `json:"name"`
+	Type       string `json:"type,omitempty"`
+	Data       *struct {
 	} `json:"data,omitempty"`
 	Attributes FieldAttribute `json:"attrs"`
 }
@@ -98,12 +99,12 @@ type OutRequest struct {
 	ID    string `json:"id,omitempty"`
 	Type  string `json:"type,omitempty"`
 	Query struct {
-		Title  string       `json:"title,omitempty"`
-		Action string       `json:"action"`
-		Text   string       `json:"text,omitempty"`
-		Form   *OutForm     `json:"form,omitempty"`
-		Result []OutCommand `json:"result,omitempty"`
-	} `json:"query"`
+			  Title  string       `json:"title,omitempty"`
+			  Action string       `json:"action"`
+			  Text   string       `json:"text,omitempty"`
+			  Form   *OutForm     `json:"form,omitempty"`
+			  Result []OutCommand `json:"result,omitempty"`
+		  } `json:"query"`
 }
 
 type OutPkg struct {
@@ -113,24 +114,27 @@ type OutPkg struct {
 }
 
 
-type checkFunc func() (string, bool)
+type CheckFunc func() (string, bool)
 
 type BotContext struct {
-	Check checkFunc
+	Name             string
+	Check            CheckFunc
 	Request_commands map[string]RequestCommandProcessor
 	Message_commands map[string]MessageCommandProcessor
+	Commands         map[string]*[]OutCommand
+
 }
 
 type MessageResult struct {
-	Commands *[]OutCommand
-	Body string
-	Error error
+	Commands   *[]OutCommand
+	Body       string
+	Error      error
 	IsDeferred bool
 }
 
 type RequestResult struct {
 	Commands *[]OutCommand
-	Error error
+	Error    error
 }
 
 type RequestCommandProcessor interface {
