@@ -5,33 +5,15 @@ import (
 	"log"
 	m "msngr"
 	t "msngr/taxi"
+	i "msngr/taxi/infinity"
 	sh "msngr/shop"
 	d "msngr/db"
 	n "msngr/notify"
 	s "msngr/structs"
 	"net/http"
 	"time"
+	"errors"
 )
-
-func GetExternalApi(params t.ApiParams) t.TaxiInterface {
-	switch api_name := params.Name; api_name{
-	case "infinity":
-		return t.GetInfinityAPI(params)
-	case "fake":
-		return t.GetFakeInfinityAPI()
-	}
-	panic("can not imply api name")
-}
-
-func GetAddressSupplier(params t.ApiParams) t.AddressSupplier {
-	switch api_name := params.Name; api_name{
-	case "infinity":
-		return t.GetInfinityAddressSupplier(params)
-	case "fake":
-		return t.GetInfinityAddressSupplier(params)
-	}
-	panic("can not imply api name")
-}
 
 func startAfter(check s.CheckFunc, what func()) {
 	for {
@@ -45,11 +27,28 @@ func startAfter(check s.CheckFunc, what func()) {
 	go what()
 }
 
+func GetAPIInstruments(params t.ApiParams) (t.TaxiInterface, t.AddressSupplier, error) {
+	switch api_name := params.Name; api_name{
+	case "infinity":
+		return i.GetInfinityAPI(params), i.GetInfinityAddressSupplier(params), nil
+	case "fake":
+		return t.GetFakeInfinityAPI(), i.GetInfinityAddressSupplier(params), nil
+	}
+	return nil, nil, errors.New("Not imply name of api")
+}
+
+
 func main() {
 	conf := m.ReadConfig()
 
 	for _, taxi_conf := range conf.Taxis {
-		external_api := GetExternalApi(taxi_conf.Api)
+		external_api, address_supplier, err := GetAPIInstruments(taxi_conf.Api)
+
+		if err != nil {
+			log.Printf("Skip this taxi api [%+v]\nBecause: %v", taxi_conf.Api, err)
+			continue
+		}
+
 		apiMixin := t.ExternalApiMixin{API: external_api}
 		db := d.NewDbHandler(conf.Database.ConnString, conf.Database.Name, taxi_conf.Name)
 		carsCache := t.NewCarsCache(external_api)
@@ -65,7 +64,7 @@ func main() {
 			t.TaxiOrderWatch(&taxiContext, botContext)
 		})
 
-		address_supplier := GetAddressSupplier(taxi_conf.Api)
+
 		http.HandleFunc(fmt.Sprintf("/taxi/%v/streets", taxi_conf.Name), func(w http.ResponseWriter, r *http.Request) {
 			t.StreetsSearchController(w, r, address_supplier)
 		})

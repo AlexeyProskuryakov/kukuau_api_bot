@@ -1,6 +1,5 @@
 package taxi
 
-
 type ConnectInterface interface {
 	IsConnected() bool
 }
@@ -19,5 +18,12 @@ type AddressSupplier interface {
 	ConnectInterface
 	AddressesSearch(query string) FastAddress
 }
+
+
+type ExternalApiMixin struct {
+	API TaxiInterface
+}
+
+
 
 

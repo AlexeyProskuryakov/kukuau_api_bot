@@ -53,6 +53,39 @@ func FormNotification(whom string, order_id int64, state int, previous_state int
 	return nil
 }
 
+type CarsCache struct {
+	cars map[int64]CarInfo
+	api  TaxiInterface
+}
+
+func _create_cars_map(i TaxiInterface) map[int64]CarInfo {
+	cars_map := make(map[int64]CarInfo)
+	cars_info := i.GetCarsInfo()
+	for _, info := range cars_info {
+		cars_map[info.ID] = info
+	}
+	return cars_map
+}
+
+func NewCarsCache(i TaxiInterface) *CarsCache {
+	cars_map := _create_cars_map(i)
+	handler := CarsCache{cars: cars_map, api: i}
+	return &handler
+}
+
+func (ch *CarsCache) CarInfo(car_id int64) *CarInfo {
+	key, ok := ch.cars[car_id]
+	if !ok {
+		ch.cars = _create_cars_map(ch.api)
+		key, ok = ch.cars[car_id]
+		if !ok {
+			return nil
+		}
+	}
+	return &key
+}
+
+
 type TaxiContext struct {
 	API      TaxiInterface
 	DataBase *d.DbHandlerMixin

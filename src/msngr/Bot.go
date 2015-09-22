@@ -17,7 +17,6 @@ func _check(e error) {
 	}
 }
 
-
 func getInPackage(r *http.Request) (*s.InPkg, error) {
 	var in s.InPkg
 	body, err := ioutil.ReadAll(r.Body)
@@ -33,7 +32,6 @@ func getInPackage(r *http.Request) (*s.InPkg, error) {
 }
 
 func setOutPackage(w http.ResponseWriter, out *s.OutPkg, isError bool, isDeferred bool) {
-
 	jsoned_out, err := json.Marshal(out)
 	if err != nil {
 		log.Println("set out package: ", jsoned_out, err)

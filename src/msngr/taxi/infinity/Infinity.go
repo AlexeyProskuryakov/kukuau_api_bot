@@ -1,35 +1,16 @@
-package taxi
+package infinity
 
 import (
 	"encoding/json"
 	"errors"
 
-	"fmt"
 	"io/ioutil"
 	"log"
 	"net/http"
 
 	"time"
-	"msngr/db"
-	"msngr/utils"
+	t "msngr/taxi"
 )
-
-const (
-	ORDER_PAYED = 7
-	ORDER_CANCELED = 9
-	ORDER_CREATED = 1
-	ID_SERVICE = 5001753333
-)
-
-
-
-
-
-func warn(err error) {
-	if err != nil {
-		log.Println(err)
-	}
-}
 
 func warnp(err error) {
 	if err != nil {
@@ -40,52 +21,48 @@ func warnp(err error) {
 
 // infinity - Структура для работы с API infinity.
 type infinity struct {
-	Host               string
-	ConnString         string // Строка подключения к infinity API
-							  // default: http://109.202.25.248:8080/WebAPITaxi/
-	LoginTime          time.Time
-	Cookie             *http.Cookie
-	LoginResponse      struct {
-						   Success   bool  `json:"success"`
-						   IDClient  int64 `json:"idClient"`
-						   Params    struct {
-										 ProtocolVersion            int    `json:"ProtocolVersion"`
-										 RefreshOrdersSeconds       int    `json:"RefreshOrdersSeconds"`
-										 LoginRegEx                 string `json:"LoginRegEx"`
-										 MyPhoneRegEx               string `json:"MyPhoneRegEx"`
-										 OurPhoneDisplay            string `json:"OurPhoneDisplay"`
-										 OurPhoneNumber             string `json:"OurPhoneNumber"`
-										 DefaultInfinityServiceID   int64  `json:"DefaultInfinityServiceID"`
-										 DefaultInfinityServiceName string `json:"DefaultInfinityServiceName"`
-										 DefaultRegionID            int64  `json:"DefaultRegionID"`
-										 DefaultRegionName          string `json:"DefaultRegionName"`
-										 DefaultDistrictID          string `json:"DefaultDistrictID"` // Can be null, so used as string here.
-										 DefaultDistrictName        string `json:"DefaultDistrictName"`
-										 DefaultCityID              int64  `json:"DefaultCityID"`
-										 DefaultCityName            string `json:"DefaultCityName"`
-										 DefaultPlaceID             string `json:"DefaultPlaceID"`    // Can be null, so used as string here.
-										 DefaultPlaceName           string `json:"DefaultPlaceName"`
-									 } `json:"params"`
-						   SessionID string `json:"sessionid"`
-					   }
-	Message            struct {
-						   Success bool   `json:"isSuccess"`
-						   Content string `json:"content"`
-					   }
-	Services           []InfinityServices `json:"InfinityServices"`
-							  //for
-	curent_credentials struct {
-						   login    string
-						   password string
-					   }
+	Host                string
+	ConnString          string // Строка подключения к infinity API// default: http://109.202.25.248:8080/WebAPITaxi/
+	LoginTime           time.Time
+	Cookie              *http.Cookie
+	LoginResponse       struct {
+							Success   bool  `json:"success"`
+							IDClient  int64 `json:"idClient"`
+							Params    struct {
+										  ProtocolVersion            int    `json:"ProtocolVersion"`
+										  RefreshOrdersSeconds       int    `json:"RefreshOrdersSeconds"`
+										  LoginRegEx                 string `json:"LoginRegEx"`
+										  MyPhoneRegEx               string `json:"MyPhoneRegEx"`
+										  OurPhoneDisplay            string `json:"OurPhoneDisplay"`
+										  OurPhoneNumber             string `json:"OurPhoneNumber"`
+										  DefaultInfinityServiceID   int64  `json:"DefaultInfinityServiceID"`
+										  DefaultInfinityServiceName string `json:"DefaultInfinityServiceName"`
+										  DefaultRegionID            int64  `json:"DefaultRegionID"`
+										  DefaultRegionName          string `json:"DefaultRegionName"`
+										  DefaultDistrictID          string `json:"DefaultDistrictID"` // Can be null, so used as string here.
+										  DefaultDistrictName        string `json:"DefaultDistrictName"`
+										  DefaultCityID              int64  `json:"DefaultCityID"`
+										  DefaultCityName            string `json:"DefaultCityName"`
+										  DefaultPlaceID             string `json:"DefaultPlaceID"`    // Can be null, so used as string here.
+										  DefaultPlaceName           string `json:"DefaultPlaceName"`
+									  } `json:"params"`
+							SessionID string `json:"sessionid"`
+						}
+	Message             struct {
+							Success bool   `json:"isSuccess"`
+							Content string `json:"content"`
+						}
+	Services            []InfinityServices `json:"InfinityServices"`
+
+	current_credentials struct {
+							login    string
+							password string
+						}
 }
 
 // Global API variable
 var instance *infinity
 
-type ExternalApiMixin struct {
-	API TaxiInterface
-}
 
 func _initInfinity(conn_str, host, login, password string) *infinity {
 	result := &infinity{}
@@ -99,125 +76,26 @@ func _initInfinity(conn_str, host, login, password string) *infinity {
 	return result
 }
 
-func GetInfinityAPI(tc TaxiConfig) TaxiInterface {
+func GetInfinityAPI(tc t.TaxiConfig) t.TaxiInterface {
 	if instance == nil {
 		instance = _initInfinity(tc.GetConnectionString(), tc.GetHost(), tc.GetLogin(), tc.GetPassword())
 	}
 	return instance
 }
 
-func GetInfinityAddressSupplier(tc TaxiConfig) AddressSupplier {
+func GetInfinityAddressSupplier(tc t.TaxiConfig) t.AddressSupplier {
 	if instance == nil {
 		instance = _initInfinity(tc.GetConnectionString(), tc.GetHost(), tc.GetLogin(), tc.GetPassword())
 	}
 	return instance
-}
-
-
-type Answer struct {
-	IsSuccess bool   `json:"isSuccess"`
-	Message   string `json:"message"`
-
-	Content   struct {
-				  Id      int64  `json:"id"`     // :7007330031,
-				  Name    string `json:"name"`
-				  Login   string `json:"login"`
-				  Number  int64  `json:"number"` // :406
-				  Cost    int    `json:"cost"`
-				  Details string `json:"details"`
-			  } `json:"content"`
-}
-
-type Destination struct {
-	IdRegion      int64   `json:"idRegion"`                 // : <Идентификатор региона (Int64)>,
-	IdStreet      int64   `json:"idStreet"`                 // : <Идентификатор улицы (Int64)>,
-	House         string  `json:"house"`                    // : <№ дома (строка)>,
-
-	Lat           *float64 `json:"lat,omitempty"`           // : <Широта координаты адреса (при указании места на карте). Если указано, информация о доставке по указанию и адресе игнорируется>,
-	Lon           *float64 `json:"lon,omitempty"`           // : <Долгота координаты адреса (при указании места на карте). Если указано, информация о доставке по указанию и адресе игнорируется>,"isByDirection" : <Заказ машины с указанием пункта назначения при подаче (если задано в true,информация о адресе игнонрируются)>,
-
-	IdDistrict    *int64   `json:"idDistrict"`              // : <Идентификатор района (Int64)>,
-	IdCity        *int64   `json:"idCity"`                  // : <Идентификатор города (Int64)>,
-	IdPlace       *int64   `json:"idPlace"`                 // : <Идентификатор поселения (Int64)>,
-
-	Building      *string  `json:"building,omitempty"`      // : <Строение (строка)>,
-	Fraction      *string  `json:"fraction,omitempty"`      // : <Корпус (строка)>,
-	Entrance      *string  `json:"entrance,omitempty"`      // : <Подъезд (строка)>,
-	Apartment     *string  `json:"apartment,omitempty"`     // : <№ квартиры (строка)> ,
-
-	IdAddress     *string  `json:"idAddress,omitempty"`     // : <Идентификатор существующего описания адреса (адрес дома или объекта)>,
-	IdFastAddress *string  `json:"idFastAddress,omitempty"` // : <ID быстрого адреса. Дополнительное информационное поле, описывающее быстрый адрес, связанный с указанным адресом. Значение учитывается только при указании idAddress>
-}
-
-type Delivery struct {
-
-	IdRegion      int64 `json:"idRegion"`                   // <Идентификатор региона (Int64)>,
-	IdStreet      int64  `json:"idStreet"`                  // : <Идентификатор улицы (Int64)>,
-	House         string `json:"house"`                     // : <№ дома (строка)>,
-
-	Lat           *float64 `json:"lat,omitempty"`           // : <Широта координаты адреса (при указании места на карте). Если указано, информация о адресе игнорируется>,
-	Lon           *float64 `json:"lon,omitempty"`           // : <Долгота координаты адреса (при указании места на карте). Если указано, информация о адресе игнорируется>,
-
-	Building      *string `json:"building,omitempty"`       // : <Строение (строка)>,
-	Fraction      *string `json:"fraction,omitempty"`       // : <Корпус (строка)>,
-	Entrance      *string `json:"entrance,omitempty"`       // : <Подъезд (строка)>,
-	Apartment     *string `json:"apartment,omitempty"`      // : <№ квартиры (строка)>,
-
-
-	IdPlace       *int64 `json:"idPlace"`                   //IdPlace       int64  `json:"idPlace"`       //: <Идентификатор поселения (Int64)>,
-	IdCity        *int64 `json:"idCity"`                    //IdCity        int64  `json:"idCity"`        // : <Идентификатор города (Int64)>,
-	IdDistrict    *int64 `json:"idDistrict"`                //IdDistrict    int64  `json:"idDistrict"`    // : <Идентификатор района (Int64)>,
-
-	IdAddress     *string `json:"idAddress,omitempty"`      // <Идентификатор существующего описания адреса (адрес дома или объекта)>,
-	IdFastAddress *string  `json:"idFastAddress,omitempty"` //: <ID быстрого адреса. Дополнительное информационное поле, описывающее быстрый адрес, связанный с указанным адресом. Значение учитывается только при указании idAddress>
-
-}
-
-type NewOrder struct {
-																 //request
-	Phone           string `json:"phone"`
-	DeliveryTime    *string `json:"deliveryTime,omitempty"`      //<Время подачи в формате yyyy-MM-dd HH:mm:ss>
-	DeliveryMinutes int64  `json:"deliveryMinutes"`              // <Количество минут до подачи (0-сейчас, но не менее минимального времени на подачу, указанного в настройках системы), не анализируется если задано поле deliveryTime >
-	IdService       int64  `json:"idService"`                    //<Идентификатор услуги заказа (не может быть пустым)>
-	Notes           *string `json:"notes,omitempty"`             // <Комментарий к заказу>
-																 //Markups           [2]int64 `json:"markups"`           // <Массив идентификаторов наценок заказа>
-	Attributes      *[2]int64      `json:"attributes,omitempty"` // <Массив идентификаторов дополнительных атрибутов заказа>
-	Delivery        Delivery      `json:"delivery"`              // Инфомация о месте подачи машины
-	Destinations    []Destination `json:"destinations"`          // Пункты назначения заказа (массив, не может быть пустым)
-	IsNotCash       *bool          `json:"isNotCash,omitempty"`  //: // Флаг безналичного заказа <true или false (bool)>
-}
-
-type Order struct {
-	ID                int64  `json:"ID"`                // ID
-	State             int    `json:"State"`             //Состояние заказа
-	Cost              int    `json:"Cost"`              //Стоимость
-	IsNotCash         bool   `json:"IsNotCash"`         //Безналичный заказ (bool)
-	IsPrevious        int    `json:"IsPrevious"`        //Тип заказа (0 –активный, 1-предварительный, 2-предварительный ставший активным)
-	LastStateTime     string `json:"LastStateTime"`     //Дата-Время последнего и\зменения состояния
-	DeliveryTime      string `json:"DeliveryTime"`      //Требуемое время подачи машины
-	Distance          int    `json:"Distance"`          //Расстояние км (если оно рассчитано системой)
-	TimeOfArrival     string `json:"TimeOfArrival"`     //Прогнозируемое время прибытия машины на заказ
-	IDDeliveryAddress int64  `json:"IDDeliveryAddress"` //ID адреса подачи
-	DeliveryStr       string `json:"DeliveryStr"`       //Адрес подачи в виде текста
-	DestinationsStr   string `json:"DestinationsStr"`   //Пункты назначения в виде текста (с учетом настроек отображения в диспетчерской: Первый/Последний/Все)
-	IDCar             int64  `json:"IDCar"`             //ID машины
-	IDService         int64  `json:"IdService"`         //ID услуги
-	Car               string `json:"Car"`               //Позывной машины
-	Service           string `json:"Service"`           //Услуга
-	Drivers           string `json:"Drivers"`           //ФИО Водителя
-}
-
-func (o *Order) ToOrderData() db.OrderData {
-	odc, _ := utils.ToMap(o, "json")
-	return db.NewOrderData(odc)
 }
 
 // Login - Авторизация в сервисе infinity. Входные параметры: login:string; password:string.
 // Возвращает true, если авторизация прошла успешно, false иначе.
 // Устанавливает время авторизации в infinity.LoginTime при успешной авторизации.
 func (p *infinity) Login(login, password string) bool {
-	p.curent_credentials.login = login
-	p.curent_credentials.password = password
+	p.current_credentials.login = login
+	p.current_credentials.password = password
 	p.LoginResponse.Success = false
 
 	client := &http.Client{}
@@ -265,12 +143,12 @@ func (p *infinity) IsConnected() bool {
 }
 
 func (p *infinity) reconnect() {
-	if p.curent_credentials.login == "" && p.curent_credentials.password == "" {
+	if p.current_credentials.login == "" && p.current_credentials.password == "" {
 		panic(errors.New("reconnect before connect! I don't know login and password :( "))
 	}
 	sleep_time := time.Duration(1000)
 	for {
-		result := p.Login(p.curent_credentials.login, p.curent_credentials.password)
+		result := p.Login(p.current_credentials.login, p.current_credentials.password)
 		if result {
 			break
 		} else {
@@ -323,22 +201,7 @@ type InfinityServices struct {
 	Rows []InfinityService `json:"rows"`
 }
 type InfinityCarsInfo struct {
-	Rows []CarInfo `json:"rows"`
-}
-type CarInfo struct {
-	ID       int64   `json:"id"`
-	Callsign string  `json:"Callsign"`
-	State    int     `json:"State"`
-	Number   string  `json:"Number"`
-	Color    string  `json:"Color"`
-	Model    string  `json:"Model"`
-	Driver   string  `json:"Driver"`
-	Lat      float64 `json:"Lat"`
-	Lon      float64 `json:"Lon"`
-}
-
-func (car CarInfo) String() string {
-	return fmt.Sprintf("%v %v с номером %v", car.Color, car.Model, car.Number)
+	Rows []t.CarInfo `json:"rows"`
 }
 
 func (p *infinity) _request(conn_suffix string, url_values map[string]string) []byte {
@@ -382,7 +245,7 @@ func (p *infinity) GetServices() []InfinityService {
 }
 
 // GetCarsInfo возвращает информацию о машинах
-func (p *infinity) GetCarsInfo() []CarInfo {
+func (p *infinity) GetCarsInfo() []t.CarInfo {
 	var tmp []InfinityCarsInfo
 	body := p._request("GetViewData", map[string]string{"params": "[{\"viewName\":\"Taxi.Cars.InfoEx\"}]"})
 	err := json.Unmarshal(body, &tmp)
@@ -390,23 +253,23 @@ func (p *infinity) GetCarsInfo() []CarInfo {
 	return tmp[0].Rows
 }
 
-func (p *infinity) NewOrder(order NewOrder) Answer {
+func (p *infinity) NewOrder(order t.NewOrder) t.Answer {
 	log.Printf("INF NO: %+v", order)
 	param, err := json.Marshal(order)
 	warnp(err)
 	log.Printf("INF NO jsonified: %+v", string(param))
 	body := p._request("RemoteCall", map[string]string{"params": string(param), "method": "Taxi.WebAPI.NewOrder"})
-	var ans Answer
+	var ans t.Answer
 	err = json.Unmarshal(body, &ans)
 	warnp(err)
 	return ans
 }
 
-func (p *infinity) CalcOrderCost(order NewOrder) (int, string) {
+func (p *infinity) CalcOrderCost(order t.NewOrder) (int, string) {
 	param, err := json.Marshal(order)
 	warnp(err)
 	body := p._request("RemoteCall", map[string]string{"params": string(param), "method": "Taxi.WebAPI.CalcOrderCost"})
-	var tmp Answer
+	var tmp t.Answer
 	err = json.Unmarshal(body, &tmp)
 	warnp(err)
 	return tmp.Content.Cost, tmp.Content.Details
@@ -425,7 +288,7 @@ type PrivateParams struct {
 func (p *infinity) GetPrivateParams() (bool, string, string) {
 
 	body := p._request("RemoteCall", map[string]string{"method": "Taxi.WebAPI.Client.GetPrivateParams"})
-	var temp Answer
+	var temp t.Answer
 	err := json.Unmarshal(body, &temp)
 	warnp(err)
 	return temp.IsSuccess, temp.Content.Name, temp.Content.Login
@@ -442,7 +305,7 @@ func (p *infinity) ChangePassword(password string) (bool, string) {
 	tmp, err := json.Marshal(password)
 	warnp(err)
 	body := p._request("RemoteCall", map[string]string{"params": string(tmp), "method": "Taxi.WebAPI.Client.ChangePassword"})
-	var temp Answer
+	var temp t.Answer
 	err = json.Unmarshal(body, &temp)
 	warnp(err)
 	return temp.IsSuccess, temp.Message
@@ -458,7 +321,7 @@ func (p *infinity) ChangeName(name string) (bool, string) {
 
 	body := p._request("RemoteCall", map[string]string{"params": string(tmp), "method": "Taxi.WebAPI.Client.ChangeName"})
 
-	var temp Answer
+	var temp t.Answer
 	err = json.Unmarshal(body, &temp)
 	warnp(err)
 	return temp.IsSuccess, temp.Message
@@ -473,7 +336,7 @@ func (p *infinity) SendMessage(message string) (bool, string /*, string*/) {
 
 	body := p._request("RemoteCall", map[string]string{"params": string(tmp), "method": "Taxi.WebAPI.Client.SendMessage"})
 
-	var temp Answer
+	var temp t.Answer
 	err = json.Unmarshal(body, &temp)
 	warnp(err)
 	return temp.IsSuccess, temp.Message
@@ -483,7 +346,7 @@ func (p *infinity) CallbackRequest(phone string) (bool, string) {
 	tmp, err := json.Marshal(phone)
 	warnp(err)
 	body := p._request("RemoteCall", map[string]string{"params": string(tmp), "method": "Taxi.WebAPI.Client.CallbackRequest"})
-	var temp Answer
+	var temp t.Answer
 	err = json.Unmarshal(body, &temp)
 	warnp(err)
 	return temp.IsSuccess, temp.Message
@@ -494,7 +357,7 @@ func (p *infinity) CallbackRequest(phone string) (bool, string) {
 func (p *infinity) ClearHistory() (bool, string) {
 	body := p._request("RemoteCall", map[string]string{"method": "Taxi.WebAPI.Client.ClearHistory"})
 
-	var temp Answer
+	var temp t.Answer
 	err := json.Unmarshal(body, &temp)
 	warnp(err)
 	return temp.IsSuccess, temp.Message
@@ -509,7 +372,7 @@ func (p *infinity) CancelOrder(order int64) (bool, string) {
 
 	body := p._request("RemoteCall", map[string]string{"params": string(tmp), "method": "Taxi.WebAPI.Client.CancelOrder"})
 
-	var temp Answer
+	var temp t.Answer
 	err = json.Unmarshal(body, &temp)
 	warnp(err)
 	return temp.IsSuccess, temp.Message
@@ -524,19 +387,14 @@ func (p *infinity) CancelOrder(order int64) (bool, string) {
 //"notes" : <Текст отзыва>
 //}
 
-type Feedback struct {
-	IdOrder int64  `json:"idOrder"`
-	Rating  int    `json:"rating"`
-	Notes   string `json:"notes"`
-}
 
-func (p *infinity) Feedback(inf Feedback) (bool, string) {
+func (p *infinity) Feedback(inf t.Feedback) (bool, string) {
 	tmp, err := json.Marshal(inf)
 	warnp(err)
 
 	body := p._request("RemoteCall", map[string]string{"params": string(tmp), "method": "Taxi.WebAPI.Client.Feedback"})
 
-	var temp Answer
+	var temp t.Answer
 	err = json.Unmarshal(body, &temp)
 	warnp(err)
 	return temp.IsSuccess, temp.Message
@@ -552,7 +410,7 @@ func (p *infinity) WhereIT(ID int64) (bool, string) {
 
 	body := p._request("RemoteCall", map[string]string{"params": string(tmp), "method": "Taxi.WebAPI.Client.WhereIT"})
 
-	var temp Answer
+	var temp t.Answer
 	err = json.Unmarshal(body, &temp)
 	warnp(err)
 	return temp.IsSuccess, temp.Message
@@ -577,7 +435,7 @@ func (p *infinity) PhonesEdit(phone phonesEdit) (bool, string) {
 	tmp, err := json.Marshal(phone)
 	warnp(err)
 	body := p._request("RemoteCall", map[string]string{"params": string(tmp), "method": "Taxi.WebAPI.Client.Phones.Edit"})
-	var temp Answer
+	var temp t.Answer
 	err = json.Unmarshal(body, &temp)
 	warnp(err)
 	return temp.IsSuccess, temp.Message
@@ -590,7 +448,7 @@ func (p *infinity) PhonesRemove(phone int64) (bool, string) {
 	tmp, err := json.Marshal(phone)
 	warnp(err)
 	body := p._request("RemoteCall", map[string]string{"params": string(tmp), "method": "Taxi.WebAPI.Client.Phones.Remove"})
-	var temp Answer
+	var temp t.Answer
 	err = json.Unmarshal(body, &temp)
 	warnp(err)
 	return temp.IsSuccess, temp.Message
@@ -624,7 +482,7 @@ func (p *infinity) AddressesEdit(f favorite) (bool, string) {
 	warnp(err)
 
 	body := p._request("RemoteCall", map[string]string{"params": string(tmp), "method": "Taxi.WebAPI.Client.Addresses.Edit"})
-	var temp Answer
+	var temp t.Answer
 	err = json.Unmarshal(body, &temp)
 	warnp(err)
 
@@ -636,7 +494,7 @@ func (p *infinity) AddressesRemove(id int64) (bool, string) {
 	warnp(err)
 
 	body := p._request("RemoteCall", map[string]string{"params": string(tmp), "method": "Taxi.WebAPI.Client.Addresses.Remove"})
-	var temp Answer
+	var temp t.Answer
 	err = json.Unmarshal(body, &temp)
 	warnp(err)
 	return temp.IsSuccess, temp.Message
@@ -644,11 +502,11 @@ func (p *infinity) AddressesRemove(id int64) (bool, string) {
 
 /////////////////////////////
 type Orders struct {
-	Rows []Order `json:"rows"`
+	Rows []t.Order `json:"rows"`
 }
 
-//Taxi.Orders (Заказы: активные и предварительные)
-func (p *infinity) Orders() []Order {
+//Taxi.t.Orders (Заказы: активные и предварительные)
+func (p *infinity) Orders() []t.Order {
 	body := p._request("GetViewData", map[string]string{"params": "[{\"viewName\": \"Taxi.Orders\"}]"})
 	temp := []Orders{}
 	//	log.Println(">>>", string(body))
@@ -658,8 +516,8 @@ func (p *infinity) Orders() []Order {
 	return temp[0].Rows
 }
 
-//Taxi.Orders.Closed.ByDates (История заказов: По датам)
-func (p *infinity) OrdersClosedByDates() []Order {
+//Taxi.t.Orders.Closed.ByDates (История заказов: По датам)
+func (p *infinity) OrdersClosedByDates() []t.Order {
 	body := p._request("GetViewData", map[string]string{"params": "[{\"viewName\": \"Taxi.Orders.Closed.ByDates\"}]"})
 	temp := []Orders{}
 	err := json.Unmarshal(body, &temp)
@@ -668,23 +526,23 @@ func (p *infinity) OrdersClosedByDates() []Order {
 }
 
 //Taxi.Orders.Closed.LastN (История заказов: Последние)
-func (p *infinity) OrdersClosedlastN() []Order {
+func (p *infinity) OrdersClosedlastN() []t.Order {
 	body := p._request("GetViewData", map[string]string{"params": "[{\"viewName\": \"Taxi.Orders.Closed.LastN\"}]"})
 
-	var temp []Order
+	var temp []t.Order
 	err := json.Unmarshal(body, &temp)
 	warnp(err)
 	return temp
 }
 
-//Taxi.Destinations.ByActiveOrder (Пункты назначения: Активные заказы)
-//Taxi.Destinations.ByClosedOrder (Пункты назначения: Закрытые заказы (история))
+//Taxi.Destinations.ByActivet.Order (Пункты назначения: Активные заказы)
+//Taxi.Destinations.ByClosedt.Order (Пункты назначения: Закрытые заказы (история))
 
 //Taxi.Markups (Список доступных наценок)
-func (p *infinity) Markups() []Order {
+func (p *infinity) Markups() []t.Order {
 	body := p._request("GetViewData", map[string]string{"params": "[{\"viewName\": \"Taxi.Markups\"}]"})
 
-	var temp []Order
+	var temp []t.Order
 	err := json.Unmarshal(body, &temp)
 	warnp(err)
 	return temp
@@ -698,7 +556,7 @@ func (p *infinity) Markups() []Order {
 /////////////////////////////////////////////////////////////////////////////////////////////////////
 /////////////////////////////////////////////////////////////////////////////////////////////////////
 /////////////////////////////////////////////////////////////////////////////////////////////////////
-//Taxi.FastAddresses.Search (Поиск быстрых адресов) Доступность: Личный кабинет + Заказ с сайта
+//Taxi.t.FastAddresses.Search (Поиск быстрых адресов) Доступность: Личный кабинет + Заказ с сайта
 //Поля:  ID  Name  IDType  IDAddress  Apartment  Entrance  StrAddress  AddrDescription  Type
 //Наименование
 //Тип адреса/быстрого адреса
@@ -709,185 +567,22 @@ func (p *infinity) Markups() []Order {
 //Описание адреса
 //Тип адреса/быстрого адреса в виде строки
 
-type FastAddress struct {
-	Rows []struct {
-		ID         int64  `json:"ID"`
-		IDParent   int64  `json:"IDParent,omitempty"`
-		Name       string `json:"Name"`
-		ShortName  string `json:"ShortName,omitempty"`
-		ItemType   int64  `json:"ItemType,omitempty"`
-		FullName   string `json:"FullName"`
-		IDRegion   int64  `json:"IDRegion"`
-		IDDistrict int64  `json:"IDDistrict"`
-		IDCity     int64  `json:"IDCity"`
-		IDPlace    int64  `json:"IDPlace"`
-		Region     string `json:"Region,omitempty"`
-		District   string `json:"District,omitempty"`
-		City       string `json:"City"`
-		Place      string `json:"Place,omitempty"`
-	} `json:"rows"`
-}
 
-type Address struct {
-	ID         int64  `json:"ID"`
-	IDParent   int64  `json:"IDParent,omitempty"`
-	Name       string `json:"Name"`
-	ShortName  string `json:"ShortName,omitempty"`
-	ItemType   int64  `json:"ItemType,omitempty"`
-	FullName   string `json:"FullName"`
-	IDRegion   int64  `json:"IDRegion"`
-	IDDistrict int64  `json:"IDDistrict"`
-	IDCity     int64  `json:"IDCity"`
-	IDPlace    int64  `json:"IDPlace"`
-	Region     string `json:"Region,omitempty"`
-	District   string `json:"District,omitempty"`
-	City       string `json:"City"`
-	Place      string `json:"Place,omitempty"`
-}
-
-func (p *infinity) AddressesSearch(text string) FastAddress {
-
+func (p *infinity) AddressesSearch(text string) t.FastAddress {
 	body := p._request("GetViewData", map[string]string{"params": "[{\"viewName\": \"Taxi.Addresses.Search\", \"params\": [{\"n\": \"SearchText\", \"v\": \"" + text + "\"}]}]"})
-
-	var temp []FastAddress
+	var temp []t.FastAddress
 	err := json.Unmarshal(body, &temp)
 	warnp(err)
 	return temp[0]
 }
 
 //Taxi.ClientAddresses (Адреса клиента)
-func (p *infinity) ClientAddresses() FastAddress {
+func (p *infinity) ClientAddresses() t.FastAddress {
 	body := p._request("GetViewData", map[string]string{"params": "[{\"viewName\": \"Taxi.ClientAddresses\"}]"})
-	var temp []FastAddress
+	var temp []t.FastAddress
 	err := json.Unmarshal(body, &temp)
 	warnp(err)
 	return temp[0]
-}
-
-//Taxi.Addresses.ByNameAndType (Объекты адреса по типу и наименованию)
-//Taxi.Addresses.Search (Поиск улиц/объектов)
-//Taxi.Terminal.Info (Информация для пользователя)
-//Taxi.OrderMarkups.ByClosedOrder (Наценки: Закрытые заказы (история))
-//Taxi.OrderMarkups.ByActiveOrder (Наценки: Активные заказы)
-//Taxi.OrderAttributes.ByClosedOrder (Атрибуты машины: Закрытые заказы)
-//Taxi.OrderAttributes.ByActiveOrder (Атрибуты машины: Активные заказы)
-//Taxi.Cars.InfoEx (Дополнительная расширенная информация о машине)
-
-//////////////////////////////////////////////////////////////////////////////////////////////////////
-//////////////////////////////////////////////////////////////////////////////////////////////////////
-//////////////////////////////////////////////////////////////////////////////////////////////////////
-type DictItem struct {
-	Key      string `json:"key"`
-	Title    string `json:"title"`
-	SubTitle string `json:"subtitle"`
-
-}
-
-func StreetsSearchController(w http.ResponseWriter, r *http.Request, i AddressSupplier) {
-	w.Header().Set("Content-type", "application/json")
-	w.WriteHeader(http.StatusOK)
-
-	log.Println("Searching address...")
-	if r.Method == "GET" {
-		params := r.URL.Query()
-		query := params.Get("q")
-		var results []DictItem
-		if query != "" {
-
-			if !i.IsConnected() {
-				ans, _ := json.Marshal(map[string]string{"error":"true", "details":"service is not avaliable"})
-				fmt.Fprintf(w, "%s", string(ans))
-				return
-			}
-
-			rows := i.AddressesSearch(query).Rows
-			for _, nitem := range rows {
-				var item DictItem
-				var err error
-				t, err := json.Marshal(nitem)
-				item.Key = string(t)
-				warn(err)
-				item.Title = fmt.Sprintf("%v %v", nitem.Name, nitem.ShortName)
-				item.SubTitle = fmt.Sprintf("%v", utils.FirstOf(nitem.Place, nitem.District, nitem.City, nitem.Region))
-				results = append(results, item)
-			}
-		}
-		ans, err := json.Marshal(results)
-		warn(err)
-		fmt.Fprintf(w, "%s", string(ans))
-	}
-}
-
-type InPlace struct {
-	StreetId   int64 `json:"ID"`
-	RegionId   int64 `json:"IDRegion"`
-	DistrictId *int64 `json:"IDDistrict"`
-	CityId     *int64 `json:"IDCity"`
-	PlaceId    *int64 `json:"IDPlace"`
-}
-
-//helpers for forming
-// destination and delivery on infinity results after street search request
-func GetDeliveryHelper(info string, house string, entrance *string) Delivery {
-	log.Printf("0 NO delivery marshalled: %+v\n and parameters: house: %+v, entrance: %q", info, house, entrance)
-	in := InPlace{}
-	err := json.Unmarshal([]byte(info), &in)
-	warn(err)
-	result := Delivery{IdStreet:in.StreetId, IdRegion:in.RegionId, House:house, Entrance:entrance,
-		IdCity:in.CityId,
-		IdPlace:in.PlaceId,
-		IdDistrict:in.DistrictId,
-	}
-	log.Printf("1 NO delivery: %+v", result)
-	return result
-}
-
-func GetDestinationHelper(info string, house string) Destination {
-	log.Printf("0 NO destination marshalled: %+v", info)
-	in := InPlace{}
-	err := json.Unmarshal([]byte(info), &in)
-	warn(err)
-	result := Destination{IdStreet:in.StreetId, IdRegion:in.RegionId, House:house,
-		IdCity:in.CityId,
-		IdPlace:in.PlaceId,
-		IdDistrict:in.DistrictId,
-	}
-	log.Printf("1 NO destination: %+v", result)
-	return result
-}
-
-///////////////////////////////////////////////////////////////////////////
-
-type CarsCache struct {
-	cars map[int64]CarInfo
-	api  TaxiInterface
-}
-
-func _create_cars_map(i TaxiInterface) map[int64]CarInfo {
-	cars_map := make(map[int64]CarInfo)
-	cars_info := i.GetCarsInfo()
-	for _, info := range cars_info {
-		cars_map[info.ID] = info
-	}
-	return cars_map
-}
-
-func NewCarsCache(i TaxiInterface) *CarsCache {
-	cars_map := _create_cars_map(i)
-	handler := CarsCache{cars: cars_map, api: i}
-	return &handler
-}
-
-func (ch *CarsCache) CarInfo(car_id int64) *CarInfo {
-	key, ok := ch.cars[car_id]
-	if !ok {
-		ch.cars = _create_cars_map(ch.api)
-		key, ok = ch.cars[car_id]
-		if !ok {
-			return nil
-		}
-	}
-	return &key
 }
 
 var StatusesMap = map[int]string{
@@ -907,9 +602,3 @@ var StatusesMap = map[int]string{
 	15: "Не подтвержден",
 }
 
-func IsOrderNotAvailable(state int) bool {
-	if state == 9 || state == 13 || state == 7 || state == 0 {
-		return true
-	}
-	return false
-}
