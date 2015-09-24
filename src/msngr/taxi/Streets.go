@@ -48,7 +48,6 @@ type DictItem struct {
 	Key      string `json:"key"`
 	Title    string `json:"title"`
 	SubTitle string `json:"subtitle"`
-
 }
 
 

@@ -258,7 +258,7 @@ func _form_order(fields []s.InField) (new_order NewOrder) {
 	}
 	//	fucking hardcode //todo refactor
 	new_order.IdService = ID_SERVICE
-	//	new_order.Notes = "Тестирование."
+	new_order.Notes = "Тестирование."
 	//	new_order.Attributes = [2]int64{1000113000, 1000113002}
 	//	end fucking hardcode
 
