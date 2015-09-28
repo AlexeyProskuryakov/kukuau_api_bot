@@ -189,7 +189,7 @@ type ShopSupportMessageProcessor struct {}
 
 func contains(container string, elements []string) bool {
 	container_elements := regexp.MustCompile("[a-zA-Zа-яА-Я]+").FindAllString(container, -1)
-	log.Printf("SCH splitted: %v", strings.Join(container_elements, ","))
+//	log.Printf("SCH splitted: %v", strings.Join(container_elements, ","))
 	ce_map := make(map[string]bool)
 	for _, ce_element := range container_elements {
 		ce_map[strings.ToLower(ce_element)] = true
@@ -198,7 +198,7 @@ func contains(container string, elements []string) bool {
 	for _, element := range elements {
 		_, ok := ce_map[element]
 		result = result && ok
-		log.Printf("SCH element: %+v, contains? : %+v => %+v", element, ok, result)
+//		log.Printf("SCH element: %+v, contains? : %+v => %+v", element, ok, result)
 	}
 	return result
 }
@@ -217,7 +217,7 @@ func (sm ShopSupportMessageProcessor) ProcessMessage(in *s.InPkg) *s.MessageResu
 	var body string
 
 	if commands != nil {
-		log.Printf("SCH: commands: %+v, fields: %+v", commands, commands[0].Form.Fields)
+//		log.Printf("SCH: commands: %+v, fields: %+v", commands, commands[0].Form.Fields)
 		if contains(make_one_string(commands[0].Form.Fields), []string{"где", "забрать", "заказ"}) {
 			body = "Ваш заказ вы можете забрать по адресу: ул. Николаева д. 11."
 		} else {

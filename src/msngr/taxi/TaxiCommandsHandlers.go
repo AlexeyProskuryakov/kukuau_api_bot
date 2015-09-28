@@ -24,7 +24,7 @@ func FormTaxiCommands(im *ExternalApiMixin, db_handler *d.DbHandlerMixin, dictUr
 		var ok bool
 		var detail string
 		ok = im.API.IsConnected()
-		log.Printf("CHECK api: %+v, ok: %v", im.API, ok)
+//		log.Printf("CHECK api: %+v, ok: %v", im.API, ok)
 		if !ok {
 			detail = "Ошибка в подключении к сервису"
 		}

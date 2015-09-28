@@ -47,7 +47,6 @@ func (n Notifier) Notify(outPkg s.OutPkg) {
 	client := &http.Client{}
 	resp, err := client.Do(req)
 	warn(err)
-
 	if resp != nil {
 		defer resp.Body.Close()
 	}

@@ -104,11 +104,11 @@ func TaxiOrderWatch(taxiContext *TaxiContext, botContext *s.BotContext) {
 				continue
 			}
 			if api_order.State != db_order_state {
-				log.Printf("OW state of:\n%+v \nis updated (api: %v != db: %v)", api_order, api_order.State, db_order_state)
+				log.Printf("OW state of: %+v is updated (api: %v != db: %v)", api_order.ID, api_order.State, db_order_state)
 				order_data := api_order.ToOrderData()
 				err := taxiContext.DataBase.Orders.SetState(api_order.ID, api_order.State, &order_data)
 				if err != nil {
-					log.Printf("OW for order %+v can not update status %+v", api_order.ID, api_order.State)
+					log.Printf("!!! OW for order %+v can not update status %+v", api_order.ID, api_order.State)
 					continue
 				}
 				order_wrapper := taxiContext.DataBase.Orders.GetByOrderId(api_order.ID)

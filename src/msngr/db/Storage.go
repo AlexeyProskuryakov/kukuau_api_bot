@@ -165,13 +165,13 @@ func NewDbHandler(conn, dbname, source string) *DbHandlerMixin {
 	return &odbh
 }
 
-func (odbh *orderHandler) GetState(order_id int64) int {
+func (odbh *orderHandler) GetState(order_id int64) OrderWrapper {
 	result := OrderWrapper{}
 	err := odbh.collection.Find(bson.M{"order_id": order_id}).One(&result)
 	if err != nil {
 		return -1
 	}
-	return result.OrderState
+	return result
 }
 
 func (odbh *orderHandler) SetState(order_id int64, new_state int, order_data *OrderData) error {
