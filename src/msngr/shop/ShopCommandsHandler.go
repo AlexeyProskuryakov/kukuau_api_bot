@@ -3,7 +3,6 @@ package shop
 import (
 	"bytes"
 	"fmt"
-	"log"
 	"math/rand"
 	"regexp"
 	"strings"

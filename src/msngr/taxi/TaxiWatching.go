@@ -98,13 +98,13 @@ func TaxiOrderWatch(taxiContext *TaxiContext, botContext *s.BotContext) {
 	for {
 		api_orders := taxiContext.API.Orders()
 		for _, api_order := range api_orders {
-			db_order_state := taxiContext.DataBase.Orders.GetState(api_order.ID)
-			if db_order_state == -1 {
+			db_order_state, err := taxiContext.DataBase.Orders.GetState(api_order.ID)
+			if err != nil {
 				log.Printf("OW order %+v is not present in system :(\n", api_order)
 				continue
 			}
-			if api_order.State != db_order_state {
-				log.Printf("OW state of: %+v is updated (api: %v != db: %v)", api_order.ID, api_order.State, db_order_state)
+			if api_order.State != db_order_state.OrderState {
+				log.Printf("OW state of: %+v is updated (api: %v != db: %v)", api_order.ID, api_order.State, db_order_state.OrderState)
 				order_data := api_order.ToOrderData()
 				err := taxiContext.DataBase.Orders.SetState(api_order.ID, api_order.State, &order_data)
 				if err != nil {

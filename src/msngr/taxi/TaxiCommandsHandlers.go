@@ -16,7 +16,7 @@ const (
 
 )
 
-func FormTaxiCommands(im *ExternalApiMixin, db_handler *d.DbHandlerMixin, dictUrl string, name string) *s.BotContext {
+func FormTaxiCommands(im *ExternalApiMixin, db_handler *d.DbHandlerMixin, dictUrl string, name string, information *string) *s.BotContext {
 
 	context := s.BotContext{}
 
@@ -39,7 +39,7 @@ func FormTaxiCommands(im *ExternalApiMixin, db_handler *d.DbHandlerMixin, dictUr
 	}
 
 	context.Message_commands = map[string]s.MessageCommandProcessor{
-		"information":      &TaxiInformationProcessor{DbHandlerMixin: *db_handler, context:&context},
+		"information":      &TaxiInformationProcessor{DbHandlerMixin: *db_handler, context:&context, information:information},
 		"new_order":        &TaxiNewOrderProcessor{ExternalApiMixin: *im, DbHandlerMixin: *db_handler, context:&context},
 		"cancel_order":     &TaxiCancelOrderProcessor{ExternalApiMixin: *im, DbHandlerMixin: *db_handler, context:&context},
 		"calculate_price":  &TaxiCalculatePriceProcessor{ExternalApiMixin: *im, context:&context},
@@ -219,11 +219,18 @@ func (cp *TaxiCommandsProcessor) ProcessRequest(in *s.InPkg) *s.RequestResult {
 type TaxiInformationProcessor struct {
 	d.DbHandlerMixin
 	context *s.BotContext
+	information *string
 }
 
 func (ih *TaxiInformationProcessor) ProcessMessage(in *s.InPkg) *s.MessageResult {
+	var info_text string
+	if ih.information == nil {
+		info_text = "Срочный заказ такси. Быстрая подача. Оплата наличными или картой. "
+	} else {
+		info_text = *ih.information
+	}
 	return &s.MessageResult{
-		Body: "Срочный заказ такси в Новосибирске. Быстрая подача. Оплата наличными или картой. ",
+		Body: info_text,
 		Commands:FormCommands(in.From, ih.DbHandlerMixin, ih.context.Commands),
 	}
 }

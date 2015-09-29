@@ -54,7 +54,7 @@ func main() {
 		carsCache := t.NewCarsCache(external_api)
 		notifier := n.NewNotifier(conf.Main.CallbackAddr, taxi_conf.Key)
 
-		botContext := t.FormTaxiCommands(&apiMixin, db, taxi_conf.DictUrl, taxi_conf.Name)
+		botContext := t.FormTaxiCommands(&apiMixin, db, taxi_conf.DictUrl, taxi_conf.Name, taxi_conf.Information)
 		taxiContext := t.TaxiContext{API:external_api, DataBase:db, Cars:carsCache, Notifier:notifier}
 
 		controller := m.FormBotController(botContext)

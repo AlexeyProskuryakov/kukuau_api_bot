@@ -14,6 +14,7 @@ type taxi_config struct {
 	DictUrl  string `json:"dict_url"`
 	Key      string `json:"key"`
 	Name     string `json:"name"`
+	Information *string `json:"information"`
 }
 
 type shop_config struct {
