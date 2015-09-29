@@ -28,7 +28,7 @@ func test_taxi(){
 //		dbh.Orders.AddOrder(order_id, "foo")
 //	}
 //
-	dbh.Orders.AddOrder(order_id, "foo")
+	dbh.Orders.AddOrder(order_id, "foo", "fake")
 
 	order := t.Order{IDCar:100500, ID:100500600, Cost:100400}
 	order_data := order.ToOrderData()
@@ -36,7 +36,7 @@ func test_taxi(){
 
 	dbh.Orders.SetState(order_id, 1, order_data)
 
-	order_wrpr := dbh.Orders.GetByOrderId(order_id)
+	order_wrpr := dbh.Orders.GetOrderById(order_id, "fake")
 	log.Printf("wrpr: %+v", order_wrpr)
 	log.Printf("result: %+v", order_wrpr.OrderData)
 	idcar := order_wrpr.OrderData.Get("IDCar")

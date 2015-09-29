@@ -98,7 +98,7 @@ func TaxiOrderWatch(taxiContext *TaxiContext, botContext *s.BotContext) {
 	for {
 		api_orders := taxiContext.API.Orders()
 		for _, api_order := range api_orders {
-			db_order_state, err := taxiContext.DataBase.Orders.GetState(api_order.ID)
+			db_order_state, err := taxiContext.DataBase.Orders.GetState(api_order.ID, botContext.Name)
 			if err != nil {
 				log.Printf("OW order %+v is not present in system :(\n", api_order)
 				continue
@@ -106,12 +106,12 @@ func TaxiOrderWatch(taxiContext *TaxiContext, botContext *s.BotContext) {
 			if api_order.State != db_order_state.OrderState {
 				log.Printf("OW state of: %+v is updated (api: %v != db: %v)", api_order.ID, api_order.State, db_order_state.OrderState)
 				order_data := api_order.ToOrderData()
-				err := taxiContext.DataBase.Orders.SetState(api_order.ID, api_order.State, &order_data)
+				err := taxiContext.DataBase.Orders.SetState(api_order.ID, botContext.Name, api_order.State, &order_data)
 				if err != nil {
 					log.Printf("!!! OW for order %+v can not update status %+v", api_order.ID, api_order.State)
 					continue
 				}
-				order_wrapper := taxiContext.DataBase.Orders.GetByOrderId(api_order.ID)
+				order_wrapper := taxiContext.DataBase.Orders.GetOrderById(api_order.ID, botContext.Name)
 				log.Printf("OW updated order: %+v", order_wrapper)
 				car_info := taxiContext.Cars.CarInfo(api_order.IDCar)
 

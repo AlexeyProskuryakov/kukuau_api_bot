@@ -50,7 +50,7 @@ func main() {
 		}
 
 		apiMixin := t.ExternalApiMixin{API: external_api}
-		db := d.NewDbHandler(conf.Database.ConnString, conf.Database.Name, taxi_conf.Name)
+		db := d.NewDbHandler(conf.Database.ConnString, conf.Database.Name)
 		carsCache := t.NewCarsCache(external_api)
 		notifier := n.NewNotifier(conf.Main.CallbackAddr, taxi_conf.Key)
 
@@ -71,14 +71,14 @@ func main() {
 	}
 
 	for _, shop_conf := range conf.Shops {
-		db := d.NewDbHandler(conf.Database.ConnString, conf.Database.Name, shop_conf.Name)
+		db := d.NewDbHandler(conf.Database.ConnString, conf.Database.Name)
 		bot_context := sh.FormShopCommands(db)
 		shop_controller := m.FormBotController(bot_context)
 		http.HandleFunc(fmt.Sprintf("/shop/%v", shop_conf.Name), shop_controller)
 
 	}
 
-	db := d.NewDbHandler(conf.Database.ConnString, conf.Database.Name, "")
+	db := d.NewDbHandler(conf.Database.ConnString, conf.Database.Name)
 	db.Users.SetUserPassword("test", "123")
 
 	server_address := fmt.Sprintf(":%v", conf.Main.Port)

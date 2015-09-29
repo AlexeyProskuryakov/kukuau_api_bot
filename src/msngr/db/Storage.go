@@ -70,7 +70,6 @@ type errorHandler struct {
 }
 
 type DbHandlerMixin struct {
-	Source  string
 	session *mgo.Session
 
 	Orders  *orderHandler
@@ -158,23 +157,23 @@ func (odbh *DbHandlerMixin) reConnect(conn string, dbname string) {
 
 }
 
-func NewDbHandler(conn, dbname, source string) *DbHandlerMixin {
+func NewDbHandler(conn, dbname string) *DbHandlerMixin {
 	odbh := DbHandlerMixin{}
-	odbh.Source = source
 	odbh.reConnect(conn, dbname)
+
 	return &odbh
 }
 
-func (odbh *orderHandler) GetState(order_id int64) (*OrderWrapper, error) {
+func (odbh *orderHandler) GetState(order_id int64, source string) (*OrderWrapper, error) {
 	result := OrderWrapper{}
-	err := odbh.collection.Find(bson.M{"order_id": order_id}).One(&result)
+	err := odbh.collection.Find(bson.M{"order_id": order_id, "source":source}).One(&result)
 	if err != nil {
 		return nil, err
 	}
 	return &result, nil
 }
 
-func (odbh *orderHandler) SetState(order_id int64, new_state int, order_data *OrderData) error {
+func (odbh *orderHandler) SetState(order_id int64, source string, new_state int, order_data *OrderData) error {
 	var to_set bson.M
 	if order_data != nil {
 		to_set = bson.M{"order_state": new_state, "when": time.Now(), "data": order_data}
@@ -183,28 +182,28 @@ func (odbh *orderHandler) SetState(order_id int64, new_state int, order_data *Or
 	}
 	change := bson.M{"$set": to_set}
 	log.Println("change:", change["$set"])
-	err := odbh.collection.Update(bson.M{"order_id": order_id}, change)
+	err := odbh.collection.Update(bson.M{"order_id": order_id, "source":source}, change)
 	return err
 }
 
-func (oh *orderHandler) SetFeedback(for_whom string, for_state int, feedback string) int64 {
+func (oh *orderHandler) SetFeedback(for_whom string, for_state int, feedback string, source string) int64 {
 	order := OrderWrapper{}
-	err := oh.collection.Find(bson.M{"whom": for_whom, "order_state": for_state}).Sort("-when").One(&order)
+	err := oh.collection.Find(bson.M{"whom": for_whom, "order_state": for_state, "source":source}).Sort("-when").One(&order)
 	if err != nil {
 		return -1
 	}
-	oh.collection.Update(bson.M{"order_id": order.OrderId}, bson.M{"$set": bson.M{"feedback": feedback}})
+	oh.collection.Update(bson.M{"order_id": order.OrderId, "source":source}, bson.M{"$set": bson.M{"feedback": feedback}})
 	order_id := order.OrderId
 	return order_id
 }
 
-func (odbh *orderHandler) AddOrder(order_id int64, whom string) {
+func (odbh *orderHandler) AddOrder(order_id int64, whom string, source string) {
 	wrapper := OrderWrapper{
 		When:       time.Now(),
 		Whom:       whom,
 		OrderId:    order_id,
 		OrderState: 1,
-		Source: odbh.Source,
+		Source: source,
 	}
 	err := odbh.collection.Insert(&wrapper)
 	if err != nil {
@@ -212,7 +211,6 @@ func (odbh *orderHandler) AddOrder(order_id int64, whom string) {
 	}
 }
 func (odbh *orderHandler) AddOrderObject(order *OrderWrapper) {
-	order.Source = odbh.Source
 	order.When = time.Now()
 	err := odbh.collection.Insert(order)
 	if err != nil {
@@ -220,18 +218,18 @@ func (odbh *orderHandler) AddOrderObject(order *OrderWrapper) {
 	}
 }
 
-func (odbh *orderHandler) GetByOwner(whom string) *OrderWrapper {
+func (odbh *orderHandler) GetByOwner(whom, source string) *OrderWrapper {
 	result := OrderWrapper{}
-	err := odbh.collection.Find(bson.M{"whom": whom}).Sort("-when").One(&result)
+	err := odbh.collection.Find(bson.M{"whom": whom, "source":source}).Sort("-when").One(&result)
 	if err != nil {
 		return nil
 	}
 	return &result
 }
 
-func (odbh *orderHandler) GetByOrderId(order_id int64) *OrderWrapper {
+func (odbh *orderHandler) GetOrderById(order_id int64, source string) *OrderWrapper {
 	result := OrderWrapper{}
-	err := odbh.collection.Find(bson.M{"order_id": order_id}).One(&result)
+	err := odbh.collection.Find(bson.M{"order_id": order_id, "source":source}).One(&result)
 	if err != nil {
 		return nil
 	}
@@ -309,7 +307,7 @@ func (uh *userHandler) CheckUserPassword(username, password string) bool {
 	return err != nil
 }
 
-func (uh *userHandler) GetById(user_id string) (*UserWrapper, error) {
+func (uh *userHandler) GetUserById(user_id string) (*UserWrapper, error) {
 	result := UserWrapper{}
 	err := uh.collection.Find(bson.M{"user_id": user_id}).One(&result)
 	return &result, err
