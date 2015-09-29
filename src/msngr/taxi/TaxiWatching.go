@@ -8,7 +8,6 @@ import (
 	u "msngr/utils"
 	n "msngr/notify"
 	"time"
-
 )
 
 const (
@@ -98,33 +97,35 @@ func TaxiOrderWatch(taxiContext *TaxiContext, botContext *s.BotContext) {
 	for {
 		api_orders := taxiContext.API.Orders()
 		for _, api_order := range api_orders {
-			db_order_state, err := taxiContext.DataBase.Orders.GetState(api_order.ID, botContext.Name)
+			db_order, err := taxiContext.DataBase.Orders.GetState(api_order.ID, botContext.Name)
 			if err != nil {
-				log.Printf("OW order %+v is not present in system :(\n", api_order)
+				log.Printf("WATCH order [%+v] is not present in system :(\n", api_order)
 				continue
 			}
-			if api_order.State != db_order_state.OrderState {
-				log.Printf("OW state of: %+v is updated (api: %v != db: %v)", api_order.ID, api_order.State, db_order_state.OrderState)
+			if db_order.OrderState == ORDER_CANCELED {
+				log.Printf("WATCH order [%+v] is CANCELED", )
+				continue
+			}
+			if api_order.State != db_order.OrderState {
+				log.Printf("WATCH state of: %+v is updated (api: %v != db: %v)", api_order.ID, api_order.State, db_order.OrderState)
 				order_data := api_order.ToOrderData()
 				err := taxiContext.DataBase.Orders.SetState(api_order.ID, botContext.Name, api_order.State, &order_data)
 				if err != nil {
-					log.Printf("!!! OW for order %+v can not update status %+v", api_order.ID, api_order.State)
+					log.Printf("WATCH for order %+v can not update status %+v", api_order.ID, api_order.State)
 					continue
 				}
-				order_wrapper := taxiContext.DataBase.Orders.GetOrderById(api_order.ID, botContext.Name)
-				log.Printf("OW updated order: %+v", order_wrapper)
 				car_info := taxiContext.Cars.CarInfo(api_order.IDCar)
 
 				if car_info != nil {
 					var notification_data *s.OutPkg
 					prev_state, ok := previous_states[api_order.ID]
 					if ok {
-						notification_data = FormNotification(order_wrapper.Whom, api_order.ID, api_order.State, prev_state, *car_info)
+						notification_data = FormNotification(db_order.Whom, api_order.ID, api_order.State, prev_state, *car_info)
 					} else {
-						notification_data = FormNotification(order_wrapper.Whom, api_order.ID, api_order.State, -1, *car_info)
+						notification_data = FormNotification(db_order.Whom, api_order.ID, api_order.State, -1, *car_info)
 					}
 					if notification_data != nil {
-						notification_data.Message.Commands = form_commands_for_current_order(order_wrapper, botContext.Commands)
+						notification_data.Message.Commands = form_commands_for_current_order(db_order, botContext.Commands)
 						taxiContext.Notifier.Notify(*notification_data)
 					}
 				}

@@ -116,7 +116,7 @@ func (odbh *DbHandlerMixin) reConnect(conn string, dbname string) {
 	}
 	orders_collection.EnsureIndex(when_index)
 
-	odbh.Orders = &orderHandler{collection: orders_collection, Source:odbh.Source}
+	odbh.Orders = &orderHandler{collection: orders_collection}
 
 	users_collection := session.DB(dbname).C("users")
 	users_collection.EnsureIndex(mgo.Index{
@@ -221,15 +221,6 @@ func (odbh *orderHandler) AddOrderObject(order *OrderWrapper) {
 func (odbh *orderHandler) GetByOwner(whom, source string) *OrderWrapper {
 	result := OrderWrapper{}
 	err := odbh.collection.Find(bson.M{"whom": whom, "source":source}).Sort("-when").One(&result)
-	if err != nil {
-		return nil
-	}
-	return &result
-}
-
-func (odbh *orderHandler) GetOrderById(order_id int64, source string) *OrderWrapper {
-	result := OrderWrapper{}
-	err := odbh.collection.Find(bson.M{"order_id": order_id, "source":source}).One(&result)
 	if err != nil {
 		return nil
 	}
