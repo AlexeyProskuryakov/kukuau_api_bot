@@ -54,7 +54,7 @@ func main() {
 		carsCache := t.NewCarsCache(external_api)
 		notifier := n.NewNotifier(conf.Main.CallbackAddr, taxi_conf.Key)
 
-		botContext := t.FormTaxiCommands(&apiMixin, db, taxi_conf.DictUrl, taxi_conf.Name, taxi_conf.Information)
+		botContext := t.FormTaxiBotContext(&apiMixin, db, taxi_conf)
 		taxiContext := t.TaxiContext{API:external_api, DataBase:db, Cars:carsCache, Notifier:notifier}
 
 		controller := m.FormBotController(botContext)
@@ -79,7 +79,17 @@ func main() {
 	}
 
 	db := d.NewDbHandler(conf.Database.ConnString, conf.Database.Name)
-	db.Users.SetUserPassword("test", "123")
+	user, password := "test", "123"
+	err := db.Users.SetUserPassword(&user, &password)
+	if err != nil {
+		go func() {
+			for err == nil {
+				time.Sleep(1 * time.Second)
+				err = db.Users.SetUserPassword(&user, &password)
+				log.Printf("trying add user for test shops... now we have err:%+v", err)
+			}
+		}()
+	}
 
 	server_address := fmt.Sprintf(":%v", conf.Main.Port)
 	log.Printf("\nStart listen and serving at: %v\n", server_address)

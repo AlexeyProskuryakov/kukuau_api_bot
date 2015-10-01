@@ -13,6 +13,10 @@
       "name": "marka",
       "dict_url": "http://localhost:9191/taxi/marka/streets",
       "key": "Kuku demo_taxi_key",
+      "information": {
+        "phone": "123-45-67",
+        "text": "Такси марка! Самое лучшее такси в академгородке!"
+      },
       "api": {
         "name": "infinity",
         "data": {
@@ -27,6 +31,10 @@
       "name": "fake",
       "dict_url": "http://localhost:9191/taxi/fake/streets",
       "key": "Kuku demo_taxi_key",
+      "information": {
+        "phone": "123-45-67",
+        "text": "Такси марка! Самое лучшее такси в академгородке!"
+      },
       "api": {
         "name": "fake",
         "data": {

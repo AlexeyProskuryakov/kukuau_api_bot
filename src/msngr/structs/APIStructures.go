@@ -1,4 +1,5 @@
 package structs
+import "fmt"
 
 type FieldAttribute struct {
 	Label     string  `json:"label"`
@@ -113,7 +114,6 @@ type OutPkg struct {
 	Request *OutRequest `json:"request,omitempty"`
 }
 
-
 type CheckFunc func() (string, bool)
 
 type BotContext struct {
@@ -122,6 +122,10 @@ type BotContext struct {
 	Request_commands map[string]RequestCommandProcessor
 	Message_commands map[string]MessageCommandProcessor
 	Commands         map[string]*[]OutCommand
+
+	Info             struct {
+						 Phone string
+					 }
 
 }
 
@@ -143,4 +147,12 @@ type RequestCommandProcessor interface {
 
 type MessageCommandProcessor interface {
 	ProcessMessage(in *InPkg) *MessageResult
+}
+
+func ExceptionMessageResult(err error) *MessageResult {
+	return &MessageResult{Body:fmt.Sprintf("Ошибка! %v \n Попробуйте еще раз позже.", err), Error:err}
+}
+
+func ExceptionRequestResult(err error, commands *[]OutCommand) *RequestResult {
+	return &RequestResult{Error:err, Commands:commands}
 }

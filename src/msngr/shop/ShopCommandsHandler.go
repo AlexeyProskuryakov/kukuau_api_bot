@@ -10,6 +10,7 @@ import (
 
 	d "msngr/db"
 	s "msngr/structs"
+	"errors"
 )
 
 func FormShopCommands(db *d.DbHandlerMixin) *s.BotContext {
@@ -101,13 +102,13 @@ var not_authorised_commands = []s.OutCommand{
 	},
 }
 
-func _get_user_and_password(fields []s.InField) (string, string) {
-	var user, password string
+func _get_user_and_password(fields []s.InField) (*string, *string) {
+	var user, password *string
 	for _, field := range fields {
 		if field.Name == "username" {
-			user = field.Data.Value
+			user = &(field.Data.Value)
 		} else if field.Name == "password" {
-			password = field.Data.Value
+			password = &(field.Data.Value)
 		}
 	}
 	return user, password
@@ -120,10 +121,10 @@ type ShopCommandsProcessor struct {
 func (cp ShopCommandsProcessor) ProcessRequest(in *s.InPkg) *s.RequestResult {
 	user_state, err := cp.Users.GetUserState(in.From)
 	if err != nil {
-		cp.Users.AddUser(in.From, in.UserData.Phone)
+		cp.Users.AddUser(&(in.From), &(in.UserData.Phone))
 	}
 	commands := []s.OutCommand{}
-	if user_state == d.LOGIN {
+	if *user_state == d.LOGIN {
 		commands = authorised_commands
 	} else {
 		commands = not_authorised_commands
@@ -138,12 +139,20 @@ type ShopAuthoriseProcessor struct {
 func (sap ShopAuthoriseProcessor) ProcessMessage(in *s.InPkg) *s.MessageResult {
 	command := *in.Message.Commands
 	user, password := _get_user_and_password(command[0].Form.Fields)
+	if user == nil || password == nil {
+		return s.ExceptionMessageResult(errors.New("Не могу извлечь логин и (или) пароль."))
+	}
+
+	check, err := sap.Users.CheckUserPassword(user, password)
+	if err != nil {
+		return s.ExceptionMessageResult(err)
+	}
 
 	var body string
 	var commands []s.OutCommand
 
-	if sap.Users.CheckUserPassword(user, password) {
-		sap.Users.SetUserState(in.From, d.LOGIN)
+	if *check {
+		sap.Users.SetUserState(&(in.From), d.LOGIN)
 		body = "Добро пожаловать в интернет магазин Desprice Markt!"
 		commands = authorised_commands
 	}else {
@@ -171,10 +180,14 @@ var order_states = [5]string{"обработан", "доставляется", "
 var order_products = [4]string{"Ноутбук Apple MacBook Air", "Электрочайник BORK K 515", "Аудиосистема Westlake Tower SM-1", "Микроволновая печь Bosch HMT85ML23"}
 
 func (osp ShopOrderStateProcessor) ProcessMessage(in *s.InPkg) *s.MessageResult {
-	user_state, _ := osp.Users.GetUserState(in.From)
+	user_state, err := osp.Users.GetUserState(in.From)
+	if err != nil {
+		return s.ExceptionMessageResult(err)
+	}
+
 	var result string
 	var commands []s.OutCommand
-	if user_state == d.LOGIN {
+	if *user_state == d.LOGIN {
 		result = fmt.Sprintf("Ваш заказ #%v (%v) %v.", rand.Int31n(10000), __choiceString(order_products[:]), __choiceString(order_states[:]))
 		commands = authorised_commands
 	} else {
@@ -188,7 +201,6 @@ type ShopSupportMessageProcessor struct {}
 
 func contains(container string, elements []string) bool {
 	container_elements := regexp.MustCompile("[a-zA-Zа-яА-Я]+").FindAllString(container, -1)
-//	log.Printf("SCH splitted: %v", strings.Join(container_elements, ","))
 	ce_map := make(map[string]bool)
 	for _, ce_element := range container_elements {
 		ce_map[strings.ToLower(ce_element)] = true
@@ -197,7 +209,6 @@ func contains(container string, elements []string) bool {
 	for _, element := range elements {
 		_, ok := ce_map[element]
 		result = result && ok
-//		log.Printf("SCH element: %+v, contains? : %+v => %+v", element, ok, result)
 	}
 	return result
 }
@@ -216,7 +227,6 @@ func (sm ShopSupportMessageProcessor) ProcessMessage(in *s.InPkg) *s.MessageResu
 	var body string
 
 	if commands != nil {
-//		log.Printf("SCH: commands: %+v, fields: %+v", commands, commands[0].Form.Fields)
 		if contains(make_one_string(commands[0].Form.Fields), []string{"где", "забрать", "заказ"}) {
 			body = "Ваш заказ вы можете забрать по адресу: ул. Николаева д. 11."
 		} else {
@@ -239,7 +249,10 @@ type ShopLogOutMessageProcessor struct {
 }
 
 func (lop ShopLogOutMessageProcessor) ProcessMessage(in *s.InPkg) *s.MessageResult {
-	lop.Users.SetUserState(in.From, d.LOGOUT)
+	err := lop.Users.SetUserState(&(in.From), d.LOGOUT)
+	if err != nil {
+		return s.ExceptionMessageResult(err)
+	}
 	return &s.MessageResult{Body:"До свидания! ", Commands:&not_authorised_commands}
 }
 

@@ -1,11 +1,12 @@
 package taxi
 
 
-type TaxiConfig interface {
+type TaxiAPIConfig interface {
 	GetHost() string
 	GetConnectionString() string
 	GetLogin() string
 	GetPassword() string
+	GetIdService() int64
 }
 
 type ApiParams struct {
@@ -15,6 +16,7 @@ type ApiParams struct {
 			 Login             string `json:"login"`
 			 Password          string `json:"password"`
 			 ConnectionsString string `json:"connection_string"`
+			 IdService         int64 `json:"id_service"`
 		 } `json:"data"`
 
 }
@@ -31,4 +33,17 @@ func (api ApiParams) GetLogin() string {
 func (api ApiParams) GetPassword() string {
 	return api.Data.Password
 }
+func (api ApiParams) GetIdService() int64 {
+	return api.Data.IdService
+}
 
+type TaxiConfig struct {
+	Api         ApiParams `json:"api"`
+	DictUrl     string `json:"dict_url"`
+	Key         string `json:"key"`
+	Name        string `json:"name"`
+	Information struct {
+					Phone string `json:"phone"`
+					Text  string `json:"text"`
+				} `json:"information"`
+}

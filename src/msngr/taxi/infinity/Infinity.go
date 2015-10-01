@@ -21,71 +21,71 @@ func warnp(err error) {
 
 // infinity - Структура для работы с API infinity.
 type infinity struct {
-	Host                string
-	ConnString          string // Строка подключения к infinity API// default: http://109.202.25.248:8080/WebAPITaxi/
-	LoginTime           time.Time
-	Cookie              *http.Cookie
-	LoginResponse       struct {
-							Success   bool  `json:"success"`
-							IDClient  int64 `json:"idClient"`
-							Params    struct {
-										  ProtocolVersion            int    `json:"ProtocolVersion"`
-										  RefreshOrdersSeconds       int    `json:"RefreshOrdersSeconds"`
-										  LoginRegEx                 string `json:"LoginRegEx"`
-										  MyPhoneRegEx               string `json:"MyPhoneRegEx"`
-										  OurPhoneDisplay            string `json:"OurPhoneDisplay"`
-										  OurPhoneNumber             string `json:"OurPhoneNumber"`
-										  DefaultInfinityServiceID   int64  `json:"DefaultInfinityServiceID"`
-										  DefaultInfinityServiceName string `json:"DefaultInfinityServiceName"`
-										  DefaultRegionID            int64  `json:"DefaultRegionID"`
-										  DefaultRegionName          string `json:"DefaultRegionName"`
-										  DefaultDistrictID          string `json:"DefaultDistrictID"` // Can be null, so used as string here.
-										  DefaultDistrictName        string `json:"DefaultDistrictName"`
-										  DefaultCityID              int64  `json:"DefaultCityID"`
-										  DefaultCityName            string `json:"DefaultCityName"`
-										  DefaultPlaceID             string `json:"DefaultPlaceID"`    // Can be null, so used as string here.
-										  DefaultPlaceName           string `json:"DefaultPlaceName"`
-									  } `json:"params"`
-							SessionID string `json:"sessionid"`
-						}
-	Message             struct {
-							Success bool   `json:"isSuccess"`
-							Content string `json:"content"`
-						}
-	Services            []InfinityServices `json:"InfinityServices"`
+	Host          string
+	ConnString    string // Строка подключения к infinity API// default: http://109.202.25.248:8080/WebAPITaxi/
+	LoginTime     time.Time
+	Cookie        *http.Cookie
+	LoginResponse struct {
+					  Success   bool  `json:"success"`
+					  IDClient  int64 `json:"idClient"`
+					  Params    struct {
+									ProtocolVersion            int    `json:"ProtocolVersion"`
+									RefreshOrdersSeconds       int    `json:"RefreshOrdersSeconds"`
+									LoginRegEx                 string `json:"LoginRegEx"`
+									MyPhoneRegEx               string `json:"MyPhoneRegEx"`
+									OurPhoneDisplay            string `json:"OurPhoneDisplay"`
+									OurPhoneNumber             string `json:"OurPhoneNumber"`
+									DefaultInfinityServiceID   int64  `json:"DefaultInfinityServiceID"`
+									DefaultInfinityServiceName string `json:"DefaultInfinityServiceName"`
+									DefaultRegionID            int64  `json:"DefaultRegionID"`
+									DefaultRegionName          string `json:"DefaultRegionName"`
+									DefaultDistrictID          string `json:"DefaultDistrictID"` // Can be null, so used as string here.
+									DefaultDistrictName        string `json:"DefaultDistrictName"`
+									DefaultCityID              int64  `json:"DefaultCityID"`
+									DefaultCityName            string `json:"DefaultCityName"`
+									DefaultPlaceID             string `json:"DefaultPlaceID"`    // Can be null, so used as string here.
+									DefaultPlaceName           string `json:"DefaultPlaceName"`
+								} `json:"params"`
+					  SessionID string `json:"sessionid"`
+				  }
+	Message       struct {
+					  Success bool   `json:"isSuccess"`
+					  Content string `json:"content"`
+				  }
+	Services      []InfinityServices `json:"InfinityServices"`
 
-	current_credentials struct {
-							login    string
-							password string
-						}
+	Config        t.TaxiAPIConfig
 }
 
 // Global API variable
 var instance *infinity
 
 
-func _initInfinity(conn_str, host, login, password string) *infinity {
+func _initInfinity(config t.TaxiAPIConfig) *infinity {
 	result := &infinity{}
-	result.ConnString = conn_str
-	result.Host = host
+	result.ConnString = config.GetConnectionString()
+	result.Host = config.GetConnectionString()
+	result.Config = config
 
-	logon := result.Login(login, password)
+	logon := result.Login(config.GetLogin(), config.GetPassword())
+
 	if !logon {
 		go result.reconnect()
 	}
+
 	return result
 }
 
-func GetInfinityAPI(tc t.TaxiConfig) t.TaxiInterface {
+func GetInfinityAPI(tc t.TaxiAPIConfig) t.TaxiInterface {
 	if instance == nil {
-		instance = _initInfinity(tc.GetConnectionString(), tc.GetHost(), tc.GetLogin(), tc.GetPassword())
+		instance = _initInfinity(tc)
 	}
 	return instance
 }
 
-func GetInfinityAddressSupplier(tc t.TaxiConfig) t.AddressSupplier {
+func GetInfinityAddressSupplier(tc t.TaxiAPIConfig) t.AddressSupplier {
 	if instance == nil {
-		instance = _initInfinity(tc.GetConnectionString(), tc.GetHost(), tc.GetLogin(), tc.GetPassword())
+		instance = _initInfinity(tc)
 	}
 	return instance
 }
@@ -94,8 +94,6 @@ func GetInfinityAddressSupplier(tc t.TaxiConfig) t.AddressSupplier {
 // Возвращает true, если авторизация прошла успешно, false иначе.
 // Устанавливает время авторизации в infinity.LoginTime при успешной авторизации.
 func (p *infinity) Login(login, password string) bool {
-	p.current_credentials.login = login
-	p.current_credentials.password = password
 	p.LoginResponse.Success = false
 
 	client := &http.Client{}
@@ -123,7 +121,6 @@ func (p *infinity) Login(login, password string) bool {
 	log.Printf("[login] self: %+q\n", p)
 	if p.LoginResponse.Success {
 		log.Println("[login] JSESSIONID: ", p.LoginResponse.SessionID)
-		// log.Printf("[login] self: %+q\n", p)
 		p.Cookie = &http.Cookie{
 			Name:   "JSESSIONID",
 			Value:  p.LoginResponse.SessionID,
@@ -138,17 +135,16 @@ func (p *infinity) Login(login, password string) bool {
 }
 
 func (p *infinity) IsConnected() bool {
-	//	log.Println("INF IS connected:", p)
 	return p.LoginResponse.Success
 }
 
 func (p *infinity) reconnect() {
-	if p.current_credentials.login == "" && p.current_credentials.password == "" {
+	if p.Config.GetLogin() == "" && p.Config.GetPassword() == "" {
 		panic(errors.New("reconnect before connect! I don't know login and password :( "))
 	}
 	sleep_time := time.Duration(1000)
 	for {
-		result := p.Login(p.current_credentials.login, p.current_credentials.password)
+		result := p.Login(p.Config.GetLogin(), p.Config.GetPassword())
 		if result {
 			break
 		} else {
@@ -255,6 +251,7 @@ func (p *infinity) GetCarsInfo() []t.CarInfo {
 
 func (p *infinity) NewOrder(order t.NewOrder) t.Answer {
 	log.Printf("INF NO: %+v", order)
+	order.IdService = p.Config.GetIdService()
 	param, err := json.Marshal(order)
 	warnp(err)
 	log.Printf("INF NO jsonified: %+v", string(param))

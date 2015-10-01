@@ -166,13 +166,10 @@ const (
 	ORDER_PAYED = 7
 	ORDER_CANCELED = 9
 	ORDER_CREATED = 1
-	ID_SERVICE = 5001753333
+//	ID_SERVICE = 5001753333
 )
 
 
 func IsOrderNotAvailable(state int) bool {
-	if state == 9 || state == 13 || state == 7 || state == 0 {
-		return true
-	}
-	return false
+	return utils.In(state, []int{0, 7, 9, 13})
 }

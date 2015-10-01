@@ -4,21 +4,15 @@ import (
 	"encoding/json"
 	"io/ioutil"
 	"log"
-	ia "msngr/taxi"
+	t "msngr/taxi"
 	"os"
 )
 
 
-type taxi_config struct {
-	Api 	ia.ApiParams `json:"api"`
-	DictUrl  string `json:"dict_url"`
-	Key      string `json:"key"`
-	Name     string `json:"name"`
-	Information *string `json:"information"`
-}
+
 
 type shop_config struct {
-	Key string `json:"key"`
+	Key  string `json:"key"`
 	Name string `json:"name"`
 }
 
@@ -34,17 +28,24 @@ type config struct {
 				 Name       string `json:"name"`
 			 } `json:"database"`
 
-	Taxis    []taxi_config `json:"taxis"`
-	Shops     []shop_config `json:"shops"`
+	Taxis    []t.TaxiConfig `json:"taxis"`
+	Shops    []shop_config `json:"shops"`
 }
 
 
 func ReadConfig() config {
-	cdata, _ := ioutil.ReadFile("config.json")
+	cdata, err := ioutil.ReadFile("config.json")
+	if err != nil {
+		log.Printf("error reading config")
+		os.Exit(-1)
+	}
 	log.Println("config data: ", string(cdata))
 	conf := config{}
-	err := json.Unmarshal(cdata, &conf)
-	_check(err)
+	err = json.Unmarshal(cdata, &conf)
+	if err != nil {
+		log.Printf("error decoding configuration file")
+		os.Exit(-1)
+	}
 
 	if conf.Main.LoggingFile != "" {
 		f, err := os.OpenFile("demo_bot.log", os.O_RDWR | os.O_CREATE | os.O_TRUNC, 0666)
