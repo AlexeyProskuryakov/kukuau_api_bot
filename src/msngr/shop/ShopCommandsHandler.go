@@ -11,6 +11,7 @@ import (
 	d "msngr/db"
 	s "msngr/structs"
 	"errors"
+	"gopkg.in/mgo.v2"
 )
 
 func FormShopCommands(db *d.DbHandlerMixin) *s.BotContext {
@@ -120,8 +121,18 @@ type ShopCommandsProcessor struct {
 
 func (cp ShopCommandsProcessor) ProcessRequest(in *s.InPkg) *s.RequestResult {
 	user_state, err := cp.Users.GetUserState(in.From)
-	if err != nil {
-		cp.Users.AddUser(&(in.From), &(in.UserData.Phone))
+	if err == mgo.ErrNotFound {
+		user_data := in.UserData
+		if user_data == nil {
+			return s.ExceptionRequestResult(errors.New("not user data !"), &not_authorised_commands)
+		}
+		phone := in.UserData.Phone
+		if phone == "" {
+			return s.ExceptionRequestResult(errors.New("not user data phone!"), &not_authorised_commands)
+		}
+		cp.Users.AddUser(&(in.From), &phone)
+	} else {
+		return s.ExceptionRequestResult(err, &not_authorised_commands)
 	}
 	commands := []s.OutCommand{}
 	if *user_state == d.LOGIN {
@@ -144,7 +155,7 @@ func (sap ShopAuthoriseProcessor) ProcessMessage(in *s.InPkg) *s.MessageResult {
 	}
 
 	check, err := sap.Users.CheckUserPassword(user, password)
-	if err != nil {
+	if err != nil && err != mgo.ErrNotFound {
 		return s.ExceptionMessageResult(err)
 	}
 
@@ -181,7 +192,7 @@ var order_products = [4]string{"Ноутбук Apple MacBook Air", "Электр
 
 func (osp ShopOrderStateProcessor) ProcessMessage(in *s.InPkg) *s.MessageResult {
 	user_state, err := osp.Users.GetUserState(in.From)
-	if err != nil {
+	if err != nil && err != mgo.ErrNotFound {
 		return s.ExceptionMessageResult(err)
 	}
 
@@ -197,7 +208,7 @@ func (osp ShopOrderStateProcessor) ProcessMessage(in *s.InPkg) *s.MessageResult 
 	return &s.MessageResult{Body:result, Commands:&commands}
 }
 
-type ShopSupportMessageProcessor struct {}
+type ShopSupportMessageProcessor struct{}
 
 func contains(container string, elements []string) bool {
 	container_elements := regexp.MustCompile("[a-zA-Zа-яА-Я]+").FindAllString(container, -1)
@@ -238,7 +249,7 @@ func (sm ShopSupportMessageProcessor) ProcessMessage(in *s.InPkg) *s.MessageResu
 	return &s.MessageResult{Body:body}
 }
 
-type ShopInformationProcessor struct {}
+type ShopInformationProcessor struct{}
 
 func (ih ShopInformationProcessor) ProcessMessage(in *s.InPkg) *s.MessageResult {
 	return &s.MessageResult{Body:"Desprice Markt - интернет-магазин бытовой техники и электроники в Новосибирске и других городах России. Каталог товаров мировых брендов."}

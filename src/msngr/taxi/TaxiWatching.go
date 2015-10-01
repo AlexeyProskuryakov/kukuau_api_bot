@@ -98,7 +98,8 @@ func TaxiOrderWatch(taxiContext *TaxiContext, botContext *s.BotContext) {
 	for {
 		api_orders := taxiContext.API.Orders()
 		for _, api_order := range api_orders {
-			db_order, err := taxiContext.DataBase.Orders.GetState(api_order.ID, botContext.Name)
+			log.Print("get ")
+			db_order, err := taxiContext.DataBase.Orders.GetById(api_order.ID, botContext.Name)
 			if err != nil {
 				log.Printf("WATCH order [%+v] is not present in system :(\n", api_order)
 				continue

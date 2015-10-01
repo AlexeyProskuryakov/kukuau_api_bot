@@ -92,6 +92,8 @@ type DbHandlerMixin struct {
 	Errors  *errorHandler
 }
 
+var DELETE_DB = false
+
 func (odbh *DbHandlerMixin) reConnect(conn string, dbname string) {
 	var session *mgo.Session
 	count := 2500 * time.Millisecond
@@ -112,6 +114,12 @@ func (odbh *DbHandlerMixin) reConnect(conn string, dbname string) {
 	session.SetMode(mgo.Monotonic, true)
 	odbh.session = session
 
+	if (DELETE_DB){
+		err := session.DB(dbname).DropDatabase()
+		if err!=nil{
+			log.Println("db must be dropped but errr:\n", err)
+		}
+	}
 	orders_collection := session.DB(dbname).C("orders")
 
 	orders_index := mgo.Index{
@@ -198,14 +206,15 @@ func NewDbHandler(conn, dbname string) *DbHandlerMixin {
 	return &odbh
 }
 
-func (oh *orderHandler) GetState(order_id int64, source string) (*OrderWrapper, error) {
+func (oh *orderHandler) GetById(order_id int64, source string) (*OrderWrapper, error) {
 	if oh.collection == nil {
 		return nil, errors.New("БД не доступна")
 	}
 
 	result := OrderWrapper{}
 	err := oh.collection.Find(bson.M{"order_id": order_id, "source":source}).One(&result)
-	if err != nil {
+	if err != nil && err != mgo.ErrNotFound{
+
 		return nil, err
 	}
 	return &result, nil
@@ -279,7 +288,7 @@ func (oh *orderHandler) GetByOwner(whom, source string) (*OrderWrapper, error) {
 	result := OrderWrapper{}
 	err := oh.collection.Find(bson.M{"whom": whom, "source":source}).Sort("-when").One(&result)
 	if err != nil {
-		return nil, errors.New(fmt.Sprintf("orders for owner [%v] of [%v] not found", whom, source))
+		return nil, nil
 	}
 	return &result, nil
 }
@@ -366,7 +375,7 @@ func (uh *userHandler) CheckUserPassword(username, password *string) (*bool, err
 
 	tmp := UserWrapper{}
 	err := uh.collection.Find(bson.M{"user_name": username, "password": phash(password)}).One(&tmp)
-	result := (err != nil)
+	result := (err!=nil)
 	return &result, err
 }
 

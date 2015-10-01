@@ -13,6 +13,7 @@ import (
 	"net/http"
 	"time"
 	"errors"
+	"flag"
 )
 
 func startAfter(check s.CheckFunc, what func()) {
@@ -40,6 +41,15 @@ func GetAPIInstruments(params t.ApiParams) (t.TaxiInterface, t.AddressSupplier, 
 
 func main() {
 	conf := m.ReadConfig()
+	var test = flag.Bool("test", false, "go in test use?")
+	flag.Parse()
+
+	d.DELETE_DB = *test
+	log.Printf("%+v %+v", *test, d.DELETE_DB)
+	if d.DELETE_DB{
+		log.Println("!start at test mode!")
+		conf.Database.Name = conf.Database.Name + "_test"
+	}
 
 	for _, taxi_conf := range conf.Taxis {
 		external_api, address_supplier, err := GetAPIInstruments(taxi_conf.Api)
