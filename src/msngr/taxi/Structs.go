@@ -126,18 +126,20 @@ func (o *Order) ToOrderData() db.OrderData {
 	return db.NewOrderData(odc)
 }
 
+type AnswerContent struct {
+	Id      int64  `json:"id"`     // :7007330031,
+	Name    string `json:"name"`
+	Login   string `json:"login"`
+	Number  int64  `json:"number"` // :406
+	Cost    int    `json:"cost"`
+	Details string `json:"details"`
+}
+
 type Answer struct {
 	IsSuccess bool   `json:"isSuccess"`
 	Message   string `json:"message"`
 
-	Content   struct {
-				  Id      int64  `json:"id"`     // :7007330031,
-				  Name    string `json:"name"`
-				  Login   string `json:"login"`
-				  Number  int64  `json:"number"` // :406
-				  Cost    int    `json:"cost"`
-				  Details string `json:"details"`
-			  } `json:"content"`
+	Content   AnswerContent `json:"content"`
 }
 
 type CarInfo struct {

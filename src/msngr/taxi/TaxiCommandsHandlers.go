@@ -323,7 +323,14 @@ func (nop *TaxiNewOrderProcessor) ProcessMessage(in *s.InPkg) *s.MessageResult {
 
 		ans := nop.API.NewOrder(new_order)
 		log.Printf("Order was created! %+v \n with content: %+v", ans, ans.Content)
-		text := fmt.Sprintf("Ваш заказ создан! Стоймость поездки составит %+v рублей.", ans.Content.Cost)
+		cost := ans.Content.Cost
+		if cost == 0 {
+			cost, _ = nop.API.CalcOrderCost(new_order)
+			if cost == 0 {
+				log.Printf("ALERT! Создан заказ [%+v] без денег!", ans.Content.Id)
+			}
+		}
+		text := fmt.Sprintf("Ваш заказ создан! Стоймость поездки составит %+v рублей.", cost)
 
 		if !ans.IsSuccess {
 			nop.Errors.StoreError(in.From, ans.Message)

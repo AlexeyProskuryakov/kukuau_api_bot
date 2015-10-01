@@ -18,11 +18,12 @@ const (
 
 )
 
-func FormNotification(whom string, order_id int64, state int, previous_state int, car_info CarInfo) *s.OutPkg {
+func FormNotification(whom string, order_id int64, state int, previous_state int, car_info CarInfo, deliv_time time.Time) *s.OutPkg {
 	var text string
 	switch state {
 	case 2:
-		text = fmt.Sprintf("%v %v, время подачи %v.", nominated, car_info, u.GetTimeAfter(5 * time.Minute, "15:04"))
+		_time, _ := time.Parse(deliv_time.Format("15:04"), "15:04")
+		text = fmt.Sprintf("%v %v, время подачи %v.", nominated, car_info, _time)
 	case 3:
 		text = fmt.Sprintf("%v", car_set_out)
 	case 4:
@@ -39,7 +40,7 @@ func FormNotification(whom string, order_id int64, state int, previous_state int
 		} else {
 			text = fmt.Sprintf("%v %v", car_arrived, good_passage)
 		}
-	case 7:
+	case 7,9:
 		text = "Заказ выполнен! Спасибо что воспользовались услугами нашей компании."
 	//	default:
 	//		status, _ := StatusesMap[state]
@@ -119,10 +120,15 @@ func TaxiOrderWatch(taxiContext *TaxiContext, botContext *s.BotContext) {
 				if car_info != nil {
 					var notification_data *s.OutPkg
 					prev_state, ok := previous_states[api_order.ID]
+					delivery_time, err := time.Parse("2006-01-02 15:04:05", api_order.DeliveryTime)
+					if err != nil {
+						delivery_time = time.Now()
+					}
+
 					if ok {
-						notification_data = FormNotification(db_order.Whom, api_order.ID, api_order.State, prev_state, *car_info)
+						notification_data = FormNotification(db_order.Whom, api_order.ID, api_order.State, prev_state, *car_info, delivery_time)
 					} else {
-						notification_data = FormNotification(db_order.Whom, api_order.ID, api_order.State, -1, *car_info)
+						notification_data = FormNotification(db_order.Whom, api_order.ID, api_order.State, -1, *car_info, delivery_time)
 					}
 					if notification_data != nil {
 						notification_data.Message.Commands = form_commands_for_current_order(db_order, botContext.Commands)

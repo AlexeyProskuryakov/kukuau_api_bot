@@ -27,7 +27,7 @@ type FakeTaxiAPI struct {
 
 func send_states(order_id int64, inf *FakeTaxiAPI) {
 	log.Printf("FA will send fake states for order %v", order_id)
-	for _, i := range []int{2, 3, 4, 5, 6, 12, 7 } {
+	for _, i := range []int{2, } {
 		time.Sleep(5 * time.Second)
 		log.Println("FA send state: ", i)
 		inf.set_order_state(order_id, i)
@@ -43,10 +43,6 @@ func (inf *FakeTaxiAPI) set_order_state(order_id int64, new_state int) {
 }
 
 func (inf *FakeTaxiAPI) NewOrder(order NewOrder) Answer {
-	log.Printf("3 NO delivery: %+v", order.Delivery)
-	log.Printf("3 NO destination: %+v", order.Destinations)
-	log.Printf("3 NO order all: %+v", order)
-
 	saved_order := Order{
 		ID:    rand.Int63(),
 		State: 1,
@@ -72,7 +68,6 @@ func (inf *FakeTaxiAPI) NewOrder(order NewOrder) Answer {
 }
 
 func (inf *FakeTaxiAPI) Orders() []Order {
-//	log.Println("FA orders: ", inf.orders)
 	return inf.orders
 }
 

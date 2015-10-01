@@ -67,6 +67,11 @@ type ErrorWrapper struct {
 	Time     time.Time
 }
 
+type Loaded interface {
+	isLoaded() bool
+}
+
+
 type orderHandler struct {
 	collection *mgo.Collection
 }
@@ -89,15 +94,18 @@ type DbHandlerMixin struct {
 
 func (odbh *DbHandlerMixin) reConnect(conn string, dbname string) {
 	var session *mgo.Session
-
+	count := 2500 * time.Millisecond
 	for {
+		log.Printf("connecting...")
 		var err error
 		session, err = mgo.Dial(conn)
 		if err == nil {
+			log.Printf("connected!")
 			break
 		} else {
-			log.Printf("can not connect to db server %v %v", conn, dbname)
-			time.Sleep(5 * time.Second)
+			count += count
+			log.Printf("error, will sleep %+v miliseconds",count)
+			time.Sleep(count)
 		}
 	}
 
@@ -182,6 +190,7 @@ func NewDbHandler(conn, dbname string) *DbHandlerMixin {
 	odbh.Orders = &orderHandler{}
 	odbh.Errors = &errorHandler{}
 
+	log.Printf("start reconnecting")
 	go func() {
 		odbh.reConnect(conn, dbname)
 	}()

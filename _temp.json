@@ -1,0 +1,44 @@
+"ID": 5009782521,
+"IDParent": 5009776292,
+"Name": "Радужная",
+"ShortName": "ул",
+"ItemType": 5,
+"FullName": "обл Новосибирская р-н Колыванский рп Колывань ул Радужная",
+"IDRegion": 5009755359,
+"IDDistrict": 5009776291,
+"IDCity": null,
+"IDPlace": 5009776292,
+"Region": "обл Новосибирская",
+"District": "р-н Колыванский",
+"City": null,
+"Place": "рп Колывань"
+
+
+"ID": 5009785215,
+"IDParent": 5009776746,
+"Name": "Коммунистическая",
+"ShortName": "ул",
+"ItemType": 5,
+"FullName": "обл Новосибирская р-н Мошковский с Сокур ул Коммунистическая",
+"IDRegion": 5009755359,
+"IDDistrict": 5009776716,
+"IDCity": null,
+"IDPlace": 5009776746,
+"Region": "обл Новосибирская",
+"District": "р-н Мошковский",
+"City": null,
+"Place": "с Сокур"
+
+[
+{Name:street_from Type:dict Data:{Value:{"ID":5009756374,"IDParent":5009755360,"Name":"Николаева","ShortName":"ул","ItemType":5,"FullName":" ул Николаева","IDRegion":5009755359,"IDDistrict":0,"IDCity":5009755360,"IDPlace":0,"Region":"обл Новосибирская","City":"г Новосибирск"} Text:Николаева}} 
+
+{Name:house_from Type:text Data:{Value: Text:8}} 
+{Name:entrance Type:number Data:{Value: Text:3}} 
+{Name:street_to Type:dict Data:{Value:{"ID":5009756374,"IDParent":5009755360,"Name":"Николаева","ShortName":"ул","ItemType":5,"FullName":" ул Николаева","IDRegion":5009755359,"IDDistrict":0,"IDCity":5009755360,"IDPlace":0,"Region":"обл Новосибирская","City":"г Новосибирск"} Text:Николаева }} 
+
+{Name:house_to Type:text Data:{Value: Text:34}} 
+{Name:time Type:datetime Data:{Value:0 Text:}}
+
+]
+
+{"phone":"+79138973664","idService":5001753333,"notes":"Тестирование.","attributes":[1000113000,1000113002],"delivery":{"idRegion":5009755359,"idStreet":5009756374,"house":"","idAddress":null,"building":null,"fraction":null,"entrance":"0","apartment":null,"idPlace":0,"idCity":5009755360,"idDistrict":0,"idFastAddress":null},"destinations":[{"idRegion":5009755359,"idStreet":5009756374,"house":"","idAddress":null,"idDistrict":0,"idCity":5009755360,"idPlace":0,"building":null,"fraction":null,"entrance":null,"apartment":null,"idFastAddress":null}],"isNotCash":false}

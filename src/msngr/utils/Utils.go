@@ -1,16 +1,12 @@
 package utils
 import (
-	"time"
+
 	"fmt"
 	"math/rand"
 	"reflect"
+
 )
 
-
-func GetTimeAfter(d time.Duration, format string) string {
-	result := time.Now().Add(d)
-	return result.Format(format)
-}
 
 func GenId() string {
 	return fmt.Sprintf("%d", rand.Int63())
