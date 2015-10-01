@@ -1,0 +1,55 @@
+{
+  "main": {
+    "port": 9191,
+    "callback_addr": "http://localhost:9876/notify",
+    "log_file": "",
+    "database": {
+      "name": "bot",
+      "connection_string": "localhost:27017"
+    }
+  },
+  "taxis": [
+    {
+      "name": "marka",
+      "dict_url": "http://localhost:9191/taxi/marka/streets",
+      "key": "Kuku demo_taxi_key",
+      "information": {
+        "phone": "123-45-67",
+        "text": "Такси марка! Самое лучшее такси в академгородке!"
+      },
+      "api": {
+        "name": "infinity",
+        "data": {
+          "login": "test1",
+          "password": "test1",
+          "connection_string": "http://109.202.25.248:8080/WebAPITaxi/",
+          "host": "109.202.25.248:8080"
+        }
+      }
+    },
+    {
+      "name": "fake",
+      "dict_url": "http://localhost:9191/taxi/fake/streets",
+      "key": "Kuku demo_taxi_key",
+      "information": {
+        "phone": "123-45-67",
+        "text": "Такси марка! Самое лучшее такси в академгородке!"
+      },
+      "api": {
+        "name": "fake",
+        "data": {
+          "login": "test1",
+          "password": "test1",
+          "connection_string": "http://109.202.25.248:8080/WebAPITaxi/",
+          "host": "109.202.25.248:8080"
+        }
+      }
+    }
+  ],
+  "shops": [
+    {
+      "name": "test_shop",
+      "key": "Kuku demo_shop_key"
+    }
+  ]
+}
