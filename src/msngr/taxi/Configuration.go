@@ -18,7 +18,10 @@ type ApiParams struct {
 			 ConnectionsString string `json:"connection_string"`
 			 IdService         int64 `json:"id_service"`
 		 } `json:"data"`
-
+	Fake struct {
+			 SendedStates []int `json:"sended_states"`
+			 SleepTime   int `json:"sleep_time"`
+		 } `json:"fake"`
 }
 
 func (api ApiParams) GetHost() string {

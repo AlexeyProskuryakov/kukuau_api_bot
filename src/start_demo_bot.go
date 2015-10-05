@@ -33,7 +33,7 @@ func GetAPIInstruments(params t.ApiParams) (t.TaxiInterface, t.AddressSupplier, 
 	case "infinity":
 		return i.GetInfinityAPI(params), i.GetInfinityAddressSupplier(params), nil
 	case "fake":
-		return t.GetFakeInfinityAPI(), i.GetInfinityAddressSupplier(params), nil
+		return t.GetFakeInfinityAPI(params), i.GetInfinityAddressSupplier(params), nil
 	}
 	return nil, nil, errors.New("Not imply name of api")
 }

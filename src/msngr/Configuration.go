@@ -5,6 +5,7 @@ import (
 	"io/ioutil"
 	"log"
 	t "msngr/taxi"
+	s "msngr/shop"
 	"os"
 )
 
@@ -29,7 +30,7 @@ type config struct {
 			 } `json:"database"`
 
 	Taxis    []t.TaxiConfig `json:"taxis"`
-	Shops    []shop_config `json:"shops"`
+	Shops    []s.ShopConfig `json:"shops"`
 }
 
 

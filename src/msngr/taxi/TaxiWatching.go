@@ -40,7 +40,7 @@ func FormNotification(whom string, order_id int64, state int, previous_state int
 		} else {
 			text = fmt.Sprintf("%v %v", car_arrived, good_passage)
 		}
-	case 7,9:
+	case 7, 9:
 		text = "Заказ выполнен! Спасибо что воспользовались услугами нашей компании."
 	//	default:
 	//		status, _ := StatusesMap[state]
@@ -101,11 +101,15 @@ func TaxiOrderWatch(taxiContext *TaxiContext, botContext *s.BotContext) {
 			log.Print("get ")
 			db_order, err := taxiContext.DataBase.Orders.GetById(api_order.ID, botContext.Name)
 			if err != nil {
+				log.Printf("WATCH some error in retrieve order [%+v]", api_order)
+				continue
+			}
+			if db_order == nil {
 				log.Printf("WATCH order [%+v] is not present in system :(\n", api_order)
 				continue
 			}
 			if db_order.OrderState == ORDER_CANCELED {
-				log.Printf("WATCH order [%+v] is CANCELED", )
+//				log.Printf("WATCH order [%+v] is CANCELED", db_order.OrderId)
 				continue
 			}
 			if api_order.State != db_order.OrderState {

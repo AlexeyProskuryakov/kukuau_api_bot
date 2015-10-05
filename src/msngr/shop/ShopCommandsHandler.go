@@ -14,13 +14,20 @@ import (
 	"gopkg.in/mgo.v2"
 )
 
-func FormShopCommands(db *d.DbHandlerMixin) *s.BotContext {
+type ShopConfig struct {
+	Key  string `json:"key"`
+	Name string `json:"name"`
+	Info string `json:"information"`
+}
+
+
+func FormShopCommands(db *d.DbHandlerMixin, config *ShopConfig) *s.BotContext {
 	var ShopRequestCommands = map[string]s.RequestCommandProcessor{
 		"commands": ShopCommandsProcessor{DbHandlerMixin: *db},
 	}
 
 	var ShopMessageCommands = map[string]s.MessageCommandProcessor{
-		"information":     ShopInformationProcessor{},
+		"information":     ShopInformationProcessor{Info:config.Info},
 		"authorise":       ShopAuthoriseProcessor{DbHandlerMixin: *db},
 		"log_out":         ShopLogOutMessageProcessor{DbHandlerMixin: *db},
 		"orders_state":    ShopOrderStateProcessor{DbHandlerMixin: *db},
@@ -249,10 +256,16 @@ func (sm ShopSupportMessageProcessor) ProcessMessage(in *s.InPkg) *s.MessageResu
 	return &s.MessageResult{Body:body}
 }
 
-type ShopInformationProcessor struct{}
+type ShopInformationProcessor struct{
+	Info string
+}
 
 func (ih ShopInformationProcessor) ProcessMessage(in *s.InPkg) *s.MessageResult {
-	return &s.MessageResult{Body:"Desprice Markt - интернет-магазин бытовой техники и электроники в Новосибирске и других городах России. Каталог товаров мировых брендов."}
+	info := ih.Info
+	if info == ""{
+		info = "Desprice Markt - интернет-магазин бытовой техники и электроники в Новосибирске и других городах России. Каталог товаров мировых брендов."
+	}
+	return &s.MessageResult{Body:info}
 }
 
 type ShopLogOutMessageProcessor struct {

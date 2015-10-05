@@ -6,11 +6,6 @@ pkg
 .idea
 config.json
 
-github.com
-gopkg.in
-9fans.net
-golang.org
-*learn*
 
 /temp.json
 test_foo.go

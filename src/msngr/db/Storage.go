@@ -94,6 +94,10 @@ type DbHandlerMixin struct {
 
 var DELETE_DB = false
 
+func (odbh *DbHandlerMixin) IsConnected() bool {
+	return odbh.session != nil
+}
+
 func (odbh *DbHandlerMixin) reConnect(conn string, dbname string) {
 	var session *mgo.Session
 	count := 2500 * time.Millisecond
@@ -103,10 +107,11 @@ func (odbh *DbHandlerMixin) reConnect(conn string, dbname string) {
 		session, err = mgo.Dial(conn)
 		if err == nil {
 			log.Printf("connected!")
+			odbh.session = session
 			break
 		} else {
 			count += count
-			log.Printf("error, will sleep %+v miliseconds",count)
+			log.Printf("error, will sleep %+v miliseconds", count)
 			time.Sleep(count)
 		}
 	}
@@ -114,9 +119,9 @@ func (odbh *DbHandlerMixin) reConnect(conn string, dbname string) {
 	session.SetMode(mgo.Monotonic, true)
 	odbh.session = session
 
-	if (DELETE_DB){
+	if (DELETE_DB) {
 		err := session.DB(dbname).DropDatabase()
-		if err!=nil{
+		if err != nil {
 			log.Println("db must be dropped but errr:\n", err)
 		}
 	}
@@ -202,7 +207,6 @@ func NewDbHandler(conn, dbname string) *DbHandlerMixin {
 	go func() {
 		odbh.reConnect(conn, dbname)
 	}()
-
 	return &odbh
 }
 
@@ -213,8 +217,7 @@ func (oh *orderHandler) GetById(order_id int64, source string) (*OrderWrapper, e
 
 	result := OrderWrapper{}
 	err := oh.collection.Find(bson.M{"order_id": order_id, "source":source}).One(&result)
-	if err != nil && err != mgo.ErrNotFound{
-
+	if err != nil && err != mgo.ErrNotFound {
 		return nil, err
 	}
 	return &result, nil
@@ -287,8 +290,10 @@ func (oh *orderHandler) GetByOwner(whom, source string) (*OrderWrapper, error) {
 
 	result := OrderWrapper{}
 	err := oh.collection.Find(bson.M{"whom": whom, "source":source}).Sort("-when").One(&result)
-	if err != nil {
+	if err == mgo.ErrNotFound {
 		return nil, nil
+	}else if err != nil {
+		return nil, err
 	}
 	return &result, nil
 }
@@ -300,6 +305,9 @@ func (uh *userHandler) CheckUser(req bson.M) (*UserWrapper, error) {
 
 	tmp := UserWrapper{}
 	err := uh.collection.Find(req).One(&tmp)
+	if err == mgo.ErrNotFound {
+		return nil, nil
+	}
 	if err != nil {
 		return nil, errors.New(fmt.Sprintf("user for %+v is not found", req))
 	}
@@ -311,9 +319,9 @@ func (uh *userHandler) AddUser(user_id, phone *string) error {
 		return errors.New("БД не доступна")
 	}
 
-	tmp, _ := uh.CheckUser(bson.M{"user_id": user_id, "phone": phone})
+	tmp, err := uh.CheckUser(bson.M{"user_id": user_id, "phone": phone})
 	if tmp == nil {
-		err := uh.collection.Insert(&UserWrapper{UserId: user_id, State: REGISTERED, Phone: phone, LastUpdate: time.Now()})
+		err = uh.collection.Insert(&UserWrapper{UserId: user_id, State: REGISTERED, Phone: phone, LastUpdate: time.Now()})
 		return err
 	}
 	return nil
@@ -375,7 +383,7 @@ func (uh *userHandler) CheckUserPassword(username, password *string) (*bool, err
 
 	tmp := UserWrapper{}
 	err := uh.collection.Find(bson.M{"user_name": username, "password": phash(password)}).One(&tmp)
-	result := (err!=nil)
+	result := (err != nil)
 	return &result, err
 }
 

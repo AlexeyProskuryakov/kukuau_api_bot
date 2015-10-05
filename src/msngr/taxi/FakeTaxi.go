@@ -13,22 +13,25 @@ import (
 
 var fakeInstance *FakeTaxiAPI
 
-func GetFakeInfinityAPI() TaxiInterface {
+func GetFakeInfinityAPI(params ApiParams) TaxiInterface {
 	if fakeInstance == nil {
-		fakeInstance = &FakeTaxiAPI{}
+		log.Print("params:::",params.Fake)
+		fakeInstance = &FakeTaxiAPI{SleepTime:params.Fake.SleepTime, SendedStates:params.Fake.SendedStates}
 	}
 	return fakeInstance
 }
 
 
 type FakeTaxiAPI struct {
-	orders []Order
+	SleepTime    int
+	SendedStates []int
+	orders       []Order
 }
 
 func send_states(order_id int64, inf *FakeTaxiAPI) {
-	log.Printf("FA will send fake states for order %v", order_id)
-	for _, i := range []int{2, } {
-		time.Sleep(5 * time.Second)
+	log.Printf("FA will send fake states for order %v", order_id, inf.SendedStates)
+	for _, i := range inf.SendedStates {
+		time.Sleep(time.Duration(inf.SleepTime) * time.Second)
 		log.Println("FA send state: ", i)
 		inf.set_order_state(order_id, i)
 	}
@@ -95,7 +98,7 @@ func (p *FakeTaxiAPI) IsConnected() bool {
 	return true
 }
 
-func (p *FakeTaxiAPI) GetCarsInfo() []CarInfo{
+func (p *FakeTaxiAPI) GetCarsInfo() []CarInfo {
 	return []CarInfo{
 		CarInfo{
 			ID:5033615557,
