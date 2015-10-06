@@ -125,7 +125,7 @@ func test_shops() {
 
 	for _, shop_conf := range conf.Shops {
 		db := d.NewDbHandler(conf.Database.ConnString, conf.Database.Name)
-		bot_context := sh.FormShopCommands(db)
+		bot_context := sh.FormShopCommands(db, shop_conf)
 		request_commands := bot_context.Request_commands
 
 		in := s.InPkg{From:"TEST", UserData:&s.InUserData{Phone:"TEST123"}, Request:&s.InRequest{ID:"1234", Type:"get"}}
@@ -138,5 +138,6 @@ func test_shops() {
 }
 func main() {
 	test_taxi()
+	test_shops()
 }
 
