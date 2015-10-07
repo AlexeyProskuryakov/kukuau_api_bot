@@ -16,7 +16,7 @@ const (
 
 )
 
-func FormTaxiBotContext(im *ExternalApiMixin, db_handler *d.DbHandlerMixin, tc TaxiConfig) *s.BotContext {
+func FormTaxiBotContext(im *ExternalApiMixin, db_handler *d.DbHandlerMixin, tc TaxiConfig, ah *GoogleAddressHandler) *s.BotContext {
 
 	context := s.BotContext{}
 
@@ -37,11 +37,12 @@ func FormTaxiBotContext(im *ExternalApiMixin, db_handler *d.DbHandlerMixin, tc T
 		"commands": &TaxiCommandsProcessor{DbHandlerMixin: *db_handler, context: &context},
 	}
 
+	log.Printf("2 SUPPLIER: %+v", ah.ExternalAddressSupplier)
 	context.Message_commands = map[string]s.MessageCommandProcessor{
 		"information":      &TaxiInformationProcessor{DbHandlerMixin: *db_handler, context:&context, information:&(tc.Information.Text)},
-		"new_order":        &TaxiNewOrderProcessor{ExternalApiMixin: *im, DbHandlerMixin: *db_handler, context:&context},
+		"new_order":        &TaxiNewOrderProcessor{ExternalApiMixin: *im, DbHandlerMixin: *db_handler, context:&context, AddressHandler:ah},
 		"cancel_order":     &TaxiCancelOrderProcessor{ExternalApiMixin: *im, DbHandlerMixin: *db_handler, context:&context, alert_phone:tc.Information.Phone},
-		"calculate_price":  &TaxiCalculatePriceProcessor{ExternalApiMixin: *im, context:&context},
+		"calculate_price":  &TaxiCalculatePriceProcessor{ExternalApiMixin: *im, context:&context, AddressHandler:ah},
 		"feedback":         &TaxiFeedbackProcessor{ExternalApiMixin: *im, DbHandlerMixin: *db_handler, context:&context},
 		"write_dispatcher": &TaxiSupportMessageProcessor{},
 	}
@@ -241,10 +242,10 @@ func (ih *TaxiInformationProcessor) ProcessMessage(in *s.InPkg) *s.MessageResult
 	}
 }
 
-func _form_order(fields []s.InField) (new_order NewOrder) {
+func _form_order(fields []s.InField, ah *GoogleAddressHandler) (*NewOrder, error) {
 	var from_info, to_info, hf, ht string
 	var entrance *string
-	log.Printf("-1 NO fields: %+v", fields)
+	log.Printf("NEW ORDER fields: %+v", fields)
 	for _, field := range fields {
 		switch fn := field.Name; fn {
 		case "street_from":
@@ -269,25 +270,42 @@ func _form_order(fields []s.InField) (new_order NewOrder) {
 		// 	}
 		}
 	}
-	//	fucking hardcode //todo refactor
 
+	new_order := NewOrder{}
 	note_info := "Тестирование."
 	new_order.Notes = &note_info
-
 
 	//	new_order.Attributes = [2]int64{1000113000, 1000113002}
 	//	end fucking hardcode
 
-	new_order.Delivery = GetDeliveryHelper(from_info, hf, entrance)
-	new_order.Destinations = []Destination{GetDestinationHelper(to_info, ht)}
+	if !(ah.IsHere(from_info) || ah.IsHere(to_info)) {
+		return nil, errors.New("Адрес не поддерживается этим такси.")
+	}
 
-	return
+	delivery_street_info, err := ah.GetStreetId(from_info)
+	if err != nil {
+		return nil, err
+	}
+
+	destination_street_info, err := ah.GetStreetId(to_info)
+	if err != nil {
+		return nil, err
+	}
+
+	delivery := Delivery{IdStreet:delivery_street_info.ID, House:hf, Entrance:entrance, IdRegion:delivery_street_info.IDRegion}
+	destination := Destination{IdStreet:destination_street_info.ID, House:ht, IdRegion:destination_street_info.IDRegion}
+
+	new_order.Delivery = delivery
+	new_order.Destinations = []Destination{destination}
+
+	return &new_order, nil
 }
 
 type TaxiNewOrderProcessor struct {
 	ExternalApiMixin
 	d.DbHandlerMixin
-	context *s.BotContext
+	AddressHandler *GoogleAddressHandler
+	context        *s.BotContext
 }
 
 func _get_phone(in *s.InPkg) (phone *string, err error) {
@@ -318,14 +336,18 @@ func (nop *TaxiNewOrderProcessor) ProcessMessage(in *s.InPkg) *s.MessageResult {
 			}
 		}
 
-		new_order := _form_order(commands[0].Form.Fields)
+		new_order, err := _form_order(commands[0].Form.Fields, nop.AddressHandler)
+		if err != nil {
+			return s.ExceptionMessageResult(err)
+		}
+
 		new_order.Phone = *phone
 
-		ans := nop.API.NewOrder(new_order)
+		ans := nop.API.NewOrder(*new_order)
 		log.Printf("Order was created! %+v \n with content: %+v", ans, ans.Content)
 		cost := ans.Content.Cost
 		if cost == 0 {
-			cost, _ = nop.API.CalcOrderCost(new_order)
+			cost, _ = nop.API.CalcOrderCost(*new_order)
 			if cost == 0 {
 				log.Printf("ALERT! Создан заказ [%+v] без денег!", ans.Content.Id)
 			}
@@ -378,13 +400,17 @@ func (cop *TaxiCancelOrderProcessor) ProcessMessage(in *s.InPkg) *s.MessageResul
 
 type TaxiCalculatePriceProcessor struct {
 	ExternalApiMixin
-	context *s.BotContext
+	context        *s.BotContext
+	AddressHandler *GoogleAddressHandler
 }
 
 func (cpp *TaxiCalculatePriceProcessor) ProcessMessage(in *s.InPkg) *s.MessageResult {
 	commands := *in.Message.Commands
-	order := _form_order(commands[0].Form.Fields)
-	cost_s, _ := cpp.API.CalcOrderCost(order)
+	order, err := _form_order(commands[0].Form.Fields, cpp.AddressHandler)
+	if err != nil {
+		return s.ExceptionMessageResult(err)
+	}
+	cost_s, _ := cpp.API.CalcOrderCost(*order)
 	cost := strconv.Itoa(cost_s)
 	return &s.MessageResult{Body: fmt.Sprintf("Стоймость будет всего лишь %v рублей!", cost)}
 }

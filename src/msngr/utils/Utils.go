@@ -12,7 +12,7 @@ func GenId() string {
 	return fmt.Sprintf("%d", rand.Int63())
 }
 
-func CheckErr(e error){
+func CheckErr(e error) {
 	if e != nil {
 		panic(e)
 	}
@@ -44,7 +44,7 @@ func ToMap(in interface{}, tag string) (map[string]interface{}, error) {
 
 func FirstOf(data ...interface{}) interface{} {
 	for _, data_el := range data {
-		if data_el != ""{
+		if data_el != "" {
 			return data_el
 		}
 	}
@@ -52,6 +52,15 @@ func FirstOf(data ...interface{}) interface{} {
 }
 
 func In(p int, a []int) bool {
+	for _, v := range a {
+		if p == v {
+			return true
+		}
+	}
+	return false
+}
+
+func InS(p string, a []string) bool {
 	for _, v := range a {
 		if p == v {
 			return true
