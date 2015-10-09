@@ -102,11 +102,10 @@ func (odbh *DbHandlerMixin) reConnect(conn string, dbname string) {
 	var session *mgo.Session
 	count := 2500 * time.Millisecond
 	for {
-		log.Printf("connecting...")
 		var err error
 		session, err = mgo.Dial(conn)
 		if err == nil {
-			log.Printf("connected!")
+			log.Printf("Connection to mongodb established!")
 			odbh.session = session
 			break
 		} else {

@@ -82,7 +82,7 @@ func main() {
 
 	for _, shop_conf := range conf.Shops {
 		db := d.NewDbHandler(conf.Database.ConnString, conf.Database.Name)
-		bot_context := sh.FormShopCommands(db)
+		bot_context := sh.FormShopCommands(db, &shop_conf)
 		shop_controller := m.FormBotController(bot_context)
 		http.HandleFunc(fmt.Sprintf("/shop/%v", shop_conf.Name), shop_controller)
 
