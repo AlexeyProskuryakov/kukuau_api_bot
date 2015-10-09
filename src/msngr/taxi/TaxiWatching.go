@@ -40,12 +40,17 @@ func FormNotification(whom string, order_id int64, state int, previous_state int
 		} else {
 			text = fmt.Sprintf("%v %v", car_arrived, good_passage)
 		}
-	case 7, 9:
+	case 7:
 		text = "Заказ выполнен! Спасибо что воспользовались услугами нашей компании."
+	case 9:
+		if !u.In(previous_state, []int{7, 8, 12}) {
+			text = "Заказ выполнен! Спасибо что воспользовались услугами нашей компании."
+		}
 	//	default:
 	//		status, _ := StatusesMap[state]
 	//		text = fmt.Sprintf("Машина %v %v c номером %v перешла в состояние [%v]", car_info.Color, car_info.Model, car_info.Number, status)
 	}
+
 	if text != "" {
 		out := s.OutPkg{To: whom, Message: &s.OutMessage{ID: u.GenId(), Type: "chat", Body: text}}
 		return &out
@@ -109,7 +114,6 @@ func TaxiOrderWatch(taxiContext *TaxiContext, botContext *s.BotContext) {
 				continue
 			}
 			if db_order.OrderState == ORDER_CANCELED {
-//				log.Printf("WATCH order [%+v] is CANCELED", db_order.OrderId)
 				continue
 			}
 			if api_order.State != db_order.OrderState {
@@ -143,7 +147,7 @@ func TaxiOrderWatch(taxiContext *TaxiContext, botContext *s.BotContext) {
 			}
 			previous_states[api_order.ID] = api_order.State
 		}
-		time.Sleep(3 * time.Second)
+		time.Sleep(1 * time.Second)
 	}
 }
 

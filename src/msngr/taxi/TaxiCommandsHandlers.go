@@ -242,6 +242,11 @@ func (ih *TaxiInformationProcessor) ProcessMessage(in *s.InPkg) *s.MessageResult
 	}
 }
 
+type AddressNotHere struct{}
+func (a *AddressNotHere) Error() string {
+	return fmt.Sprint("Адрес не поддерживается этим такси.")
+}
+
 func _form_order(fields []s.InField, ah *GoogleAddressHandler) (*NewOrder, error) {
 	var from_info, to_info, hf, ht string
 	var entrance *string
@@ -278,26 +283,22 @@ func _form_order(fields []s.InField, ah *GoogleAddressHandler) (*NewOrder, error
 	//	new_order.Attributes = [2]int64{1000113000, 1000113002}
 	//	end fucking hardcode
 
-	if !(ah.IsHere(from_info) || ah.IsHere(to_info)) {
-		return nil, errors.New("Адрес не поддерживается этим такси.")
+	if !ah.IsHere(from_info) && !ah.IsHere(to_info) {
+		return nil, &AddressNotHere{}
 	}
-
 	delivery_street_info, err := ah.GetStreetId(from_info)
 	if err != nil {
 		return nil, err
 	}
-
 	destination_street_info, err := ah.GetStreetId(to_info)
 	if err != nil {
 		return nil, err
 	}
-
 	delivery := Delivery{IdStreet:delivery_street_info.ID, House:hf, Entrance:entrance, IdRegion:delivery_street_info.IDRegion}
 	destination := Destination{IdStreet:destination_street_info.ID, House:ht, IdRegion:destination_street_info.IDRegion}
-
 	new_order.Delivery = delivery
 	new_order.Destinations = []Destination{destination}
-
+	log.Printf("NEW ORDER: \ndelivery:%#v\ndestination:%#v", delivery, destination)
 	return &new_order, nil
 }
 
@@ -337,6 +338,13 @@ func (nop *TaxiNewOrderProcessor) ProcessMessage(in *s.InPkg) *s.MessageResult {
 		}
 
 		new_order, err := _form_order(commands[0].Form.Fields, nop.AddressHandler)
+		if _, ok := err.(*AddressNotHere); ok {
+			return &s.MessageResult{
+				Body: "Адрес не поддерживается этим такси.",
+				Commands: nop.context.Commands["commands_at_not_created_order"],
+				Error: errors.New("Адрес не поддерживается этим такси."),
+			}
+		}
 		if err != nil {
 			return s.ExceptionMessageResult(err)
 		}

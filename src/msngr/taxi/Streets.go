@@ -10,6 +10,7 @@ import (
 	"math"
 	"errors"
 	s "msngr/taxi/set"
+	u "msngr/utils"
 	"regexp"
 	"strings"
 )
@@ -172,7 +173,7 @@ func (ah *GoogleAddressHandler) GetStreetId(place_id string) (*FastAddressRow, e
 
 		intersect := google_set.Intersect(external_set)
 
-		log.Printf("GetStreetId [%v]:\n %+v <=> %+v", query, external_set, google_set)
+		//		log.Printf("GetStreetId [%v]:\n %+v <=> %+v", query, external_set, google_set)
 		if intersect.Contains(query) {
 			result := fmt.Sprintf("%v", nitem.ID)
 			log.Printf("GetStreetId: [%+v] at %v %v %v", result, nitem.Name, nitem.FullName, nitem.City)
@@ -193,7 +194,7 @@ func (ah *GoogleAddressHandler) AddressesSearch(q string) FastAddress {
 	suff := "/place/autocomplete/json"
 	url := GOOGLE_API_URL + suff
 
-	tmp := GoogleResultAddress{}
+	address_result := GoogleResultAddress{}
 	params := map[string]string{
 		"components": "country:ru",
 		"language": "ru",
@@ -204,13 +205,13 @@ func (ah *GoogleAddressHandler) AddressesSearch(q string) FastAddress {
 		"key":ah.key,
 	}
 	body, err := GET(url, &params)
-	err = json.Unmarshal(*body, &tmp)
+	err = json.Unmarshal(*body, &address_result)
 	if err != nil {
 		log.Printf("ERROR! GAS unmarshal error [%+v]", string(*body))
 		return result
 	}
 
-	result = _to_fast_address(tmp)
+	result = _to_fast_address(address_result)
 	return result
 }
 
@@ -302,7 +303,7 @@ func _to_fast_address(input GoogleResultAddress) FastAddress {
 		row := FastAddressRow{}
 		terms_len := len(prediction.Terms)
 		if terms_len > 0 {
-			row.Name = prediction.Terms[0].Value
+			row.Name, row.ShortName = _get_street_name_shortname(prediction.Terms[0].Value)
 		}
 		if terms_len > 1 {
 			row.City = prediction.Terms[1].Value
@@ -317,6 +318,27 @@ func _to_fast_address(input GoogleResultAddress) FastAddress {
 	return result
 }
 
+func _get_street_name_shortname(input string) (string, string) {
+	addr_split := strings.Split(input, " ")
+	if len(addr_split) == 2 {
+		if u.InS(addr_split[0], []string{"улица", "проспект", "площадь", "переулок", "шоссе", "магистраль"}) {
+			return addr_split[1], _shorten_street_type(addr_split[0])
+		}
+		return addr_split[0], _shorten_street_type(addr_split[1])
+	}
+	return strings.Join(addr_split, " "), ""
+}
+
+func _shorten_street_type(input string) string {
+	runes_array := []rune(input)
+	if u.InS(input, []string{"улица", "проспект", "площадь"}) {
+		return string(runes_array[:2]) + "."
+	}else if u.InS(input, []string{"переулок", "шоссе", "магистраль"}) {
+		return string(runes_array[:3]) + "."
+	}
+	return string(runes_array)
+}
+
 func GET(url string, params *map[string]string) (*[]byte, error) {
 	log.Println("GET > \n", url, "\n|", params, "|")
 	req, err := http.NewRequest("GET", url, nil)
@@ -327,7 +349,6 @@ func GET(url string, params *map[string]string) (*[]byte, error) {
 
 	if params != nil {
 		values := req.URL.Query()
-
 		for k, v := range *params {
 			values.Add(k, v)
 		}

@@ -51,7 +51,10 @@ func main() {
 			log.Printf("<<< %q", string(*body))
 			var results []t.DictItem
 			err = json.Unmarshal(*body, &results)
-			log.Printf("err: %v \nunmarshaled:%+v", err, results)
+			//			log.Printf("err: %v \nunmarshaled:%+v", err, results)
+			for _, val := range results {
+				log.Printf("KEY: %v, TITLE: %v, SUBTITLE: %v", val.Key, val.Title, val.SubTitle)
+			}
 			last_result = results[0]
 		}
 		if err != nil {
