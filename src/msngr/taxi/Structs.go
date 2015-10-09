@@ -5,24 +5,26 @@ import (
 	"fmt"
 )
 
+type FastAddressRow struct {
+	GID        string
+	ID         int64  `json:"ID"`
+	IDParent   int64  `json:"IDParent,omitempty"`
+	Name       string `json:"Name"`
+	ShortName  string `json:"ShortName,omitempty"`
+	ItemType   int64  `json:"ItemType,omitempty"`
+	FullName   string `json:"FullName"`
+	IDRegion   int64  `json:"IDRegion"`
+	IDDistrict int64  `json:"IDDistrict"`
+	IDCity     int64  `json:"IDCity"`
+	IDPlace    int64  `json:"IDPlace"`
+	Region     string `json:"Region,omitempty"`
+	District   string `json:"District,omitempty"`
+	City       string `json:"City"`
+	Place      string `json:"Place,omitempty"`
+}
 
 type FastAddress struct {
-	Rows []struct {
-		ID         int64  `json:"ID"`
-		IDParent   int64  `json:"IDParent,omitempty"`
-		Name       string `json:"Name"`
-		ShortName  string `json:"ShortName,omitempty"`
-		ItemType   int64  `json:"ItemType,omitempty"`
-		FullName   string `json:"FullName"`
-		IDRegion   int64  `json:"IDRegion"`
-		IDDistrict int64  `json:"IDDistrict"`
-		IDCity     int64  `json:"IDCity"`
-		IDPlace    int64  `json:"IDPlace"`
-		Region     string `json:"Region,omitempty"`
-		District   string `json:"District,omitempty"`
-		City       string `json:"City"`
-		Place      string `json:"Place,omitempty"`
-	} `json:"rows"`
+	Rows *[]FastAddressRow `json:"rows"`
 }
 
 type Address struct {

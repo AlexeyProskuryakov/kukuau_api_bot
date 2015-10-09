@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	s "msngr/structs"
 	t "msngr/taxi"
+	i "msngr/taxi/infinity"
 	m "msngr"
 	d "msngr/db"
 	n "msngr/notify"
@@ -63,6 +64,8 @@ func test_taxi() {
 		if taxi_conf.Name == "fake" {
 			log.Println(taxi_conf)
 			external_api := t.GetFakeInfinityAPI(taxi_conf.Api)
+			external_address_supplier := i.GetInfinityAddressSupplier(taxi_conf.Api)
+
 			apiMixin := t.ExternalApiMixin{API: external_api}
 
 			db := d.NewDbHandler(conf.Database.ConnString, conf.Database.Name)
@@ -73,12 +76,32 @@ func test_taxi() {
 			carsCache := t.NewCarsCache(external_api)
 			notifier := n.NewNotifier(conf.Main.CallbackAddr, taxi_conf.Key)
 
-			botContext := t.FormTaxiBotContext(&apiMixin, db, taxi_conf)
+			gah := t.NewGoogleAddressHandler(conf.Main.GoogleKey, taxi_conf.GeoOrbit, external_address_supplier)
+
+
+			botContext := t.FormTaxiBotContext(&apiMixin, db, taxi_conf, gah)
 			request_commands := botContext.Request_commands
 			message_commands := botContext.Message_commands
 			taxiContext := t.TaxiContext{API:external_api, DataBase:db, Cars:carsCache, Notifier:notifier}
 
 			go t.TaxiOrderWatch(&taxiContext, botContext)
+
+
+			streets_address := fmt.Sprintf("/taxi/%v/streets", taxi_conf.Name)
+
+			http.HandleFunc(streets_address, func(w http.ResponseWriter, r *http.Request) {
+				t.StreetsSearchController(w, r, gah)
+			})
+
+			server_address := fmt.Sprintf(":%v", conf.Main.Port)
+
+			server := &http.Server{
+				Addr: server_address,
+			}
+			test_url := "http://localhost" + server_address + streets_address
+			log.Printf("start server... send tests to: %v?=", test_url)
+
+			go server.ListenAndServe()
 
 
 			//scenario commands
@@ -102,12 +125,13 @@ func test_taxi() {
 				log.Printf("EXCEPTED PACKAGE: [%v]\n %+v \nstate: [%v]", counter, pkg, states[counter])
 
 				counter += 1
-
 				if counter >= len(states) {
 					break
 				}
 
 			}
+
+
 
 		}
 	}
@@ -125,7 +149,7 @@ func test_shops() {
 
 	for _, shop_conf := range conf.Shops {
 		db := d.NewDbHandler(conf.Database.ConnString, conf.Database.Name)
-		bot_context := sh.FormShopCommands(db)
+		bot_context := sh.FormShopCommands(db, &shop_conf)
 		request_commands := bot_context.Request_commands
 
 		in := s.InPkg{From:"TEST", UserData:&s.InUserData{Phone:"TEST123"}, Request:&s.InRequest{ID:"1234", Type:"get"}}
@@ -138,5 +162,6 @@ func test_shops() {
 }
 func main() {
 	test_taxi()
+	test_shops()
 }
 

@@ -6,10 +6,10 @@
           "fields": [
             {
               "data": {
-                "value": "{\"ID\":5009785215,\"IDParent\":5009776746,\"Name\":\"\u041a\u043e\u043c\u043c\u0443\u043d\u0438\u0441\u0442\u0438\u0447\u0435\u0441\u043a\u0430\u044f\",\"ShortName\":\"\u0443\u043b\",\"ItemType\":5,\"FullName\":\"\u043e\u0431\u043b \u041d\u043e\u0432\u043e\u0441\u0438\u0431\u0438\u0440\u0441\u043a\u0430\u044f \u0440-\u043d \u041c\u043e\u0448\u043a\u043e\u0432\u0441\u043a\u0438\u0439 \u0441 \u0421\u043e\u043a\u0443\u0440 \u0443\u043b \u041a\u043e\u043c\u043c\u0443\u043d\u0438\u0441\u0442\u0438\u0447\u0435\u0441\u043a\u0430\u044f\",\"IDRegion\":5009755359,\"IDDistrict\":5009776716,\"IDCity\":0,\"IDPlace\":5009776746,\"Region\":\"\u043e\u0431\u043b \u041d\u043e\u0432\u043e\u0441\u0438\u0431\u0438\u0440\u0441\u043a\u0430\u044f\",\"District\":\"\u0440-\u043d \u041c\u043e\u0448\u043a\u043e\u0432\u0441\u043a\u0438\u0439\",\"City\":\"\",\"Place\":\"\u0441 \u0421\u043e\u043a\u0443\u0440\"}",
+                "value": "EnDQm9C10YHQvtGB0LXRh9C90LDRjyDRg9C70LjRhtCwLCDQndC-0LLQvtGB0LjQsdC40YDRgdC6LCDQndC-0LLQvtGB0LjQsdC40YDRgdC60LDRjyDQvtCx0LvQsNGB0YLRjCwg0KDQvtGB0YHQuNGP",
                 "text": "\u041a\u043e\u043c\u043c\u0443\u043d\u0438\u0441\u0442\u0438\u0447\u0435\u0441\u043a\u0430\u044f \u0443\u043b"
               },
-                "type": "dict",
+              "type": "dict",
               "name": "street_from"
             },
             {
@@ -18,7 +18,7 @@
             },
             {
               "data": {
-                "value": "{\"ID\":5009782521,\"IDParent\":5009776292,\"Name\":\"\u0420\u0430\u0434\u0443\u0436\u043d\u0430\u044f\",\"ShortName\":\"\u0443\u043b\",\"ItemType\":5,\"FullName\":\"\u043e\u0431\u043b \u041d\u043e\u0432\u043e\u0441\u0438\u0431\u0438\u0440\u0441\u043a\u0430\u044f \u0440-\u043d \u041a\u043e\u043b\u044b\u0432\u0430\u043d\u0441\u043a\u0438\u0439 \u0440\u043f \u041a\u043e\u043b\u044b\u0432\u0430\u043d\u044c \u0443\u043b \u0420\u0430\u0434\u0443\u0436\u043d\u0430\u044f\",\"IDRegion\":5009755359,\"IDDistrict\":5009776291,\"IDCity\":0,\"IDPlace\":5009776292,\"Region\":\"\u043e\u0431\u043b \u041d\u043e\u0432\u043e\u0441\u0438\u0431\u0438\u0440\u0441\u043a\u0430\u044f\",\"District\":\"\u0440-\u043d \u041a\u043e\u043b\u044b\u0432\u0430\u043d\u0441\u043a\u0438\u0439\",\"City\":\"\",\"Place\":\"\u0440\u043f \u041a\u043e\u043b\u044b\u0432\u0430\u043d\u044c\"}",
+                "value": "EnDQoNC-0YHRgdC40LnRgdC60LDRjyDRg9C70LjRhtCwLCDQndC-0LLQvtGB0LjQsdC40YDRgdC6LCDQndC-0LLQvtGB0LjQsdC40YDRgdC60LDRjyDQvtCx0LvQsNGB0YLRjCwg0KDQvtGB0YHQuNGP",
                 "text": "\u0420\u0430\u0434\u0443\u0436\u043d\u0430\u044f \u0443\u043b"
               },
               "type": "dict",

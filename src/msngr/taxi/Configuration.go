@@ -20,7 +20,7 @@ type ApiParams struct {
 		 } `json:"data"`
 	Fake struct {
 			 SendedStates []int `json:"sended_states"`
-			 SleepTime   int `json:"sleep_time"`
+			 SleepTime    int `json:"sleep_time"`
 		 } `json:"fake"`
 }
 
@@ -49,4 +49,5 @@ type TaxiConfig struct {
 					Phone string `json:"phone"`
 					Text  string `json:"text"`
 				} `json:"information"`
+	GeoOrbit    TaxiGeoOrbit `json:"geo_orbit"`
 }

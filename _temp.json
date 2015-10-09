@@ -1,44 +1,34 @@
-"ID": 5009782521,
-"IDParent": 5009776292,
-"Name": "Радужная",
-"ShortName": "ул",
-"ItemType": 5,
-"FullName": "обл Новосибирская р-н Колыванский рп Колывань ул Радужная",
-"IDRegion": 5009755359,
-"IDDistrict": 5009776291,
-"IDCity": null,
-"IDPlace": 5009776292,
-"Region": "обл Новосибирская",
-"District": "р-н Колыванский",
-"City": null,
-"Place": "рп Колывань"
-
-
-"ID": 5009785215,
-"IDParent": 5009776746,
-"Name": "Коммунистическая",
-"ShortName": "ул",
-"ItemType": 5,
-"FullName": "обл Новосибирская р-н Мошковский с Сокур ул Коммунистическая",
-"IDRegion": 5009755359,
-"IDDistrict": 5009776716,
-"IDCity": null,
-"IDPlace": 5009776746,
-"Region": "обл Новосибирская",
-"District": "р-н Мошковский",
-"City": null,
-"Place": "с Сокур"
-
-[
-{Name:street_from Type:dict Data:{Value:{"ID":5009756374,"IDParent":5009755360,"Name":"Николаева","ShortName":"ул","ItemType":5,"FullName":" ул Николаева","IDRegion":5009755359,"IDDistrict":0,"IDCity":5009755360,"IDPlace":0,"Region":"обл Новосибирская","City":"г Новосибирск"} Text:Николаева}} 
-
-{Name:house_from Type:text Data:{Value: Text:8}} 
-{Name:entrance Type:number Data:{Value: Text:3}} 
-{Name:street_to Type:dict Data:{Value:{"ID":5009756374,"IDParent":5009755360,"Name":"Николаева","ShortName":"ул","ItemType":5,"FullName":" ул Николаева","IDRegion":5009755359,"IDDistrict":0,"IDCity":5009755360,"IDPlace":0,"Region":"обл Новосибирская","City":"г Новосибирск"} Text:Николаева }} 
-
-{Name:house_to Type:text Data:{Value: Text:34}} 
-{Name:time Type:datetime Data:{Value:0 Text:}}
-
-]
-
-{"phone":"+79138973664","idService":5001753333,"notes":"Тестирование.","attributes":[1000113000,1000113002],"delivery":{"idRegion":5009755359,"idStreet":5009756374,"house":"","idAddress":null,"building":null,"fraction":null,"entrance":"0","apartment":null,"idPlace":0,"idCity":5009755360,"idDistrict":0,"idFastAddress":null},"destinations":[{"idRegion":5009755359,"idStreet":5009756374,"house":"","idAddress":null,"idDistrict":0,"idCity":5009755360,"idPlace":0,"building":null,"fraction":null,"entrance":null,"apartment":null,"idFastAddress":null}],"isNotCash":false}
+{
+  "html_attributions": [],
+  "result": {
+    "address_components": [
+      {
+        "long_name": "11",
+        "short_name": "11",
+        "types": [
+          "street_number"
+        ],
+        "adr_address": "<span class=\"street-address\">Морской пр., 11</span>, <span class=\"locality\">Новосибирск</span>, <span class=\"region\">Новосибирская обл.</span>, <span class=\"country-name\">Россия</span>, <span class=\"postal-code\">630090</span>",
+        "formatted_address": "Морской пр., 11, Новосибирск, Новосибирская обл., Россия, 630090",
+        "geometry": {
+          "location": {
+            "lat": 54.839462,
+            "lng": 83.108751
+          }
+        },
+        "icon": "https://maps.gstatic.com/mapfiles/place_api/icons/geocode-71.png",
+        "id": "12cee828468856d7702663931712a7598b835e25",
+        "name": "Морской пр., 11",
+        "place_id": "ChIJe__tMRPE30IRiamsxjEU6gM",
+        "reference": "CtQByAAAAKnpYgyZvJxukpPdOJwIzaR3L0gdzDQOqL1y2UEJ020VrXnMbVROZfuL_7sqp556-sMTScf_hbwFLhDHcYDpVcIqhpuLl_rOJjy018WQAxPYQZw9Be160gZvSghV5yHvvXmNDbf_A7VSENxf538xk5wsubFdapc6GrC6v2bMunuYIrE8k4AB1te4YyXLre6RHpuYN2CNCeYHQxB8ucA5lPMZukW3jNMUtw8lh2jMtcmpHhGEh6vrfuNvK01yNZs5eLQ0LTSEOnyjScV41KRpb8ASENbjGj-ZHzzu9Sdwu8tL7cUaFBvUTAe497L8bsQb09s1g3_CGVzj",
+        "scope": "GOOGLE",
+        "types": [
+          "street_address"
+        ],
+        "url": "https://maps.google.com/maps/place?q=%D0%9C%D0%BE%D1%80%D1%81%D0%BA%D0%BE%D0%B9+%D0%BF%D1%80.,+11,+%D0%9D%D0%BE%D0%B2%D0%BE%D1%81%D0%B8%D0%B1%D0%B8%D1%80%D1%81%D0%BA,+%D0%9D%D0%BE%D0%B2%D0%BE%D1%81%D0%B8%D0%B1%D0%B8%D1%80%D1%81%D0%BA%D0%B0%D1%8F+%D0%BE%D0%B1%D0%BB.,+%D0%A0%D0%BE%D1%81%D1%81%D0%B8%D1%8F,+630090&ftid=0x42dfc41331edff7b:0x3ea1431c6aca989",
+        "vicinity": "Новосибирск"
+      },
+      "status"
+      :
+      "OK"
+      }

@@ -22,6 +22,7 @@ type config struct {
 				 Port         int    `json:"port"`
 				 CallbackAddr string `json:"callback_addr"`
 				 LoggingFile  string `json:"log_file"`
+				 GoogleKey    string `json:"google_key"`
 			 } `json:"main"`
 
 	Database struct {
@@ -29,8 +30,8 @@ type config struct {
 				 Name       string `json:"name"`
 			 } `json:"database"`
 
-	Taxis    []t.TaxiConfig `json:"taxis"`
-	Shops    []s.ShopConfig `json:"shops"`
+	Taxis    map[string]t.TaxiConfig `json:"taxis"`
+	Shops    map[string]s.ShopConfig `json:"shops"`
 }
 
 
@@ -44,7 +45,7 @@ func ReadConfig() config {
 	conf := config{}
 	err = json.Unmarshal(cdata, &conf)
 	if err != nil {
-		log.Printf("error decoding configuration file")
+		log.Printf("error decoding configuration file", err)
 		os.Exit(-1)
 	}
 

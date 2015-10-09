@@ -6,10 +6,11 @@
     "database": {
       "name": "bot",
       "connection_string": "localhost:27017"
-    }
+    },
+    "google_key": "AIzaSyBXW3UaS5e4FtOt-XJqLFHGpvrFlf45DV4"
   },
-  "taxis": [
-    {
+  "taxis": {
+    "marka": {
       "name": "marka",
       "dict_url": "http://localhost:9191/taxi/marka/streets",
       "key": "Kuku demo_taxi_key",
@@ -27,13 +28,18 @@
         }
       }
     },
-    {
+    "fake": {
       "name": "fake",
       "dict_url": "http://localhost:9191/taxi/fake/streets",
       "key": "Kuku demo_taxi_key",
       "information": {
         "phone": "123-45-67",
-        "text": "Такси фейк! Тестируте Господа всласть!"
+        "text": "Такси ! Самое лучшее такси в академгородке!"
+      },
+      "geo_orbit": {
+        "lat": 54.8580438,
+        "lon": 83.1100316,
+        "radius": 50000
       },
       "api": {
         "name": "fake",
@@ -57,11 +63,11 @@
         }
       }
     }
-  ],
-  "shops": [
-    {
+  },
+  "shops": {
+    "test_shop": {
       "name": "test_shop",
       "key": "Kuku demo_shop_key"
     }
-  ]
+  }
 }
