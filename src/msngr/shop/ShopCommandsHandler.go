@@ -4,12 +4,11 @@ import (
 	"bytes"
 	"fmt"
 	"math/rand"
-	"regexp"
-	"strings"
 	"time"
 
 	d "msngr/db"
 	s "msngr/structs"
+	u "msngr/utils"
 	"errors"
 	"gopkg.in/mgo.v2"
 )
@@ -217,24 +216,11 @@ func (osp ShopOrderStateProcessor) ProcessMessage(in *s.InPkg) *s.MessageResult 
 
 type ShopSupportMessageProcessor struct{}
 
-func contains(container string, elements []string) bool {
-	container_elements := regexp.MustCompile("[a-zA-Zа-яА-Я]+").FindAllString(container, -1)
-	ce_map := make(map[string]bool)
-	for _, ce_element := range container_elements {
-		ce_map[strings.ToLower(ce_element)] = true
-	}
-	result := true
-	for _, element := range elements {
-		_, ok := ce_map[element]
-		result = result && ok
-	}
-	return result
-}
-
 func make_one_string(fields []s.InField) string {
 	var buffer bytes.Buffer
 	for _, field := range fields {
 		buffer.WriteString(field.Data.Value)
+		buffer.WriteString(" ")
 		buffer.WriteString(field.Data.Text)
 	}
 	return buffer.String()
@@ -243,9 +229,9 @@ func make_one_string(fields []s.InField) string {
 func (sm ShopSupportMessageProcessor) ProcessMessage(in *s.InPkg) *s.MessageResult {
 	commands := *in.Message.Commands
 	var body string
-
+	input := make_one_string(commands[0].Form.Fields)
 	if commands != nil {
-		if contains(make_one_string(commands[0].Form.Fields), []string{"где", "забрать", "заказ"}) {
+		if u.Contains(input, []string{"где", "забрать", "заказ"}) {
 			body = "Ваш заказ вы можете забрать по адресу: ул. Николаева д. 11."
 		} else {
 			body = "Спасибо за вопрос. Мы ответим Вам в ближайшее время."
@@ -253,6 +239,7 @@ func (sm ShopSupportMessageProcessor) ProcessMessage(in *s.InPkg) *s.MessageResu
 	} else {
 		body = "Спасибо за вопрос. Мы ответим Вам в ближайшее время."
 	}
+	u.SaveToFile(fmt.Sprintf("\n%v | %v", input, in.From), "shop_revue.txt")
 	return &s.MessageResult{Body:body}
 }
 

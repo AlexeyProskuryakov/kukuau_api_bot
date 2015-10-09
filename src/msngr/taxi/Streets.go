@@ -231,7 +231,6 @@ func StreetsSearchController(w http.ResponseWriter, r *http.Request, i AddressSu
 
 		var results []DictItem
 		if query != "" {
-
 			if !i.IsConnected() {
 				ans, _ := json.Marshal(map[string]string{"error":"true", "details":"service is not avaliable"})
 				fmt.Fprintf(w, "%s", string(ans))
@@ -252,7 +251,10 @@ func StreetsSearchController(w http.ResponseWriter, r *http.Request, i AddressSu
 				}else {
 					key_raw, err := json.Marshal(nitem)
 					key = string(key_raw)
-					utils.CheckErr(err)
+					if err != nil {
+						log.Printf("SSC: ERROR At unmarshal:%+v", err)
+					}
+
 				}
 				item.Key = string(key)
 				item.Title = fmt.Sprintf("%v %v", nitem.Name, nitem.ShortName)
@@ -261,12 +263,13 @@ func StreetsSearchController(w http.ResponseWriter, r *http.Request, i AddressSu
 			}
 		}
 		ans, err := json.Marshal(results)
-		utils.CheckErr(err)
+		if err != nil {
+			log.Printf("SSC: ERROR At unmarshal:%+v", err)
+		}
+
 		fmt.Fprintf(w, "%s", string(ans))
 	}
 }
-
-
 
 func _add_to_set(set s.Set, element string) string {
 	result := strings.ToLower(element)
