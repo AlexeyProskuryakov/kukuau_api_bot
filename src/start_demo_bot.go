@@ -28,7 +28,7 @@ func startAfter(check s.CheckFunc, what func()) {
 	go what()
 }
 
-func GetAPIInstruments(params t.ApiParams) (t.TaxiInterface, *t.AddressSupplier, error) {
+func GetAPIInstruments(params t.ApiParams) (t.TaxiInterface, t.AddressSupplier, error) {
 	switch api_name := params.Name; api_name{
 	case "infinity":
 		return i.GetInfinityAPI(params), i.GetInfinityAddressSupplier(params), nil
@@ -77,7 +77,7 @@ func main() {
 		})
 
 		http.HandleFunc(fmt.Sprintf("/taxi/%v/streets", taxi_conf.Name), func(w http.ResponseWriter, r *http.Request) {
-			t.StreetsSearchController(w, r, *google_address_handler)
+			t.StreetsSearchController(w, r, google_address_handler)
 		})
 	}
 
