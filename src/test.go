@@ -117,19 +117,18 @@ func test_taxi() {
 			message_result := message_commands["new_order"].ProcessMessage(read_in)
 			log.Println("new order ERROR == ", message_result.Error)
 
-//			states := taxi_conf.Api.Fake.SendedStates
-//			counter := 0
-//			for pkg := range notif_chan {
-//				log.Printf("\n\nEXCEPTED PACKAGE: [%v]\n %#v \nstate: [%v]\n", counter, pkg, states[counter])
-//				counter += 1
-//				if counter >= len(states) {
-//					break
-//				}
-//			}
 
 			read_in = readIn("test_data/new_order_ok.json")
 			message_result = message_commands["new_order"].ProcessMessage(read_in)
 			log.Println("new order ERROR?:", message_result.Error)
+
+			states := taxi_conf.Api.Fake.SendedStates
+			counter := 0
+
+			for pkg := range notif_chan {
+				log.Printf("\n\nEXCEPTED PACKAGE: [%v]\n %#v \nstate: [%v]\n", counter, pkg, states[counter])
+				counter += 1
+			}
 
 		}
 	}

@@ -22,8 +22,7 @@ func FormNotification(whom string, order_id int64, state int, previous_state int
 	var text string
 	switch state {
 	case 2:
-		_time, _ := time.Parse(deliv_time.Format("15:04"), "15:04")
-		text = fmt.Sprintf("%v %v, время подачи %v.", nominated, car_info, _time)
+		text = fmt.Sprintf("%v %v, время подачи %v.", nominated, car_info, deliv_time.Format("15:04"))
 	case 3:
 		text = fmt.Sprintf("%v", car_set_out)
 	case 4:
@@ -103,7 +102,6 @@ func TaxiOrderWatch(taxiContext *TaxiContext, botContext *s.BotContext) {
 	for {
 		api_orders := taxiContext.API.Orders()
 		for _, api_order := range api_orders {
-			log.Print("get ")
 			db_order, err := taxiContext.DataBase.Orders.GetById(api_order.ID, botContext.Name)
 			if err != nil {
 				log.Printf("WATCH some error in retrieve order [%+v]", api_order)
@@ -131,7 +129,7 @@ func TaxiOrderWatch(taxiContext *TaxiContext, botContext *s.BotContext) {
 					prev_state, ok := previous_states[api_order.ID]
 					delivery_time, err := time.Parse("2006-01-02 15:04:05", api_order.DeliveryTime)
 					if err != nil {
-						delivery_time = time.Now()
+						delivery_time = time.Now().Add(5 * time.Minute)
 					}
 
 					if ok {

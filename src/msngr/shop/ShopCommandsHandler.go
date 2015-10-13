@@ -27,7 +27,7 @@ func FormShopCommands(db *d.DbHandlerMixin, config *ShopConfig) *s.BotContext {
 
 	var ShopMessageCommands = map[string]s.MessageCommandProcessor{
 		"information":     ShopInformationProcessor{Info:config.Info},
-		"authorise":       ShopAuthoriseProcessor{DbHandlerMixin: *db},
+		"authorise":       ShopLogInMessageProcessor{DbHandlerMixin: *db},
 		"log_out":         ShopLogOutMessageProcessor{DbHandlerMixin: *db},
 		"orders_state":    ShopOrderStateProcessor{DbHandlerMixin: *db},
 		"support_message": ShopSupportMessageProcessor{},
@@ -149,37 +149,6 @@ func (cp ShopCommandsProcessor) ProcessRequest(in *s.InPkg) *s.RequestResult {
 	return &s.RequestResult{Commands:&commands}
 }
 
-type ShopAuthoriseProcessor struct {
-	d.DbHandlerMixin
-}
-
-func (sap ShopAuthoriseProcessor) ProcessMessage(in *s.InPkg) *s.MessageResult {
-	command := *in.Message.Commands
-	user, password := _get_user_and_password(command[0].Form.Fields)
-	if user == nil || password == nil {
-		return s.ExceptionMessageResult(errors.New("Не могу извлечь логин и (или) пароль."))
-	}
-
-	check, err := sap.Users.CheckUserPassword(user, password)
-	if err != nil && err != mgo.ErrNotFound {
-		return s.ExceptionMessageResult(err)
-	}
-
-	var body string
-	var commands []s.OutCommand
-
-	if *check {
-		sap.Users.SetUserState(&(in.From), d.LOGIN)
-		body = "Добро пожаловать в интернет магазин Desprice Markt!"
-		commands = authorised_commands
-	}else {
-		body = "Не правильные логин или пароль :("
-		commands = not_authorised_commands
-	}
-	return &s.MessageResult{Body:body, Commands:&commands}
-
-}
-
 type ShopOrderStateProcessor struct {
 	d.DbHandlerMixin
 }
@@ -257,6 +226,37 @@ func (ih ShopInformationProcessor) ProcessMessage(in *s.InPkg) *s.MessageResult 
 
 type ShopLogOutMessageProcessor struct {
 	d.DbHandlerMixin
+}
+
+type ShopLogInMessageProcessor struct {
+	d.DbHandlerMixin
+}
+
+func (sap ShopLogInMessageProcessor) ProcessMessage(in *s.InPkg) *s.MessageResult {
+	command := *in.Message.Commands
+	user, password := _get_user_and_password(command[0].Form.Fields)
+	if user == nil || password == nil {
+		return s.ExceptionMessageResult(errors.New("Не могу извлечь логин и (или) пароль."))
+	}
+
+	check, err := sap.Users.CheckUserPassword(user, password)
+	if err != nil && err != mgo.ErrNotFound {
+		return s.ExceptionMessageResult(err)
+	}
+
+	var body string
+	var commands []s.OutCommand
+
+	if *check {
+		sap.Users.SetUserState(&(in.From), d.LOGIN)
+		body = "Добро пожаловать в интернет магазин Desprice Markt!"
+		commands = authorised_commands
+	}else {
+		body = "Не правильные логин или пароль :("
+		commands = not_authorised_commands
+	}
+	return &s.MessageResult{Body:body, Commands:&commands}
+
 }
 
 func (lop ShopLogOutMessageProcessor) ProcessMessage(in *s.InPkg) *s.MessageResult {
