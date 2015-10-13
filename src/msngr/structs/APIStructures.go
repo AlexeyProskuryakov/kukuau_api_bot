@@ -22,10 +22,12 @@ type InForm struct {
 type InField struct {
 	Name string `json:"name"`
 	Type string `json:"type,omitempty"`
-	Data struct {
-			 Value string `json:"value"`
-			 Text  string `json:"text"`
-		 } `json:"data,omitempty"`
+	Data InFieldData `json:"data,omitempty"`
+}
+
+type InFieldData struct {
+	Value string `json:"value"`
+	Text  string `json:"text"`
 }
 type InCommand struct {
 	Title  string `json:"title,omitempty"`

@@ -38,6 +38,19 @@ func GetAPIInstruments(params t.ApiParams) (t.TaxiInterface, t.AddressSupplier, 
 	return nil, nil, errors.New("Not imply name of api")
 }
 
+func InsertTestUser(conf m.Configuration, user, pwd *string) {
+	db := d.NewDbHandler(conf.Database.ConnString, conf.Database.Name)
+	err := db.Users.SetUserPassword(user, pwd)
+	if err != nil {
+		go func() {
+			for err == nil {
+				time.Sleep(1 * time.Second)
+				err = db.Users.SetUserPassword(user, pwd)
+				log.Printf("trying add user for test shops... now we have err:%+v", err)
+			}
+		}()
+	}
+}
 
 func main() {
 	conf := m.ReadConfig()
@@ -89,18 +102,8 @@ func main() {
 
 	}
 
-	db := d.NewDbHandler(conf.Database.ConnString, conf.Database.Name)
-	user, password := "test", "123"
-	err := db.Users.SetUserPassword(&user, &password)
-	if err != nil {
-		go func() {
-			for err == nil {
-				time.Sleep(1 * time.Second)
-				err = db.Users.SetUserPassword(&user, &password)
-				log.Printf("trying add user for test shops... now we have err:%+v", err)
-			}
-		}()
-	}
+	user, pwd := "test", "test"
+	InsertTestUser(conf, &user, &pwd)
 
 	server_address := fmt.Sprintf(":%v", conf.Main.Port)
 	log.Printf("\nStart listen and serving at: %v\n", server_address)

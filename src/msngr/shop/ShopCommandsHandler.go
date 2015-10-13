@@ -11,6 +11,7 @@ import (
 	u "msngr/utils"
 	"errors"
 	"gopkg.in/mgo.v2"
+	"log"
 )
 
 type ShopConfig struct {
@@ -41,7 +42,7 @@ func FormShopCommands(db *d.DbHandlerMixin, config *ShopConfig) *s.BotContext {
 	return &context
 }
 
-var authorised_commands = []s.OutCommand{
+var AUTH_COMMANDS = []s.OutCommand{
 	s.OutCommand{
 		Title:    "Мои заказы",
 		Action:   "orders_state",
@@ -78,7 +79,7 @@ var authorised_commands = []s.OutCommand{
 		Position: 3,
 	},
 }
-var not_authorised_commands = []s.OutCommand{
+var NOT_AUTH_COMANDS = []s.OutCommand{
 	s.OutCommand{
 		Title:    "Авторизоваться",
 		Action:   "authorise",
@@ -130,21 +131,21 @@ func (cp ShopCommandsProcessor) ProcessRequest(in *s.InPkg) *s.RequestResult {
 	if err == mgo.ErrNotFound {
 		user_data := in.UserData
 		if user_data == nil {
-			return s.ExceptionRequestResult(errors.New("not user data !"), &not_authorised_commands)
+			return s.ExceptionRequestResult(errors.New("not user data !"), &NOT_AUTH_COMANDS)
 		}
 		phone := in.UserData.Phone
 		if phone == "" {
-			return s.ExceptionRequestResult(errors.New("not user data phone!"), &not_authorised_commands)
+			return s.ExceptionRequestResult(errors.New("not user data phone!"), &NOT_AUTH_COMANDS)
 		}
 		cp.Users.AddUser(&(in.From), &phone)
-	} else {
-		return s.ExceptionRequestResult(err, &not_authorised_commands)
+	} else if err != nil {
+		return s.ExceptionRequestResult(err, &NOT_AUTH_COMANDS)
 	}
 	commands := []s.OutCommand{}
 	if *user_state == d.LOGIN {
-		commands = authorised_commands
+		commands = AUTH_COMMANDS
 	} else {
-		commands = not_authorised_commands
+		commands = NOT_AUTH_COMANDS
 	}
 	return &s.RequestResult{Commands:&commands}
 }
@@ -175,10 +176,10 @@ func (osp ShopOrderStateProcessor) ProcessMessage(in *s.InPkg) *s.MessageResult 
 	var commands []s.OutCommand
 	if *user_state == d.LOGIN {
 		result = fmt.Sprintf("Ваш заказ #%v (%v) %v.", rand.Int31n(10000), __choiceString(order_products[:]), __choiceString(order_states[:]))
-		commands = authorised_commands
+		commands = AUTH_COMMANDS
 	} else {
 		result = "Авторизуйтесь пожалуйста!"
-		commands = not_authorised_commands
+		commands = NOT_AUTH_COMANDS
 	}
 	return &s.MessageResult{Body:result, Commands:&commands}
 }
@@ -212,13 +213,13 @@ func (sm ShopSupportMessageProcessor) ProcessMessage(in *s.InPkg) *s.MessageResu
 	return &s.MessageResult{Body:body}
 }
 
-type ShopInformationProcessor struct{
+type ShopInformationProcessor struct {
 	Info string
 }
 
 func (ih ShopInformationProcessor) ProcessMessage(in *s.InPkg) *s.MessageResult {
 	info := ih.Info
-	if info == ""{
+	if info == "" {
 		info = "Desprice Markt - интернет-магазин бытовой техники и электроники в Новосибирске и других городах России. Каталог товаров мировых брендов."
 	}
 	return &s.MessageResult{Body:info}
@@ -250,10 +251,10 @@ func (sap ShopLogInMessageProcessor) ProcessMessage(in *s.InPkg) *s.MessageResul
 	if *check {
 		sap.Users.SetUserState(&(in.From), d.LOGIN)
 		body = "Добро пожаловать в интернет магазин Desprice Markt!"
-		commands = authorised_commands
+		commands = AUTH_COMMANDS
 	}else {
 		body = "Не правильные логин или пароль :("
-		commands = not_authorised_commands
+		commands = NOT_AUTH_COMANDS
 	}
 	return &s.MessageResult{Body:body, Commands:&commands}
 
@@ -264,12 +265,12 @@ func (lop ShopLogOutMessageProcessor) ProcessMessage(in *s.InPkg) *s.MessageResu
 	if err != nil {
 		return s.ExceptionMessageResult(err)
 	}
-	return &s.MessageResult{Body:"До свидания! ", Commands:&not_authorised_commands}
+	return &s.MessageResult{Body:"До свидания! ", Commands:&NOT_AUTH_COMANDS}
 }
 
 type ShopBalanceProcessor struct {
 }
 
 func (sbp ShopBalanceProcessor) ProcessMessage(in *s.InPkg) *s.MessageResult {
-	return &s.MessageResult{Body: fmt.Sprintf("Ваш баланс на %v составляет %v бонусных баллов.", time.Now().Format("01.02.2006"), rand.Int31n(1000) + 10), Commands: &authorised_commands}
+	return &s.MessageResult{Body: fmt.Sprintf("Ваш баланс на %v составляет %v бонусных баллов.", time.Now().Format("01.02.2006"), rand.Int31n(1000) + 10), Commands: &AUTH_COMMANDS}
 }

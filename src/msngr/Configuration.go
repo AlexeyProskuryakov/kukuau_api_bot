@@ -17,7 +17,7 @@ type shop_config struct {
 	Name string `json:"name"`
 }
 
-type config struct {
+type Configuration struct {
 	Main     struct {
 				 Port         int    `json:"port"`
 				 CallbackAddr string `json:"callback_addr"`
@@ -35,14 +35,14 @@ type config struct {
 }
 
 
-func ReadConfig() config {
+func ReadConfig() Configuration {
 	cdata, err := ioutil.ReadFile("config.json")
 	if err != nil {
 		log.Printf("error reading config")
 		os.Exit(-1)
 	}
 	log.Println("config data: ", string(cdata))
-	conf := config{}
+	conf := Configuration{}
 	err = json.Unmarshal(cdata, &conf)
 	if err != nil {
 		log.Printf("error decoding configuration file", err)
