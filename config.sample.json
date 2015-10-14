@@ -2,6 +2,7 @@
   "main": {
     "port": 9191,
     "callback_addr": "http://localhost:9876/notify",
+    "console_addr":":9595",
     "log_file": "",
     "database": {
       "name": "bot",

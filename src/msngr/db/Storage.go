@@ -216,7 +216,7 @@ func (oh *orderHandler) GetById(order_id int64, source string) (*OrderWrapper, e
 	}
 
 	result := OrderWrapper{}
-	err := oh.collection.Find(bson.M{"order_id": order_id, "source":source}).One(&result)
+	err := oh.collection.Find(bson.M{"order_id": order_id, "source": source}).One(&result)
 	if err != nil && err != mgo.ErrNotFound {
 		return nil, err
 	}
@@ -259,7 +259,6 @@ func (oh *orderHandler) AddOrder(order_id int64, whom string, source string) err
 	if oh.collection == nil {
 		return errors.New("БД не доступна")
 	}
-
 	wrapper := OrderWrapper{
 		When:       time.Now(),
 		Whom:       whom,
@@ -282,8 +281,22 @@ func (oh *orderHandler) AddOrderObject(order *OrderWrapper) error {
 	return err
 }
 
-func (oh *orderHandler) GetByOwner(whom, source string) (*OrderWrapper, error) {
+func (oh *orderHandler) Count() int {
+	result, _ := oh.collection.Count()
+	return result
+}
 
+func (oh *orderHandler) GetBy(req bson.M) ([]OrderWrapper, error) {
+	if oh.collection == nil {
+		return nil, errors.New("БД не доступна")
+	}
+
+	result := []OrderWrapper{}
+	err := oh.collection.Find(req).Sort("-when").All(&result)
+	return result, err
+}
+
+func (oh *orderHandler) GetByOwner(whom, source string) (*OrderWrapper, error) {
 	if oh.collection == nil {
 		return nil, errors.New("БД не доступна")
 	}
@@ -396,6 +409,19 @@ func (uh *userHandler) GetUserById(user_id string) (*UserWrapper, error) {
 	err := uh.collection.Find(bson.M{"user_id": user_id}).One(&result)
 	return &result, err
 }
+func (uh *userHandler) Count() int {
+	r, _ := uh.collection.Count()
+	return r
+}
+
+func (uh *userHandler) GetBy(req bson.M) (*[]UserWrapper, error) {
+	if uh.collection == nil {
+		return nil, errors.New("БД не доступна")
+	}
+	result := []UserWrapper{}
+	err := uh.collection.Find(req).Sort("last_update").All(&result)
+	return &result, err
+}
 
 
 func (eh *errorHandler) StoreError(username, error string) error {
@@ -406,4 +432,14 @@ func (eh *errorHandler) StoreError(username, error string) error {
 	result := ErrorWrapper{Username:username, Error:error, Time:time.Now()}
 	err := eh.collection.Insert(&result)
 	return err
+}
+
+func (eh *errorHandler) GetBy(req bson.M) (*[]ErrorWrapper, error) {
+	if eh.collection == nil {
+		return nil, errors.New("БД не доступна")
+	}
+
+	result := []ErrorWrapper{}
+	err := eh.collection.Find(req).Sort("time").All(&result)
+	return &result, err
 }

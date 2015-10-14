@@ -97,8 +97,10 @@ type TaxiContext struct {
 	Notifier *n.Notifier
 }
 
+var PreviousStates = make(map[int64]int)
+
 func TaxiOrderWatch(taxiContext *TaxiContext, botContext *s.BotContext) {
-	previous_states := map[int64]int{}
+
 	for {
 		api_orders := taxiContext.API.Orders()
 		for _, api_order := range api_orders {
@@ -126,7 +128,7 @@ func TaxiOrderWatch(taxiContext *TaxiContext, botContext *s.BotContext) {
 
 				if car_info != nil {
 					var notification_data *s.OutPkg
-					prev_state, ok := previous_states[api_order.ID]
+					prev_state, ok := PreviousStates[api_order.ID]
 					delivery_time, err := time.Parse("2006-01-02 15:04:05", api_order.DeliveryTime)
 					if err != nil {
 						delivery_time = time.Now().Add(5 * time.Minute)
@@ -143,7 +145,7 @@ func TaxiOrderWatch(taxiContext *TaxiContext, botContext *s.BotContext) {
 					}
 				}
 			}
-			previous_states[api_order.ID] = api_order.State
+			PreviousStates[api_order.ID] = api_order.State
 		}
 		time.Sleep(1 * time.Second)
 	}

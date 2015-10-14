@@ -20,6 +20,7 @@ type shop_config struct {
 type Configuration struct {
 	Main     struct {
 				 Port         int    `json:"port"`
+				 ConsoleAddr  string `json:"console_addr"`
 				 CallbackAddr string `json:"callback_addr"`
 				 LoggingFile  string `json:"log_file"`
 				 GoogleKey    string `json:"google_key"`

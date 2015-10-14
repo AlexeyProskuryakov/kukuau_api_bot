@@ -1,0 +1,38 @@
+<h1>
+    Taxi
+</h1>
+<h3>All orders count: {{.info.TaxiOrdersCount}}</h3>
+
+<h3> Sended to users states:</h3>
+<table>
+    <thead>
+    <tr>
+        <th>
+            Username
+        </th>
+        <th>
+            Order state
+        </th>
+    </tr>
+    </thead>
+    <tbody>
+    {{range $user_name, $status := .info.TaxiUserOrders}}
+    <tr>
+        <th>
+            {{$user_name}}
+        </th>
+        <th>
+            {{$status}}
+        </th>
+    </tr>
+    {{end}}
+    </tbody>
+</table>
+
+<h1>
+    Shops
+</h1>
+
+<h3>All shp users count: {{.info.ShopUsersCount}}</h3>
+
+<h3>Logged users: {{.info.ShopLoginUsers}}</h3>
