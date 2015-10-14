@@ -10,6 +10,7 @@ import (
 	d "msngr/db"
 	n "msngr/notify"
 	s "msngr/structs"
+	c "msngr/console"
 	"net/http"
 	"time"
 	"errors"
@@ -112,5 +113,7 @@ func main() {
 		Addr: server_address,
 	}
 
+
+	go c.Run(conf, db)
 	log.Fatal(server.ListenAndServe())
 }
