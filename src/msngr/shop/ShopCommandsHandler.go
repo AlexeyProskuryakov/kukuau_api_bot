@@ -11,7 +11,6 @@ import (
 	u "msngr/utils"
 	"errors"
 	"gopkg.in/mgo.v2"
-	"log"
 )
 
 type ShopConfig struct {
