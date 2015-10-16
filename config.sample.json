@@ -2,6 +2,7 @@
   "main": {
     "port": 9191,
     "callback_addr": "http://localhost:9876/notify",
+    "console_addr": ":9595",
     "log_file": "",
     "database": {
       "name": "bot",
@@ -25,6 +26,22 @@
           "password": "test1",
           "connection_string": "http://109.202.25.248:8080/WebAPITaxi/",
           "host": "109.202.25.248:8080"
+        }
+      }
+    },
+    "master": {
+      "name": "master",
+      "dict_url": "http://localhost:9191/taxi/master/streets",
+      "key": "Kuku demo_taxi_key",
+      "information": {
+        "phone": "123-45-67",
+        "text": "Такси мастер! Самое лучшее такси в академгородке!"
+      },
+      "api": {
+        "name": "master",
+        "data": {
+          "bearer_token": "1234567890",
+          "connection_string": "https://ip:port/common_api/1.0/"
         }
       }
     },

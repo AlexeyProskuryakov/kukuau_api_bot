@@ -17,6 +17,7 @@ type ApiParams struct {
 			 Password          string `json:"password"`
 			 ConnectionsString string `json:"connection_string"`
 			 IdService         int64 `json:"id_service"`
+			BearerToken		string `json:""`
 		 } `json:"data"`
 	Fake struct {
 			 SendedStates []int `json:"sended_states"`
