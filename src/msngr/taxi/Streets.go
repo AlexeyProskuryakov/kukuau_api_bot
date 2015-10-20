@@ -320,13 +320,20 @@ func _to_fast_address(input GoogleResultAddress) FastAddress {
 
 func _get_street_name_shortname(input string) (string, string) {
 	addr_split := strings.Split(input, " ")
-	if len(addr_split) == 2 {
-		if u.InS(addr_split[0], []string{"улица", "проспект", "площадь", "переулок", "шоссе", "магистраль"}) {
-			return addr_split[1], _shorten_street_type(addr_split[0])
+	var street_type, street_name string
+	for _, sn_part := range addr_split {
+		if u.InS(sn_part, []string{"улица", "проспект", "площадь", "переулок", "шоссе", "магистраль"}) {
+			street_type = _shorten_street_type(sn_part)
+		} else {
+			if street_name == "" {
+				street_name += sn_part
+			}else {
+				street_name += " "
+				street_name += sn_part
+			}
 		}
-		return addr_split[0], _shorten_street_type(addr_split[1])
 	}
-	return strings.Join(addr_split, " "), ""
+	return street_name, street_type
 }
 
 func _shorten_street_type(input string) string {
