@@ -136,6 +136,7 @@ type MessageResult struct {
 	Body       string
 	Error      error
 	IsDeferred bool
+	Type		string
 }
 
 type RequestResult struct {

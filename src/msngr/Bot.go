@@ -86,6 +86,7 @@ func FormBotController(context *s.BotContext) controllerHandler {
 				if requestResult.Error != nil {
 					request_error = requestResult.Error
 				}else{
+					//normal our request forming
 					out.Request.Query.Result = *requestResult.Commands
 				}
 			} else {
@@ -107,6 +108,12 @@ func FormBotController(context *s.BotContext) controllerHandler {
 						if messageResult.Error != nil {
 							message_error = messageResult.Error
 						}else{
+							//normal out message forming
+							if messageResult.Type != ""{
+								out.Message.Type = "chat"
+							}else{
+								out.Message.Type = messageResult.Type
+							}
 							out.Message.Body = messageResult.Body
 							out.Message.Commands = messageResult.Commands
 							isDeferred = messageResult.IsDeferred

@@ -6,21 +6,12 @@ import (
 	t "msngr/taxi"
 	m "msngr"
 	d "msngr/db"
-	i "msngr/taxi/infinity"
+	i "msngr/taxi/infinity
 
 	"encoding/json"
 )
 
-func start_serv() string {
-	conf := m.ReadConfig()
-
-	d.DELETE_DB = true
-	if d.DELETE_DB {
-		log.Println("!start at test mode!")
-		conf.Database.Name = conf.Database.Name + "_test"
-	}
-
-
+func start_serv(conf m.Configuration) (string, *t.GoogleAddressHandler) {
 	taxi_conf := conf.Taxis["fake"]
 
 	address_supplier := t.NewGoogleAddressHandler(conf.Main.GoogleKey, taxi_conf.GeoOrbit, i.GetInfinityAddressSupplier(taxi_conf.Api))
@@ -40,12 +31,21 @@ func start_serv() string {
 	log.Printf("start server... send tests to: %v", test_url)
 
 	go server.ListenAndServe()
-	return test_url
+	return test_url, address_supplier
 }
 
 func main() {
 
-	test_url := start_serv()
+	conf := m.ReadConfig()
+
+	d.DELETE_DB = true
+	if d.DELETE_DB {
+		log.Println("!start at test mode!")
+		conf.Database.Name = conf.Database.Name + "_test"
+	}
+
+	test_url, address_supplier := start_serv(conf)
+	taxi_conf := conf.Taxis["fake"]
 
 	last_result := t.DictItem{}
 	//test is next:
@@ -68,13 +68,13 @@ func main() {
 	}
 	log.Printf("LAST RESULT: %#v", last_result)
 
-//	is_here := address_supplier.IsHere(last_result.Key)
-//	log.Print("is here: ", is_here)
-//
-//	external_suppier := i.GetInfinityAddressSupplier(taxi_conf.Api)
-//	address_supplier.ExternalAddressSupplier = external_suppier
-//
-//	street_id, err := address_supplier.GetStreetId(last_result.Key)
-//	log.Printf("address err?: %v\n street_id: %#v", err, street_id)
+	is_here := address_supplier.IsHere(last_result.Key)
+	log.Print("is here: ", is_here)
+
+	external_suppier := i.GetInfinityAddressSupplier(taxi_conf.Api)
+	address_supplier.ExternalAddressSupplier = external_suppier
+
+	street_id, err := address_supplier.GetStreetId(last_result.Key)
+	log.Printf("address err?: %v\n street_id: %#v", err, street_id)
 
 }

@@ -342,7 +342,7 @@ func (nop *TaxiNewOrderProcessor) ProcessMessage(in *s.InPkg) *s.MessageResult {
 			return &s.MessageResult{
 				Body: "Адрес не поддерживается этим такси.",
 				Commands: nop.context.Commands["commands_at_not_created_order"],
-				Error: errors.New("Адрес не поддерживается этим такси."),
+				Type: "chat",
 			}
 		}
 		if err != nil {
@@ -372,7 +372,7 @@ func (nop *TaxiNewOrderProcessor) ProcessMessage(in *s.InPkg) *s.MessageResult {
 			return s.ExceptionMessageResult(err)
 		}
 
-		return &s.MessageResult{Body:text, Commands:nop.context.Commands["commands_at_created_order"]}
+		return &s.MessageResult{Body:text, Commands:nop.context.Commands["commands_at_created_order"], Type:"chat"}
 	}
 	return &s.MessageResult{Body: "Заказ уже создан!", Commands: nop.context.Commands["commands_at_created_order"], Error: errors.New("Заказ уже создан!")}
 }
