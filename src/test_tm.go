@@ -7,5 +7,5 @@ import (
 
 func main() {
 	api := tm.TaxiMasterAPI{}
-	api.
+	api.GetTariffList()
 }

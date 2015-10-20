@@ -12,6 +12,7 @@ import (
 	"time"
 	"io/ioutil"
 	"encoding/json"
+	"errors"
 )
 
 var ErrorsMap = map[int]string{
@@ -27,15 +28,53 @@ var ErrorsMap = map[int]string{
 	10:"Внутренняя ошибка обработки запроса",
 }
 
+const MAX_TRY_COUNT = 5
+
+func doReq(req *http.Request) ([]byte, error) {
+	count := 0
+	for {
+		client := &http.Client{}
+		res, err := client.Do(req)
+		if res == nil || err != nil {
+			log.Println("TM response is: ", res, "; error is:", err, ". I will reconnect and will retrieve data again after 3s.")
+			time.Sleep(3 * time.Second)
+			count += 1
+			if count > MAX_TRY_COUNT {
+				return []byte{}, errors.New(fmt.Sprintf("Max tryings count ended and request not proceed... %#v", req))
+			}
+			continue
+		}
+		defer res.Body.Close()
+		body, err := ioutil.ReadAll(res.Body)
+		return body, err
+	}
+	return []byte{}, errors.New(fmt.Sprintf("Error at do request... %#v", req))
+}
+
+
+
+
 type TaxiMasterAPI struct {
 	ConnString  string
 	BearerToken string
 }
 
-type TMAPIResponse struct{
-	Code int `json:"code"`
+type TMAPIResponse struct {
+	Code        int `json:"code"`
 	Description string `json:"descr"`
-	Data map[string]interface{} `json:"data"`
+	Data        map[string]interface{} `json:"data"`
+}
+
+func (m *TaxiMasterAPI) _createSignature(params map[string]string) string {
+	params_string := ""
+	for k, v := range params {
+		params_string += fmt.Sprintf("%v=%v?", k, v)
+	}
+	params_string += m.BearerToken
+	h := md5.New()
+	io.WriteString(h, params_string)
+	signature := fmt.Sprintf("%x", h.Sum(nil))
+	return signature
 }
 
 func (m *TaxiMasterAPI) _get_request(method string, params map[string]string, security bool) ([]byte, error) {
@@ -44,67 +83,30 @@ func (m *TaxiMasterAPI) _get_request(method string, params map[string]string, se
 		log.Printf("TM gr error in request")
 	}
 	if security {
-		params_string := ""
-		for k, v := range params {
-			params_string += fmt.Sprintf("%v=%v?", k, v)
-		}
-		params_string+=m.BearerToken
-		h := md5.New()
-		io.WriteString(h, params_string)
-		signature := fmt.Sprintf("%x", h.Sum(nil))
+		signature := m._createSignature(params)
 		req.Header.Add("Signature", signature)
 	}
-
 	values := req.URL.Query()
 	for k, v := range params {
 		values.Add(k, v)
 	}
-
 	req.URL.RawQuery = values.Encode()
-
-	client := &http.Client{}
-	res, err := client.Do(req)
-	if res == nil || err != nil {
-		log.Println("TM response is: ", res, "; error is:", err, ". I will reconnect and will retrieve data again after 3s.")
-		time.Sleep(3 * time.Second)
-
-	}
-	defer res.Body.Close()
-	body, err := ioutil.ReadAll(res.Body)
-	return body, err
+	return doReq(req)
 }
 
-func (m *TaxiMasterAPI) _post_request(method string, params map[string]string, security bool) ([]byte, error){
+func (m *TaxiMasterAPI) _post_request(method string, params map[string]string, security bool) ([]byte, error) {
 	req, err := http.NewRequest("POST", m.ConnString + method, nil)
 	if err != nil {
 		log.Printf("TM pr error in request")
 	}
 	if security {
-		params_string := ""
-		for k, v := range params {
-			params_string += fmt.Sprintf("%v=%v?", k, v)
-		}
-		params_string+=m.BearerToken
-		h := md5.New()
-		io.WriteString(h, params_string)
-		signature := fmt.Sprintf("%x", h.Sum(nil))
+		signature := m._createSignature(params)
 		req.Header.Add("Signature", signature)
 	}
-
 	for k, v := range params {
 		req.Form.Add(k, v)
 	}
-
-	client := &http.Client{}
-	res, err := client.Do(req)
-	if res == nil || err != nil {
-		log.Println("TM response is: ", res, "; error is:", err, ". I will reconnect and will retrieve data again after 3s.")
-		time.Sleep(3 * time.Second)
-
-	}
-	defer res.Body.Close()
-	body, err := ioutil.ReadAll(res.Body)
-	return body, err
+	return doReq(req)
 }
 
 func (m *TaxiMasterAPI) Ping() {
@@ -118,21 +120,33 @@ func (m *TaxiMasterAPI) Ping() {
 		log.Println("error at unmarshal ing result")
 	}
 }
-type Tariff struct{
-	Id int
-	Name string
-	IsActive bool
+
+type Tariff struct {
+	Id       int `json:"id"`
+	Name     string `json:"name"`
+	IsActive bool `json:"is_active"`
 }
 
 type TariffWrapper struct {
 	TMAPIResponse
-	Data
+	Data struct {
+			 Tariffs []Tariff `json:"tariffs"`
+		 } `json:"data"`
 }
-func (m *TaxiMasterAPI) GetTariffList() {
-	result, err := m._get_request("get_tarif_list", map[string]string{}, true)
-	if err != nil{
+
+func (m *TaxiMasterAPI) GetTariffList() []Tariff {
+	request_result, err := m._get_request("get_tarif_list", map[string]string{}, true)
+	result_wrapper := TariffWrapper{}
+	if err != nil {
 		log.Println("error at getting tarif list")
+		return result_wrapper.Data.Tariffs
 	}
+	err = json.Unmarshal(request_result, &result_wrapper)
+	if err != nil {
+		log.Println("error at unmarshalling json from tariff list")
+		return result_wrapper.Data.Tariffs
+	}
+	return result_wrapper.Data.Tariffs
 }
 
 func (m *TaxiMasterAPI)NewOrder(order t.NewOrder) t.Answer {
@@ -145,13 +159,13 @@ func (m *TaxiMasterAPI)CalcOrderCost(order t.NewOrder) (int, string) {
 	return 0, ""
 }
 func (m *TaxiMasterAPI)Orders() []t.Order {
-	return []t.Order
+
 }
 func (m *TaxiMasterAPI)Feedback(f t.Feedback) (bool, string) {
 	return false, ""
 }
 func (m *TaxiMasterAPI)GetCarsInfo() []t.CarInfo {
-	return []t.CarInfo
+	return []t.CarInfo{}
 }
 
 func (m *TaxiMasterAPI)AddressesSearch(query string) t.FastAddress {
