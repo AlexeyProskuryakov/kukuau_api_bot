@@ -242,7 +242,7 @@ func StreetsSearchController(w http.ResponseWriter, r *http.Request, i AddressSu
 			if rows == nil {
 				return
 			}
-			log.Printf("was returned some data...")
+			log.Printf("was returned: %v rows", len(*rows))
 			for _, nitem := range *rows {
 				var item DictItem
 
@@ -258,7 +258,11 @@ func StreetsSearchController(w http.ResponseWriter, r *http.Request, i AddressSu
 
 				}
 				item.Key = string(key)
-				item.Title = fmt.Sprintf("%v %v", nitem.Name, nitem.ShortName)
+				if nitem.ShortName != "" {
+					item.Title = fmt.Sprintf("%v %v", nitem.Name, nitem.ShortName)
+				}else {
+					item.Title = nitem.Name
+				}
 				item.SubTitle = fmt.Sprintf("%v", utils.FirstOf(nitem.Place, nitem.District, nitem.City, nitem.Region))
 				results = append(results, item)
 			}
@@ -267,7 +271,6 @@ func StreetsSearchController(w http.ResponseWriter, r *http.Request, i AddressSu
 		if err != nil {
 			log.Printf("SSC: ERROR At unmarshal:%+v", err)
 		}
-
 		fmt.Fprintf(w, "%s", string(ans))
 	}
 }
@@ -350,7 +353,7 @@ func GET(url string, params *map[string]string) (*[]byte, error) {
 	log.Println("GET > \n", url, "\n|", params, "|")
 	req, err := http.NewRequest("GET", url, nil)
 	if err != nil {
-		log.Printf("ERROR! GAS With reqest [%v] ", url)
+		log.Printf("ERROR IN GET FORM REQUEST! [%v]\n", url, err)
 		return nil, err
 	}
 
@@ -365,7 +368,7 @@ func GET(url string, params *map[string]string) (*[]byte, error) {
 	client := &http.Client{}
 	res, err := client.Do(req)
 	if res == nil || err != nil {
-		log.Println("ERROR! GAS response is: ", res, "; error is:", err, ". I will reconnect and will retrieve data again after 3s.")
+		log.Println("ERROR IN GET DO REQUEST!\nRESPONSE: ", res, "\nERROR: ", err)
 		return nil, err
 	}
 	defer res.Body.Close()

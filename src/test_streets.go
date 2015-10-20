@@ -11,8 +11,7 @@ import (
 	"encoding/json"
 )
 
-func main() {
-
+func start_serv() string {
 	conf := m.ReadConfig()
 
 	d.DELETE_DB = true
@@ -37,16 +36,22 @@ func main() {
 	server := &http.Server{
 		Addr: server_address,
 	}
-	test_url := "http://localhost" + server_address + streets_address
-	log.Printf("start server... send tests to: %v?=", test_url)
+	test_url := "http://127.0.0.1" + server_address + streets_address
+	log.Printf("start server... send tests to: %v", test_url)
 
 	go server.ListenAndServe()
+	return test_url
+}
+
+func main() {
+
+	test_url := start_serv()
 
 	last_result := t.DictItem{}
 	//test is next:
-	for _, q := range []string{"лесосе"} {
+	for _, q := range []string{"лесосе", "Остров"} {
 		log.Printf(">>> %v", q)
-		body, err := t.GET(test_url, &map[string]string{"q":"лес"})
+		body, err := t.GET(test_url, &map[string]string{"q":q})
 		if body != nil {
 			log.Printf("<<< %q", string(*body))
 			var results []t.DictItem
@@ -61,14 +66,15 @@ func main() {
 			log.Printf("!!!ERRRR!!! %+v", err)
 		}
 	}
+	log.Printf("LAST RESULT: %#v", last_result)
 
-	is_here := address_supplier.IsHere(last_result.Key)
-	log.Print("is here: ", is_here)
-
-	external_suppier := i.GetInfinityAddressSupplier(taxi_conf.Api)
-	address_supplier.ExternalAddressSupplier = external_suppier
-
-	street_id, err := address_supplier.GetStreetId(last_result.Key)
-	log.Printf("address err?: %v\n street_id: %v", err, street_id.ID)
+//	is_here := address_supplier.IsHere(last_result.Key)
+//	log.Print("is here: ", is_here)
+//
+//	external_suppier := i.GetInfinityAddressSupplier(taxi_conf.Api)
+//	address_supplier.ExternalAddressSupplier = external_suppier
+//
+//	street_id, err := address_supplier.GetStreetId(last_result.Key)
+//	log.Printf("address err?: %v\n street_id: %#v", err, street_id)
 
 }
