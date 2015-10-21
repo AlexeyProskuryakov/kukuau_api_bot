@@ -6,12 +6,11 @@ import (
 	t "msngr/taxi"
 	m "msngr"
 	d "msngr/db"
-	i "msngr/taxi/infinity
-
+	i "msngr/taxi/infinity"
 	"encoding/json"
 )
 
-func start_serv(conf m.Configuration) (string, *t.GoogleAddressHandler) {
+func start_serv(conf m.Configuration, threaded bool) (string, *t.GoogleAddressHandler) {
 	taxi_conf := conf.Taxis["fake"]
 
 	address_supplier := t.NewGoogleAddressHandler(conf.Main.GoogleKey, taxi_conf.GeoOrbit, i.GetInfinityAddressSupplier(taxi_conf.Api))
@@ -27,15 +26,19 @@ func start_serv(conf m.Configuration) (string, *t.GoogleAddressHandler) {
 	server := &http.Server{
 		Addr: server_address,
 	}
-	test_url := "http://127.0.0.1" + server_address + streets_address
+	test_url := "http://localhost" + server_address + streets_address
 	log.Printf("start server... send tests to: %v", test_url)
 
-	go server.ListenAndServe()
+	if threaded {
+		go server.ListenAndServe()
+	} else {
+		server.ListenAndServe()
+	}
 	return test_url, address_supplier
 }
 
-func main() {
 
+func test_serv() {
 	conf := m.ReadConfig()
 
 	d.DELETE_DB = true
@@ -44,12 +47,24 @@ func main() {
 		conf.Database.Name = conf.Database.Name + "_test"
 	}
 
-	test_url, address_supplier := start_serv(conf)
+	start_serv(conf, false)
+}
+
+func test_all() {
+	conf := m.ReadConfig()
+
+	d.DELETE_DB = true
+	if d.DELETE_DB {
+		log.Println("!start at test mode!")
+		conf.Database.Name = conf.Database.Name + "_test"
+	}
+
+	test_url, address_supplier := start_serv(conf, true)
 	taxi_conf := conf.Taxis["fake"]
 
 	last_result := t.DictItem{}
 	//test is next:
-	for _, q := range []string{"лесосе", "Остров"} {
+	for _, q := range []string{"Никола"} {
 		log.Printf(">>> %v", q)
 		body, err := t.GET(test_url, &map[string]string{"q":q})
 		if body != nil {
@@ -77,4 +92,8 @@ func main() {
 	street_id, err := address_supplier.GetStreetId(last_result.Key)
 	log.Printf("address err?: %v\n street_id: %#v", err, street_id)
 
+
+}
+func main() {
+	test_all()
 }

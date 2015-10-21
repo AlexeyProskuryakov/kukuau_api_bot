@@ -98,7 +98,9 @@ func (p *infinity) Login(login, password string) bool {
 
 	client := &http.Client{}
 	req, err := http.NewRequest("GET", p.ConnString + "Login", nil)
-	warnp(err)
+	if err != nil {
+		log.Printf("error at forming request to login, %v", err)
+	}
 	req.Header.Add("ContentType", "text/html;charset=UTF-8")
 
 	values := req.URL.Query()
@@ -110,14 +112,20 @@ func (p *infinity) Login(login, password string) bool {
 
 	//если нет соединения с infinity то выходим
 	if err != nil {
+		log.Printf("error at connection to infinity %v", err)
 		return false
 	}
 
 	defer res.Body.Close()
 	body, err := ioutil.ReadAll(res.Body)
-	warnp(err)
+	if err != nil {
+		log.Printf("error at reading bytes from response, %v", err)
+	}
 	err = json.Unmarshal(body, &p.LoginResponse)
-	warnp(err)
+	if err != nil {
+		log.Printf("error at unmarshalling json:%q \nerror: %v", string(body), err)
+		return false
+	}
 	log.Printf("[login] self: %+q\n", p)
 	if p.LoginResponse.Success {
 		log.Println("[login] JSESSIONID: ", p.LoginResponse.SessionID)
@@ -202,7 +210,9 @@ type InfinityCarsInfo struct {
 
 func (p *infinity) _request(conn_suffix string, url_values map[string]string) []byte {
 	req, err := http.NewRequest("GET", p.ConnString + conn_suffix, nil)
-	warnp(err)
+	if err != nil {
+		log.Printf("error at forming request %v, %#v\n error: %v", conn_suffix, url_values, err)
+	}
 	req.Header.Add("ContentType", "text/html;charset=UTF-8")
 	values := req.URL.Query()
 	for k, v := range url_values {
@@ -214,30 +224,28 @@ func (p *infinity) _request(conn_suffix string, url_values map[string]string) []
 
 	client := &http.Client{}
 	res, err := client.Do(req)
-	if res == nil || err != nil {
+	if res == nil || err != nil || res.Status == "403 Forbidden" {
 		log.Println("INF response is: ", res, "; error is:", err, ". I will reconnect and will retrieve data again after 3s.")
 		time.Sleep(3 * time.Second)
 		p.reconnect()
 		return p._request(conn_suffix, url_values)
 	}
-	if res.Status == "403 Forbidden" {
-		err = errors.New("Ошибка авторизации infinity! (Возможно не установлены cookies)")
-		p.reconnect()
-	}
-	warnp(err)
 	defer res.Body.Close()
 	body, err := ioutil.ReadAll(res.Body)
-	warnp(err)
+	if err != nil {
+		log.Printf("error at reading from response %v", err)
+	}
 	return body
 }
 
 // GetServices возвращает информацию об услугах доступных для заказа (filterField is set to true!)
 func (p *infinity) GetServices() []InfinityService {
 	var tmp []InfinityServices
-
 	body := p._request("GetViewData", map[string]string{"params": "[{\"viewName\":\"Taxi.Services\",\"filterField\":{\"n\":\"AvailableToClients\",\"v\":true}}]"})
 	err := json.Unmarshal(body, &tmp)
-	warnp(err)
+	if err != nil {
+		log.Printf("error in unmarshalling json, %v", err)
+	}
 	return tmp[0].Rows
 }
 

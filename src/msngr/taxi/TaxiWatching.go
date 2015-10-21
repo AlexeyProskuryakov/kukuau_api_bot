@@ -64,6 +64,10 @@ type CarsCache struct {
 
 func _create_cars_map(i TaxiInterface) map[int64]CarInfo {
 	cars_map := make(map[int64]CarInfo)
+	for !i.IsConnected(){
+		log.Printf("Can not create cars cache because taxi api is not response... Will wait 3s")
+		time.Sleep(3 * time.Second)
+	}
 	cars_info := i.GetCarsInfo()
 	for _, info := range cars_info {
 		cars_map[info.ID] = info

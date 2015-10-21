@@ -111,7 +111,7 @@ func (odbh *DbHandlerMixin) reConnect(conn string, dbname string) {
 			break
 		} else {
 			count += count
-			log.Printf("error, will sleep %+v miliseconds", count)
+			log.Printf("error, will sleep %+v", count)
 			time.Sleep(count)
 		}
 	}
