@@ -86,5 +86,8 @@
       "name": "test_shop",
       "key": "Kuku demo_shop_key"
     }
+  },
+  "ru_post":{
+    "url":"http://rupost.info/json"
   }
 }

@@ -7,6 +7,7 @@ import (
 	m "msngr"
 	d "msngr/db"
 	i "msngr/taxi/infinity"
+	u "msngr/utils"
 	"encoding/json"
 )
 
@@ -66,7 +67,7 @@ func test_all() {
 	//test is next:
 	for _, q := range []string{"Никола"} {
 		log.Printf(">>> %v", q)
-		body, err := t.GET(test_url, &map[string]string{"q":q})
+		body, err := u.GET(test_url, &map[string]string{"q":q})
 		if body != nil {
 			log.Printf("<<< %q", string(*body))
 			var results []t.DictItem
@@ -91,7 +92,6 @@ func test_all() {
 
 	street_id, err := address_supplier.GetStreetId(last_result.Key)
 	log.Printf("address err?: %v\n street_id: %#v", err, street_id)
-
 
 }
 func main() {

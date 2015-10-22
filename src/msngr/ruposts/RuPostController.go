@@ -1,0 +1,105 @@
+package ruposts
+
+
+import (
+	s "msngr/structs"
+	"log"
+	"text/template"
+	"bufio"
+	"bytes"
+)
+var req = "<последние 14 цифр>"
+var form_for_tracking = &s.OutForm{
+	Title: "Форма запроса информации о посылке",
+	Type:  "form",
+	Name:  "call_taxi",
+	Text:  "Номер отправления: ?(code)",
+	Fields: []s.OutField{
+		s.OutField{
+			Name: "code",
+			Type: "number",
+			Attributes: s.FieldAttribute{
+				Label:    "<последние 14 цифр>",
+				Required: true,
+				EmptyText: &req,
+			},
+		},
+	},
+}
+
+var out_g_commands = &[]s.OutCommand{
+	s.OutCommand{
+		Title:    "Поиск посылок по почтовому идентификатору",
+		Action:   "tracking",
+		Position: 0,
+		Repeated: true,
+		Form:     form_for_tracking,
+	},
+}
+
+type RuPostCommandsProcessor struct {
+
+}
+/*
+info	Объект	Содержит поля:
+code - номер идентификатора
+name - наименование отправления
+destination - адрес назначения: id, county, index, adress
+weight - вес отправления в граммах
+category - общие категории отправления: info, rank, mark, type
+weight - финансовые категории отправления: payment, value, weight, insurance, air, rate
+latest - информация о последней операции
+operations	Объект	Содержит поля:
+date - дата в формате "день месяц год, часы минуты"
+dateiso - дата в формате ISO 8601
+timestamp - дата в формате Unix Timestamp
+adress - адрес регистрации: index, description
+operation - наименование операции
+attr - описание операции
+ */
+const LETTER = `Посылка № {{.Info.Code}} {{.Info.Name}} в {{.Info.Destinaiton}}\n
+весом {{.Info.Weight}} гр. \n
+Имела следующие операции: {{.Operations}}
+`
+var LETTER_TEMPLATE = template.Must(template.New("post_leter").Parse(LETTER))
+
+func (rpcp *RuPostCommandsProcessor)ProcessRequest(in *s.InPkg) *s.RequestResult {
+	result := s.RequestResult{Commands:out_g_commands}
+	return &result
+}
+
+type RuPostTrackingProcessor struct {
+	Url string
+
+}
+
+func (rptp *RuPostTrackingProcessor) ProcessMessage(in *s.InPkg) *s.MessageResult {
+	commands_ptr := in.Message.Commands
+	if commands_ptr != nil {
+		commands := *commands_ptr
+		for _, command := range commands {
+			if command.Action = "tracking" {
+				for _, field := range command.Form.Fields {
+					if field.Name == "code" {
+						code := field.Data.Value
+						result, err := Load(code, rptp.Url)
+						if err != nil {
+							return s.ExceptionMessageResult(err)
+						}
+
+						wrtr := bufio.NewWriter(bytes.NewBufferString(""))
+						err = LETTER_TEMPLATE.ExecuteTemplate(wrtr,"post_letter", result)
+						if err != nil{
+							log.Printf("err in execut templatE:%v", err)
+						}
+						text := ""
+						wrtr.WriteString(text)
+						mr := s.MessageResult{Commands:commands, Body:text}
+
+					}
+				}
+			}
+		}
+	}
+	return nil
+}

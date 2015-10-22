@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"encoding/json"
 	"msngr/utils"
-	"io/ioutil"
 	"math"
 	"errors"
 	s "msngr/taxi/set"
@@ -95,7 +94,7 @@ func NewGoogleAddressHandler(key string, orbit TaxiGeoOrbit, external AddressSup
 }
 
 func (ah *GoogleAddressHandler) GetDetailPlace(place_id string) (*GoogleDetailPlaceResult, error) {
-	from_info, err := GET(GOOGLE_API_URL + "/place/details/json", &map[string]string{
+	from_info, err := u.GET(GOOGLE_API_URL + "/place/details/json", &map[string]string{
 		"placeid":place_id,
 		"key":ah.key,
 		"language":"ru",
@@ -204,7 +203,7 @@ func (ah *GoogleAddressHandler) AddressesSearch(q string) FastAddress {
 		"input": q,
 		"key":ah.key,
 	}
-	body, err := GET(url, &params)
+	body, err := u.GET(url, &params)
 	err = json.Unmarshal(*body, &address_result)
 	if err != nil {
 		log.Printf("ERROR! GAS unmarshal error [%+v]", string(*body))
@@ -349,33 +348,6 @@ func _shorten_street_type(input string) string {
 	return string(runes_array)
 }
 
-func GET(url string, params *map[string]string) (*[]byte, error) {
-	log.Println("GET > \n", url, "\n|", params, "|")
-	req, err := http.NewRequest("GET", url, nil)
-	if err != nil {
-		log.Printf("ERROR IN GET FORM REQUEST! [%v]\n", url, err)
-		return nil, err
-	}
-
-	if params != nil {
-		values := req.URL.Query()
-		for k, v := range *params {
-			values.Add(k, v)
-		}
-		req.URL.RawQuery = values.Encode()
-	}
-
-	client := &http.Client{}
-	res, err := client.Do(req)
-	if res == nil || err != nil {
-		log.Println("ERROR IN GET DO REQUEST!\nRESPONSE: ", res, "\nERROR: ", err)
-		return nil, err
-	}
-	defer res.Body.Close()
-	body, err := ioutil.ReadAll(res.Body)
-	log.Printf("GET < \n%v\n", string(body), )
-	return &body, err
-}
 
 type DictItem struct {
 	Key      string `json:"key"`

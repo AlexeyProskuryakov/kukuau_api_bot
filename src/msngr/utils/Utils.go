@@ -10,6 +10,8 @@ import (
 
 	"os"
 	"log"
+	"net/http"
+	"io/ioutil"
 )
 
 
@@ -99,5 +101,33 @@ func SaveToFile(what, fn string) {
 	if _, err = f.WriteString(what); err != nil {
 		log.Printf("ERROR when save to file in write to file %v [%v]", fn, err)
 	}
+}
+
+func GET(url string, params *map[string]string) (*[]byte, error) {
+	log.Println("GET > \n", url, "\n|", params, "|")
+	req, err := http.NewRequest("GET", url, nil)
+	if err != nil {
+		log.Printf("ERROR IN GET FORM REQUEST! [%v]\n", url, err)
+		return nil, err
+	}
+
+	if params != nil {
+		values := req.URL.Query()
+		for k, v := range *params {
+			values.Add(k, v)
+		}
+		req.URL.RawQuery = values.Encode()
+	}
+
+	client := &http.Client{}
+	res, err := client.Do(req)
+	if res == nil || err != nil {
+		log.Println("ERROR IN GET DO REQUEST!\nRESPONSE: ", res, "\nERROR: ", err)
+		return nil, err
+	}
+	defer res.Body.Close()
+	body, err := ioutil.ReadAll(res.Body)
+	log.Printf("GET < \n%v\n", string(body), )
+	return &body, err
 }
 
