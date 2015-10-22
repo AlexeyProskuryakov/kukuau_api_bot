@@ -186,15 +186,17 @@ func (smp *TaxiSupportMessageProcessor) ProcessMessage(in *s.InPkg) *s.MessageRe
 
 func form_commands_for_current_order(order_wrapper *d.OrderWrapper, commands map[string]*[]s.OutCommand) *[]s.OutCommand {
 	if order_wrapper != nil {
-		if order_wrapper.OrderState == ORDER_PAYED && time.Now().Sub(order_wrapper.When) < time.Hour && order_wrapper.Feedback == "" {
+		//if time and not fedb and state is end of driver
+		if time.Now().Sub(order_wrapper.When) < time.Hour && order_wrapper.Feedback == "" &&
+			order_wrapper.OrderState >= ORDER_PAYED {
 			return commands["commands_for_order_feedback"]
-		} else if u.In(order_wrapper.OrderState, []int{7, 8, 9, 13, 15}) {
-			return commands["commands_at_not_created_order"]
 		}
-		return commands["commands_at_created_order"]
-	} else {
-		return commands["commands_at_not_created_order"]
+		//if order state less than order payed in StatusesMap
+		if order_wrapper.OrderState < ORDER_PAYED {
+			return commands["commands_at_created_order"]
+		}
 	}
+	return commands["commands_at_not_created_order"]
 }
 
 func FormCommands(username string, db d.DbHandlerMixin, context *s.BotContext) (*[]s.OutCommand, error) {

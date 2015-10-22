@@ -125,10 +125,18 @@ func test_taxi() {
 			states := taxi_conf.Api.Fake.SendedStates
 			counter := 0
 
+
 			for pkg := range notif_chan {
 				log.Printf("\n\nEXCEPTED PACKAGE: [%v]\n %#v \nstate: [%v]\n", counter, pkg, states[counter])
+				if counter == 2 { //because must be
+					break
+				}
 				counter += 1
+
 			}
+			whom := read_in.From
+
+			db.Orders.SetFeedback(whom)
 
 		}
 	}

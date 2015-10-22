@@ -18,9 +18,10 @@ const (
 
 )
 
-func FormNotification(whom string, order_id int64, state int, previous_state int, car_info CarInfo, deliv_time time.Time) *s.OutPkg {
+func FormNotification(ow *d.OrderWrapper, previous_state int, car_info CarInfo, deliv_time time.Time) *s.OutPkg {
 	var text string
-	switch state {
+
+	switch ow.OrderState {
 	case 2:
 		text = fmt.Sprintf("%v %v, время подачи %v.", nominated, car_info, deliv_time.Format("15:04"))
 	case 3:
@@ -51,7 +52,7 @@ func FormNotification(whom string, order_id int64, state int, previous_state int
 	}
 
 	if text != "" {
-		out := s.OutPkg{To: whom, Message: &s.OutMessage{ID: u.GenId(), Type: "chat", Body: text}}
+		out := s.OutPkg{To: ow.Whom, Message: &s.OutMessage{ID: u.GenId(), Type: "chat", Body: text}}
 		return &out
 	}
 	return nil
@@ -64,8 +65,8 @@ type CarsCache struct {
 
 func _create_cars_map(i TaxiInterface) map[int64]CarInfo {
 	cars_map := make(map[int64]CarInfo)
-	for !i.IsConnected(){
-		log.Printf("Can not create cars cache because taxi api is not response... Will wait 3s")
+	for !i.IsConnected() {
+		log.Printf("Can not create cars cache because taxi api is not response")
 		time.Sleep(3 * time.Second)
 	}
 	cars_info := i.GetCarsInfo()
@@ -115,13 +116,13 @@ func TaxiOrderWatch(taxiContext *TaxiContext, botContext *s.BotContext) {
 				log.Printf("WATCH order [%+v] is not present in system :(\n", api_order)
 				continue
 			}
-			if db_order.OrderState == ORDER_CANCELED {
-				continue
-			}
 			if api_order.State != db_order.OrderState {
 				log.Printf("WATCH state of: %+v is updated (api: %v != db: %v)", api_order.ID, api_order.State, db_order.OrderState)
 				order_data := api_order.ToOrderData()
 				err := taxiContext.DataBase.Orders.SetState(api_order.ID, botContext.Name, api_order.State, &order_data)
+				db_order.OrderState = api_order.State
+				db_order.OrderId = api_order.ID
+
 				if err != nil {
 					log.Printf("WATCH for order %+v can not update status %+v", api_order.ID, api_order.State)
 					continue
@@ -137,13 +138,14 @@ func TaxiOrderWatch(taxiContext *TaxiContext, botContext *s.BotContext) {
 					}
 
 					if ok {
-						notification_data = FormNotification(db_order.Whom, api_order.ID, api_order.State, prev_state, *car_info, delivery_time)
+						notification_data = FormNotification(db_order, prev_state, *car_info, delivery_time)
 					} else {
-						notification_data = FormNotification(db_order.Whom, api_order.ID, api_order.State, -1, *car_info, delivery_time)
+						notification_data = FormNotification(db_order, -1, *car_info, delivery_time)
 					}
 					if notification_data != nil {
 						notification_data.Message.Commands = form_commands_for_current_order(db_order, botContext.Commands)
 						taxiContext.Notifier.Notify(*notification_data)
+						log.Printf("notification data not nil! will return commands:\n %#v \n and notify that: \n %#v", notification_data.Message.Commands, *notification_data)
 					}
 				}
 			}
