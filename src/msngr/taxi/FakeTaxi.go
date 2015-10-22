@@ -15,7 +15,7 @@ var fakeInstance *FakeTaxiAPI
 
 func GetFakeInfinityAPI(params ApiParams) TaxiInterface {
 	if fakeInstance == nil {
-		log.Print("params:::",params.Fake)
+		log.Printf("Params fake:%#v",params.Fake)
 		fakeInstance = &FakeTaxiAPI{SleepTime:params.Fake.SleepTime, SendedStates:params.Fake.SendedStates}
 	}
 	return fakeInstance

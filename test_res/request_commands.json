@@ -1,0 +1,7 @@
+{
+  "rquest":{"id":"12345", "type":"get"},
+  "from": "TEST",
+  "userdata": {
+    "phone": "TESTPHONE"
+  }
+}

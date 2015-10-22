@@ -13,7 +13,7 @@ import (
 	"net/http"
 	"time"
 	"errors"
-	"flag"
+//	"flag"
 )
 
 func startAfter(check s.CheckFunc, what func()) {
@@ -53,16 +53,16 @@ func InsertTestUser(db *d.DbHandlerMixin, user, pwd *string) {
 
 func main() {
 	conf := m.ReadConfig()
-	var test = flag.Bool("test", false, "go in test use?")
-	flag.Parse()
-
-	d.DELETE_DB = *test
-	log.Printf("%+v %+v", *test, d.DELETE_DB)
-	if d.DELETE_DB {
-		log.Println("!start at test mode!")
-		conf.Database.Name = conf.Database.Name + "_test"
-	}
-
+//	var test = flag.Bool("test", false, "go in test use?")
+//	flag.Parse()
+//
+//	d.DELETE_DB = *test
+//	log.Printf("%+v %+v", *test, d.DELETE_DB)
+//	if d.DELETE_DB {
+//		log.Println("!start at test mode!")
+//		conf.Database.Name = conf.Database.Name + "_test"
+//	}
+	log.Printf("hw!")
 	db := d.NewDbHandler(conf.Database.ConnString, conf.Database.Name)
 
 	for _, taxi_conf := range conf.Taxis {

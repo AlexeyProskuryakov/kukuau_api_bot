@@ -52,12 +52,11 @@ func ReadConfig() Configuration {
 	if conf.Main.LoggingFile != "" {
 		f, err := os.OpenFile("demo_bot.log", os.O_RDWR | os.O_CREATE | os.O_TRUNC, 0666)
 		if err != nil {
-			log.Fatalf("error opening file: %v", err)
+			log.Fatalf("error opening log file: %v", err)
 		}
-		defer f.Close()
 
 		log.SetOutput(f)
-		log.Println("This is a test log entry")
+		log.Println("Logging file is setted here...")
 	}
 
 	return conf
