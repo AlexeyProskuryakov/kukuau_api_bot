@@ -27,6 +27,7 @@ func readIn(in_jsoned string) *s.InPkg {
 	}
 	return &in
 }
+
 func serve_notifications(out chan s.OutPkg) {
 	addr := ":9876"
 
@@ -128,15 +129,30 @@ func test_taxi() {
 
 			for pkg := range notif_chan {
 				log.Printf("\n\nEXCEPTED PACKAGE: [%v]\n %#v \nstate: [%v]\n", counter, pkg, states[counter])
-				if counter == 2 { //because must be
+				counter += 1
+				if counter == 3 { //because must be it!
 					break
 				}
-				counter += 1
-
 			}
-			whom := read_in.From
 
-			db.Orders.SetFeedback(whom)
+			in = s.InPkg{From:"TEST", UserData:&s.InUserData{Phone:"TEST123"}, Request:&s.InRequest{ID:"1234", Type:"get"}}
+			in.Request.Query.Action = "COMMANDS"
+
+			request_result1 := request_commands["commands"].ProcessRequest(&in)
+			log.Println("BEFORE FDBCK commands: ERROR?: ", request_result1.Error, "commands: \n", request_result1.Commands)
+
+			order_of_owner, err := db.Orders.GetByOwner(read_in.From, "fake")
+			log.Printf("order of last err:%v order: %v", err, order_of_owner)
+			whom := read_in.From
+			db.Orders.SetFeedback(whom, order_of_owner.OrderState, "GOOD TEST", "fake")
+
+
+			in = s.InPkg{From:"TEST", UserData:&s.InUserData{Phone:"TESTPHONE"}, Request:&s.InRequest{ID:"1234", Type:"get"}}
+			in.Request.Query.Action = "COMMANDS"
+
+			request_result2 := request_commands["commands"].ProcessRequest(&in)
+			log.Println("AFTERcommands: ERROR?: ", request_result2.Error, "commands: \n", request_result2.Commands)
+
 
 		}
 	}
@@ -167,6 +183,6 @@ func test_shops() {
 }
 func main() {
 	test_taxi()
-//	test_shops()
+	//	test_shops()
 }
 

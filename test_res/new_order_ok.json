@@ -50,8 +50,8 @@
     "type": "chat",
     "id": "T6rqU-93"
   },
-  "from": "113c32ee9f65586882284425376e5d9d",
+  "from": "TEST",
   "userdata": {
-    "phone": "79231243359"
+    "phone": "TESTPHONE"
   }
 }
