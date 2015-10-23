@@ -26,7 +26,7 @@ REQUEST_DENIED – означает, что запрос отклонен, ка�
 INVALID_REQUEST – как правило, отсутствует обязательный параметр запроса (location или radius).
 */
 
-var cc_reg = regexp.MustCompilePOSIX("(ул(ица|\\.)?|прос(\\.|пект)?|пер(\\.|еулок)?|г(ород|\\.|(ор(\\.)?))?|обл(асть|\\.))?")
+var cc_reg = regexp.MustCompilePOSIX("(ул(ица|\\.)?|прос(\\.|пект)?|пер(\\.|еулок)?|г(ород|\\.|ор\\.)|обл(асть|\\.))?")
 
 const GOOGLE_API_URL = "https://maps.googleapis.com/maps/api"
 
@@ -185,14 +185,12 @@ func (ah *GoogleAddressHandler) GetStreetId(place_id string) (*FastAddressRow, e
 }
 
 
-
-
 func (ah *GoogleAddressHandler) AddressesSearch(q string) FastAddress {
 	rows := []FastAddressRow{}
 	result := FastAddress{Rows:&rows}
 	suff := "/place/autocomplete/json"
 	url := GOOGLE_API_URL + suff
-
+	log.Printf(fmt.Sprintf("location= %v,%v", ah.orbit.Lat, ah.orbit.Lon))
 	address_result := GoogleResultAddress{}
 	params := map[string]string{
 		"components": "country:ru",

@@ -35,7 +35,6 @@ func FormShopCommands(db *d.DbHandlerMixin, config *ShopConfig) *s.BotContext {
 	}
 
 	context := s.BotContext{}
-	context.Check = func() (string, bool) { return "", true }
 	context.Message_commands = ShopMessageCommands
 	context.Request_commands = ShopRequestCommands
 	return &context

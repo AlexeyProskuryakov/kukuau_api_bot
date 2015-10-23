@@ -20,14 +20,19 @@ func FormTaxiBotContext(im *ExternalApiMixin, db_handler *d.DbHandlerMixin, tc T
 
 	context := s.BotContext{}
 
-	context.Check = func() (string, bool) {
-		var ok bool
-		var detail string
+	context.Check = func() (detail string, ok bool) {
 		ok = im.API.IsConnected()
 		if !ok {
-			detail = "Ошибка в подключении к сервису"
+			detail = "Ошибка в подключении к сервису попробуйте позже"
 		}
-		return detail, ok
+		ok = ok && db_handler.IsConnected()
+		if !ok {
+			detail = "Ошибка в подключении к БД попробуйте позже"
+		}
+		if ok {
+			detail = "All ok!"
+		}
+		return
 	}
 
 	context.Commands = GetCommands(tc.DictUrl)
@@ -188,7 +193,7 @@ func form_commands_for_current_order(order_wrapper *d.OrderWrapper, commands map
 	if order_wrapper != nil {
 		//if time and not fedb and state is end of driver
 		if time.Now().Sub(order_wrapper.When) < time.Hour && order_wrapper.Feedback == "" &&
-			order_wrapper.OrderState >= ORDER_PAYED {
+		order_wrapper.OrderState >= ORDER_PAYED {
 			return commands["commands_for_order_feedback"]
 		}
 		//if order state less than order payed in StatusesMap

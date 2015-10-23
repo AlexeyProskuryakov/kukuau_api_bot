@@ -32,6 +32,10 @@ type Configuration struct {
 
 	Taxis    map[string]t.TaxiConfig `json:"taxis"`
 	Shops    map[string]s.ShopConfig `json:"shops"`
+	RuPost   struct {
+				 ExternalUrl string `json:"external_url"`
+				 WorkUrl     string `json:"work_url"`
+			 } `json:"ru_post"`
 }
 
 

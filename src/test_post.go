@@ -6,5 +6,5 @@ import (
 
 
 func test_rupost(){
-	//p.Load("")
+	p.Load("")
 }

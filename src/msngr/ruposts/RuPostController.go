@@ -3,9 +3,9 @@ package ruposts
 
 import (
 	s "msngr/structs"
+	m "msngr"
 	"log"
 	"text/template"
-	"bufio"
 	"bytes"
 )
 var req = "<последние 14 цифр>"
@@ -37,9 +37,7 @@ var out_g_commands = &[]s.OutCommand{
 	},
 }
 
-type RuPostCommandsProcessor struct {
 
-}
 /*
 info	Объект	Содержит поля:
 code - номер идентификатора
@@ -57,28 +55,28 @@ adress - адрес регистрации: index, description
 operation - наименование операции
 attr - описание операции
  */
+type RuPostCommandsProcessor struct {
+
+}
 const LETTER = `Посылка № {{.Info.Code}} {{.Info.Name}} в {{.Info.Destinaiton}}\n
 весом {{.Info.Weight}} гр. \n
 Имела следующие операции: {{.Operations}}
 `
 var LETTER_TEMPLATE = template.Must(template.New("post_leter").Parse(LETTER))
 
-func (rpcp *RuPostCommandsProcessor)ProcessRequest(in *s.InPkg) *s.RequestResult {
+func (rpcp RuPostCommandsProcessor) ProcessRequest(in *s.InPkg) *s.RequestResult {
 	result := s.RequestResult{Commands:out_g_commands}
 	return &result
 }
-
 type RuPostTrackingProcessor struct {
 	Url string
-
 }
-
-func (rptp *RuPostTrackingProcessor) ProcessMessage(in *s.InPkg) *s.MessageResult {
+func (rptp RuPostTrackingProcessor) ProcessMessage(in *s.InPkg) *s.MessageResult {
 	commands_ptr := in.Message.Commands
 	if commands_ptr != nil {
 		commands := *commands_ptr
 		for _, command := range commands {
-			if command.Action = "tracking" {
+			if command.Action == "tracking" {
 				for _, field := range command.Form.Fields {
 					if field.Name == "code" {
 						code := field.Data.Value
@@ -86,20 +84,29 @@ func (rptp *RuPostTrackingProcessor) ProcessMessage(in *s.InPkg) *s.MessageResul
 						if err != nil {
 							return s.ExceptionMessageResult(err)
 						}
-
-						wrtr := bufio.NewWriter(bytes.NewBufferString(""))
-						err = LETTER_TEMPLATE.ExecuteTemplate(wrtr,"post_letter", result)
-						if err != nil{
+						var wrtr bytes.Buffer
+						err = LETTER_TEMPLATE.ExecuteTemplate(&wrtr, "post_letter", result)
+						if err != nil {
 							log.Printf("err in execut templatE:%v", err)
 						}
-						text := ""
-						wrtr.WriteString(text)
-						mr := s.MessageResult{Commands:commands, Body:text}
-
+						text := wrtr.String()
+						mr := s.MessageResult{Commands:out_g_commands, Body:text, Type:"chat"}
+						return &mr
 					}
 				}
 			}
 		}
 	}
 	return nil
+}
+
+func FormRPBotContext(conf m.Configuration) *s.BotContext {
+	result := s.BotContext{}
+	result.Request_commands = map[string]s.RequestCommandProcessor{
+		"commands":RuPostCommandsProcessor{},
+	}
+	result.Message_commands = map[string]s.MessageCommandProcessor{
+		"traking":RuPostTrackingProcessor{Url:conf.RuPost.ExternalUrl},
+	}
+	return &result
 }

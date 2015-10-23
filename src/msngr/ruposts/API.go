@@ -57,15 +57,15 @@ type PostTrackingWrapper struct {
 }
 
 func Load(code string, url string) (*PostTrackingWrapper, error) {
-	data, err := u.GET(url, map[string]string{"code":code})
+	data, err := u.GET(url, &map[string]string{"code":code})
 	if err != nil {
 		log.Printf("RUPOST LOAD err %v at getting request %v?code=%v", err, url, code)
 		return nil, err
 	}
 	psw := PostTrackingWrapper{}
-	err = json.Unmarshal(data, &psw)
+	err = json.Unmarshal(*data, &psw)
 	if err != nil {
-		log.Printf("RUPOST LOAD err %v\n at unmarshal %q ", err, string(data))
+		log.Printf("RUPOST LOAD err %v\n at unmarshal %q ", err, string(*data))
 		return nil, err
 	}
 	return &psw, nil

@@ -10,10 +10,12 @@ import (
 	d "msngr/db"
 	n "msngr/notify"
 	s "msngr/structs"
+	rp "msngr/ruposts"
 	"net/http"
 	"time"
 	"errors"
-//	"flag"
+	"flag"
+
 )
 
 func startAfter(check s.CheckFunc, what func()) {
@@ -53,15 +55,15 @@ func InsertTestUser(db *d.DbHandlerMixin, user, pwd *string) {
 
 func main() {
 	conf := m.ReadConfig()
-//	var test = flag.Bool("test", false, "go in test use?")
-//	flag.Parse()
-//
-//	d.DELETE_DB = *test
-//	log.Printf("%+v %+v", *test, d.DELETE_DB)
-//	if d.DELETE_DB {
-//		log.Println("!start at test mode!")
-//		conf.Database.Name = conf.Database.Name + "_test"
-//	}
+	var test = flag.Bool("test", false, "go in test use?")
+	flag.Parse()
+
+	d.DELETE_DB = *test
+	log.Printf("%+v %+v", *test, d.DELETE_DB)
+	if d.DELETE_DB {
+		log.Println("!start at test mode!")
+		conf.Database.Name = conf.Database.Name + "_test"
+	}
 	log.Printf("hw!")
 	db := d.NewDbHandler(conf.Database.ConnString, conf.Database.Name)
 
@@ -104,6 +106,13 @@ func main() {
 
 	user, pwd := "test", "test"
 	InsertTestUser(db, &user, &pwd)
+
+	if conf.RuPost.WorkUrl != "" {
+		log.Printf("will start ru post controller at: %v and will send requests to: %v", conf.RuPost.WorkUrl, conf.RuPost.ExternalUrl)
+		rp_bot_context := rp.FormRPBotContext(conf)
+		rp_controller := m.FormBotController(rp_bot_context)
+		http.HandleFunc(conf.RuPost.WorkUrl, rp_controller)
+	}
 
 	server_address := fmt.Sprintf(":%v", conf.Main.Port)
 	log.Printf("\nStart listen and serving at: %v\n", server_address)
