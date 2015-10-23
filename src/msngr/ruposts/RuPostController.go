@@ -12,7 +12,7 @@ var req = "<последние 14 цифр>"
 var form_for_tracking = &s.OutForm{
 	Title: "Форма запроса информации о посылке",
 	Type:  "form",
-	Name:  "call_taxi",
+	Name:  "tracking_form",
 	Text:  "Номер отправления: ?(code)",
 	Fields: []s.OutField{
 		s.OutField{
@@ -76,7 +76,7 @@ func (rptp RuPostTrackingProcessor) ProcessMessage(in *s.InPkg) *s.MessageResult
 	if commands_ptr != nil {
 		commands := *commands_ptr
 		for _, command := range commands {
-			if command.Action == "tracking" {
+			if command.Action == "tracking" && command.Form.Name == "tracking_form" {
 				for _, field := range command.Form.Fields {
 					if field.Name == "code" {
 						code := field.Data.Value
@@ -94,7 +94,10 @@ func (rptp RuPostTrackingProcessor) ProcessMessage(in *s.InPkg) *s.MessageResult
 						return &mr
 					}
 				}
+			} else {
+				log.Printf("RU POST TP WARNING: i have command with verififcatio fail: %+v \n with form: %+v", command, command.Form)
 			}
+
 		}
 	}
 	return nil
