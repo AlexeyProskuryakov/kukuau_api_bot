@@ -154,8 +154,8 @@ func (m *TaxiMasterAPI)GetCarsInfo() []t.CarInfo {
 	return []t.CarInfo
 }
 
-func (m *TaxiMasterAPI)AddressesSearch(query string) t.FastAddress {
-	return t.FastAddress{}
+func (m *TaxiMasterAPI)AddressesSearch(query string) t.AddressPackage {
+	return t.AddressPackage{}
 }
 
 func (m *TaxiMasterAPI)IsConnected() bool {

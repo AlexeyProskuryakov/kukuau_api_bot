@@ -66,13 +66,10 @@ func test_all() {
 	last_result := t.DictItem{}
 	//test is next:
 	for _, q := range []string{"Никола"} {
-		log.Printf(">>> %v", q)
 		body, err := u.GET(test_url, &map[string]string{"q":q})
 		if body != nil {
-			log.Printf("<<< %q", string(*body))
 			var results []t.DictItem
 			err = json.Unmarshal(*body, &results)
-			//			log.Printf("err: %v \nunmarshaled:%+v", err, results)
 			for _, val := range results {
 				log.Printf("KEY: %v, TITLE: %v, SUBTITLE: %v", val.Key, val.Title, val.SubTitle)
 			}
@@ -90,7 +87,7 @@ func test_all() {
 	external_suppier := i.GetInfinityAddressSupplier(taxi_conf.Api)
 	address_supplier.ExternalAddressSupplier = external_suppier
 
-	street_id, err := address_supplier.GetStreetId(last_result.Key)
+	street_id, err := address_supplier.GetStreetInfo(last_result.Key)
 	log.Printf("address err?: %v\n street_id: %#v", err, street_id)
 
 }

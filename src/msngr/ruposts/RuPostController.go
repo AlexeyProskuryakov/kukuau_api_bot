@@ -7,6 +7,7 @@ import (
 	"log"
 	"text/template"
 	"bytes"
+	"fmt"
 )
 var req = "<последние 14 цифр>"
 var form_for_tracking = &s.OutForm{
@@ -84,12 +85,19 @@ func (rptp RuPostTrackingProcessor) ProcessMessage(in *s.InPkg) *s.MessageResult
 						if err != nil {
 							return s.ExceptionMessageResult(err)
 						}
-						var wrtr bytes.Buffer
-						err = LETTER_TEMPLATE.ExecuteTemplate(&wrtr, "post_letter", result)
-						if err != nil {
-							log.Printf("err in execut templatE:%v", err)
+						var text string
+						if result.ResponseId < 0 {
+							text = fmt.Sprintf("Ошибка в почте № %v (%v), попробуйте как-нибудь по-другому.", result.ResponseId, result.Message)
+						} else if result.ResponseId == 0 {
+							text = "Нет результатов у такого почтового номера, попробуйте какой-нибудь другой."
+						} else {
+							var wrtr bytes.Buffer
+							err = LETTER_TEMPLATE.ExecuteTemplate(&wrtr, "post_letter", result)
+							if err != nil {
+								log.Printf("err in execut templatE:%v", err)
+							}
+							text = wrtr.String()
 						}
-						text := wrtr.String()
 						mr := s.MessageResult{Commands:out_g_commands, Body:text, Type:"chat"}
 						return &mr
 					}
@@ -109,7 +117,7 @@ func FormRPBotContext(conf m.Configuration) *s.BotContext {
 		"commands":RuPostCommandsProcessor{},
 	}
 	result.Message_commands = map[string]s.MessageCommandProcessor{
-		"traking":RuPostTrackingProcessor{Url:conf.RuPost.ExternalUrl},
+		"tracking":RuPostTrackingProcessor{Url:conf.RuPost.ExternalUrl},
 	}
 	return &result
 }

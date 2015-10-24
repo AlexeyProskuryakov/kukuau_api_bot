@@ -574,18 +574,18 @@ func (p *infinity) Markups() []t.Order {
 //Тип адреса/быстрого адреса в виде строки
 
 
-func (p *infinity) AddressesSearch(text string) t.FastAddress {
+func (p *infinity) AddressesSearch(text string) t.AddressPackage {
 	body := p._request("GetViewData", map[string]string{"params": "[{\"viewName\": \"Taxi.Addresses.Search\", \"params\": [{\"n\": \"SearchText\", \"v\": \"" + text + "\"}]}]"})
-	var temp []t.FastAddress
+	var temp []t.AddressPackage
 	err := json.Unmarshal(body, &temp)
 	warnp(err)
 	return temp[0]
 }
 
 //Taxi.ClientAddresses (Адреса клиента)
-func (p *infinity) ClientAddresses() t.FastAddress {
+func (p *infinity) ClientAddresses() t.AddressPackage {
 	body := p._request("GetViewData", map[string]string{"params": "[{\"viewName\": \"Taxi.ClientAddresses\"}]"})
-	var temp []t.FastAddress
+	var temp []t.AddressPackage
 	err := json.Unmarshal(body, &temp)
 	warnp(err)
 	return temp[0]

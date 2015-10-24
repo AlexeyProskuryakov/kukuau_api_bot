@@ -51,7 +51,7 @@ type TrackingOperation struct {
 }
 type PostTrackingWrapper struct {
 	ResponseId int `json:"id"`
-
+	Message string `json:"msg"`
 	Info       PostInformation `json:"info"`
 	Operations []TrackingOperation `json:"operations"`
 }

@@ -20,7 +20,7 @@ func readIn(in_jsoned string) *s.InPkg {
 		log.Printf("error at read: %q \n", err)
 	}
 	in := s.InPkg{}
-	log.Printf("<<<:%s", data)
+	log.Printf("READ IN FROM FILE:\n%+v", string(data))
 	err = json.Unmarshal(data, &in)
 	if err != nil {
 		log.Printf("error at unmarshal: %+v \n", err)
@@ -33,6 +33,7 @@ func serve_notifications(out chan s.OutPkg) {
 
 	http.HandleFunc("/notify", func(w http.ResponseWriter, r *http.Request) {
 		body, err := ioutil.ReadAll(r.Body)
+		log.Printf("!!!TEST notification arrivied: %+v", string(body))
 		var pkg s.OutPkg
 		err = json.Unmarshal(body, &pkg)
 		if err != nil {
@@ -135,17 +136,14 @@ func test_taxi() {
 				}
 			}
 
+			log.Printf("will sleep 5 seconds while notifications will sended all...")
+			time.Sleep(5 * time.Second)
 			in = s.InPkg{From:"TEST", UserData:&s.InUserData{Phone:"TEST123"}, Request:&s.InRequest{ID:"1234", Type:"get"}}
 			in.Request.Query.Action = "COMMANDS"
 
 			request_result1 := request_commands["commands"].ProcessRequest(&in)
 			log.Println("BEFORE FDBCK commands: ERROR?: ", request_result1.Error, "commands: \n", request_result1.Commands)
 
-			//			order_of_owner, err := db.Orders.GetByOwner(read_in.From, "fake")
-			//			log.Printf("order of last err:%v order: %v", err, order_of_owner)
-			//			whom := read_in.From
-			//			db.Orders.SetFeedback(whom, order_of_owner.OrderState, "GOOD TEST", "fake")
-			//
 			read_in = readIn("test_res/feedback.json")
 			message_result = message_commands["feedback"].ProcessMessage(read_in)
 			log.Printf("feedback error?: %v\n body: %v, \n commands:%v", message_result.Error, message_result.Body, message_result.Commands)

@@ -19,11 +19,14 @@ func _check(e error) {
 
 func getInPackage(r *http.Request) (*s.InPkg, error) {
 	var in s.InPkg
+	if r.Header.Get("Content-type") != "application/json"{
+		return nil, errors.New("No header `Content-type` or his value is not `application/json`")
+	}
 	body, err := ioutil.ReadAll(r.Body)
 	if err != nil {
 		log.Printf("error at reading: %q \n", err)
 	}
-	log.Printf("<<<:%s", string(body))
+	log.Printf("BOT RECEIVED: \n%s\n", string(body))
 	err = json.Unmarshal(body, &in)
 	if err != nil {
 		log.Printf("error at unmarshal: %q \n", err)
@@ -38,7 +41,7 @@ func setOutPackage(w http.ResponseWriter, out *s.OutPkg, isError bool, isDeferre
 	}
 	w.Header().Set("Content-type", "application/json")
 
-	log.Printf(">>> %s\n", string(jsoned_out))
+	log.Printf("BOT RESPONSED: \n%s\n", string(jsoned_out))
 
 	if isError {
 		w.WriteHeader(http.StatusBadRequest)

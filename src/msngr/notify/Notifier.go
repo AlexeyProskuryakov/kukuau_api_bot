@@ -48,7 +48,7 @@ func (n Notifier) Notify(outPkg s.OutPkg) {
 	req.Header.Add("Accept", "application/json")
 	req.Header.Add("Authorization", n.key)
 
-	log.Printf("N >> %+v", req.Header)
+	log.Printf("N >> %+v \n%+v \n %+v", n.address, req.Header, req.Body)
 
 	client := &http.Client{}
 	resp, err := client.Do(req)
@@ -57,6 +57,12 @@ func (n Notifier) Notify(outPkg s.OutPkg) {
 		return
 	}
 	if resp != nil {
+//		body, err := ioutil.ReadAll(resp.Body)
+//		if err != nil{
+//			log.Printf("N << ERROR:%+v", err)
+//		} else{
+//			log.Printf("N << %v", string(body))
+//		}
 		defer resp.Body.Close()
 	}
 

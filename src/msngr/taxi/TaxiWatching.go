@@ -145,7 +145,7 @@ func TaxiOrderWatch(taxiContext *TaxiContext, botContext *s.BotContext) {
 					if notification_data != nil {
 						notification_data.Message.Commands = form_commands_for_current_order(db_order, botContext.Commands)
 						taxiContext.Notifier.Notify(*notification_data)
-						log.Printf("notification data not nil! will return commands:\n %#v \n and notify that: \n %#v", notification_data.Message.Commands, *notification_data)
+						log.Printf("WATCH sended for order [%+v]:\n %#v \n and notify that: \n %#v", db_order.OrderId, notification_data.Message.Commands, *notification_data)
 					}
 				}
 			}

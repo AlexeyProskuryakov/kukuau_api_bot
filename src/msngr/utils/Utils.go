@@ -104,7 +104,7 @@ func SaveToFile(what, fn string) {
 }
 
 func GET(url string, params *map[string]string) (*[]byte, error) {
-	log.Println("GET > \n", url, "\n|", params, "|")
+	log.Printf("GET > [%+v] |%+v|", url, params)
 	req, err := http.NewRequest("GET", url, nil)
 	if err != nil {
 		log.Printf("ERROR IN GET FORM REQUEST! [%v]\n", url, err)
@@ -118,7 +118,6 @@ func GET(url string, params *map[string]string) (*[]byte, error) {
 		}
 		req.URL.RawQuery = values.Encode()
 	}
-
 	client := &http.Client{}
 	res, err := client.Do(req)
 	if res == nil || err != nil {
@@ -127,7 +126,7 @@ func GET(url string, params *map[string]string) (*[]byte, error) {
 	}
 	defer res.Body.Close()
 	body, err := ioutil.ReadAll(res.Body)
-	log.Printf("GET < \n%v\n", string(body), )
+//	log.Printf("GET < \n%v\n", string(body), )
 	return &body, err
 }
 

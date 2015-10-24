@@ -42,7 +42,7 @@ func FormTaxiBotContext(im *ExternalApiMixin, db_handler *d.DbHandlerMixin, tc T
 		"commands": &TaxiCommandsProcessor{DbHandlerMixin: *db_handler, context: &context},
 	}
 
-	log.Printf("2 SUPPLIER: %+v", ah.ExternalAddressSupplier)
+	log.Printf("ADDRESS SUPPLIER: %+v", ah.ExternalAddressSupplier)
 	context.Message_commands = map[string]s.MessageCommandProcessor{
 		"information":      &TaxiInformationProcessor{DbHandlerMixin: *db_handler, context:&context, information:&(tc.Information.Text)},
 		"new_order":        &TaxiNewOrderProcessor{ExternalApiMixin: *im, DbHandlerMixin: *db_handler, context:&context, AddressHandler:ah},
@@ -61,7 +61,7 @@ func GetCommands(dictUrl string) map[string]*[]s.OutCommand {
 	result := make(map[string]*[]s.OutCommand)
 
 	var taxi_call_form = &s.OutForm{
-		Title: "Форма вызова такси",
+		Title: "Форма вsызова такси",
 		Type:  "form",
 		Name:  "call_taxi",
 		Text:  "Откуда: ?(street_from), ?(house_from), ?(entrance). Куда: ?(street_to), ?(house_to).",
@@ -249,9 +249,12 @@ func (ih *TaxiInformationProcessor) ProcessMessage(in *s.InPkg) *s.MessageResult
 	}
 }
 
-type AddressNotHere struct{}
+type AddressNotHere struct {
+	From string
+	To   string
+}
 func (a *AddressNotHere) Error() string {
-	return fmt.Sprint("Адрес не поддерживается этим такси.")
+	return fmt.Sprintf("Адрес \n %+v --> %+v \n не поддерживается этим такси.", a.From, a.To)
 }
 
 func _form_order(fields []s.InField, ah *GoogleAddressHandler) (*NewOrder, error) {
@@ -291,13 +294,13 @@ func _form_order(fields []s.InField, ah *GoogleAddressHandler) (*NewOrder, error
 	//	end fucking hardcode
 
 	if !ah.IsHere(from_info) && !ah.IsHere(to_info) {
-		return nil, &AddressNotHere{}
+		return nil, &AddressNotHere{From:from_info, To:to_info}
 	}
-	delivery_street_info, err := ah.GetStreetId(from_info)
+	delivery_street_info, err := ah.GetStreetInfo(from_info)
 	if err != nil {
 		return nil, err
 	}
-	destination_street_info, err := ah.GetStreetId(to_info)
+	destination_street_info, err := ah.GetStreetInfo(to_info)
 	if err != nil {
 		return nil, err
 	}
@@ -305,7 +308,7 @@ func _form_order(fields []s.InField, ah *GoogleAddressHandler) (*NewOrder, error
 	destination := Destination{IdStreet:destination_street_info.ID, House:ht, IdRegion:destination_street_info.IDRegion}
 	new_order.Delivery = delivery
 	new_order.Destinations = []Destination{destination}
-	log.Printf("NEW ORDER: \ndelivery:%#v\ndestination:%#v", delivery, destination)
+	log.Printf("NEW ORDER: \ndelivery:%+v\ndestination:%+v", delivery, destination)
 	return &new_order, nil
 }
 
@@ -345,7 +348,8 @@ func (nop *TaxiNewOrderProcessor) ProcessMessage(in *s.InPkg) *s.MessageResult {
 		}
 
 		new_order, err := _form_order(commands[0].Form.Fields, nop.AddressHandler)
-		if _, ok := err.(*AddressNotHere); ok {
+		if err_val, ok := err.(*AddressNotHere); ok {
+			log.Printf("Addrss not here! %+v", err_val)
 			return &s.MessageResult{
 				Body: "Адрес не поддерживается этим такси.",
 				Commands: nop.context.Commands["commands_at_not_created_order"],

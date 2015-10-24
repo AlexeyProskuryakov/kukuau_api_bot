@@ -16,7 +16,7 @@ type TaxiInterface interface {
 
 type AddressSupplier interface {
 	ConnectInterface
-	AddressesSearch(query string) FastAddress
+	AddressesSearch(query string) AddressPackage
 }
 
 

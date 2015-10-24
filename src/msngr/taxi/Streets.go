@@ -78,7 +78,7 @@ type GoogleAddressHandler struct {
 	key                     string
 	orbit                   TaxiGeoOrbit
 
-	cache                   map[string]*FastAddressRow
+	cache                   map[string]*AddressF
 	cache_dests             map[string]*GoogleDetailPlaceResult
 
 	ExternalAddressSupplier AddressSupplier
@@ -87,7 +87,7 @@ type GoogleAddressHandler struct {
 
 func NewGoogleAddressHandler(key string, orbit TaxiGeoOrbit, external AddressSupplier) *GoogleAddressHandler {
 	result := GoogleAddressHandler{key:key, orbit:orbit}
-	result.cache = make(map[string]*FastAddressRow)
+	result.cache = make(map[string]*AddressF)
 	result.cache_dests = make(map[string]*GoogleDetailPlaceResult)
 	result.ExternalAddressSupplier = external
 	return &result
@@ -135,7 +135,7 @@ func (ah *GoogleAddressHandler)IsHere(place_id string) bool {
 	return distance < ah.orbit.Radius
 }
 
-func (ah *GoogleAddressHandler) GetStreetId(place_id string) (*FastAddressRow, error) {
+func (ah *GoogleAddressHandler) GetStreetInfo(place_id string) (*AddressF, error) {
 	street_id, ok := ah.cache[place_id]
 	if ok {
 		return street_id, nil
@@ -185,9 +185,9 @@ func (ah *GoogleAddressHandler) GetStreetId(place_id string) (*FastAddressRow, e
 }
 
 
-func (ah *GoogleAddressHandler) AddressesSearch(q string) FastAddress {
-	rows := []FastAddressRow{}
-	result := FastAddress{Rows:&rows}
+func (ah *GoogleAddressHandler) AddressesSearch(q string) AddressPackage {
+	rows := []AddressF{}
+	result := AddressPackage{Rows:&rows}
 	suff := "/place/autocomplete/json"
 	url := GOOGLE_API_URL + suff
 	log.Printf(fmt.Sprintf("location= %v,%v", ah.orbit.Lat, ah.orbit.Lon))
@@ -204,7 +204,7 @@ func (ah *GoogleAddressHandler) AddressesSearch(q string) FastAddress {
 	body, err := u.GET(url, &params)
 	err = json.Unmarshal(*body, &address_result)
 	if err != nil {
-		log.Printf("ERROR! GAS unmarshal error [%+v]", string(*body))
+		log.Printf("ERROR! Google Adress Supplier unmarshal error [%+v]", string(*body))
 		return result
 	}
 
@@ -297,10 +297,10 @@ func _process_address_components(components []GoogleAddressComponent) (string, s
 	return route, google_set
 }
 
-func _to_fast_address(input GoogleResultAddress) FastAddress {
-	rows := []FastAddressRow{}
+func _to_fast_address(input GoogleResultAddress) AddressPackage {
+	rows := []AddressF{}
 	for _, prediction := range input.Predictions {
-		row := FastAddressRow{}
+		row := AddressF{}
 		terms_len := len(prediction.Terms)
 		if terms_len > 0 {
 			row.Name, row.ShortName = _get_street_name_shortname(prediction.Terms[0].Value)
@@ -314,7 +314,7 @@ func _to_fast_address(input GoogleResultAddress) FastAddress {
 		row.GID = prediction.PlaceId
 		rows = append(rows, row)
 	}
-	result := FastAddress{Rows:&rows}
+	result := AddressPackage{Rows:&rows}
 	return result
 }
 

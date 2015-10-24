@@ -244,7 +244,7 @@ func (oh *orderHandler) SetFeedback(for_whom string, for_state int, feedback str
 	}
 	order := OrderWrapper{}
 	err := oh.collection.Find(bson.M{"whom": for_whom, "order_state": for_state, "source":source}).Sort("-when").One(&order)
-	if err != nil {
+	if err != nil && err != mgo.ErrNotFound {
 		return nil, err
 	}
 	log.Printf("Store fedback by this order id:%v", order.OrderId)

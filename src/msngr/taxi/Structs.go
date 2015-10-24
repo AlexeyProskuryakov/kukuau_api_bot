@@ -5,7 +5,7 @@ import (
 	"fmt"
 )
 
-type FastAddressRow struct {
+type AddressF struct {
 	GID        string
 	ID         int64  `json:"ID"`
 	IDParent   int64  `json:"IDParent,omitempty"`
@@ -23,8 +23,8 @@ type FastAddressRow struct {
 	Place      string `json:"Place,omitempty"`
 }
 
-type FastAddress struct {
-	Rows *[]FastAddressRow `json:"rows"`
+type AddressPackage struct {
+	Rows *[]AddressF `json:"rows"`
 }
 
 type Address struct {
