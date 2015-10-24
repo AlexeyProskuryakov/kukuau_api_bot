@@ -6,6 +6,7 @@ import (
 	"log"
 	"net/http"
 	s "msngr/structs"
+	"io/ioutil"
 )
 
 func warn(err error) {
@@ -57,12 +58,12 @@ func (n Notifier) Notify(outPkg s.OutPkg) {
 		return
 	}
 	if resp != nil {
-//		body, err := ioutil.ReadAll(resp.Body)
-//		if err != nil{
-//			log.Printf("N << ERROR:%+v", err)
-//		} else{
-//			log.Printf("N << %v", string(body))
-//		}
+		body, err := ioutil.ReadAll(resp.Body)
+		if err != nil{
+			log.Printf("N << ERROR:%+v", err)
+		} else{
+			log.Printf("N << %v", string(body))
+		}
 		defer resp.Body.Close()
 	}
 
