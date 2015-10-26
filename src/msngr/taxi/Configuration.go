@@ -6,7 +6,7 @@ type TaxiAPIConfig interface {
 	GetConnectionString() string
 	GetLogin() string
 	GetPassword() string
-	GetIdService() int64
+	GetIdService() string
 }
 
 type ApiParams struct {
@@ -16,8 +16,8 @@ type ApiParams struct {
 			 Login             string `json:"login"`
 			 Password          string `json:"password"`
 			 ConnectionsString string `json:"connection_string"`
-			 IdService         int64 `json:"id_service"`
-			BearerToken		string `json:""`
+			 IdService         string `json:"id_service"`
+			 BearerToken       string `json:"bearer_token"`
 		 } `json:"data"`
 	Fake struct {
 			 SendedStates []int `json:"sended_states"`
@@ -37,7 +37,7 @@ func (api ApiParams) GetLogin() string {
 func (api ApiParams) GetPassword() string {
 	return api.Data.Password
 }
-func (api ApiParams) GetIdService() int64 {
+func (api ApiParams) GetIdService() string {
 	return api.Data.IdService
 }
 

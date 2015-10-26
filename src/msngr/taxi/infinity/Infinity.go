@@ -259,11 +259,10 @@ func (p *infinity) GetCarsInfo() []t.CarInfo {
 }
 
 func (p *infinity) NewOrder(order t.NewOrder) t.Answer {
-	log.Printf("INF NO: %+v", order)
 	order.IdService = p.Config.GetIdService()
 	param, err := json.Marshal(order)
 	warnp(err)
-	log.Printf("INF NO jsonified: %+v", string(param))
+	log.Printf("INF NEW ORDER (jsonified): %+v", string(param))
 	body := p._request("RemoteCall", map[string]string{"params": string(param), "method": "Taxi.WebAPI.NewOrder"})
 	var ans t.Answer
 	err = json.Unmarshal(body, &ans)
@@ -272,6 +271,7 @@ func (p *infinity) NewOrder(order t.NewOrder) t.Answer {
 }
 
 func (p *infinity) CalcOrderCost(order t.NewOrder) (int, string) {
+	order.IdService = p.Config.GetIdService()
 	param, err := json.Marshal(order)
 	warnp(err)
 	body := p._request("RemoteCall", map[string]string{"params": string(param), "method": "Taxi.WebAPI.CalcOrderCost"})

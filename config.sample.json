@@ -12,12 +12,17 @@
   },
   "taxis": {
     "marka": {
-      "name": "marka",
-      "dict_url": "http://localhost:9191/taxi/marka/streets",
       "key": "Kuku demo_taxi_key",
+      "dict_url": "http://localhost:9191/taxi/marka/streets",
       "information": {
         "phone": "123-45-67",
         "text": "Такси марка! Самое лучшее такси в академгородке!"
+      },
+      "name": "marka",
+      "geo_orbit": {
+        "lat": 54.642655,
+        "lon": 83.296285,
+        "radius": 1000000
       },
       "api": {
         "name": "infinity",
@@ -25,7 +30,8 @@
           "login": "test1",
           "password": "test1",
           "connection_string": "http://109.202.25.248:8080/WebAPITaxi/",
-          "host": "109.202.25.248:8080"
+          "host": "109.202.25.248:8080",
+          "id_service":"5001753333"
         }
       }
     },
@@ -87,8 +93,8 @@
       "key": "Kuku demo_shop_key"
     }
   },
-  "ru_post":{
-    "external_url":"http://rupost.info/json",
-    "work_url":"russian_post/tracking"
+  "ru_post": {
+    "external_url": "http://rupost.info/json",
+    "work_url": "russian_post/tracking"
   }
 }

@@ -124,11 +124,6 @@ type BotContext struct {
 	Request_commands map[string]RequestCommandProcessor
 	Message_commands map[string]MessageCommandProcessor
 	Commands         map[string]*[]OutCommand
-
-	Info             struct {
-						 Phone string
-					 }
-
 }
 
 type MessageResult struct {
@@ -136,7 +131,7 @@ type MessageResult struct {
 	Body       string
 	Error      error
 	IsDeferred bool
-	Type		string
+	Type       string
 }
 
 type RequestResult struct {
@@ -158,7 +153,7 @@ func ExceptionMessageResult(err error) *MessageResult {
 //todo
 func ErrorMessageResult(err error, commands *[]OutCommand) *MessageResult {
 	result := MessageResult{Body:fmt.Sprintf("Ошибка! %v \n Попробуйте еще раз позже.", err), Type:"chat"}
-	if commands != nil{
+	if commands != nil {
 		result.Commands = commands
 	}
 	return &result

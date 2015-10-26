@@ -94,7 +94,7 @@ type NewOrder struct {
 	Phone           string `json:"phone"`
 	DeliveryTime    *string `json:"deliveryTime,omitempty"`      //<Время подачи в формате yyyy-MM-dd HH:mm:ss>
 	DeliveryMinutes int64  `json:"deliveryMinutes"`              // <Количество минут до подачи (0-сейчас, но не менее минимального времени на подачу, указанного в настройках системы), не анализируется если задано поле deliveryTime >
-	IdService       int64  `json:"idService"`                    //<Идентификатор услуги заказа (не может быть пустым)>
+	IdService       string  `json:"idService"`                    //<Идентификатор услуги заказа (не может быть пустым)>
 	Notes           *string `json:"notes,omitempty"`             // <Комментарий к заказу>
 																 //Markups           [2]int64 `json:"markups"`           // <Массив идентификаторов наценок заказа>
 	Attributes      *[2]int64      `json:"attributes,omitempty"` // <Массив идентификаторов дополнительных атрибутов заказа>
