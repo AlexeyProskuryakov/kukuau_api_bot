@@ -463,12 +463,12 @@ func (fp *TaxiFeedbackProcessor) ProcessMessage(in *s.InPkg) *s.MessageResult {
 	if *order_id != -1 {
 		f := Feedback{IdOrder: *order_id, Rating: 5, Notes: fdbk}
 		fp.API.Feedback(f)
-		commands, err := FormCommands(in.From, fp.DbHandlerMixin, fp.context)
+		result_commands, err := FormCommands(in.From, fp.DbHandlerMixin, fp.context)
 		if err != nil {
 			return s.ErrorMessageResult(err, fp.context.Commands["commands_at_not_created_order"])
 		}
-		return &s.MessageResult{Body: "Спасибо! Ваш отзыв очень важен для нас:)", Commands: commands}
+		return &s.MessageResult{Body: "Спасибо! Ваш отзыв очень важен для нас:)", Commands: result_commands}
 	} else {
-		return &s.MessageResult{Body:"Оплаченный заказ не найден :( Отзывы могут быть только для оплаченных заказов", Commands:commands}
+		return &s.MessageResult{Body:"Оплаченный заказ не найден :( Отзывы могут быть только для оплаченных заказов", Commands:fp.context.Commands["commands_at_not_created_order"]}
 	}
 }
