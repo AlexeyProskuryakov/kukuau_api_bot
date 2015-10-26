@@ -83,7 +83,7 @@ func (rptp RuPostTrackingProcessor) ProcessMessage(in *s.InPkg) *s.MessageResult
 						code := field.Data.Value
 						result, err := Load(code, rptp.Url)
 						if err != nil {
-							return s.ExceptionMessageResult(err)
+							return s.ErrorMessageResult(err, out_g_commands)
 						}
 						var text string
 						if result.ResponseId < 0 {

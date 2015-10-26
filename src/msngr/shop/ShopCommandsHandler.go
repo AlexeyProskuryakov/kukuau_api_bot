@@ -167,7 +167,7 @@ var order_products = [4]string{"Ноутбук Apple MacBook Air", "Электр
 func (osp ShopOrderStateProcessor) ProcessMessage(in *s.InPkg) *s.MessageResult {
 	user_state, err := osp.Users.GetUserState(in.From)
 	if err != nil && err != mgo.ErrNotFound {
-		return s.ExceptionMessageResult(err)
+		return s.ErrorMessageResult(err, &NOT_AUTH_COMANDS)
 	}
 
 	var result string
@@ -235,12 +235,12 @@ func (sap ShopLogInMessageProcessor) ProcessMessage(in *s.InPkg) *s.MessageResul
 	command := *in.Message.Commands
 	user, password := _get_user_and_password(command[0].Form.Fields)
 	if user == nil || password == nil {
-		return s.ExceptionMessageResult(errors.New("Не могу извлечь логин и (или) пароль."))
+		return s.ErrorMessageResult(errors.New("Не могу извлечь логин и (или) пароль."), &NOT_AUTH_COMANDS)
 	}
 
 	check, err := sap.Users.CheckUserPassword(user, password)
 	if err != nil && err != mgo.ErrNotFound {
-		return s.ExceptionMessageResult(err)
+		return s.ErrorMessageResult(err, &NOT_AUTH_COMANDS)
 	}
 
 	var body string
@@ -260,8 +260,8 @@ func (sap ShopLogInMessageProcessor) ProcessMessage(in *s.InPkg) *s.MessageResul
 
 func (lop ShopLogOutMessageProcessor) ProcessMessage(in *s.InPkg) *s.MessageResult {
 	err := lop.Users.SetUserState(&(in.From), d.LOGOUT)
-	if err != nil {
-		return s.ExceptionMessageResult(err)
+	if err != nil && err != mgo.ErrNotFound {
+		return s.ErrorMessageResult(err, &NOT_AUTH_COMANDS)
 	}
 	return &s.MessageResult{Body:"До свидания! ", Commands:&NOT_AUTH_COMANDS}
 }
