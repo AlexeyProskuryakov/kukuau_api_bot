@@ -153,7 +153,11 @@ type MessageCommandProcessor interface {
 }
 
 func ExceptionMessageResult(err error) *MessageResult {
-	return &MessageResult{Body:fmt.Sprintf("Ошибка! %v \n Попробуйте еще раз позже.", err), Error:err}
+	return &MessageResult{Body:fmt.Sprintf("Ошибка! %v \n Попробуйте еще раз позже.", err), Type:"chat"}
+}
+//todo
+func ErrorMessageResult(err error) *MessageResult {
+	return &MessageResult{Body:fmt.Sprintf("Ошибка! %v \n Попробуйте еще раз позже.", err), Type:"chat"}
 }
 
 func ExceptionRequestResult(err error, commands *[]OutCommand) *RequestResult {
