@@ -182,7 +182,7 @@ const (
 
 //	ID_SERVICE = 5001753333
 )
-var StatusesMap = map[int]string{
+var InfinityStatusesName = map[int]string{
 	1:  "Не распределен",
 	2:  "Назначен",
 	3:  "Выехал",
