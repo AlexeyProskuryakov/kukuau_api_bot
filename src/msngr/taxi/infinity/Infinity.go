@@ -10,6 +10,7 @@ import (
 
 	"time"
 	t "msngr/taxi"
+	"fmt"
 )
 
 type InfinityService struct {
@@ -176,7 +177,7 @@ func (p *infinity) Ping() (bool, string) {
 	client := &http.Client{}
 	req, err := http.NewRequest("GET", p.ConnString + "RemoteCall", nil)
 	if err != nil {
-		log.Printf("error at forming new request %v",p.ConnString + "RemoteCall")
+		log.Printf("error at forming new request %v", p.ConnString + "RemoteCall")
 		return false, ""
 	}
 	req.Header.Add("ContentType", "text/html;charset=UTF-8")
@@ -269,8 +270,8 @@ func (p *infinity) NewOrder(order t.NewOrder) t.Answer {
 	order.IdService = p.Config.GetIdService()
 	param, err := json.Marshal(order)
 	if err != nil {
-		log.Printf("error at marshal json to infinity %v", string(order))
-		return t.Answer{IsSuccess:false, Message:string(err)}
+		log.Printf("error at marshal json to infinity %+v", order)
+		return t.Answer{IsSuccess:false, Message:fmt.Sprint(err)}
 	}
 	log.Printf("INF NEW ORDER (jsonified): %+v", string(param))
 	body := p._request("RemoteCall", map[string]string{"params": string(param), "method": "Taxi.WebAPI.NewOrder"})
@@ -278,7 +279,7 @@ func (p *infinity) NewOrder(order t.NewOrder) t.Answer {
 	err = json.Unmarshal(body, &ans)
 	if err != nil {
 		log.Printf("error at unmarshal json from infinity %v", string(body))
-		return t.Answer{IsSuccess:false, Message:string(err)}
+		return t.Answer{IsSuccess:false, Message:fmt.Sprint(err)}
 	}
 	return ans
 }
@@ -287,7 +288,7 @@ func (p *infinity) CalcOrderCost(order t.NewOrder) (int, string) {
 	order.IdService = p.Config.GetIdService()
 	param, err := json.Marshal(order)
 	if err != nil {
-		log.Printf("error at marshal json from infinity %v", string(order))
+		log.Printf("error at marshal json from infinity %v", order)
 		return -1, ""
 	}
 	body := p._request("RemoteCall", map[string]string{"params": string(param), "method": "Taxi.WebAPI.CalcOrderCost"})
@@ -331,14 +332,14 @@ func (p *infinity) ChangePassword(password string) (bool, string) {
 	tmp, err := json.Marshal(password)
 	if err != nil {
 		log.Printf("error at marshal json to infinity %v", string(password))
-		return false, string(err)
+		return false, fmt.Sprint(err)
 	}
 	body := p._request("RemoteCall", map[string]string{"params": string(tmp), "method": "Taxi.WebAPI.Client.ChangePassword"})
 	var temp t.Answer
 	err = json.Unmarshal(body, &temp)
 	if err != nil {
 		log.Printf("error at unmarshal json from infinity %v", string(body))
-		return false, string(err)
+		return false, fmt.Sprint(err)
 	}
 	return temp.IsSuccess, temp.Message
 }
@@ -351,7 +352,7 @@ func (p *infinity) ChangeName(name string) (bool, string) {
 	tmp, err := json.Marshal(name)
 	if err != nil {
 		log.Printf("error at marshal json to infinity %v", string(name))
-		return false, string(err)
+		return false, fmt.Sprint(err)
 	}
 
 	body := p._request("RemoteCall", map[string]string{"params": string(tmp), "method": "Taxi.WebAPI.Client.ChangeName"})
@@ -360,7 +361,7 @@ func (p *infinity) ChangeName(name string) (bool, string) {
 	err = json.Unmarshal(body, &temp)
 	if err != nil {
 		log.Printf("error at unmarshal json from infinity %v", string(body))
-		return false, string(err)
+		return false, fmt.Sprint(err)
 	}
 	return temp.IsSuccess, temp.Message
 }
@@ -372,14 +373,14 @@ func (p *infinity) SendMessage(message string) (bool, string /*, string*/) {
 	tmp, err := json.Marshal(message)
 	if err != nil {
 		log.Printf("error at marshal json to infinity %v", string(message))
-		return false, string(err)
+		return false, fmt.Sprint(err)
 	}
 	body := p._request("RemoteCall", map[string]string{"params": string(tmp), "method": "Taxi.WebAPI.Client.SendMessage"})
 	var temp t.Answer
 	err = json.Unmarshal(body, &temp)
 	if err != nil {
 		log.Printf("error at unmarshal json from infinity %v", string(body))
-		return false, string(err)
+		return false, fmt.Sprint(err)
 	}
 	return temp.IsSuccess, temp.Message
 }
@@ -388,14 +389,14 @@ func (p *infinity) CallbackRequest(phone string) (bool, string) {
 	tmp, err := json.Marshal(phone)
 	if err != nil {
 		log.Printf("error at marshal json to infinity %v", string(phone))
-		return false, string(err)
+		return false, fmt.Sprint(err)
 	}
 	body := p._request("RemoteCall", map[string]string{"params": string(tmp), "method": "Taxi.WebAPI.Client.CallbackRequest"})
 	var temp t.Answer
 	err = json.Unmarshal(body, &temp)
 	if err != nil {
 		log.Printf("error at unmarshal json from infinity %v", string(body))
-		return false, string(err)
+		return false, fmt.Sprint(err)
 	}
 	return temp.IsSuccess, temp.Message
 }
@@ -409,7 +410,7 @@ func (p *infinity) ClearHistory() (bool, string) {
 	err := json.Unmarshal(body, &temp)
 	if err != nil {
 		log.Printf("error at unmarshal json from infinity %v", string(body))
-		return false, string(err)
+		return false, fmt.Sprint(err)
 	}
 	return temp.IsSuccess, temp.Message
 }
@@ -421,7 +422,7 @@ func (p *infinity) CancelOrder(order int64) (bool, string) {
 	tmp, err := json.Marshal(order)
 	if err != nil {
 		log.Printf("error at marshal json to infinity %v", string(order))
-		return false, string(err)
+		return false, fmt.Sprint(err)
 	}
 
 	body := p._request("RemoteCall", map[string]string{"params": string(tmp), "method": "Taxi.WebAPI.Client.CancelOrder"})
@@ -430,7 +431,7 @@ func (p *infinity) CancelOrder(order int64) (bool, string) {
 	err = json.Unmarshal(body, &temp)
 	if err != nil {
 		log.Printf("error at unmarshal json from infinity %v", string(body))
-		return false, string(err)
+		return false, fmt.Sprint(err)
 	}
 	return temp.IsSuccess, temp.Message
 }
@@ -448,8 +449,8 @@ func (p *infinity) CancelOrder(order int64) (bool, string) {
 func (p *infinity) Feedback(inf t.Feedback) (bool, string) {
 	tmp, err := json.Marshal(inf)
 	if err != nil {
-		log.Printf("error at marshal json to infinity %v", string(inf))
-		return false, string(err)
+		log.Printf("error at marshal json to infinity %v", inf)
+		return false, fmt.Sprint(err)
 	}
 
 	body := p._request("RemoteCall", map[string]string{"params": string(tmp), "method": "Taxi.WebAPI.Client.Feedback"})
@@ -458,7 +459,7 @@ func (p *infinity) Feedback(inf t.Feedback) (bool, string) {
 	err = json.Unmarshal(body, &temp)
 	if err != nil {
 		log.Printf("error at unmarshal json from infinity %v", string(body))
-		return false, string(err)
+		return false, fmt.Sprint(err)
 	}
 	return temp.IsSuccess, temp.Message
 }
@@ -471,7 +472,7 @@ func (p *infinity) WhereIT(ID int64) (bool, string) {
 	tmp, err := json.Marshal(ID)
 	if err != nil {
 		log.Printf("error at marshal json to infinity %v", string(ID))
-		return false, string(err)
+		return false, fmt.Sprint(err)
 	}
 
 	body := p._request("RemoteCall", map[string]string{"params": string(tmp), "method": "Taxi.WebAPI.Client.WhereIT"})
@@ -480,7 +481,7 @@ func (p *infinity) WhereIT(ID int64) (bool, string) {
 	err = json.Unmarshal(body, &temp)
 	if err != nil {
 		log.Printf("error at unmarshal json from infinity %v", string(body))
-		return false, string(err)
+		return false, fmt.Sprint(err)
 	}
 	return temp.IsSuccess, temp.Message
 }
@@ -503,15 +504,15 @@ type phonesEdit struct {
 func (p *infinity) PhonesEdit(phone phonesEdit) (bool, string) {
 	tmp, err := json.Marshal(phone)
 	if err != nil {
-		log.Printf("error at marshal json to infinity %v", string(phone))
-		return false, string(err)
+		log.Printf("error at marshal json to infinity %+v", phone)
+		return false, fmt.Sprint(err)
 	}
 	body := p._request("RemoteCall", map[string]string{"params": string(tmp), "method": "Taxi.WebAPI.Client.Phones.Edit"})
 	var temp t.Answer
 	err = json.Unmarshal(body, &temp)
 	if err != nil {
 		log.Printf("error at unmarshal json from infinity %v", string(body))
-		return false, string(err)
+		return false, fmt.Sprint(err)
 	}
 	return temp.IsSuccess, temp.Message
 }
@@ -523,14 +524,14 @@ func (p *infinity) PhonesRemove(phone int64) (bool, string) {
 	tmp, err := json.Marshal(phone)
 	if err != nil {
 		log.Printf("error at marshal json to infinity %v", string(phone))
-		return false, string(err)
+		return false, fmt.Sprint(err)
 	}
 	body := p._request("RemoteCall", map[string]string{"params": string(tmp), "method": "Taxi.WebAPI.Client.Phones.Remove"})
 	var temp t.Answer
 	err = json.Unmarshal(body, &temp)
 	if err != nil {
 		log.Printf("error at unmarshal json from infinity %v", string(body))
-		return false, string(err)
+		return false, fmt.Sprint(err)
 	}
 	return temp.IsSuccess, temp.Message
 }
@@ -561,8 +562,8 @@ func (p *infinity) AddressesEdit(f favorite) (bool, string) {
 
 	tmp, err := json.Marshal(f)
 	if err != nil {
-		log.Printf("error at marshal json to infinity %v", string(f))
-		return false, string(err)
+		log.Printf("error at marshal json to infinity %+v", f)
+		return false, fmt.Sprint(err)
 	}
 
 	body := p._request("RemoteCall", map[string]string{"params": string(tmp), "method": "Taxi.WebAPI.Client.Addresses.Edit"})
@@ -570,7 +571,7 @@ func (p *infinity) AddressesEdit(f favorite) (bool, string) {
 	err = json.Unmarshal(body, &temp)
 	if err != nil {
 		log.Printf("error at unmarshal json from infinity %v", string(body))
-		return false, string(err)
+		return false, fmt.Sprint(err)
 	}
 
 	return temp.IsSuccess, temp.Message
@@ -582,7 +583,7 @@ func (p *infinity) AddressesRemove(id int64) (bool, string) {
 	err := json.Unmarshal(body, &temp)
 	if err != nil {
 		log.Printf("error at unmarshal json from infinity %v", string(body))
-		return false, string(err)
+		return false, fmt.Sprint(err)
 	}
 	return temp.IsSuccess, temp.Message
 }
