@@ -15,6 +15,7 @@ var fakeInstance *FakeTaxiAPI
 
 func GetFakeInfinityAPI(params ApiParams) TaxiInterface {
 	if fakeInstance == nil {
+		log.Printf("Params fake:%#v",params.Fake)
 		fakeInstance = &FakeTaxiAPI{SleepTime:params.Fake.SleepTime, SendedStates:params.Fake.SendedStates}
 	}
 	return fakeInstance
@@ -52,7 +53,7 @@ func (inf *FakeTaxiAPI) NewOrder(order NewOrder) Answer {
 		IDCar: 5033615557,
 	}
 	result, _ := json.Marshal(order)
-	log.Printf("4 END NO RESULT DATA\n%+v\n", string(result))
+	log.Printf("FA New order:f\n%+v\n", string(result))
 
 	inf.orders = append(inf.orders, saved_order)
 

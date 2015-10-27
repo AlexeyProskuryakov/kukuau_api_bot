@@ -15,39 +15,47 @@ const (
 	car_set_out = "Машина выехала."
 	good_passage = "Приятной Вам поездки!"
 	nominated = "Вам назначен: "
-
+	order_canceled = "Ваш заказ отменен!"
 )
 
-func FormNotification(whom string, order_id int64, state int, previous_state int, car_info CarInfo, deliv_time time.Time) *s.OutPkg {
+func FormNotification(ow *d.OrderWrapper, previous_state int, car_info CarInfo, deliv_time time.Time) *s.OutPkg {
 	var text string
-	switch state {
-	case 2:
-		_time, _ := time.Parse(deliv_time.Format("15:04"), "15:04")
-		text = fmt.Sprintf("%v %v, время подачи %v.", nominated, car_info, _time)
-	case 3:
-		text = fmt.Sprintf("%v", car_set_out)
-	case 4:
-		if previous_state == 1 {
+
+	switch ow.OrderState {
+	case ORDER_ASSIGNED:
+		text = fmt.Sprintf("%v %v, время подачи %v.", nominated, car_info, deliv_time.Format("15:04"))
+	case ORDER_CAR_SET_OUT:
+		text = fmt.Sprintf("%v, время подачи %м", car_set_out)
+	case ORDER_CLIENT_WAIT:
+		if previous_state == ORDER_CREATED {
 			text = fmt.Sprintf("%v %v %v %v.", car_arrived, good_passage, nominated, car_info)
 		} else {
 			text = fmt.Sprintf("%v %v", car_arrived, good_passage)
 		}
-	case 5:
-		if previous_state == 4 {
+	case ORDER_IN_PROCESS:
+		if previous_state == ORDER_CLIENT_WAIT {
 			return nil
-		} else if previous_state == 1 {
+		} else if previous_state == ORDER_CREATED {
 			text = fmt.Sprintf("%v %v %v %v.", car_arrived, good_passage, nominated, car_info)
 		} else {
 			text = fmt.Sprintf("%v %v", car_arrived, good_passage)
 		}
-	case 7, 9:
+	case ORDER_PAYED:
 		text = "Заказ выполнен! Спасибо что воспользовались услугами нашей компании."
+
+	case ORDER_CANCELED:
+		if !u.In(previous_state, []int{ORDER_PAYED, ORDER_NOT_PAYED}) {
+			text = "Заказ выполнен! Спасибо что воспользовались услугами нашей компании."
+		} else {
+			text = order_canceled
+		}
 	//	default:
 	//		status, _ := StatusesMap[state]
 	//		text = fmt.Sprintf("Машина %v %v c номером %v перешла в состояние [%v]", car_info.Color, car_info.Model, car_info.Number, status)
 	}
+
 	if text != "" {
-		out := s.OutPkg{To: whom, Message: &s.OutMessage{ID: u.GenId(), Type: "chat", Body: text}}
+		out := s.OutPkg{To: ow.Whom, Message: &s.OutMessage{ID: u.GenId(), Type: "chat", Body: text}}
 		return &out
 	}
 	return nil
@@ -60,6 +68,10 @@ type CarsCache struct {
 
 func _create_cars_map(i TaxiInterface) map[int64]CarInfo {
 	cars_map := make(map[int64]CarInfo)
+	for !i.IsConnected() {
+		log.Printf("Can not create cars cache because taxi api is not response")
+		time.Sleep(3 * time.Second)
+	}
 	cars_info := i.GetCarsInfo()
 	for _, info := range cars_info {
 		cars_map[info.ID] = info
@@ -98,7 +110,6 @@ func TaxiOrderWatch(taxiContext *TaxiContext, botContext *s.BotContext) {
 	for {
 		api_orders := taxiContext.API.Orders()
 		for _, api_order := range api_orders {
-			log.Print("get ")
 			db_order, err := taxiContext.DataBase.Orders.GetById(api_order.ID, botContext.Name)
 			if err != nil {
 				log.Printf("WATCH some error in retrieve order [%+v]", api_order)
@@ -106,10 +117,6 @@ func TaxiOrderWatch(taxiContext *TaxiContext, botContext *s.BotContext) {
 			}
 			if db_order == nil {
 				log.Printf("WATCH order [%+v] is not present in system :(\n", api_order)
-				continue
-			}
-			if db_order.OrderState == ORDER_CANCELED {
-//				log.Printf("WATCH order [%+v] is CANCELED", db_order.OrderId)
 				continue
 			}
 			if api_order.State != db_order.OrderState {
@@ -120,30 +127,47 @@ func TaxiOrderWatch(taxiContext *TaxiContext, botContext *s.BotContext) {
 					log.Printf("WATCH for order %+v can not update status %+v", api_order.ID, api_order.State)
 					continue
 				}
-				car_info := taxiContext.Cars.CarInfo(api_order.IDCar)
+				db_order.OrderState = api_order.State
+				db_order.OrderId = api_order.ID
 
-				if car_info != nil {
+				//если заказ отменил не пользователь
+				if api_order.State == ORDER_CANCELED {
+					log.Printf("WATCH NOTIFYING THAT ORDER IS CANCELED")
+					taxiContext.Notifier.Notify(s.OutPkg{
+						To:db_order.Whom,
+						Message: &s.OutMessage{
+							ID: u.GenId(),
+							Type: "chat",
+							Body: "Ваш заказ отменен!",
+							Commands: botContext.Commands["commands_at_not_created_order"],
+						},
+					})
+					previous_states[api_order.ID] = api_order.State
+					continue
+				}
+
+				if car_info := taxiContext.Cars.CarInfo(api_order.IDCar); car_info != nil {
 					var notification_data *s.OutPkg
-					prev_state, ok := previous_states[api_order.ID]
 					delivery_time, err := time.Parse("2006-01-02 15:04:05", api_order.DeliveryTime)
 					if err != nil {
-						delivery_time = time.Now()
+						delivery_time = time.Now().Add(5 * time.Minute)
 					}
-
+					prev_state, ok := previous_states[api_order.ID]
 					if ok {
-						notification_data = FormNotification(db_order.Whom, api_order.ID, api_order.State, prev_state, *car_info, delivery_time)
+						notification_data = FormNotification(db_order, prev_state, *car_info, delivery_time)
 					} else {
-						notification_data = FormNotification(db_order.Whom, api_order.ID, api_order.State, -1, *car_info, delivery_time)
+						notification_data = FormNotification(db_order, -1, *car_info, delivery_time)
 					}
 					if notification_data != nil {
 						notification_data.Message.Commands = form_commands_for_current_order(db_order, botContext.Commands)
 						taxiContext.Notifier.Notify(*notification_data)
+						log.Printf("WATCH sended for order [%+v]:\n %#v \n and notify that: \n %#v", db_order.OrderId, notification_data.Message.Commands, *notification_data)
 					}
 				}
 			}
 			previous_states[api_order.ID] = api_order.State
 		}
-		time.Sleep(3 * time.Second)
+		time.Sleep(1 * time.Second)
 	}
 }
 

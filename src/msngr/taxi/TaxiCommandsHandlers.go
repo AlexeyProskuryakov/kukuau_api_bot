@@ -9,6 +9,7 @@ import (
 	s "msngr/structs"
 	d "msngr/db"
 	u "msngr/utils"
+	"gopkg.in/mgo.v2"
 )
 
 const (
@@ -20,14 +21,19 @@ func FormTaxiBotContext(im *ExternalApiMixin, db_handler *d.DbHandlerMixin, tc T
 
 	context := s.BotContext{}
 
-	context.Check = func() (string, bool) {
-		var ok bool
-		var detail string
+	context.Check = func() (detail string, ok bool) {
 		ok = im.API.IsConnected()
 		if !ok {
-			detail = "Ошибка в подключении к сервису"
+			detail = "Ошибка в подключении к сервису попробуйте позже"
 		}
-		return detail, ok
+		ok = ok && db_handler.IsConnected()
+		if !ok {
+			detail = "Ошибка в подключении к БД попробуйте позже"
+		}
+		if ok {
+			detail = "All ok!"
+		}
+		return
 	}
 
 	context.Commands = GetCommands(tc.DictUrl)
@@ -37,7 +43,7 @@ func FormTaxiBotContext(im *ExternalApiMixin, db_handler *d.DbHandlerMixin, tc T
 		"commands": &TaxiCommandsProcessor{DbHandlerMixin: *db_handler, context: &context},
 	}
 
-	log.Printf("2 SUPPLIER: %+v", ah.ExternalAddressSupplier)
+	log.Printf("ADDRESS SUPPLIER: %+v", ah.ExternalAddressSupplier)
 	context.Message_commands = map[string]s.MessageCommandProcessor{
 		"information":      &TaxiInformationProcessor{DbHandlerMixin: *db_handler, context:&context, information:&(tc.Information.Text)},
 		"new_order":        &TaxiNewOrderProcessor{ExternalApiMixin: *im, DbHandlerMixin: *db_handler, context:&context, AddressHandler:ah},
@@ -56,7 +62,7 @@ func GetCommands(dictUrl string) map[string]*[]s.OutCommand {
 	result := make(map[string]*[]s.OutCommand)
 
 	var taxi_call_form = &s.OutForm{
-		Title: "Форма вызова такси",
+		Title: "Форма вsызова такси",
 		Type:  "form",
 		Name:  "call_taxi",
 		Text:  "Откуда: ?(street_from), ?(house_from), ?(entrance). Куда: ?(street_to), ?(house_to).",
@@ -186,21 +192,25 @@ func (smp *TaxiSupportMessageProcessor) ProcessMessage(in *s.InPkg) *s.MessageRe
 
 func form_commands_for_current_order(order_wrapper *d.OrderWrapper, commands map[string]*[]s.OutCommand) *[]s.OutCommand {
 	if order_wrapper != nil {
-		if order_wrapper.OrderState == ORDER_PAYED && time.Now().Sub(order_wrapper.When) < time.Hour && order_wrapper.Feedback == "" {
+		//if time and not fedb and state is end of driver
+		if time.Now().Sub(order_wrapper.When) < time.Hour && order_wrapper.Feedback == "" &&
+		order_wrapper.OrderState >= ORDER_PAYED {
 			return commands["commands_for_order_feedback"]
-		} else if u.In(order_wrapper.OrderState, []int{7, 8, 9, 13, 15}) {
-			return commands["commands_at_not_created_order"]
 		}
-		return commands["commands_at_created_order"]
-	} else {
-		return commands["commands_at_not_created_order"]
+		//if order state less than order payed in StatusesMap
+		if order_wrapper.OrderState < ORDER_PAYED {
+			return commands["commands_at_created_order"]
+		}
 	}
+	return commands["commands_at_not_created_order"]
 }
 
 func FormCommands(username string, db d.DbHandlerMixin, context *s.BotContext) (*[]s.OutCommand, error) {
 	order_wrapper, err := db.Orders.GetByOwner(username, context.Name)
-	if err != nil {
+	if err != nil && err != mgo.ErrNotFound {
 		return nil, err
+	} else if err == mgo.ErrNotFound {
+		return context.Commands["commands_at_not_created_order"], nil
 	}
 	return form_commands_for_current_order(order_wrapper, context.Commands), nil
 }
@@ -242,6 +252,14 @@ func (ih *TaxiInformationProcessor) ProcessMessage(in *s.InPkg) *s.MessageResult
 	}
 }
 
+type AddressNotHere struct {
+	From string
+	To   string
+}
+func (a *AddressNotHere) Error() string {
+	return fmt.Sprintf("Адрес \n %+v --> %+v \n не поддерживается этим такси.", a.From, a.To)
+}
+
 func _form_order(fields []s.InField, ah *GoogleAddressHandler) (*NewOrder, error) {
 	var from_info, to_info, hf, ht string
 	var entrance *string
@@ -278,26 +296,22 @@ func _form_order(fields []s.InField, ah *GoogleAddressHandler) (*NewOrder, error
 	//	new_order.Attributes = [2]int64{1000113000, 1000113002}
 	//	end fucking hardcode
 
-	if !(ah.IsHere(from_info) || ah.IsHere(to_info)) {
-		return nil, errors.New("Адрес не поддерживается этим такси.")
+	if !ah.IsHere(from_info) && !ah.IsHere(to_info) {
+		return nil, &AddressNotHere{From:from_info, To:to_info}
 	}
-
-	delivery_street_info, err := ah.GetStreetId(from_info)
+	delivery_street_info, err := ah.GetStreetInfo(from_info)
 	if err != nil {
 		return nil, err
 	}
-
-	destination_street_info, err := ah.GetStreetId(to_info)
+	destination_street_info, err := ah.GetStreetInfo(to_info)
 	if err != nil {
 		return nil, err
 	}
-
 	delivery := Delivery{IdStreet:delivery_street_info.ID, House:hf, Entrance:entrance, IdRegion:delivery_street_info.IDRegion}
 	destination := Destination{IdStreet:destination_street_info.ID, House:ht, IdRegion:destination_street_info.IDRegion}
-
 	new_order.Delivery = delivery
 	new_order.Destinations = []Destination{destination}
-
+	log.Printf("NEW ORDER: \ndelivery:%+v\ndestination:%+v", delivery, destination)
 	return &new_order, nil
 }
 
@@ -321,7 +335,7 @@ func (nop *TaxiNewOrderProcessor) ProcessMessage(in *s.InPkg) *s.MessageResult {
 	order_wrapper, err := nop.Orders.GetByOwner(in.From, nop.context.Name)
 	log.Printf("NOP saved_order info: %+v\n", order_wrapper)
 	if err != nil {
-		return s.ExceptionMessageResult(err)
+		return s.ErrorMessageResult(err, nop.context.Commands["commands_at_not_created_order"])
 	}
 
 	if order_wrapper == nil || IsOrderNotAvailable(order_wrapper.OrderState) {
@@ -330,15 +344,23 @@ func (nop *TaxiNewOrderProcessor) ProcessMessage(in *s.InPkg) *s.MessageResult {
 		if err != nil {
 			uwrpr, err := nop.Users.GetUserById(in.From)
 			if err != nil {
-				return s.ExceptionMessageResult(errors.New("Не предоставлен номер телефона"))
+				return s.ErrorMessageResult(errors.New("Не предоставлен номер телефона"), nop.context.Commands["commands_at_not_created_order"])
 			} else {
 				phone = uwrpr.Phone
 			}
 		}
 
 		new_order, err := _form_order(commands[0].Form.Fields, nop.AddressHandler)
+		if err_val, ok := err.(*AddressNotHere); ok {
+			log.Printf("Addrss not here! %+v", err_val)
+			return &s.MessageResult{
+				Body: "Адрес не поддерживается этим такси.",
+				Commands: nop.context.Commands["commands_at_not_created_order"],
+				Type: "chat",
+			}
+		}
 		if err != nil {
-			return s.ExceptionMessageResult(err)
+			return s.ErrorMessageResult(errors.New("Не могу определить адрес"), nop.context.Commands["commands_at_not_created_order"])
 		}
 
 		new_order.Phone = *phone
@@ -356,17 +378,17 @@ func (nop *TaxiNewOrderProcessor) ProcessMessage(in *s.InPkg) *s.MessageResult {
 
 		if !ans.IsSuccess {
 			nop.Errors.StoreError(in.From, ans.Message)
-			return s.ExceptionMessageResult(errors.New(ans.Message))
+			return s.ErrorMessageResult(errors.New(ans.Message), nop.context.Commands["commands_at_not_created_order"])
 		}
 
 		err = nop.Orders.AddOrderObject(&d.OrderWrapper{OrderState:ORDER_CREATED, Whom:in.From, OrderId:ans.Content.Id, Source:nop.context.Name})
 		if err != nil {
-			return s.ExceptionMessageResult(err)
+			return s.ErrorMessageResult(err, nop.context.Commands["commands_at_not_created_order"])
 		}
 
-		return &s.MessageResult{Body:text, Commands:nop.context.Commands["commands_at_created_order"]}
+		return &s.MessageResult{Body:text, Commands:nop.context.Commands["commands_at_created_order"], Type:"chat"}
 	}
-	return &s.MessageResult{Body: "Заказ уже создан!", Commands: nop.context.Commands["commands_at_created_order"], Error: errors.New("Заказ уже создан!")}
+	return &s.MessageResult{Body: "Заказ уже создан!", Commands: nop.context.Commands["commands_at_created_order"]}
 }
 
 type TaxiCancelOrderProcessor struct {
@@ -379,23 +401,23 @@ type TaxiCancelOrderProcessor struct {
 func (cop *TaxiCancelOrderProcessor) ProcessMessage(in *s.InPkg) *s.MessageResult {
 	order_wrapper, err := cop.Orders.GetByOwner(in.From, cop.context.Name)
 	if err != nil {
-		return s.ExceptionMessageResult(err)
+		return s.ErrorMessageResult(err, cop.context.Commands["commands_at_not_created_order"])
 	}
 
 	if order_wrapper != nil && !IsOrderNotAvailable(order_wrapper.OrderState) {
 		is_success, message := cop.API.CancelOrder(order_wrapper.OrderId)
 		if is_success {
-			err = cop.Orders.SetState(order_wrapper.OrderId, cop.context.Name, ORDER_CANCELED, nil)
-			return &s.MessageResult{Body:"Ваш заказ отменен!", Commands: cop.context.Commands["commands_at_not_created_order"], Error:err}
+			cop.Orders.SetState(order_wrapper.OrderId, cop.context.Name, ORDER_CANCELED, nil)
+			return &s.MessageResult{Body:"Ваш заказ отменен!", Commands: cop.context.Commands["commands_at_not_created_order"]}
 		} else {
-			return &s.MessageResult{Body:fmt.Sprintf("Проблемы с отменом заказа %v", message), Error: errors.New(fmt.Sprintf("Звони скорее: %+v", cop.alert_phone))}
+			return &s.MessageResult{Body:fmt.Sprintf("Проблемы с отменой заказа %v\nЗвони скорее: %+v ", message, cop.alert_phone), Commands: cop.context.Commands["commands_at_not_created_order"] }
 		}
 	}
 	commands, err := FormCommands(in.From, cop.DbHandlerMixin, cop.context)
 	if err != nil {
-		return s.ExceptionMessageResult(err)
+		return s.ErrorMessageResult(err, cop.context.Commands["commands_at_not_created_order"])
 	}
-	return &s.MessageResult{Body: "У вас нет активных заказов!", Commands:commands, Error: errors.New("У вас нет активных заказов!")}
+	return &s.MessageResult{Body: "У вас нет активных заказов!", Commands:commands}
 }
 
 type TaxiCalculatePriceProcessor struct {
@@ -408,7 +430,7 @@ func (cpp *TaxiCalculatePriceProcessor) ProcessMessage(in *s.InPkg) *s.MessageRe
 	commands := *in.Message.Commands
 	order, err := _form_order(commands[0].Form.Fields, cpp.AddressHandler)
 	if err != nil {
-		return s.ExceptionMessageResult(err)
+		return s.ErrorMessageResult(err, cpp.context.Commands["commands_at_not_created_order"])
 	}
 	cost_s, _ := cpp.API.CalcOrderCost(*order)
 	cost := strconv.Itoa(cost_s)
@@ -435,18 +457,18 @@ func (fp *TaxiFeedbackProcessor) ProcessMessage(in *s.InPkg) *s.MessageResult {
 	fdbk := _get_feedback(commands[0].Form.Fields)
 	order_id, err := fp.Orders.SetFeedback(in.From, ORDER_PAYED, fdbk, fp.context.Name)
 	if err != nil {
-		return s.ExceptionMessageResult(err)
+		return s.ErrorMessageResult(err, fp.context.Commands["commands_at_not_created_order"])
 	}
 
 	if *order_id != -1 {
 		f := Feedback{IdOrder: *order_id, Rating: 5, Notes: fdbk}
 		fp.API.Feedback(f)
-		commands, err := FormCommands(in.From, fp.DbHandlerMixin, fp.context)
+		result_commands, err := FormCommands(in.From, fp.DbHandlerMixin, fp.context)
 		if err != nil {
-			return s.ExceptionMessageResult(err)
+			return s.ErrorMessageResult(err, fp.context.Commands["commands_at_not_created_order"])
 		}
-		return &s.MessageResult{Body: "Спасибо! Ваш отзыв очень важен для нас:)", Commands: commands}
+		return &s.MessageResult{Body: "Спасибо! Ваш отзыв очень важен для нас:)", Commands: result_commands}
 	} else {
-		return &s.MessageResult{Error:errors.New("Оплаченный заказ не найден :( Отзывы могут быть только для оплаченных заказов")}
+		return &s.MessageResult{Body:"Оплаченный заказ не найден :( Отзывы могут быть только для оплаченных заказов", Commands:fp.context.Commands["commands_at_not_created_order"]}
 	}
 }

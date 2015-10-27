@@ -22,10 +22,12 @@ type InForm struct {
 type InField struct {
 	Name string `json:"name"`
 	Type string `json:"type,omitempty"`
-	Data struct {
-			 Value string `json:"value"`
-			 Text  string `json:"text"`
-		 } `json:"data,omitempty"`
+	Data InFieldData `json:"data,omitempty"`
+}
+
+type InFieldData struct {
+	Value string `json:"value"`
+	Text  string `json:"text"`
 }
 type InCommand struct {
 	Title  string `json:"title,omitempty"`
@@ -122,11 +124,6 @@ type BotContext struct {
 	Request_commands map[string]RequestCommandProcessor
 	Message_commands map[string]MessageCommandProcessor
 	Commands         map[string]*[]OutCommand
-
-	Info             struct {
-						 Phone string
-					 }
-
 }
 
 type MessageResult struct {
@@ -134,6 +131,7 @@ type MessageResult struct {
 	Body       string
 	Error      error
 	IsDeferred bool
+	Type       string
 }
 
 type RequestResult struct {
@@ -150,7 +148,15 @@ type MessageCommandProcessor interface {
 }
 
 func ExceptionMessageResult(err error) *MessageResult {
-	return &MessageResult{Body:fmt.Sprintf("Ошибка! %v \n Попробуйте еще раз позже.", err), Error:err}
+	return &MessageResult{Body:fmt.Sprintf("Ошибка! %v \n Попробуйте еще раз позже.", err), Type:"error"}
+}
+//todo
+func ErrorMessageResult(err error, commands *[]OutCommand) *MessageResult {
+	result := MessageResult{Body:fmt.Sprintf("Ошибка! %v", err), Type:"chat"}
+	if commands != nil {
+		result.Commands = commands
+	}
+	return &result
 }
 
 func ExceptionRequestResult(err error, commands *[]OutCommand) *RequestResult {

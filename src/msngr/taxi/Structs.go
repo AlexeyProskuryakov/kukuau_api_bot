@@ -5,7 +5,7 @@ import (
 	"fmt"
 )
 
-type FastAddressRow struct {
+type AddressF struct {
 	GID        string
 	ID         int64  `json:"ID"`
 	IDParent   int64  `json:"IDParent,omitempty"`
@@ -23,8 +23,8 @@ type FastAddressRow struct {
 	Place      string `json:"Place,omitempty"`
 }
 
-type FastAddress struct {
-	Rows *[]FastAddressRow `json:"rows"`
+type AddressPackage struct {
+	Rows *[]AddressF `json:"rows"`
 }
 
 type Address struct {
@@ -94,7 +94,7 @@ type NewOrder struct {
 	Phone           string `json:"phone"`
 	DeliveryTime    *string `json:"deliveryTime,omitempty"`      //<Время подачи в формате yyyy-MM-dd HH:mm:ss>
 	DeliveryMinutes int64  `json:"deliveryMinutes"`              // <Количество минут до подачи (0-сейчас, но не менее минимального времени на подачу, указанного в настройках системы), не анализируется если задано поле deliveryTime >
-	IdService       int64  `json:"idService"`                    //<Идентификатор услуги заказа (не может быть пустым)>
+	IdService       string  `json:"idService"`                    //<Идентификатор услуги заказа (не может быть пустым)>
 	Notes           *string `json:"notes,omitempty"`             // <Комментарий к заказу>
 																 //Markups           [2]int64 `json:"markups"`           // <Массив идентификаторов наценок заказа>
 	Attributes      *[2]int64      `json:"attributes,omitempty"` // <Массив идентификаторов дополнительных атрибутов заказа>
@@ -167,11 +167,37 @@ type Feedback struct {
 }
 
 const (
+	ORDER_CREATED = 1
+	ORDER_ASSIGNED = 2
+	ORDER_CAR_SET_OUT = 3
+	ORDER_CLIENT_WAIT = 4
+	ORDER_IN_PROCESS = 5
+
 	ORDER_PAYED = 7
 	ORDER_CANCELED = 9
-	ORDER_CREATED = 1
+	ORDER_NOT_CREATED = 13
+
+	ORDER_NOT_PAYED = 8
+	ORDER_FIXED = 12
+
 //	ID_SERVICE = 5001753333
 )
+var InfinityStatusesName = map[int]string{
+	1:  "Не распределен",
+	2:  "Назначен",
+	3:  "Выехал",
+	4:  "Ожидание клиента",
+	5:  "Выполнение",
+	6:  "Простой",
+	7:  "Оплачен",
+	8:  "Не оплачен",
+	9:  "Отменен",
+	11: "Запланирована машина",
+	12: "Зафиксирован",
+	13: "Не создан",
+	14: "Горящий заказ",
+	15: "Не подтвержден",
+}
 
 
 func IsOrderNotAvailable(state int) bool {

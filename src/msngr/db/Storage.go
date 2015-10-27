@@ -110,7 +110,7 @@ func (odbh *DbHandlerMixin) reConnect(conn string, dbname string) {
 			break
 		} else {
 			count += count
-			log.Printf("error, will sleep %+v miliseconds", count)
+			log.Printf("error, will sleep %+v", count)
 			time.Sleep(count)
 		}
 	}
@@ -213,7 +213,6 @@ func (oh *orderHandler) GetById(order_id int64, source string) (*OrderWrapper, e
 	if oh.collection == nil {
 		return nil, errors.New("БД не доступна")
 	}
-
 	result := OrderWrapper{}
 	err := oh.collection.Find(bson.M{"order_id": order_id, "source":source}).One(&result)
 	if err != nil && err != mgo.ErrNotFound {
@@ -226,7 +225,6 @@ func (oh *orderHandler) SetState(order_id int64, source string, new_state int, o
 	if oh.collection == nil {
 		return errors.New("БД не доступна")
 	}
-
 	var to_set bson.M
 	if order_data != nil {
 		to_set = bson.M{"order_state": new_state, "when": time.Now(), "data": order_data}
@@ -236,19 +234,22 @@ func (oh *orderHandler) SetState(order_id int64, source string, new_state int, o
 	change := bson.M{"$set": to_set}
 	log.Println("change:", change["$set"])
 	err := oh.collection.Update(bson.M{"order_id": order_id, "source":source}, change)
-	return err
+	if err != nil && err != mgo.ErrNotFound{
+		return err
+	}
+	return nil
 }
 
 func (oh *orderHandler) SetFeedback(for_whom string, for_state int, feedback string, source string) (*int64, error) {
 	if oh.collection == nil {
 		return nil, errors.New("БД не доступна")
 	}
-
 	order := OrderWrapper{}
 	err := oh.collection.Find(bson.M{"whom": for_whom, "order_state": for_state, "source":source}).Sort("-when").One(&order)
-	if err != nil {
+	if err != nil && err != mgo.ErrNotFound {
 		return nil, err
 	}
+	log.Printf("Store fedback by this order id:%v", order.OrderId)
 	oh.collection.Update(bson.M{"order_id": order.OrderId, "source":source}, bson.M{"$set": bson.M{"feedback": feedback}})
 	order_id := order.OrderId
 	return &order_id, nil
@@ -258,7 +259,6 @@ func (oh *orderHandler) AddOrder(order_id int64, whom string, source string) err
 	if oh.collection == nil {
 		return errors.New("БД не доступна")
 	}
-
 	wrapper := OrderWrapper{
 		When:       time.Now(),
 		Whom:       whom,
@@ -268,25 +268,21 @@ func (oh *orderHandler) AddOrder(order_id int64, whom string, source string) err
 	}
 	err := oh.collection.Insert(&wrapper)
 	return err
-
 }
 
 func (oh *orderHandler) AddOrderObject(order *OrderWrapper) error {
 	if oh.collection == nil {
 		return errors.New("БД не доступна")
 	}
-
 	order.When = time.Now()
 	err := oh.collection.Insert(order)
 	return err
 }
 
 func (oh *orderHandler) GetByOwner(whom, source string) (*OrderWrapper, error) {
-
 	if oh.collection == nil {
 		return nil, errors.New("БД не доступна")
 	}
-
 	result := OrderWrapper{}
 	err := oh.collection.Find(bson.M{"whom": whom, "source":source}).Sort("-when").One(&result)
 	if err == mgo.ErrNotFound {
@@ -301,7 +297,6 @@ func (uh *userHandler) CheckUser(req bson.M) (*UserWrapper, error) {
 	if uh.collection == nil {
 		return nil, errors.New("БД не доступна")
 	}
-
 	tmp := UserWrapper{}
 	err := uh.collection.Find(req).One(&tmp)
 	if err == mgo.ErrNotFound {
@@ -317,7 +312,6 @@ func (uh *userHandler) AddUser(user_id, phone *string) error {
 	if uh.collection == nil {
 		return errors.New("БД не доступна")
 	}
-
 	tmp, err := uh.CheckUser(bson.M{"user_id": user_id, "phone": phone})
 	if tmp == nil {
 		err = uh.collection.Insert(&UserWrapper{UserId: user_id, State: REGISTERED, Phone: phone, LastUpdate: time.Now()})
@@ -330,7 +324,6 @@ func (uh *userHandler) SetUserState(user_id *string, state string) error {
 	if uh.collection == nil {
 		return errors.New("БД не доступна")
 	}
-
 	tmp, _ := uh.CheckUser(bson.M{"user_id": user_id})
 	if tmp == nil {
 		err := uh.collection.Insert(&UserWrapper{UserId: user_id, State: state, LastUpdate: time.Now()})
@@ -342,14 +335,12 @@ func (uh *userHandler) SetUserState(user_id *string, state string) error {
 		)
 		return err
 	}
-
 }
 
 func (uh *userHandler) SetUserPassword(username, password *string) error {
 	if uh.collection == nil {
 		return errors.New("БД не доступна")
 	}
-
 	tmp, _ := uh.CheckUser(bson.M{"user_name": username})
 	if tmp == nil {
 		err := uh.collection.Insert(&UserWrapper{UserId: username, UserName: username, Password: password, State: REGISTERED, LastUpdate: time.Now()})
@@ -369,7 +360,6 @@ func (uh *userHandler) GetUserState(user_id string) (*string, error) {
 	if uh.collection == nil {
 		return nil, errors.New("БД не доступна")
 	}
-
 	result := UserWrapper{}
 	err := uh.collection.Find(bson.M{"user_id": user_id}).One(&result)
 	return &(result.State), err
@@ -379,7 +369,6 @@ func (uh *userHandler) CheckUserPassword(username, password *string) (*bool, err
 	if uh.collection == nil {
 		return nil, errors.New("БД не доступна")
 	}
-
 	tmp := UserWrapper{}
 	err := uh.collection.Find(bson.M{"user_name": username, "password": phash(password)}).One(&tmp)
 	result := (err != nil)
@@ -390,7 +379,6 @@ func (uh *userHandler) GetUserById(user_id string) (*UserWrapper, error) {
 	if uh.collection == nil {
 		return nil, errors.New("БД не доступна")
 	}
-
 	result := UserWrapper{}
 	err := uh.collection.Find(bson.M{"user_id": user_id}).One(&result)
 	return &result, err
@@ -401,7 +389,6 @@ func (eh *errorHandler) StoreError(username, error string) error {
 	if eh.collection == nil {
 		return errors.New("БД не доступна")
 	}
-
 	result := ErrorWrapper{Username:username, Error:error, Time:time.Now()}
 	err := eh.collection.Insert(&result)
 	return err

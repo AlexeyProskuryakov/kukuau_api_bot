@@ -6,7 +6,7 @@
           "fields": [
             {
               "data": {
-                "value": "EnDQm9C10YHQvtGB0LXRh9C90LDRjyDRg9C70LjRhtCwLCDQndC-0LLQvtGB0LjQsdC40YDRgdC6LCDQndC-0LLQvtGB0LjQsdC40YDRgdC60LDRjyDQvtCx0LvQsNGB0YLRjCwg0KDQvtGB0YHQuNGP",
+                "value": "EmTRg9C70LjRhtCwINCi0L7Qu9GB0YLQvtCz0L4sINCY0YHQutC40YLQuNC8LCDQndC-0LLQvtGB0LjQsdC40YDRgdC60LDRjyDQvtCx0LvQsNGB0YLRjCwg0KDQvtGB0YHQuNGP",
                 "text": "\u041a\u043e\u043c\u043c\u0443\u043d\u0438\u0441\u0442\u0438\u0447\u0435\u0441\u043a\u0430\u044f \u0443\u043b"
               },
               "type": "dict",
@@ -18,7 +18,7 @@
             },
             {
               "data": {
-                "value": "EnDQoNC-0YHRgdC40LnRgdC60LDRjyDRg9C70LjRhtCwLCDQndC-0LLQvtGB0LjQsdC40YDRgdC6LCDQndC-0LLQvtGB0LjQsdC40YDRgdC60LDRjyDQvtCx0LvQsNGB0YLRjCwg0KDQvtGB0YHQuNGP",
+                "value": "EmTRg9C70LjRhtCwINCt0L3Qs9C10LvRjNGB0LAsINCY0YHQutC40YLQuNC8LCDQndC-0LLQvtGB0LjQsdC40YDRgdC60LDRjyDQvtCx0LvQsNGB0YLRjCwg0KDQvtGB0YHQuNGP",
                 "text": "\u0420\u0430\u0434\u0443\u0436\u043d\u0430\u044f \u0443\u043b"
               },
               "type": "dict",
@@ -50,8 +50,8 @@
     "type": "chat",
     "id": "T6rqU-93"
   },
-  "from": "113c32ee9f65586882284425376e5d9d",
+  "from": "TEST",
   "userdata": {
-    "phone": "79231243359"
+    "phone": "TESTPHONE"
   }
 }

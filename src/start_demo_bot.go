@@ -10,10 +10,12 @@ import (
 	d "msngr/db"
 	n "msngr/notify"
 	s "msngr/structs"
+	rp "msngr/ruposts"
 	"net/http"
 	"time"
 	"errors"
 	"flag"
+
 )
 
 func startAfter(check s.CheckFunc, what func()) {
@@ -38,6 +40,18 @@ func GetAPIInstruments(params t.ApiParams) (t.TaxiInterface, t.AddressSupplier, 
 	return nil, nil, errors.New("Not imply name of api")
 }
 
+func InsertTestUser(db *d.DbHandlerMixin, user, pwd *string) {
+	err := db.Users.SetUserPassword(user, pwd)
+	if err != nil {
+		go func() {
+			for err == nil {
+				time.Sleep(1 * time.Second)
+				err = db.Users.SetUserPassword(user, pwd)
+				log.Printf("trying add user for test shops... now we have err:%+v", err)
+			}
+		}()
+	}
+}
 
 func main() {
 	conf := m.ReadConfig()
@@ -50,6 +64,8 @@ func main() {
 		log.Println("!start at test mode!")
 		conf.Database.Name = conf.Database.Name + "_test"
 	}
+	log.Printf("hw!")
+	db := d.NewDbHandler(conf.Database.ConnString, conf.Database.Name)
 
 	for _, taxi_conf := range conf.Taxis {
 		external_api, external_address_supplier, err := GetAPIInstruments(taxi_conf.Api)
@@ -60,7 +76,7 @@ func main() {
 		}
 
 		apiMixin := t.ExternalApiMixin{API: external_api}
-		db := d.NewDbHandler(conf.Database.ConnString, conf.Database.Name)
+
 		carsCache := t.NewCarsCache(external_api)
 		notifier := n.NewNotifier(conf.Main.CallbackAddr, taxi_conf.Key)
 
@@ -82,24 +98,20 @@ func main() {
 	}
 
 	for _, shop_conf := range conf.Shops {
-		db := d.NewDbHandler(conf.Database.ConnString, conf.Database.Name)
 		bot_context := sh.FormShopCommands(db, &shop_conf)
 		shop_controller := m.FormBotController(bot_context)
 		http.HandleFunc(fmt.Sprintf("/shop/%v", shop_conf.Name), shop_controller)
 
 	}
 
-	db := d.NewDbHandler(conf.Database.ConnString, conf.Database.Name)
-	user, password := "test", "123"
-	err := db.Users.SetUserPassword(&user, &password)
-	if err != nil {
-		go func() {
-			for err == nil {
-				time.Sleep(1 * time.Second)
-				err = db.Users.SetUserPassword(&user, &password)
-				log.Printf("trying add user for test shops... now we have err:%+v", err)
-			}
-		}()
+	user, pwd := "test", "test"
+	InsertTestUser(db, &user, &pwd)
+
+	if conf.RuPost.WorkUrl != "" {
+		log.Printf("will start ru post controller at: %v and will send requests to: %v", conf.RuPost.WorkUrl, conf.RuPost.ExternalUrl)
+		rp_bot_context := rp.FormRPBotContext(conf)
+		rp_controller := m.FormBotController(rp_bot_context)
+		http.HandleFunc(conf.RuPost.WorkUrl, rp_controller)
 	}
 
 	server_address := fmt.Sprintf(":%v", conf.Main.Port)

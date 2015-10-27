@@ -19,11 +19,14 @@ func _check(e error) {
 
 func getInPackage(r *http.Request) (*s.InPkg, error) {
 	var in s.InPkg
+	if r.Header.Get("Content-type") != "application/json"{
+		return nil, errors.New("No header `Content-type` or his value is not `application/json`")
+	}
 	body, err := ioutil.ReadAll(r.Body)
 	if err != nil {
 		log.Printf("error at reading: %q \n", err)
 	}
-	log.Printf("<<<:%s", string(body))
+	log.Printf("BOT RECEIVED: \n%s\n", string(body))
 	err = json.Unmarshal(body, &in)
 	if err != nil {
 		log.Printf("error at unmarshal: %q \n", err)
@@ -38,14 +41,14 @@ func setOutPackage(w http.ResponseWriter, out *s.OutPkg, isError bool, isDeferre
 	}
 	w.Header().Set("Content-type", "application/json")
 
-	log.Printf(">>> %s\n", string(jsoned_out))
+	log.Printf("BOT RESPONSED: \n%s\n", string(jsoned_out))
 
-	if isError{
+	if isError {
 		w.WriteHeader(http.StatusBadRequest)
-	} else if isDeferred{
+	} else if isDeferred {
 		w.WriteHeader(http.StatusNoContent)
 		return
-	}else{
+	}else {
 		w.WriteHeader(http.StatusOK)
 	}
 
@@ -67,10 +70,13 @@ func FormBotController(context *s.BotContext) controllerHandler {
 		var isError, isDeferred bool
 		var global_error, request_error, message_error error
 
-		if detail, ok := context.Check(); !ok{
-			out.Message = &s.OutMessage{Type: "error", Thread: "0", ID: u.GenId(), Body: fmt.Sprintln(detail)}
-			setOutPackage(w, out, true, false)
-			return
+		check := context.Check
+		if check != nil {
+			if detail, ok := check(); !ok {
+				out.Message = &s.OutMessage{Type: "error", Thread: "0", ID: u.GenId(), Body: fmt.Sprintln(detail)}
+				setOutPackage(w, out, true, false)
+				return
+			}
 		}
 
 		in, global_error = getInPackage(r)
@@ -85,7 +91,8 @@ func FormBotController(context *s.BotContext) controllerHandler {
 				requestResult := commandProcessor.ProcessRequest(in)
 				if requestResult.Error != nil {
 					request_error = requestResult.Error
-				}else{
+				}else {
+					//normal our request forming
 					out.Request.Query.Result = *requestResult.Commands
 				}
 			} else {
@@ -106,7 +113,13 @@ func FormBotController(context *s.BotContext) controllerHandler {
 						messageResult := commandProcessor.ProcessMessage(in)
 						if messageResult.Error != nil {
 							message_error = messageResult.Error
-						}else{
+						}else {
+							//normal out message forming
+							if messageResult.Type != "" {
+								out.Message.Type = "chat"
+							}else {
+								out.Message.Type = messageResult.Type
+							}
 							out.Message.Body = messageResult.Body
 							out.Message.Commands = messageResult.Commands
 							isDeferred = messageResult.IsDeferred

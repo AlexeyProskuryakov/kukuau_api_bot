@@ -17,7 +17,7 @@ type shop_config struct {
 	Name string `json:"name"`
 }
 
-type config struct {
+type Configuration struct {
 	Main     struct {
 				 Port         int    `json:"port"`
 				 CallbackAddr string `json:"callback_addr"`
@@ -32,17 +32,21 @@ type config struct {
 
 	Taxis    map[string]t.TaxiConfig `json:"taxis"`
 	Shops    map[string]s.ShopConfig `json:"shops"`
+	RuPost   struct {
+				 ExternalUrl string `json:"external_url"`
+				 WorkUrl     string `json:"work_url"`
+			 } `json:"ru_post"`
 }
 
 
-func ReadConfig() config {
+func ReadConfig() Configuration {
 	cdata, err := ioutil.ReadFile("config.json")
 	if err != nil {
 		log.Printf("error reading config")
 		os.Exit(-1)
 	}
 	log.Println("config data: ", string(cdata))
-	conf := config{}
+	conf := Configuration{}
 	err = json.Unmarshal(cdata, &conf)
 	if err != nil {
 		log.Printf("error decoding configuration file", err)
@@ -52,12 +56,11 @@ func ReadConfig() config {
 	if conf.Main.LoggingFile != "" {
 		f, err := os.OpenFile("demo_bot.log", os.O_RDWR | os.O_CREATE | os.O_TRUNC, 0666)
 		if err != nil {
-			log.Fatalf("error opening file: %v", err)
+			log.Fatalf("error opening log file: %v", err)
 		}
-		defer f.Close()
 
 		log.SetOutput(f)
-		log.Println("This is a test log entry")
+		log.Println("Logging file is setted here...")
 	}
 
 	return conf
