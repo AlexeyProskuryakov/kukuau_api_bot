@@ -235,7 +235,10 @@ func (oh *orderHandler) SetState(order_id int64, source string, new_state int, o
 	change := bson.M{"$set": to_set}
 	log.Println("change:", change["$set"])
 	err := oh.collection.Update(bson.M{"order_id": order_id, "source":source}, change)
-	return err
+	if err != nil && err != mgo.ErrNotFound{
+		return err
+	}
+	return nil
 }
 
 func (oh *orderHandler) SetFeedback(for_whom string, for_state int, feedback string, source string) (*int64, error) {

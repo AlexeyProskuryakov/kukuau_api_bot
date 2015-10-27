@@ -152,7 +152,7 @@ func ExceptionMessageResult(err error) *MessageResult {
 }
 //todo
 func ErrorMessageResult(err error, commands *[]OutCommand) *MessageResult {
-	result := MessageResult{Body:fmt.Sprintf("Ошибка! %v \n Попробуйте еще раз позже.", err), Type:"chat"}
+	result := MessageResult{Body:fmt.Sprintf("Ошибка! %v", err), Type:"chat"}
 	if commands != nil {
 		result.Commands = commands
 	}

@@ -360,7 +360,7 @@ func (nop *TaxiNewOrderProcessor) ProcessMessage(in *s.InPkg) *s.MessageResult {
 			}
 		}
 		if err != nil {
-			return s.ErrorMessageResult(err, nop.context.Commands["commands_at_not_created_order"])
+			return s.ErrorMessageResult(errors.New("Не могу определить адрес"), nop.context.Commands["commands_at_not_created_order"])
 		}
 
 		new_order.Phone = *phone
