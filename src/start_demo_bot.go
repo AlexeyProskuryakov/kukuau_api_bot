@@ -59,12 +59,11 @@ func main() {
 	flag.Parse()
 
 	d.DELETE_DB = *test
-	log.Printf("%+v %+v", *test, d.DELETE_DB)
+	log.Printf("Is test? [%+v] Will delete db? [%+v]", *test, d.DELETE_DB)
 	if d.DELETE_DB {
 		log.Println("!start at test mode!")
 		conf.Database.Name = conf.Database.Name + "_test"
 	}
-	log.Printf("hw!")
 	db := d.NewDbHandler(conf.Database.ConnString, conf.Database.Name)
 
 	for _, taxi_conf := range conf.Taxis {
