@@ -150,7 +150,10 @@ func TaxiOrderWatch(taxiContext *TaxiContext, botContext *s.BotContext) {
 					var notification_data *s.OutPkg
 					delivery_time, err := time.Parse("2006-01-02 15:04:05", api_order.TimeOfArrival)
 					if err != nil {
-						delivery_time = time.Now().Add(5 * time.Minute)
+						delivery_time, err = time.Parse("2006-01-02 15:04:05", api_order.DeliveryTime)
+						if err != nil{
+							delivery_time = time.Now().Add(5 * time.Minute)
+						}
 					}
 					prev_state, ok := previous_states[api_order.ID]
 					if ok {
