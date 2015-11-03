@@ -19,11 +19,6 @@ func GenId() string {
 	return fmt.Sprintf("%d", rand.Int63())
 }
 
-func CheckErr(e error) {
-	if e != nil {
-		panic(e)
-	}
-}
 
 func ToMap(in interface{}, tag string) (map[string]interface{}, error) {
 	out := make(map[string]interface{})

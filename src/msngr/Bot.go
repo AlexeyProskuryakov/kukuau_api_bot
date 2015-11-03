@@ -9,6 +9,7 @@ import (
 	"errors"
 	s "msngr/structs"
 	u "msngr/utils"
+	"strings"
 )
 
 func _check(e error) {
@@ -19,8 +20,8 @@ func _check(e error) {
 
 func getInPackage(r *http.Request) (*s.InPkg, error) {
 	var in s.InPkg
-	if r.Header.Get("Content-type") != "application/json"{
-		return nil, errors.New("No header `Content-type` or his value is not `application/json`")
+	if !strings.Contains(r.Header.Get("Content-Type"), "application/json") {
+		return nil, errors.New("No header `Content-Type` or his value is not `application/json`")
 	}
 	body, err := ioutil.ReadAll(r.Body)
 	if err != nil {
@@ -39,7 +40,7 @@ func setOutPackage(w http.ResponseWriter, out *s.OutPkg, isError bool, isDeferre
 	if err != nil {
 		log.Println("set out package: ", jsoned_out, err)
 	}
-	w.Header().Set("Content-type", "application/json")
+	w.Header().Set("Content-Type", "application/json")
 
 	log.Printf("BOT RESPONSED: \n%s\n", string(jsoned_out))
 
@@ -80,57 +81,67 @@ func FormBotController(context *s.BotContext) controllerHandler {
 		}
 
 		in, global_error = getInPackage(r)
-
-		out.To = in.From
-
-		if in.Request != nil {
-			action := in.Request.Query.Action
-			out.Request = &s.OutRequest{ID: u.GenId(), Type: "result"}
-			out.Request.Query.Action = action
-			if commandProcessor, ok := context.Request_commands[action]; ok {
-				requestResult := commandProcessor.ProcessRequest(in)
-				if requestResult.Error != nil {
-					request_error = requestResult.Error
-				}else {
-					//normal our request forming
-					out.Request.Query.Result = *requestResult.Commands
+		if in != nil {
+			out.To = in.From
+			if in.Request != nil {
+				if in.Request.Type == "error" {
+					log.Printf("error because type of request is error:\n %+v", in.Request)
+					return
 				}
-			} else {
-				request_error = errors.New("Команда не поддерживается.")
-			}
+				action := in.Request.Query.Action
+				out.Request = &s.OutRequest{ID: u.GenId(), Type: "result"}
+				out.Request.Query.Action = action
+				out.Request.Type = in.Request.Type
 
-		} else if in.Message != nil {
-			out.Message = &s.OutMessage{Type: in.Message.Type, Thread: in.Message.Thread, ID: u.GenId()}
+				if commandProcessor, ok := context.Request_commands[action]; ok {
+					requestResult := commandProcessor.ProcessRequest(in)
+					if requestResult.Error != nil {
+						request_error = requestResult.Error
+					}else {
+						//normal our request forming
+						out.Request.Query.Result = *requestResult.Commands
+					}
+				} else {
+					request_error = errors.New("Команда не поддерживается.")
+				}
 
-			in_commands := in.Message.Commands
+			} else if in.Message != nil {
+				if in.Message.Type == "error" {
+					log.Printf("error because type of message is error:\n %+v", in.Message)
+					return
+				}
+				out.Message = &s.OutMessage{Type: in.Message.Type, Thread: in.Message.Thread, ID: u.GenId()}
 
-			if in_commands == nil {
-				message_error = errors.New("Команд не найдено.")
-			} else {
-				for _, command := range *in_commands {
-					action := command.Action
-					if commandProcessor, ok := context.Message_commands[action]; ok {
-						messageResult := commandProcessor.ProcessMessage(in)
-						if messageResult.Error != nil {
-							message_error = messageResult.Error
-						}else {
-							//normal out message forming
-							if messageResult.Type != "" {
-								out.Message.Type = "chat"
+				in_commands := in.Message.Commands
+
+				if in_commands == nil {
+					message_error = errors.New("Команд не найдено.")
+				} else {
+					for _, command := range *in_commands {
+						action := command.Action
+						if commandProcessor, ok := context.Message_commands[action]; ok {
+							messageResult := commandProcessor.ProcessMessage(in)
+							if messageResult.Error != nil {
+								message_error = messageResult.Error
 							}else {
-								out.Message.Type = messageResult.Type
+								//normal out message forming
+								if messageResult.Type != "" {
+									out.Message.Type = "chat"
+								}else {
+									out.Message.Type = messageResult.Type
+								}
+								out.Message.Body = messageResult.Body
+								out.Message.Commands = messageResult.Commands
+								isDeferred = messageResult.IsDeferred
 							}
-							out.Message.Body = messageResult.Body
-							out.Message.Commands = messageResult.Commands
-							isDeferred = messageResult.IsDeferred
+						} else {
+							message_error = errors.New("Команда не поддерживается.")
 						}
-					} else {
-						message_error = errors.New("Команда не поддерживается.")
 					}
 				}
+			} else {
+				global_error = errors.New("Ничего не понятно!")
 			}
-		} else {
-			global_error = errors.New("Ничего не понятно!")
 		}
 
 		if message_error != nil {

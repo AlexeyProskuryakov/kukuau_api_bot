@@ -9,17 +9,6 @@ import (
 	"io/ioutil"
 )
 
-func warn(err error) {
-	if err != nil {
-		log.Println("notifier: ", err)
-	}
-}
-func warnp(err error) {
-	if err != nil {
-		log.Println("notifier: ", err)
-		panic(err)
-	}
-}
 
 type Notifier struct {
 	address string

@@ -14,6 +14,7 @@ import (
 	"time"
 	"fmt"
 )
+
 func readIn(in_jsoned string) *s.InPkg {
 	data, err := ioutil.ReadFile(in_jsoned)
 	if err != nil {
@@ -180,10 +181,12 @@ func test_shops() {
 		request_result := request_commands["commands"].ProcessRequest(&in)
 		log.Println("commands: ERROR?: ", request_result.Error)
 
+
+
 	}
 }
 func main() {
-	test_taxi()
-	//	test_shops()
+	//	test_taxi()
+	test_shops()
 }
 

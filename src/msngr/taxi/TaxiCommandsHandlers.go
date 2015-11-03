@@ -187,7 +187,7 @@ type TaxiSupportMessageProcessor struct {
 }
 
 func (smp *TaxiSupportMessageProcessor) ProcessMessage(in *s.InPkg) *s.MessageResult {
-	return &s.MessageResult{Body:"Спасибо за ваш отзыв!", }
+	return &s.MessageResult{Body:"Спасибо за ваш отзыв!", Type:"chat"}
 }
 
 func form_commands_for_current_order(order_wrapper *d.OrderWrapper, commands map[string]*[]s.OutCommand) *[]s.OutCommand {
@@ -249,6 +249,7 @@ func (ih *TaxiInformationProcessor) ProcessMessage(in *s.InPkg) *s.MessageResult
 	}
 	return &s.MessageResult{
 		Body: info_text,
+		Type:"chat",
 	}
 }
 
@@ -388,7 +389,7 @@ func (nop *TaxiNewOrderProcessor) ProcessMessage(in *s.InPkg) *s.MessageResult {
 
 		return &s.MessageResult{Body:text, Commands:nop.context.Commands["commands_at_created_order"], Type:"chat"}
 	}
-	return &s.MessageResult{Body: "Заказ уже создан!", Commands: nop.context.Commands["commands_at_created_order"]}
+	return &s.MessageResult{Body: "Заказ уже создан!", Commands: nop.context.Commands["commands_at_created_order"], Type:"chat"}
 }
 
 type TaxiCancelOrderProcessor struct {
@@ -408,9 +409,9 @@ func (cop *TaxiCancelOrderProcessor) ProcessMessage(in *s.InPkg) *s.MessageResul
 		is_success, message := cop.API.CancelOrder(order_wrapper.OrderId)
 		if is_success {
 			cop.Orders.SetState(order_wrapper.OrderId, cop.context.Name, ORDER_CANCELED, nil)
-			return &s.MessageResult{Body:"Ваш заказ отменен!", Commands: cop.context.Commands["commands_at_not_created_order"]}
+			return &s.MessageResult{Body:"Ваш заказ отменен!", Commands: cop.context.Commands["commands_at_not_created_order"], Type:"chat"}
 		} else {
-			return &s.MessageResult{Body:fmt.Sprintf("Проблемы с отменой заказа %v\nЗвони скорее: %+v ", message, cop.alert_phone), Commands: cop.context.Commands["commands_at_not_created_order"] }
+			return &s.MessageResult{Body:fmt.Sprintf("Проблемы с отменой заказа %v\nЗвони скорее: %+v ", message, cop.alert_phone), Commands: cop.context.Commands["commands_at_not_created_order"], Type:"chat"}
 		}
 	}
 	commands, err := FormCommands(in.From, cop.DbHandlerMixin, cop.context)
@@ -434,7 +435,7 @@ func (cpp *TaxiCalculatePriceProcessor) ProcessMessage(in *s.InPkg) *s.MessageRe
 	}
 	cost_s, _ := cpp.API.CalcOrderCost(*order)
 	cost := strconv.Itoa(cost_s)
-	return &s.MessageResult{Body: fmt.Sprintf("Стоймость будет всего лишь %v рублей!", cost)}
+	return &s.MessageResult{Body: fmt.Sprintf("Стоймость будет всего лишь %v рублей!", cost), Type:"chat"}
 }
 
 type TaxiFeedbackProcessor struct {
@@ -467,8 +468,8 @@ func (fp *TaxiFeedbackProcessor) ProcessMessage(in *s.InPkg) *s.MessageResult {
 		if err != nil {
 			return s.ErrorMessageResult(err, fp.context.Commands["commands_at_not_created_order"])
 		}
-		return &s.MessageResult{Body: "Спасибо! Ваш отзыв очень важен для нас:)", Commands: result_commands}
+		return &s.MessageResult{Body: "Спасибо! Ваш отзыв очень важен для нас:)", Commands: result_commands, Type:"chat"}
 	} else {
-		return &s.MessageResult{Body:"Оплаченный заказ не найден :( Отзывы могут быть только для оплаченных заказов", Commands:fp.context.Commands["commands_at_not_created_order"]}
+		return &s.MessageResult{Body:"Оплаченный заказ не найден :( Отзывы могут быть только для оплаченных заказов", Commands:fp.context.Commands["commands_at_not_created_order"], Type:"chat"}
 	}
 }
