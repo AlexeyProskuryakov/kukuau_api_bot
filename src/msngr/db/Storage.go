@@ -8,6 +8,7 @@ import (
 	"time"
 	"errors"
 	"fmt"
+	"msngr/structs"
 )
 
 const (
@@ -90,6 +91,7 @@ type DbHandlerMixin struct {
 	Orders  *orderHandler
 	Users   *userHandler
 	Errors  *errorHandler
+	Check   structs.CheckFunc
 }
 
 var DELETE_DB = false
@@ -202,6 +204,12 @@ func NewDbHandler(conn, dbname string) *DbHandlerMixin {
 	odbh.Orders = &orderHandler{}
 	odbh.Errors = &errorHandler{}
 
+	odbh.Check = func() (string, bool) {
+		if odbh.session != nil {
+			return "OK", true
+		}
+		return "Db is not connected :(", false
+	}
 	log.Printf("start reconnecting")
 	go func() {
 		odbh.reConnect(conn, dbname)
@@ -234,7 +242,7 @@ func (oh *orderHandler) SetState(order_id int64, source string, new_state int, o
 	change := bson.M{"$set": to_set}
 	log.Println("change:", change["$set"])
 	err := oh.collection.Update(bson.M{"order_id": order_id, "source":source}, change)
-	if err != nil && err != mgo.ErrNotFound{
+	if err != nil && err != mgo.ErrNotFound {
 		return err
 	}
 	return nil

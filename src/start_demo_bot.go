@@ -18,17 +18,6 @@ import (
 
 )
 
-func startAfter(check s.CheckFunc, what func()) {
-	for {
-		if message, ok := check(); ok {
-			break
-		}else {
-			log.Printf("wait %v", message)
-			time.Sleep(5 * time.Second)
-		}
-	}
-	go what()
-}
 
 func GetAPIInstruments(params t.ApiParams) (t.TaxiInterface, t.AddressSupplier, error) {
 	switch api_name := params.Name; api_name{
@@ -87,7 +76,8 @@ func main() {
 		controller := m.FormBotController(botContext)
 
 		http.HandleFunc(fmt.Sprintf("/taxi/%v", taxi_conf.Name), controller)
-		startAfter(botContext.Check, func() {
+
+		s.StartAfter(botContext.Check, func() {
 			t.TaxiOrderWatch(&taxiContext, botContext)
 		})
 

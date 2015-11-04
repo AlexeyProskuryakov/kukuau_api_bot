@@ -1,5 +1,9 @@
 package structs
-import "fmt"
+import (
+	"fmt"
+	"time"
+	"log"
+)
 
 type FieldAttribute struct {
 	Label     string  `json:"label"`
@@ -137,6 +141,7 @@ type MessageResult struct {
 type RequestResult struct {
 	Commands *[]OutCommand
 	Error    error
+	Type	string
 }
 
 type RequestCommandProcessor interface {
@@ -161,4 +166,16 @@ func ErrorMessageResult(err error, commands *[]OutCommand) *MessageResult {
 
 func ExceptionRequestResult(err error, commands *[]OutCommand) *RequestResult {
 	return &RequestResult{Error:err, Commands:commands}
+}
+
+func StartAfter(check CheckFunc, what func()) {
+	for {
+		if message, ok := check(); ok {
+			break
+		}else {
+			log.Printf("wait %v", message)
+			time.Sleep(5 * time.Second)
+		}
+	}
+	go what()
 }

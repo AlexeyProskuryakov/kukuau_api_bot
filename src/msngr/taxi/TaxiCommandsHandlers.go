@@ -25,15 +25,10 @@ func FormTaxiBotContext(im *ExternalApiMixin, db_handler *d.DbHandlerMixin, tc T
 		ok = im.API.IsConnected()
 		if !ok {
 			detail = "Ошибка в подключении к сервису попробуйте позже"
+		} else{
+			return db_handler.Check()
 		}
-		ok = ok && db_handler.IsConnected()
-		if !ok {
-			detail = "Ошибка в подключении к БД попробуйте позже"
-		}
-		if ok {
-			detail = "All ok!"
-		}
-		return
+		return detail, ok
 	}
 
 	context.Commands = GetCommands(tc.DictUrl)

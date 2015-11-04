@@ -2,6 +2,7 @@ package main
 import (
 	"log"
 	m "msngr"
+	s "msngr/structs"
 	d "msngr/db"
 	sh "msngr/shop"
 	"flag"
@@ -10,9 +11,10 @@ import (
 	"net/http"
 	"io/ioutil"
 	"bytes"
+	"testing"
 )
 
-func send_post(fn, url string){
+func send_post(fn, url string) {
 	data, err := ioutil.ReadFile(fn)
 	if err != nil {
 		log.Panic(err)
@@ -44,11 +46,11 @@ func send_post(fn, url string){
 }
 
 
-func test_bot() {
+func TestBot(t *testing.T) {
 	conf := m.ReadConfig()
 	var test = flag.Bool("test", false, "go in test use?")
 	flag.Parse()
-
+	m.DEBUG = true
 	d.DELETE_DB = *test
 	log.Printf("Is test? [%+v] Will delete db? [%+v]", *test, d.DELETE_DB)
 	if d.DELETE_DB {
@@ -66,23 +68,26 @@ func test_bot() {
 	}
 
 	server_address := fmt.Sprintf(":%v", conf.Main.Port)
-	go func() {
+	s.StartAfter(db.Check, func() {
 		log.Printf("\nStart listen and serving at: %v\n", server_address)
 		server := &http.Server{
 			Addr: server_address,
 		}
 
 		log.Fatal(server.ListenAndServe())
-	}()
+	})
 
 	log.Printf("will send requests....")
 
 	addr := fmt.Sprintf("http://localhost:%v/shop/test_shop", conf.Main.Port)
 	send_post("test_res/shop_balance_ok.json", addr)
 	send_post("test_res/shop_balance_error.json", addr)
-	
+	send_post("test_res/request_commands.json", addr)
 }
 
 func main() {
-	test_bot()
+	t := testing.T{}
+
+	TestBot(&t)
+	log.Printf("%+v", t)
 }
