@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"math/rand"
 	"reflect"
-
+	"time"
 	"regexp"
 	"strings"
 
@@ -16,7 +16,10 @@ import (
 
 
 func GenId() string {
-	return fmt.Sprintf("%d", rand.Int63())
+	t := time.Now().UnixNano()
+	s := rand.NewSource(t)
+	r := rand.New(s)
+	return fmt.Sprintf("%d", r.Int63())
 }
 
 

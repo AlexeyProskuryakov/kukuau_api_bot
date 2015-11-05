@@ -15,17 +15,18 @@ import (
 	"testing"
 )
 
-func send_post(fn, url string) {
+func send_post(fn, url string) []byte {
 	data, err := ioutil.ReadFile(fn)
 	if err != nil {
 		log.Panic(err)
 	}
 	body := bytes.NewBuffer(data)
+	result := []byte{}
 
 	req, err := http.NewRequest("POST", url, body)
 	if err != nil {
 		log.Panic(err)
-		return
+		return result
 	}
 	req.Header.Add("Content-Type", "application/json")
 
@@ -33,7 +34,7 @@ func send_post(fn, url string) {
 	resp, err := client.Do(req)
 	if err != nil {
 		log.Panic(err)
-		return
+		return result
 	}
 	if resp != nil {
 		body, err := ioutil.ReadAll(resp.Body)
@@ -41,10 +42,11 @@ func send_post(fn, url string) {
 			log.Panic(err)
 		} else {
 			log.Printf("<<< %+v", string(body))
-
+			return body
 		}
 		defer resp.Body.Close()
 	}
+	return result
 }
 
 
@@ -85,11 +87,5 @@ func TestBot(t *testing.T) {
 	send_post("test_res/shop_balance_ok.json", addr)
 	send_post("test_res/shop_balance_error.json", addr)
 	send_post("test_res/request_commands.json", addr)
-}
-
-func main() {
-	t := testing.T{}
-
-	TestBot(&t)
-	log.Printf("%+v", t)
+	t.Log("test ended...")
 }
