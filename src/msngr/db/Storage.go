@@ -257,10 +257,12 @@ func (oh *orderHandler) SetFeedback(for_whom string, for_state int, feedback str
 	if err != nil && err != mgo.ErrNotFound {
 		return nil, err
 	}
-	log.Printf("Store fedback by this order id:%v", order.OrderId)
-	oh.collection.Update(bson.M{"order_id": order.OrderId, "source":source}, bson.M{"$set": bson.M{"feedback": feedback}})
+	if err == mgo.ErrNotFound{
+		return nil, errors.New("Заказ не найден!")
+	}
+	err = oh.collection.Update(bson.M{"order_id": order.OrderId, "source":source}, bson.M{"$set": bson.M{"feedback": feedback}})
 	order_id := order.OrderId
-	return &order_id, nil
+	return &order_id, err
 }
 
 func (oh *orderHandler) AddOrder(order_id int64, whom string, source string) error {

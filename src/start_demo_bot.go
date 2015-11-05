@@ -19,7 +19,7 @@ import (
 )
 
 
-func GetAPIInstruments(params t.ApiParams) (t.TaxiInterface, t.AddressSupplier, error) {
+func GetTaxiAPIInstruments(params t.ApiParams) (t.TaxiInterface, t.AddressSupplier, error) {
 	switch api_name := params.Name; api_name{
 	case "infinity":
 		return i.GetInfinityAPI(params), i.GetInfinityAddressSupplier(params), nil
@@ -53,10 +53,11 @@ func main() {
 		log.Println("!start at test mode!")
 		conf.Database.Name = conf.Database.Name + "_test"
 	}
+
 	db := d.NewDbHandler(conf.Database.ConnString, conf.Database.Name)
 
 	for _, taxi_conf := range conf.Taxis {
-		external_api, external_address_supplier, err := GetAPIInstruments(taxi_conf.Api)
+		external_api, external_address_supplier, err := GetTaxiAPIInstruments(taxi_conf.Api)
 
 		if err != nil {
 			log.Printf("Skip this taxi api [%+v]\nBecause: %v", taxi_conf.Api, err)

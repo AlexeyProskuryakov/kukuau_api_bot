@@ -25,7 +25,7 @@ func FormTaxiBotContext(im *ExternalApiMixin, db_handler *d.DbHandlerMixin, tc T
 		ok = im.API.IsConnected()
 		if !ok {
 			detail = "Ошибка в подключении к сервису попробуйте позже"
-		} else{
+		} else {
 			return db_handler.Check()
 		}
 		return detail, ok
@@ -188,8 +188,7 @@ func (smp *TaxiSupportMessageProcessor) ProcessMessage(in *s.InPkg) *s.MessageRe
 func form_commands_for_current_order(order_wrapper *d.OrderWrapper, commands map[string]*[]s.OutCommand) *[]s.OutCommand {
 	if order_wrapper != nil {
 		//if time and not fedb and state is end of driver
-		if time.Now().Sub(order_wrapper.When) < time.Hour && order_wrapper.Feedback == "" &&
-		order_wrapper.OrderState >= ORDER_PAYED {
+		if time.Now().Sub(order_wrapper.When) < time.Hour && order_wrapper.Feedback == "" && order_wrapper.OrderState == ORDER_PAYED {
 			return commands["commands_for_order_feedback"]
 		}
 		//if order state less than order payed in StatusesMap
@@ -455,8 +454,7 @@ func (fp *TaxiFeedbackProcessor) ProcessMessage(in *s.InPkg) *s.MessageResult {
 	if err != nil {
 		return s.ErrorMessageResult(err, fp.context.Commands["commands_at_not_created_order"])
 	}
-
-	if *order_id != -1 {
+	if order_id != nil {
 		f := Feedback{IdOrder: *order_id, Rating: 5, Notes: fdbk}
 		fp.API.Feedback(f)
 		result_commands, err := FormCommands(in.From, fp.DbHandlerMixin, fp.context)
