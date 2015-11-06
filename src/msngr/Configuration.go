@@ -6,6 +6,7 @@ import (
 	"log"
 	t "msngr/taxi"
 	s "msngr/shop"
+	u "msngr/utils"
 	"os"
 )
 
@@ -38,9 +39,13 @@ type Configuration struct {
 			 } `json:"ru_post"`
 }
 
-
 func ReadConfig() Configuration {
-	cdata, err := ioutil.ReadFile("config.json")
+	fn := u.FoundFile("config.json")
+	if fn == nil{
+		log.Printf("can not find config.json file :(")
+		os.Exit(-1)
+	}
+	cdata, err := ioutil.ReadFile(*fn)
 	if err != nil {
 		log.Printf("error reading config")
 		os.Exit(-1)

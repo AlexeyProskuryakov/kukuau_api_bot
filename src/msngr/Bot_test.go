@@ -6,6 +6,7 @@ import (
 	s "msngr/structs"
 	d "msngr/db"
 	sh "msngr/shop"
+	u "msngr/utils"
 	"flag"
 
 	"fmt"
@@ -13,15 +14,31 @@ import (
 	"io/ioutil"
 	"bytes"
 	"testing"
+	"path"
 )
 
+func get_test_filename(fn string) *string {
+	test_dir := u.FoundFile("test_res")
+	if test_dir != nil {
+		result := path.Join(*test_dir, fn)
+		return &result
+	}
+	return nil
+}
+
+
 func send_post(fn, url string) []byte {
-	data, err := ioutil.ReadFile(fn)
+	result := []byte{}
+	ffn := get_test_filename(fn)
+	if ffn == nil {
+		return result
+	}
+	data, err := ioutil.ReadFile(*ffn)
 	if err != nil {
 		log.Panic(err)
 	}
 	body := bytes.NewBuffer(data)
-	result := []byte{}
+
 
 	req, err := http.NewRequest("POST", url, body)
 	if err != nil {
@@ -84,8 +101,8 @@ func TestBot(t *testing.T) {
 	log.Printf("will send requests....")
 
 	addr := fmt.Sprintf("http://localhost:%v/shop/test_shop", conf.Main.Port)
-	send_post("test_res/shop_balance_ok.json", addr)
-	send_post("test_res/shop_balance_error.json", addr)
-	send_post("test_res/request_commands.json", addr)
+	send_post("shop_balance_ok.json", addr)
+	send_post("shop_balance_error.json", addr)
+	send_post("request_commands.json", addr)
 	t.Log("test ended...")
 }

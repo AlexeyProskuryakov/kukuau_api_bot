@@ -12,6 +12,7 @@ import (
 	"log"
 	"net/http"
 	"io/ioutil"
+	"path"
 )
 
 
@@ -22,6 +23,27 @@ func GenId() string {
 	return fmt.Sprintf("%d", r.Int63())
 }
 
+func FoundFile(fname string) *string {
+	dir, err := os.Getwd()
+	if err != nil {
+		return nil
+	}
+	for {
+		files, err := ioutil.ReadDir(dir)
+		if err != nil {
+			return nil
+		}
+		for _, f := range files {
+			if fname == f.Name() {
+				result := path.Join(dir, fname)
+				return &result
+			}
+		}
+		dir = path.Dir(dir)
+
+	}
+	return nil
+}
 
 func ToMap(in interface{}, tag string) (map[string]interface{}, error) {
 	out := make(map[string]interface{})
@@ -124,7 +146,7 @@ func GET(url string, params *map[string]string) (*[]byte, error) {
 	}
 	defer res.Body.Close()
 	body, err := ioutil.ReadAll(res.Body)
-//	log.Printf("GET < \n%v\n", string(body), )
+	//	log.Printf("GET < \n%v\n", string(body), )
 	return &body, err
 }
 
