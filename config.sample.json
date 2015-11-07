@@ -72,6 +72,7 @@
           "connection_string": "http://109.202.25.248:8080/WebAPITaxi/",
           "host": "109.202.25.248:8080"
         },
+        "not_send_price":true,
         "fake": {
           "sended_states": [
             2,

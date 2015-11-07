@@ -2,10 +2,11 @@ package main
 
 import (
 	tm "msngr/taxi/master"
+	"log"
 )
 
 
 func main() {
 	api := tm.TaxiMasterAPI{}
-	api.
+	log.Printf("tm api: %+v", api)
 }

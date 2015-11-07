@@ -5,6 +5,7 @@ import (
 	s "msngr/structs"
 	d "msngr/db"
 	sh "msngr/shop"
+	c "msngr/configuration"
 	"flag"
 
 	"fmt"
@@ -47,7 +48,7 @@ func send_post(fn, url string) {
 
 
 func TestBot(t *testing.T) {
-	conf := m.ReadConfig()
+	conf := c.ReadConfig()
 	var test = flag.Bool("test", false, "go in test use?")
 	flag.Parse()
 	m.DEBUG = true

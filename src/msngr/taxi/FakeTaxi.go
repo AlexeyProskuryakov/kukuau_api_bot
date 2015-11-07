@@ -5,6 +5,7 @@ import (
 	"math/rand"
 	"time"
 	"encoding/json"
+	c "msngr/configuration"
 )
 
 //////////////////////////////////////////////////////////////////////////
@@ -13,7 +14,7 @@ import (
 
 var fakeInstance *FakeTaxiAPI
 
-func GetFakeInfinityAPI(params ApiParams) TaxiInterface {
+func GetFakeAPI(params c.TaxiApiParams) TaxiInterface {
 	if fakeInstance == nil {
 		log.Printf("Params fake:%#v",params.Fake)
 		fakeInstance = &FakeTaxiAPI{SleepTime:params.Fake.SleepTime, SendedStates:params.Fake.SendedStates}

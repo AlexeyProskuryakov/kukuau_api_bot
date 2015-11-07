@@ -6,7 +6,7 @@ import (
 	s "msngr/structs"
 	d "msngr/db"
 	sh "msngr/shop"
-	u "msngr/utils"
+	t "msngr/test"
 	"flag"
 
 	"fmt"
@@ -14,22 +14,15 @@ import (
 	"io/ioutil"
 	"bytes"
 	"testing"
-	"path"
+
 )
 
-func get_test_filename(fn string) *string {
-	test_dir := u.FoundFile("test_res")
-	if test_dir != nil {
-		result := path.Join(*test_dir, fn)
-		return &result
-	}
-	return nil
-}
+
 
 
 func send_post(fn, url string) []byte {
 	result := []byte{}
-	ffn := get_test_filename(fn)
+	ffn := t.GetTestFileName(fn)
 	if ffn == nil {
 		return result
 	}

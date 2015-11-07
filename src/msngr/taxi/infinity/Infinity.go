@@ -163,7 +163,7 @@ func (p *infinity) reconnect() {
 		if result {
 			break
 		} else {
-			log.Printf("IR: reconnect is fail trying next after %+v", sleep_time)
+			log.Printf("Infinity: reconnect is fail trying next after %+v", sleep_time)
 			time.Sleep(sleep_time * time.Millisecond)
 			sleep_time = time.Duration(float32(sleep_time) * 1.4)
 		}

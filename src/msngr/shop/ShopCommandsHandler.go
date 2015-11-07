@@ -9,18 +9,14 @@ import (
 	d "msngr/db"
 	s "msngr/structs"
 	u "msngr/utils"
+	c "msngr/configuration"
 	"errors"
 	"gopkg.in/mgo.v2"
 )
 
-type ShopConfig struct {
-	Key  string `json:"key"`
-	Name string `json:"name"`
-	Info string `json:"information"`
-}
 
 
-func FormShopCommands(db *d.DbHandlerMixin, config *ShopConfig) *s.BotContext {
+func FormShopCommands(db *d.DbHandlerMixin, config *c.ShopConfig) *s.BotContext {
 	var ShopRequestCommands = map[string]s.RequestCommandProcessor{
 		"commands": ShopCommandsProcessor{DbHandlerMixin: *db},
 	}

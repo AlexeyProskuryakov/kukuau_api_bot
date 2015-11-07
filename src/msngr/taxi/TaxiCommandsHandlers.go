@@ -9,6 +9,7 @@ import (
 	s "msngr/structs"
 	d "msngr/db"
 	u "msngr/utils"
+	c "msngr/configuration"
 	"gopkg.in/mgo.v2"
 )
 
@@ -17,7 +18,7 @@ const (
 
 )
 
-func FormTaxiBotContext(im *ExternalApiMixin, db_handler *d.DbHandlerMixin, tc TaxiConfig, ah *GoogleAddressHandler) *s.BotContext {
+func FormTaxiBotContext(im *ExternalApiMixin, db_handler *d.DbHandlerMixin, tc c.TaxiConfig, ah *GoogleAddressHandler) *s.BotContext {
 
 	context := s.BotContext{}
 
@@ -47,6 +48,11 @@ func FormTaxiBotContext(im *ExternalApiMixin, db_handler *d.DbHandlerMixin, tc T
 		"feedback":         &TaxiFeedbackProcessor{ExternalApiMixin: *im, DbHandlerMixin: *db_handler, context:&context},
 		"write_dispatcher": &TaxiSupportMessageProcessor{},
 	}
+
+	context.Settings = make(map[string]interface{})
+	context.Settings["not_send_price"] = tc.Api.NotSendPrice
+
+	log.Printf("For %+v will not send price? %+v\nAll settings is: %+v", tc.Name, tc.Api.NotSendPrice, context.Settings)
 
 	return &context
 }
@@ -369,13 +375,26 @@ func (nop *TaxiNewOrderProcessor) ProcessMessage(in *s.InPkg) *s.MessageResult {
 				log.Printf("ALERT! Создан заказ [%+v] без денег!", ans.Content.Id)
 			}
 		}
-		text := fmt.Sprintf("Ваш заказ создан! Стоймость поездки составит %+v рублей.", cost)
-
+		//not send price settings
+		not_send_price := false
+		nsp_, ok := nop.context.Settings["not_send_price"]
+		if ok {
+			if _nsp, ok := nsp_.(bool); ok {
+				not_send_price = _nsp
+			}
+		}
+		text := ""
+		if not_send_price {
+			text = "Ваш заказ создан!"
+		} else {
+			text = fmt.Sprintf("Ваш заказ создан! Стоймость поездки составит %+v рублей.", cost)
+		}
+		//check is answer of new order in external api has error
 		if !ans.IsSuccess {
 			nop.Errors.StoreError(in.From, ans.Message)
 			return s.ErrorMessageResult(errors.New(ans.Message), nop.context.Commands["commands_at_not_created_order"])
 		}
-
+		//persisting order
 		err = nop.Orders.AddOrderObject(&d.OrderWrapper{OrderState:ORDER_CREATED, Whom:in.From, OrderId:ans.Content.Id, Source:nop.context.Name})
 		if err != nil {
 			return s.ErrorMessageResult(err, nop.context.Commands["commands_at_not_created_order"])

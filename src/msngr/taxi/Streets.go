@@ -8,10 +8,12 @@ import (
 	"msngr/utils"
 	"math"
 	"errors"
-	s "msngr/taxi/set"
-	u "msngr/utils"
 	"regexp"
 	"strings"
+
+	s "msngr/taxi/set"
+	u "msngr/utils"
+	c "msngr/configuration"
 )
 
 /*
@@ -30,12 +32,6 @@ var cc_reg = regexp.MustCompilePOSIX("(ул(ица|\\.| )|пр(\\.|оспект|
 
 const GOOGLE_API_URL = "https://maps.googleapis.com/maps/api"
 
-
-type TaxiGeoOrbit struct {
-	Lat    float64 `json:"lat"`
-	Lon    float64 `json:"lon"`
-	Radius float64 `json:"radius"`
-}
 
 type GoogleTerm struct {
 	Offset int16 `json:"offset"`
@@ -76,7 +72,7 @@ type GoogleAddressHandler struct {
 	AddressSupplier
 
 	key                     string
-	orbit                   TaxiGeoOrbit
+	orbit                   c.TaxiGeoOrbit
 
 	cache                   map[string]*AddressF
 	cache_dests             map[string]*GoogleDetailPlaceResult
@@ -85,7 +81,7 @@ type GoogleAddressHandler struct {
 }
 
 
-func NewGoogleAddressHandler(key string, orbit TaxiGeoOrbit, external AddressSupplier) *GoogleAddressHandler {
+func NewGoogleAddressHandler(key string, orbit c.TaxiGeoOrbit, external AddressSupplier) *GoogleAddressHandler {
 	result := GoogleAddressHandler{key:key, orbit:orbit}
 	result.cache = make(map[string]*AddressF)
 	result.cache_dests = make(map[string]*GoogleDetailPlaceResult)

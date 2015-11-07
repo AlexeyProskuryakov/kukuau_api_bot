@@ -7,10 +7,10 @@ import (
 	s "msngr/structs"
 	t "msngr/taxi"
 	i "msngr/taxi/infinity"
-	m "msngr"
 	d "msngr/db"
 	n "msngr/notify"
 	sh "msngr/shop"
+	c "msngr/configuration"
 	"time"
 	"fmt"
 )
@@ -52,7 +52,7 @@ func serve_notifications(out chan s.OutPkg) {
 
 
 func test_taxi() {
-	conf := m.ReadConfig()
+	conf := c.ReadConfig()
 
 	d.DELETE_DB = true
 	if d.DELETE_DB {
@@ -66,7 +66,7 @@ func test_taxi() {
 	for _, taxi_conf := range conf.Taxis {
 		if taxi_conf.Name == "fake" {
 			log.Println(taxi_conf)
-			external_api := t.GetFakeInfinityAPI(taxi_conf.Api)
+			external_api := t.GetFakeAPI(taxi_conf.Api)
 			external_address_supplier := i.GetInfinityAddressSupplier(taxi_conf.Api)
 
 			apiMixin := t.ExternalApiMixin{API: external_api}
@@ -162,7 +162,7 @@ func test_taxi() {
 }
 
 func test_shops() {
-	conf := m.ReadConfig()
+	conf := c.ReadConfig()
 
 	d.DELETE_DB = true
 	if d.DELETE_DB {

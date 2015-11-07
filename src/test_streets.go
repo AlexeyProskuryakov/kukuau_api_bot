@@ -4,14 +4,14 @@ import (
 	"fmt"
 	"log"
 	t "msngr/taxi"
-	m "msngr"
+	c "msngr/configuration"
 	d "msngr/db"
 	i "msngr/taxi/infinity"
 	u "msngr/utils"
 	"encoding/json"
 )
 
-func start_serv(conf m.Configuration, threaded bool) (string, *t.GoogleAddressHandler) {
+func start_serv(conf c.Configuration, threaded bool) (string, *t.GoogleAddressHandler) {
 	taxi_conf := conf.Taxis["fake"]
 
 	address_supplier := t.NewGoogleAddressHandler(conf.Main.GoogleKey, taxi_conf.GeoOrbit, i.GetInfinityAddressSupplier(taxi_conf.Api))
@@ -40,7 +40,7 @@ func start_serv(conf m.Configuration, threaded bool) (string, *t.GoogleAddressHa
 
 
 func test_serv() {
-	conf := m.ReadConfig()
+	conf := c.ReadConfig()
 
 	d.DELETE_DB = true
 	if d.DELETE_DB {
@@ -52,7 +52,7 @@ func test_serv() {
 }
 
 func test_all() {
-	conf := m.ReadConfig()
+	conf := c.ReadConfig()
 
 	d.DELETE_DB = true
 	if d.DELETE_DB {

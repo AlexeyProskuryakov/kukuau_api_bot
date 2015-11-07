@@ -11,6 +11,7 @@ import (
 	n "msngr/notify"
 	s "msngr/structs"
 	rp "msngr/ruposts"
+	c "msngr/configuration"
 	"net/http"
 	"time"
 	"errors"
@@ -19,12 +20,12 @@ import (
 )
 
 
-func GetTaxiAPIInstruments(params t.ApiParams) (t.TaxiInterface, t.AddressSupplier, error) {
+func GetTaxiAPIInstruments(params c.TaxiApiParams) (t.TaxiInterface, t.AddressSupplier, error) {
 	switch api_name := params.Name; api_name{
 	case "infinity":
 		return i.GetInfinityAPI(params), i.GetInfinityAddressSupplier(params), nil
 	case "fake":
-		return t.GetFakeInfinityAPI(params), i.GetInfinityAddressSupplier(params), nil
+		return t.GetFakeAPI(params), i.GetInfinityAddressSupplier(params), nil
 	}
 	return nil, nil, errors.New("Not imply name of api")
 }
@@ -43,7 +44,7 @@ func InsertTestUser(db *d.DbHandlerMixin, user, pwd *string) {
 }
 
 func main() {
-	conf := m.ReadConfig()
+	conf := c.ReadConfig()
 	var test = flag.Bool("test", false, "go in test use?")
 	flag.Parse()
 
@@ -51,12 +52,13 @@ func main() {
 	log.Printf("Is test? [%+v] Will delete db? [%+v]", *test, d.DELETE_DB)
 	if d.DELETE_DB {
 		log.Println("!start at test mode!")
-		conf.Database.Name = conf.Database.Name + "_test"
+		conf.Main.Database.Name = conf.Main.Database.Name + "_test"
 	}
-
-	db := d.NewDbHandler(conf.Database.ConnString, conf.Database.Name)
+	log.Printf("configuration for db:\nconnection string: %+v\ndatabase name: %+v", conf.Main.Database.ConnString, conf.Main.Database.Name)
+	db := d.NewDbHandler(conf.Main.Database.ConnString, conf.Main.Database.Name)
 
 	for _, taxi_conf := range conf.Taxis {
+		log.Printf("taxi api configuration for %+v: \nconnection str: %+v\nhost: %+v\nid_service: %+v\nlogin: %+v\npassword: %+v", taxi_conf.Name, taxi_conf.Api.GetConnectionString(), taxi_conf.Api.GetHost(), taxi_conf.Api.GetIdService(), taxi_conf.Api.GetLogin(), taxi_conf.Api.GetPassword())
 		external_api, external_address_supplier, err := GetTaxiAPIInstruments(taxi_conf.Api)
 
 		if err != nil {

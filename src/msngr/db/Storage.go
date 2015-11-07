@@ -121,6 +121,7 @@ func (odbh *DbHandlerMixin) reConnect(conn string, dbname string) {
 	odbh.session = session
 
 	if (DELETE_DB) {
+		log.Printf("will delete database %+v", dbname)
 		err := session.DB(dbname).DropDatabase()
 		if err != nil {
 			log.Println("db must be dropped but errr:\n", err)
@@ -134,6 +135,9 @@ func (odbh *DbHandlerMixin) reConnect(conn string, dbname string) {
 		Unique:     true,
 		DropDups:   true,
 	}
+
+	log.Printf("oi: %T", orders_index)
+
 	orders_collection.EnsureIndex(orders_index)
 
 	state_index := mgo.Index{
@@ -257,7 +261,7 @@ func (oh *orderHandler) SetFeedback(for_whom string, for_state int, feedback str
 	if err != nil && err != mgo.ErrNotFound {
 		return nil, err
 	}
-	if err == mgo.ErrNotFound{
+	if err == mgo.ErrNotFound {
 		return nil, errors.New("Заказ не найден!")
 	}
 	err = oh.collection.Update(bson.M{"order_id": order.OrderId, "source":source}, bson.M{"$set": bson.M{"feedback": feedback}})

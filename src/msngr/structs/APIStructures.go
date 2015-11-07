@@ -128,6 +128,7 @@ type BotContext struct {
 	Request_commands map[string]RequestCommandProcessor
 	Message_commands map[string]MessageCommandProcessor
 	Commands         map[string]*[]OutCommand
+	Settings         map[string]interface{}
 }
 
 type MessageResult struct {
@@ -141,7 +142,7 @@ type MessageResult struct {
 type RequestResult struct {
 	Commands *[]OutCommand
 	Error    error
-	Type	string
+	Type     string
 }
 
 type RequestCommandProcessor interface {

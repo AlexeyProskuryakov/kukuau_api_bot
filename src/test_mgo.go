@@ -19,38 +19,11 @@ type Doc struct {
 	SubDoc  SubDoc
 }
 
-//func test_db_taxi(){
-//	dbh := d.NewDbHandler("localhost:27017", "test")
-//	order_id := int64(1)
-//
-////	o:=dbh.Orders.GetByOrderId(order_id)
-////	if o == nil {
-////		dbh.Orders.AddOrder(order_id, "foo")
-////	}
-////
-//	dbh.Orders.AddOrder(order_id, "foo", "fake")
-//
-//	order := t.Order{IDCar:100500, ID:100500600, Cost:100400}
-//	order_data := order.ToOrderData()
-//	log.Printf("insert: %+v",order_data)
-//
-//	dbh.Orders.SetState(order_id, 1, order_data)
-//
-//	order_wrpr := dbh.Orders.GetOrderById(order_id, "fake")
-//	log.Printf("wrpr: %+v", order_wrpr)
-//	log.Printf("result: %+v", order_wrpr.OrderData)
-//	idcar := order_wrpr.OrderData.Get("IDCar")
-//	log.Printf("result field: %+v %T", idcar, idcar)
-//
-//	idfoo := order_wrpr.OrderData.Get("IDFoo")
-//	log.Printf("result field: %+v %T", idfoo, idfoo)
-//}
 
-
-func test_fundamental(){
+func test_fundamental() {
 	session, _ := mgo.Dial("localhost:27017")
 
-	collection:=session.DB("test").C("test")
+	collection := session.DB("test").C("test")
 
 	collection.RemoveAll(bson.M{})
 	doc := Doc{Content:"foo"}
@@ -67,10 +40,5 @@ func test_fundamental(){
 }
 
 func main() {
-
-
-	test_db_taxi()
-//	test_fundamental()
-
-
+	test_fundamental()
 }
