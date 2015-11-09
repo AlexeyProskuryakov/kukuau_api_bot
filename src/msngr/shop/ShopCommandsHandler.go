@@ -133,7 +133,7 @@ func (cp ShopCommandsProcessor) ProcessRequest(in *s.InPkg) *s.RequestResult {
 	if err == mgo.ErrNotFound {
 		user_data := in.UserData
 		if user_data == nil {
-			return s.ExceptionRequestResult(errors.New("not user data !"), &NOT_AUTH_COMANDS)
+			return s.ExceptionRequestResult(errors.New("not user data!"), &NOT_AUTH_COMANDS)
 		}
 		phone := in.UserData.Phone
 		if phone == "" {

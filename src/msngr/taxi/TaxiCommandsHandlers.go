@@ -308,8 +308,8 @@ func _form_order(fields []s.InField, ah *GoogleAddressHandler) (*NewOrder, error
 	if err != nil {
 		return nil, err
 	}
-	delivery := Delivery{IdStreet:delivery_street_info.ID, House:hf, Entrance:entrance, IdRegion:delivery_street_info.IDRegion}
-	destination := Destination{IdStreet:destination_street_info.ID, House:ht, IdRegion:destination_street_info.IDRegion}
+	delivery := Delivery{IdStreet:delivery_street_info.ID, Street:delivery_street_info.Name, House:hf, Entrance:entrance, IdRegion:delivery_street_info.IDRegion}
+	destination := Destination{IdStreet:destination_street_info.ID, Street:delivery_street_info.Name, House:ht, IdRegion:destination_street_info.IDRegion}
 	new_order.Delivery = delivery
 	new_order.Destinations = []Destination{destination}
 	log.Printf("NEW ORDER: \ndelivery:%+v\ndestination:%+v", delivery, destination)

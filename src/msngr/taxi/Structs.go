@@ -47,7 +47,9 @@ type Address struct {
 type Destination struct {
 	IdRegion      int64   `json:"idRegion"`                 // : <Идентификатор региона (Int64)>,
 	IdStreet      int64   `json:"idStreet"`                 // : <Идентификатор улицы (Int64)>,
+
 	House         string  `json:"house"`                    // : <№ дома (строка)>,
+	Street        string
 
 	Lat           *float64 `json:"lat,omitempty"`           // : <Широта координаты адреса (при указании места на карте). Если указано, информация о доставке по указанию и адресе игнорируется>,
 	Lon           *float64 `json:"lon,omitempty"`           // : <Долгота координаты адреса (при указании места на карте). Если указано, информация о доставке по указанию и адресе игнорируется>,"isByDirection" : <Заказ машины с указанием пункта назначения при подаче (если задано в true,информация о адресе игнонрируются)>,
@@ -69,7 +71,9 @@ type Delivery struct {
 
 	IdRegion      int64 `json:"idRegion"`                   // <Идентификатор региона (Int64)>,
 	IdStreet      int64  `json:"idStreet"`                  // : <Идентификатор улицы (Int64)>,
+
 	House         string `json:"house"`                     // : <№ дома (строка)>,
+	Street        string
 
 	Lat           *float64 `json:"lat,omitempty"`           // : <Широта координаты адреса (при указании места на карте). Если указано, информация о адресе игнорируется>,
 	Lon           *float64 `json:"lon,omitempty"`           // : <Долгота координаты адреса (при указании места на карте). Если указано, информация о адресе игнорируется>,
@@ -94,7 +98,7 @@ type NewOrder struct {
 	Phone           string `json:"phone"`
 	DeliveryTime    *string `json:"deliveryTime,omitempty"`      //<Время подачи в формате yyyy-MM-dd HH:mm:ss>
 	DeliveryMinutes int64  `json:"deliveryMinutes"`              // <Количество минут до подачи (0-сейчас, но не менее минимального времени на подачу, указанного в настройках системы), не анализируется если задано поле deliveryTime >
-	IdService       string  `json:"idService"`                    //<Идентификатор услуги заказа (не может быть пустым)>
+	IdService       string  `json:"idService"`                   //<Идентификатор услуги заказа (не может быть пустым)>
 	Notes           *string `json:"notes,omitempty"`             // <Комментарий к заказу>
 																 //Markups           [2]int64 `json:"markups"`           // <Массив идентификаторов наценок заказа>
 	Attributes      *[2]int64      `json:"attributes,omitempty"` // <Массив идентификаторов дополнительных атрибутов заказа>
