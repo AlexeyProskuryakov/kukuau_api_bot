@@ -4,23 +4,45 @@ import (
 	"fmt"
 	"math/rand"
 	"reflect"
-
+	"time"
 	"regexp"
 	"strings"
 
 	"os"
 	"log"
+	"net/http"
+	"io/ioutil"
+	"path"
 )
 
 
 func GenId() string {
-	return fmt.Sprintf("%d", rand.Int63())
+	t := time.Now().UnixNano()
+	s := rand.NewSource(t)
+	r := rand.New(s)
+	return fmt.Sprintf("%d", r.Int63())
 }
 
-func CheckErr(e error) {
-	if e != nil {
-		panic(e)
+func FoundFile(fname string) *string {
+	dir, err := os.Getwd()
+	if err != nil {
+		return nil
 	}
+	for {
+		files, err := ioutil.ReadDir(dir)
+		if err != nil {
+			return nil
+		}
+		for _, f := range files {
+			if fname == f.Name() {
+				result := path.Join(dir, fname)
+				return &result
+			}
+		}
+		dir = path.Dir(dir)
+
+	}
+	return nil
 }
 
 func ToMap(in interface{}, tag string) (map[string]interface{}, error) {
@@ -99,5 +121,32 @@ func SaveToFile(what, fn string) {
 	if _, err = f.WriteString(what); err != nil {
 		log.Printf("ERROR when save to file in write to file %v [%v]", fn, err)
 	}
+}
+
+func GET(url string, params *map[string]string) (*[]byte, error) {
+	log.Printf("GET > [%+v] |%+v|", url, params)
+	req, err := http.NewRequest("GET", url, nil)
+	if err != nil {
+		log.Printf("ERROR IN GET FORM REQUEST! [%v]\n", url, err)
+		return nil, err
+	}
+
+	if params != nil {
+		values := req.URL.Query()
+		for k, v := range *params {
+			values.Add(k, v)
+		}
+		req.URL.RawQuery = values.Encode()
+	}
+	client := &http.Client{}
+	res, err := client.Do(req)
+	if res == nil || err != nil {
+		log.Println("ERROR IN GET DO REQUEST!\nRESPONSE: ", res, "\nERROR: ", err)
+		return nil, err
+	}
+	defer res.Body.Close()
+	body, err := ioutil.ReadAll(res.Body)
+	//	log.Printf("GET < \n%v\n", string(body), )
+	return &body, err
 }
 

@@ -1,5 +1,9 @@
 package structs
-import "fmt"
+import (
+	"fmt"
+	"time"
+	"log"
+)
 
 type FieldAttribute struct {
 	Label     string  `json:"label"`
@@ -124,11 +128,7 @@ type BotContext struct {
 	Request_commands map[string]RequestCommandProcessor
 	Message_commands map[string]MessageCommandProcessor
 	Commands         map[string]*[]OutCommand
-
-	Info             struct {
-						 Phone string
-					 }
-
+	Settings         map[string]interface{}
 }
 
 type MessageResult struct {
@@ -136,11 +136,13 @@ type MessageResult struct {
 	Body       string
 	Error      error
 	IsDeferred bool
+	Type       string
 }
 
 type RequestResult struct {
 	Commands *[]OutCommand
 	Error    error
+	Type     string
 }
 
 type RequestCommandProcessor interface {
@@ -152,9 +154,29 @@ type MessageCommandProcessor interface {
 }
 
 func ExceptionMessageResult(err error) *MessageResult {
-	return &MessageResult{Body:fmt.Sprintf("Ошибка! %v \n Попробуйте еще раз позже.", err), Error:err}
+	return &MessageResult{Body:fmt.Sprintf("Ошибка! %v \n Попробуйте еще раз позже.", err), Type:"error"}
+}
+//todo
+func ErrorMessageResult(err error, commands *[]OutCommand) *MessageResult {
+	result := MessageResult{Body:fmt.Sprintf("Ошибка! %v", err), Type:"chat"}
+	if commands != nil {
+		result.Commands = commands
+	}
+	return &result
 }
 
 func ExceptionRequestResult(err error, commands *[]OutCommand) *RequestResult {
 	return &RequestResult{Error:err, Commands:commands}
+}
+
+func StartAfter(check CheckFunc, what func()) {
+	for {
+		if message, ok := check(); ok {
+			break
+		}else {
+			log.Printf("wait %v", message)
+			time.Sleep(5 * time.Second)
+		}
+	}
+	go what()
 }

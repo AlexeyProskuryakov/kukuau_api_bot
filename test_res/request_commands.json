@@ -1,0 +1,13 @@
+{
+  "request": {
+    "id": "12345",
+    "type": "get",
+    "query": {
+      "action": "commands"
+    }
+  },
+  "from": "TEST",
+  "userdata": {
+    "phone": "TESTPHONE"
+  }
+}

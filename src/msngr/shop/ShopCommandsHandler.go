@@ -9,19 +9,14 @@ import (
 	d "msngr/db"
 	s "msngr/structs"
 	u "msngr/utils"
+	c "msngr/configuration"
 	"errors"
 	"gopkg.in/mgo.v2"
-	"log"
 )
 
-type ShopConfig struct {
-	Key  string `json:"key"`
-	Name string `json:"name"`
-	Info string `json:"information"`
-}
 
 
-func FormShopCommands(db *d.DbHandlerMixin, config *ShopConfig) *s.BotContext {
+func FormShopCommands(db *d.DbHandlerMixin, config *c.ShopConfig) *s.BotContext {
 	var ShopRequestCommands = map[string]s.RequestCommandProcessor{
 		"commands": ShopCommandsProcessor{DbHandlerMixin: *db},
 	}
@@ -36,9 +31,16 @@ func FormShopCommands(db *d.DbHandlerMixin, config *ShopConfig) *s.BotContext {
 	}
 
 	context := s.BotContext{}
-	context.Check = func() (string, bool) { return "", true }
 	context.Message_commands = ShopMessageCommands
 	context.Request_commands = ShopRequestCommands
+	context.Check = func() (string, bool) {
+		if !db.IsConnected() {
+			return "Ошибка в подключении к БД попробуйте позже", false
+		}
+		return "All ok!", true
+
+
+	}
 	return &context
 }
 
@@ -131,7 +133,7 @@ func (cp ShopCommandsProcessor) ProcessRequest(in *s.InPkg) *s.RequestResult {
 	if err == mgo.ErrNotFound {
 		user_data := in.UserData
 		if user_data == nil {
-			return s.ExceptionRequestResult(errors.New("not user data !"), &NOT_AUTH_COMANDS)
+			return s.ExceptionRequestResult(errors.New("not user data!"), &NOT_AUTH_COMANDS)
 		}
 		phone := in.UserData.Phone
 		if phone == "" {
@@ -169,7 +171,7 @@ var order_products = [4]string{"Ноутбук Apple MacBook Air", "Электр
 func (osp ShopOrderStateProcessor) ProcessMessage(in *s.InPkg) *s.MessageResult {
 	user_state, err := osp.Users.GetUserState(in.From)
 	if err != nil && err != mgo.ErrNotFound {
-		return s.ExceptionMessageResult(err)
+		return s.ErrorMessageResult(err, &NOT_AUTH_COMANDS)
 	}
 
 	var result string
@@ -181,7 +183,7 @@ func (osp ShopOrderStateProcessor) ProcessMessage(in *s.InPkg) *s.MessageResult 
 		result = "Авторизуйтесь пожалуйста!"
 		commands = NOT_AUTH_COMANDS
 	}
-	return &s.MessageResult{Body:result, Commands:&commands}
+	return &s.MessageResult{Body:result, Commands:&commands, Type:"chat"}
 }
 
 type ShopSupportMessageProcessor struct{}
@@ -210,7 +212,7 @@ func (sm ShopSupportMessageProcessor) ProcessMessage(in *s.InPkg) *s.MessageResu
 		body = "Спасибо за вопрос. Мы ответим Вам в ближайшее время."
 	}
 	u.SaveToFile(fmt.Sprintf("\n%v | %v", input, in.From), "shop_revue.txt")
-	return &s.MessageResult{Body:body}
+	return &s.MessageResult{Body:body, Type:"chat"}
 }
 
 type ShopInformationProcessor struct {
@@ -222,7 +224,7 @@ func (ih ShopInformationProcessor) ProcessMessage(in *s.InPkg) *s.MessageResult 
 	if info == "" {
 		info = "Desprice Markt - интернет-магазин бытовой техники и электроники в Новосибирске и других городах России. Каталог товаров мировых брендов."
 	}
-	return &s.MessageResult{Body:info}
+	return &s.MessageResult{Body:info, Type:"chat"}
 }
 
 type ShopLogOutMessageProcessor struct {
@@ -237,12 +239,12 @@ func (sap ShopLogInMessageProcessor) ProcessMessage(in *s.InPkg) *s.MessageResul
 	command := *in.Message.Commands
 	user, password := _get_user_and_password(command[0].Form.Fields)
 	if user == nil || password == nil {
-		return s.ExceptionMessageResult(errors.New("Не могу извлечь логин и (или) пароль."))
+		return s.ErrorMessageResult(errors.New("Не могу извлечь логин и (или) пароль."), &NOT_AUTH_COMANDS)
 	}
 
 	check, err := sap.Users.CheckUserPassword(user, password)
 	if err != nil && err != mgo.ErrNotFound {
-		return s.ExceptionMessageResult(err)
+		return s.ErrorMessageResult(err, &NOT_AUTH_COMANDS)
 	}
 
 	var body string
@@ -256,21 +258,21 @@ func (sap ShopLogInMessageProcessor) ProcessMessage(in *s.InPkg) *s.MessageResul
 		body = "Не правильные логин или пароль :("
 		commands = NOT_AUTH_COMANDS
 	}
-	return &s.MessageResult{Body:body, Commands:&commands}
+	return &s.MessageResult{Body:body, Commands:&commands, Type:"chat"}
 
 }
 
 func (lop ShopLogOutMessageProcessor) ProcessMessage(in *s.InPkg) *s.MessageResult {
 	err := lop.Users.SetUserState(&(in.From), d.LOGOUT)
-	if err != nil {
-		return s.ExceptionMessageResult(err)
+	if err != nil && err != mgo.ErrNotFound {
+		return s.ErrorMessageResult(err, &NOT_AUTH_COMANDS)
 	}
-	return &s.MessageResult{Body:"До свидания! ", Commands:&NOT_AUTH_COMANDS}
+	return &s.MessageResult{Body:"До свидания! ", Commands:&NOT_AUTH_COMANDS, Type:"chat"}
 }
 
 type ShopBalanceProcessor struct {
 }
 
 func (sbp ShopBalanceProcessor) ProcessMessage(in *s.InPkg) *s.MessageResult {
-	return &s.MessageResult{Body: fmt.Sprintf("Ваш баланс на %v составляет %v бонусных баллов.", time.Now().Format("01.02.2006"), rand.Int31n(1000) + 10), Commands: &AUTH_COMMANDS}
+	return &s.MessageResult{Body: fmt.Sprintf("Ваш баланс на %v составляет %v бонусных баллов.", time.Now().Format("01.02.2006"), rand.Int31n(1000) + 10), Commands: &AUTH_COMMANDS, Type:"chat"}
 }

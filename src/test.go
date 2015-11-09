@@ -7,31 +7,34 @@ import (
 	s "msngr/structs"
 	t "msngr/taxi"
 	i "msngr/taxi/infinity"
-	m "msngr"
 	d "msngr/db"
 	n "msngr/notify"
 	sh "msngr/shop"
+	c "msngr/configuration"
 	"time"
 	"fmt"
 )
+
 func readIn(in_jsoned string) *s.InPkg {
 	data, err := ioutil.ReadFile(in_jsoned)
 	if err != nil {
 		log.Printf("error at read: %q \n", err)
 	}
 	in := s.InPkg{}
-	log.Printf("<<<:%s", data)
+	log.Printf("READ IN FROM FILE:\n%+v", string(data))
 	err = json.Unmarshal(data, &in)
 	if err != nil {
 		log.Printf("error at unmarshal: %+v \n", err)
 	}
 	return &in
 }
+
 func serve_notifications(out chan s.OutPkg) {
 	addr := ":9876"
 
 	http.HandleFunc("/notify", func(w http.ResponseWriter, r *http.Request) {
 		body, err := ioutil.ReadAll(r.Body)
+		log.Printf("!!!TEST notification arrivied: %+v", string(body))
 		var pkg s.OutPkg
 		err = json.Unmarshal(body, &pkg)
 		if err != nil {
@@ -49,7 +52,7 @@ func serve_notifications(out chan s.OutPkg) {
 
 
 func test_taxi() {
-	conf := m.ReadConfig()
+	conf := c.ReadConfig()
 
 	d.DELETE_DB = true
 	if d.DELETE_DB {
@@ -63,7 +66,7 @@ func test_taxi() {
 	for _, taxi_conf := range conf.Taxis {
 		if taxi_conf.Name == "fake" {
 			log.Println(taxi_conf)
-			external_api := t.GetFakeInfinityAPI(taxi_conf.Api)
+			external_api := t.GetFakeAPI(taxi_conf.Api)
 			external_address_supplier := i.GetInfinityAddressSupplier(taxi_conf.Api)
 
 			apiMixin := t.ExternalApiMixin{API: external_api}
@@ -125,10 +128,33 @@ func test_taxi() {
 			states := taxi_conf.Api.Fake.SendedStates
 			counter := 0
 
+
 			for pkg := range notif_chan {
 				log.Printf("\n\nEXCEPTED PACKAGE: [%v]\n %#v \nstate: [%v]\n", counter, pkg, states[counter])
 				counter += 1
+				if counter == 3 { //because must be it!
+					break
+				}
 			}
+
+			log.Printf("will sleep 5 seconds while notifications will sended all...")
+			time.Sleep(5 * time.Second)
+			in = s.InPkg{From:"TEST", UserData:&s.InUserData{Phone:"TEST123"}, Request:&s.InRequest{ID:"1234", Type:"get"}}
+			in.Request.Query.Action = "COMMANDS"
+
+			request_result1 := request_commands["commands"].ProcessRequest(&in)
+			log.Println("BEFORE FDBCK commands: ERROR?: ", request_result1.Error, "commands: \n", request_result1.Commands)
+
+			read_in = readIn("test_res/feedback.json")
+			message_result = message_commands["feedback"].ProcessMessage(read_in)
+			log.Printf("feedback error?: %v\n body: %v, \n commands:%v", message_result.Error, message_result.Body, message_result.Commands)
+
+			in = s.InPkg{From:"TEST", UserData:&s.InUserData{Phone:"TESTPHONE"}, Request:&s.InRequest{ID:"1234", Type:"get"}}
+			in.Request.Query.Action = "COMMANDS"
+
+			request_result2 := request_commands["commands"].ProcessRequest(&in)
+			log.Println("AFTER commands: ERROR?: ", request_result2.Error, "commands: \n", request_result2.Commands)
+
 
 		}
 	}
@@ -136,7 +162,7 @@ func test_taxi() {
 }
 
 func test_shops() {
-	conf := m.ReadConfig()
+	conf := c.ReadConfig()
 
 	d.DELETE_DB = true
 	if d.DELETE_DB {
@@ -155,10 +181,12 @@ func test_shops() {
 		request_result := request_commands["commands"].ProcessRequest(&in)
 		log.Println("commands: ERROR?: ", request_result.Error)
 
+
+
 	}
 }
 func main() {
-	test_taxi()
-//	test_shops()
+	//	test_taxi()
+	test_shops()
 }
 

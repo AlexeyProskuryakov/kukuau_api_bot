@@ -80,7 +80,7 @@ func (m *TaxiMasterAPI) _createSignature(params map[string]string) string {
 func (m *TaxiMasterAPI) _get_request(method string, params map[string]string, security bool) ([]byte, error) {
 	req, err := http.NewRequest("GET", m.ConnString + method, nil)
 	if err != nil {
-		log.Printf("TM gr error in request")
+		log.Printf("TM GET request error in request")
 	}
 	if security {
 		signature := m._createSignature(params)
@@ -97,7 +97,7 @@ func (m *TaxiMasterAPI) _get_request(method string, params map[string]string, se
 func (m *TaxiMasterAPI) _post_request(method string, params map[string]string, security bool) ([]byte, error) {
 	req, err := http.NewRequest("POST", m.ConnString + method, nil)
 	if err != nil {
-		log.Printf("TM pr error in request")
+		log.Printf("TM POST request error in request")
 	}
 	if security {
 		signature := m._createSignature(params)
@@ -117,7 +117,7 @@ func (m *TaxiMasterAPI) Ping() {
 	r := TMAPIResponse{}
 	err = json.Unmarshal(result, &r)
 	if err != nil {
-		log.Println("error at unmarshal ing result")
+		log.Println("error at unmarshal ping result")
 	}
 }
 
@@ -135,23 +135,72 @@ type TariffWrapper struct {
 }
 
 func (m *TaxiMasterAPI) GetTariffList() []Tariff {
-	request_result, err := m._get_request("get_tarif_list", map[string]string{}, true)
-	result_wrapper := TariffWrapper{}
+	r := TariffWrapper{}
+	result, err := m._get_request("get_tarif_list", map[string]string{}, true)
 	if err != nil {
-		log.Println("error at getting tarif list")
-		return result_wrapper.Data.Tariffs
+		log.Printf("error at getting tarif list %v", err)
+		return r.Data
 	}
-	err = json.Unmarshal(request_result, &result_wrapper)
+	err = json.Unmarshal(result, &r)
 	if err != nil {
-		log.Println("error at unmarshalling json from tariff list")
-		return result_wrapper.Data.Tariffs
+		log.Println("error at unarshaling tarif list data %v, [%s]", err, result)
 	}
-	return result_wrapper.Data.Tariffs
+	return r.Data
 }
 
-func (m *TaxiMasterAPI)NewOrder(order t.NewOrder) t.Answer {
-	return t.Answer{}
+type CreateOrderAnswer struct {
+	OrderId int64 `json:"order_id"`
 }
+type CreateOrderAnswerWrapper struct {
+	TMAPIResponse
+	Data CreateOrderAnswer `json:"data"`
+}
+
+const OrderCreatedErrorCodes = map[int]string{
+	100:    "Заказ с такими параметрами уже создан",
+	101:    "Тариф не найден",
+	102:    "Группа экипажа не найдена",
+	103:    "Служба ЕДС не найдена",
+}
+func (m *TaxiMasterAPI)NewOrder(order t.NewOrder) t.Answer {
+	phone := order.Phone
+	source := fmt.Sprintf("%v дом: %v", order.Delivery.Street, order.Delivery.House)
+	source_time := time.Now().Add(5 * time.Minute).Format("20060102150405")
+	dest := fmt.Sprintf("%v дом: %v", order.Destinations[0].Street, order.Destinations[0].House)
+
+	result := t.Answer{}
+
+	res, err := m._post_request(
+		"create_order",
+		map[string]string{
+			"phone":phone,
+			"source":source,
+			"source_time":source_time,
+			"dest":dest,
+		},
+		true,
+	)
+	if err != nil {
+		log.Printf("Error at creating TM order, %v" % err)
+		return result
+	}
+	coaw := CreateOrderAnswerWrapper{}
+	err = json.Unmarshal(res, &coaw)
+	if err != nil {
+		log.Printf("Error at unmarshalling TM order data %v [%s]", err, res)
+	}
+	if message, ok := OrderCreatedErrorCodes[coaw.Code]; ok {
+		result.IsSuccess = false
+		result.Message = message
+		return result
+	}
+
+	result.IsSuccess = true
+	result.Content.Id = coaw.Data.OrderId
+	return result
+}
+
+
 func (m *TaxiMasterAPI)CancelOrder(order_id int64) (bool, string) {
 	return false, ""
 }
@@ -168,8 +217,8 @@ func (m *TaxiMasterAPI)GetCarsInfo() []t.CarInfo {
 	return []t.CarInfo{}
 }
 
-func (m *TaxiMasterAPI)AddressesSearch(query string) t.FastAddress {
-	return t.FastAddress{}
+func (m *TaxiMasterAPI)AddressesSearch(query string) t.AddressPackage {
+	return t.AddressPackage{}
 }
 
 func (m *TaxiMasterAPI)IsConnected() bool {

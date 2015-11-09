@@ -3,14 +3,14 @@ package main
 import (
 	"log"
 	d "msngr/db"
-	m "msngr"
+	c "msngr/configuration"
 	s "msngr/structs"
 	sh "msngr/shop"
 	"time"
 	"reflect"
 )
 func test_shop_support() {
-	conf := m.ReadConfig()
+	conf := c.ReadConfig()
 
 	d.DELETE_DB = true
 	if d.DELETE_DB {
@@ -61,7 +61,7 @@ func test_shop_support() {
 }
 
 func test_shop_login_logout() {
-	conf := m.ReadConfig()
+	conf := c.ReadConfig()
 	d.DELETE_DB = true
 	if d.DELETE_DB {
 		log.Println("!start at test mode!")
