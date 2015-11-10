@@ -14,6 +14,13 @@ import (
 	"encoding/json"
 	"errors"
 )
+var OrderCreatedErrorCodes = map[int]string{
+	100:    "Заказ с такими параметрами уже создан",
+	101:    "Тариф не найден",
+	102:    "Группа экипажа не найдена",
+	103:    "Служба ЕДС не найдена",
+}
+
 
 var ErrorsMap = map[int]string{
 	1:"Неизвестная ошибка",
@@ -156,12 +163,6 @@ type CreateOrderAnswerWrapper struct {
 	Data CreateOrderAnswer `json:"data"`
 }
 
-const OrderCreatedErrorCodes = map[int]string{
-	100:    "Заказ с такими параметрами уже создан",
-	101:    "Тариф не найден",
-	102:    "Группа экипажа не найдена",
-	103:    "Служба ЕДС не найдена",
-}
 func (m *TaxiMasterAPI)NewOrder(order t.NewOrder) t.Answer {
 	phone := order.Phone
 	source := fmt.Sprintf("%v дом: %v", order.Delivery.Street, order.Delivery.House)
@@ -208,7 +209,7 @@ func (m *TaxiMasterAPI)CalcOrderCost(order t.NewOrder) (int, string) {
 	return 0, ""
 }
 func (m *TaxiMasterAPI)Orders() []t.Order {
-
+	return []t.Order
 }
 func (m *TaxiMasterAPI)Feedback(f t.Feedback) (bool, string) {
 	return false, ""
