@@ -165,9 +165,10 @@ func (car CarInfo) String() string {
 }
 
 type Feedback struct {
-	IdOrder int64  `json:"idOrder"`
-	Rating  int    `json:"rating"`
-	Notes   string `json:"notes"`
+	Phone        string
+	IdOrder      int64  `json:"idOrder"`
+	Rating       int    `json:"rating"`
+	FeedBackText string `json:"notes"`
 }
 
 const (

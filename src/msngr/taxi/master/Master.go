@@ -72,6 +72,13 @@ type TMAPIResponse struct {
 	Data        map[string]interface{} `json:"data"`
 }
 
+func (resp TMAPIResponse) Check() (bool, string) {
+	if message, ok := ErrorsMap[resp.Code]; ok {
+		return false, message
+	}
+	return true, ""
+}
+
 func (m *TaxiMasterAPI) _createSignature(params map[string]string) string {
 	params_string := ""
 	for k, v := range params {
@@ -158,6 +165,7 @@ func (m *TaxiMasterAPI) GetTariffList() []Tariff {
 type CreateOrderAnswer struct {
 	OrderId int64 `json:"order_id"`
 }
+
 type CreateOrderAnswerWrapper struct {
 	TMAPIResponse
 	Data CreateOrderAnswer `json:"data"`
@@ -196,13 +204,19 @@ func (m *TaxiMasterAPI)NewOrder(order t.NewOrder) t.Answer {
 		return result
 	}
 
-	result.IsSuccess = true
-	result.Content.Id = coaw.Data.OrderId
+	if ok, message := coaw.Check(); ok {
+		result.IsSuccess = true
+		result.Content.Id = coaw.Data.OrderId
+	} else {
+		result.IsSuccess = false
+		result.Message = message
+	}
 	return result
 }
 
 
 func (m *TaxiMasterAPI)CancelOrder(order_id int64) (bool, string) {
+
 	return false, ""
 }
 func (m *TaxiMasterAPI)CalcOrderCost(order t.NewOrder) (int, string) {
@@ -211,9 +225,23 @@ func (m *TaxiMasterAPI)CalcOrderCost(order t.NewOrder) (int, string) {
 func (m *TaxiMasterAPI)Orders() []t.Order {
 	return []t.Order
 }
-func (m *TaxiMasterAPI)Feedback(f t.Feedback) (bool, string) {
-	return false, ""
+
+func (m *TaxiMasterAPI)Feedback(f t.Feedback) (ok bool, message string) {
+	params := map[string]string{"phone":f.Phone, "rating":f.Rating, "text":f.FeedBackText, "order_id":f.IdOrder}
+	res, err := m._post_request("save_client_feed_back", params, false)
+	if err != nil {
+		log.Printf("Error at sended request at fedback with params %+v", params)
+		return ok, message
+	}
+	tm_res := TMAPIResponse{}
+	err = json.Unmarshal(res, &tm_res)
+	if err != nil{
+		log.Printf("Error at unmarshaling feedback %v, [%s]", err, res)
+	}
+	ok, message = tm_res.Check();
+	return ok, message
 }
+
 func (m *TaxiMasterAPI)GetCarsInfo() []t.CarInfo {
 	return []t.CarInfo{}
 }

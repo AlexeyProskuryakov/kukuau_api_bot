@@ -457,31 +457,43 @@ type TaxiFeedbackProcessor struct {
 	context *s.BotContext
 }
 
-func _get_feedback(fields []s.InField) string {
+func _get_feedback(fields []s.InField) (fdb string, rate int) {
+	//todo return not only string represent also int rating
 	for _, v := range fields {
 		if v.Name == "text" {
-			return u.FirstOf(v.Data.Value, v.Data.Text).(string)
+			fdb = u.FirstOf(v.Data.Value, v.Data.Text).(string)
 		}
 	}
-	return ""
+	return fdb, rate
 }
 
 func (fp *TaxiFeedbackProcessor) ProcessMessage(in *s.InPkg) *s.MessageResult {
 	commands := *in.Message.Commands
-	fdbk := _get_feedback(commands[0].Form.Fields)
+	fdbk, rate := _get_feedback(commands[0].Form.Fields)
+
 	order_id, err := fp.Orders.SetFeedback(in.From, ORDER_PAYED, fdbk, fp.context.Name)
 	if err != nil {
 		return s.ErrorMessageResult(err, fp.context.Commands["commands_at_not_created_order"])
 	}
-	if order_id != nil {
-		f := Feedback{IdOrder: *order_id, Rating: 5, Notes: fdbk}
+
+	user, err := fp.Users.GetUserById(in.From)
+	if err != nil {
+		log.Printf("Error at implying user by id %v", in.From)
+	}
+
+	if order_id != nil && user != nil {
+		f := Feedback{IdOrder: *order_id, Rating: rate, FeedBackText: fdbk, Phone:user.Phone}
 		fp.API.Feedback(f)
 		result_commands, err := FormCommands(in.From, fp.DbHandlerMixin, fp.context)
 		if err != nil {
 			return s.ErrorMessageResult(err, fp.context.Commands["commands_at_not_created_order"])
 		}
-		return &s.MessageResult{Body: "Спасибо! Ваш отзыв очень важен для нас:)", Commands: result_commands, Type:"chat"}
-	} else {
+		return &s.MessageResult{Body:"Спасибо! Ваш отзыв очень важен для нас:)", Commands: result_commands, Type:"chat"}
+	} else if order_id == nil {
 		return &s.MessageResult{Body:"Оплаченный заказ не найден :( Отзывы могут быть только для оплаченных заказов", Commands:fp.context.Commands["commands_at_not_created_order"], Type:"chat"}
+	} else if user == nil {
+		return &s.MessageResult{Body:"Не найдена информация о пользователе...", Commands:fp.context.Commands["commands_at_not_created_order"], Type:"chat"}
+	} else {
+		return &s.MessageResult{Body:"Нет ни пользователя ни заказа с нужным состоянием :(", Commands:fp.context.Commands["commands_at_not_created_order"], Type:"chat"}
 	}
 }
