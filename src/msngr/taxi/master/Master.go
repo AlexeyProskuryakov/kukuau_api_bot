@@ -3,6 +3,7 @@ package master
 
 import (
 	t "msngr/taxi"
+	d "msngr/db"
 	"crypto/md5"
 	"fmt"
 	"io"
@@ -13,7 +14,9 @@ import (
 	"io/ioutil"
 	"encoding/json"
 	"errors"
+	"gopkg.in/mgo.v2/bson"
 )
+
 var OrderCreatedErrorCodes = map[int]string{
 	100:    "Заказ с такими параметрами уже создан",
 	101:    "Тариф не найден",
@@ -35,6 +38,14 @@ var ErrorsMap = map[int]string{
 	10:"Внутренняя ошибка обработки запроса",
 }
 
+var OrderStateMap = map[string]int{
+	"new_order":t.ORDER_CREATED,
+	"driver_assigned":t.ORDER_ASSIGNED,
+	"car_at_place":t.ORDER_CLIENT_WAIT,
+	"client_inside":t.ORDER_IN_PROCESS,
+	"finished":t.ORDER_PAYED,
+	"aborted":t.ORDER_CANCELED,
+}
 const MAX_TRY_COUNT = 5
 
 func doReq(req *http.Request) ([]byte, error) {
@@ -59,11 +70,16 @@ func doReq(req *http.Request) ([]byte, error) {
 }
 
 
-
-
 type TaxiMasterAPI struct {
 	ConnString  string
 	BearerToken string
+	Source      string
+	Storage     *d.DbHandlerMixin
+}
+
+func NewTaxiMasterAPI(connString, bearerToken, source string, storage *d.DbHandlerMixin) (*TaxiMasterAPI) {
+	result := TaxiMasterAPI{ConnString:connString, BearerToken:bearerToken, Source:source, Storage:storage}
+	return &result
 }
 
 type TMAPIResponse struct {
@@ -222,8 +238,71 @@ func (m *TaxiMasterAPI)CancelOrder(order_id int64) (bool, string) {
 func (m *TaxiMasterAPI)CalcOrderCost(order t.NewOrder) (int, string) {
 	return 0, ""
 }
+
+type TMAPIOrder struct {
+	OrderId         int64 `json:"order_id"`
+	StateId         int `json:"state_id"`
+	StateKind       string `json:"state_kind"`
+	CrewId          int64 `json:"crew_id"`
+	DriverId        int64 `json:"driver_id"`
+	CarId           int64 `json:"car_id"`
+	StartTime       string `json:"start_time"`
+	SourceTime      string `json:"source_time"`
+	FinishTime      string `json:"finish_time"`
+
+	CarMark         string `json:"car_mark"`
+	CarModel        string `json:"car_model"`
+	CarColor        string `json:"car_color"`
+	CarNumber       string `json:"car_number"`
+
+	CrewCoordinates struct {
+						Lat float64 `json:"lat"`
+						Lon float64 `json:"lon"`
+					}`json:"crew_coordinates"`
+}
+
+type TMAPIOrderResponseWrapper struct {
+	TMAPIResponse
+	Data TMAPIOrder `json:"data"`
+}
+
 func (m *TaxiMasterAPI)Orders() []t.Order {
-	return []t.Order
+	result := []t.Order
+	//here we get persisted orders with our source and not ended state
+	orders, err := m.Storage.Orders.GetOrders(bson.M{"source":m.Source, "order_state":bson.M{"$nin":[]int64{t.ORDER_PAYED, t.ORDER_CANCELED}}})
+	if err != nil {
+		log.Printf("Error at retrieving current order ids: %v", err)
+		return result
+	}
+	//and for each persisted order retrieve his info from external source
+	for _, order := range orders {
+		res, err := m._get_request("get_order_state", map[string]string{"order_id":order.OrderId}, true)
+		if err != nil {
+			log.Printf("Error at getting info from API by order id [%v]: %v", order.OrderId, err)
+			continue
+		}
+		res_container := TMAPIOrderResponseWrapper{}
+		err = json.Unmarshal(res, &res_container)
+		if err != nil {
+			log.Printf("Error at unmarshalling order response for order id [%v]: %v", order.OrderId, err)
+			continue
+		}
+		response_order := res_container.Data
+		result_order := t.Order{ID:response_order.OrderId}
+		if state, ok := OrderStateMap[response_order.StateKind]; ok {
+			result_order.State = state
+		}else {
+			log.Printf("Not imply state of response order [%v] state = %v", order.OrderId, res_container.Data.StateKind)
+			continue
+		}
+		result_order.IDCar = response_order.CarId
+		arrival_time, err := time.Parse("20060102150405", response_order.SourceTime)
+		if err != nil {
+			result_order.TimeArrival = &arrival_time
+		}
+		result = append(result, result_order)
+	}
+	return result
 }
 
 func (m *TaxiMasterAPI)Feedback(f t.Feedback) (ok bool, message string) {
@@ -235,7 +314,7 @@ func (m *TaxiMasterAPI)Feedback(f t.Feedback) (ok bool, message string) {
 	}
 	tm_res := TMAPIResponse{}
 	err = json.Unmarshal(res, &tm_res)
-	if err != nil{
+	if err != nil {
 		log.Printf("Error at unmarshaling feedback %v, [%s]", err, res)
 	}
 	ok, message = tm_res.Check();
@@ -243,6 +322,25 @@ func (m *TaxiMasterAPI)Feedback(f t.Feedback) (ok bool, message string) {
 }
 
 func (m *TaxiMasterAPI)GetCarsInfo() []t.CarInfo {
+	/**
+	{
+  "cars_info":[
+    {
+      "car_id":1,
+      "code":"111",
+      "name":"CAR_1",
+      "gos_number":"111111",
+      "color":"COLOR_1",
+      "mark":"MARK_1",
+      "model":"MODEL_1",
+      "short_name":"SHORT_NAME_1",
+      "production_year":2000,
+      "is_locked":false,
+      "order_params":[1,2]
+    },
+
+    get_cars_info
+	 */
 	return []t.CarInfo{}
 }
 

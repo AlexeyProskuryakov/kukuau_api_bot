@@ -3,6 +3,7 @@ import (
 	"msngr/utils"
 	"msngr/db"
 	"fmt"
+	"time"
 )
 
 type AddressF struct {
@@ -108,6 +109,10 @@ type NewOrder struct {
 }
 
 type Order struct {
+	/**
+	Key fields is:
+	ID, State, Cost, TimeArrival, TimeDelivery
+	 */
 	ID                int64  `json:"ID"`                // ID
 	State             int    `json:"State"`             //Состояние заказа
 	Cost              int    `json:"Cost"`              //Стоимость
@@ -116,7 +121,7 @@ type Order struct {
 	LastStateTime     string `json:"LastStateTime"`     //Дата-Время последнего и\зменения состояния
 	DeliveryTime      string `json:"DeliveryTime"`      //Требуемое время подачи машины
 	Distance          int    `json:"Distance"`          //Расстояние км (если оно рассчитано системой)
-	TimeOfArrival     string `json:"TimeOfArrival"`     //Прогнозируемое время прибытия машины на заказ
+	ArrivalTime       string `json:"TimeOfArrival"`     //Прогнозируемое время прибытия машины на заказ
 	IDDeliveryAddress int64  `json:"IDDeliveryAddress"` //ID адреса подачи
 	DeliveryStr       string `json:"DeliveryStr"`       //Адрес подачи в виде текста
 	DestinationsStr   string `json:"DestinationsStr"`   //Пункты назначения в виде текста (с учетом настроек отображения в диспетчерской: Первый/Последний/Все)
@@ -125,6 +130,9 @@ type Order struct {
 	Car               string `json:"Car"`               //Позывной машины
 	Service           string `json:"Service"`           //Услуга
 	Drivers           string `json:"Drivers"`           //ФИО Водителя
+
+	TimeDelivery      *time.Time                        //Требуемое время подачи машины (в виде времени)
+	TimeArrival       *time.Time                        //Прогнозируемое время прибытия машины на заказ (в виде времени)
 }
 
 func (o *Order) ToOrderData() db.OrderData {
