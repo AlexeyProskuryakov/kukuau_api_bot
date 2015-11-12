@@ -230,9 +230,44 @@ func (m *TaxiMasterAPI)NewOrder(order t.NewOrder) t.Answer {
 	return result
 }
 
+var ChangeOrderResultErrorCodes = map[int]string{
+	100:    "Не найден заказ.",
+	101:    "Не найдено состояние заказа.",
+	102:    "Изменение состояния не соответствует необходимым условиям.",
+}
+
+type TMAPIChangeStateResponse struct {
+	TMAPIResponse
+	Data struct {
+			 OrderId  string `json:"order_id"`
+			 NewState string `json:"new_state"`
+		 }`json:"data"`
+}
+
+//todo You must know real CANCEL ORDER state
+const TM_API_CANCEL_ORDER = 9
 
 func (m *TaxiMasterAPI)CancelOrder(order_id int64) (bool, string) {
 
+	res, err := m._post_request("change_order_state", map[string]string{"ORDER_ID":order_id, "NEW_STATE":TM_API_CANCEL_ORDER}, true)
+	if err != nil {
+		log.Printf("Error at request to change order state to cancel: %v (order_id = %v)", err, order_id)
+		return false, ""
+	}
+	response := TMAPIChangeStateResponse{}
+	err = json.Unmarshal(res, &response)
+	if err != nil {
+		log.Printf("Error at unmarshal response to cancel order (%s) %v ", res, err)
+	}
+	if ok, message := response.Check(); !ok {
+		return false, message
+	}
+	if message, ok := ChangeOrderResultErrorCodes[response.Code]; ok {
+		return false, message
+	}
+	if response.Data.OrderId == order_id && response.Data.NewState == TM_API_CANCEL_ORDER {
+		return true, ""
+	}
 	return false, ""
 }
 func (m *TaxiMasterAPI)CalcOrderCost(order t.NewOrder) (int, string) {
