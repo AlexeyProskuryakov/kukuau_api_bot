@@ -270,7 +270,9 @@ func (m *TaxiMasterAPI)CancelOrder(order_id int64) (bool, string) {
 	}
 	return false, ""
 }
+
 func (m *TaxiMasterAPI)CalcOrderCost(order t.NewOrder) (int, string) {
+	//todo You must know tariff_id for calculate order cost
 	return 0, ""
 }
 
