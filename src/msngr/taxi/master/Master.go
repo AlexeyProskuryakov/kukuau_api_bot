@@ -287,6 +287,10 @@ func (m *TaxiMasterAPI)Orders() []t.Order {
 			log.Printf("Error at unmarshalling order response for order id [%v]: %v", order.OrderId, err)
 			continue
 		}
+		if ok, message := res_container.Check(); !ok {
+			log.Printf("Error at response result: %s", message)
+			continue
+		}
 		response_order := res_container.Data
 		result_order := t.Order{ID:response_order.OrderId}
 		if state, ok := OrderStateMap[response_order.StateKind]; ok {
@@ -321,6 +325,21 @@ func (m *TaxiMasterAPI)Feedback(f t.Feedback) (ok bool, message string) {
 	return ok, message
 }
 
+
+type TMAPICarInfo struct {
+	CarId   int64 `json:"car_id"`
+	Mark    string `json:"mark"`
+	Model   string `json:"model"`
+	GNumber string `json:"gos_number"`
+	Color   string `json:"color"`
+}
+type TMAPICarInfoWrapper struct {
+	TMAPIResponse
+	Data struct {
+			 CarsInfo []TMAPICarInfo `json:"cars_info"`
+		 }`json:"data"`
+}
+
 func (m *TaxiMasterAPI)GetCarsInfo() []t.CarInfo {
 	/**
 	{
@@ -341,7 +360,23 @@ func (m *TaxiMasterAPI)GetCarsInfo() []t.CarInfo {
 
     get_cars_info
 	 */
-	return []t.CarInfo{}
+	result := []t.CarInfo{}
+	res, err := m._get_request("get_cars_info", map[string]string{}, true)
+	if err != nil {
+		log.Printf("Error at requesting car info: %v", err)
+		return result
+	}
+	response := TMAPICarInfoWrapper{}
+	err = json.Unmarshal(res, &response)
+	if ok, message := response.Check(); !ok {
+		log.Printf("Error at response result: %s", message)
+		return result
+	}
+	for _, resp_car_info := range response.Data.CarsInfo {
+		elem := t.CarInfo{Color:resp_car_info.Color, ID:resp_car_info.CarId, Model:resp_car_info.Model, Number:resp_car_info.GNumber}
+		result = append(result, elem)
+	}
+	return result
 }
 
 func (m *TaxiMasterAPI)AddressesSearch(query string) t.AddressPackage {

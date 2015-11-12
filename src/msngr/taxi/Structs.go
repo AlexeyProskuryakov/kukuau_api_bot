@@ -111,7 +111,7 @@ type NewOrder struct {
 type Order struct {
 	/**
 	Key fields is:
-	ID, State, Cost, TimeArrival, TimeDelivery
+	ID, State, Cost, TimeArrival, TimeDelivery, IDCar
 	 */
 	ID                int64  `json:"ID"`                // ID
 	State             int    `json:"State"`             //Состояние заказа
@@ -157,13 +157,13 @@ type Answer struct {
 }
 
 type CarInfo struct {
+	/**
+	Key fields: color, model, number, id
+	 */
 	ID       int64   `json:"id"`
-	Callsign string  `json:"Callsign"`
-	State    int     `json:"State"`
 	Number   string  `json:"Number"`
 	Color    string  `json:"Color"`
 	Model    string  `json:"Model"`
-	Driver   string  `json:"Driver"`
 	Lat      float64 `json:"Lat"`
 	Lon      float64 `json:"Lon"`
 }
