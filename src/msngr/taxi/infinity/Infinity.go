@@ -261,7 +261,7 @@ func (p *infinity) GetCarsInfo() []t.CarInfo {
 	return tmp[0].Rows
 }
 
-func (p *infinity) NewOrder(order t.NewOrder) t.Answer {
+func (p *infinity) NewOrder(order t.NewOrderInfo) t.Answer {
 	order.IdService = p.Config.GetIdService()
 	param, err := json.Marshal(order)
 	if err != nil {
@@ -282,7 +282,7 @@ func (p *infinity) NewOrder(order t.NewOrder) t.Answer {
 	return ans
 }
 
-func (p *infinity) CalcOrderCost(order t.NewOrder) (int, string) {
+func (p *infinity) CalcOrderCost(order t.NewOrderInfo) (int, string) {
 	order.IdService = p.Config.GetIdService()
 	param, err := json.Marshal(order)
 	if err != nil {

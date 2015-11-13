@@ -59,6 +59,7 @@ type TaxiConfig struct {
 					Text  string `json:"text"`
 				} `json:"information"`
 	GeoOrbit    TaxiGeoOrbit `json:"geo_orbit"`
+	Markups		*[]string `json:"markups,omitempty"`
 }
 
 

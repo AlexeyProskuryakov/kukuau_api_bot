@@ -187,7 +187,7 @@ type CreateOrderAnswerWrapper struct {
 	Data CreateOrderAnswer `json:"data"`
 }
 
-func (m *TaxiMasterAPI)NewOrder(order t.NewOrder) t.Answer {
+func (m *TaxiMasterAPI)NewOrder(order t.NewOrderInfo) t.Answer {
 	phone := order.Phone
 	source := fmt.Sprintf("%v дом: %v", order.Delivery.Street, order.Delivery.House)
 	source_time := time.Now().Add(5 * time.Minute).Format("20060102150405")
@@ -271,7 +271,7 @@ func (m *TaxiMasterAPI)CancelOrder(order_id int64) (bool, string) {
 	return false, ""
 }
 
-func (m *TaxiMasterAPI)CalcOrderCost(order t.NewOrder) (int, string) {
+func (m *TaxiMasterAPI)CalcOrderCost(order t.NewOrderInfo) (int, string) {
 	//todo You must know tariff_id for calculate order cost
 	return 0, ""
 }

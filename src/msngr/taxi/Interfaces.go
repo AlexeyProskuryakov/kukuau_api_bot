@@ -6,9 +6,9 @@ type ConnectInterface interface {
 
 type TaxiInterface interface {
 	ConnectInterface
-	NewOrder(order NewOrder) Answer
+	NewOrder(order NewOrderInfo) Answer
 	CancelOrder(order_id int64) (bool, string)
-	CalcOrderCost(order NewOrder) (int, string)
+	CalcOrderCost(order NewOrderInfo) (int, string)
 	Orders() []Order
 	Feedback(f Feedback) (bool, string)
 	GetCarsInfo() []CarInfo

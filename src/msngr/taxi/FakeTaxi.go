@@ -46,7 +46,7 @@ func (inf *FakeTaxiAPI) set_order_state(order_id int64, new_state int) {
 	}
 }
 
-func (inf *FakeTaxiAPI) NewOrder(order NewOrder) Answer {
+func (inf *FakeTaxiAPI) NewOrder(order NewOrderInfo) Answer {
 	saved_order := Order{
 		ID:    rand.Int63(),
 		State: 1,
@@ -86,7 +86,7 @@ func (inf *FakeTaxiAPI) CancelOrder(order_id int64) (bool, string) {
 	return true, "Test order not found :( "
 }
 
-func (p *FakeTaxiAPI) CalcOrderCost(order NewOrder) (int, string) {
+func (p *FakeTaxiAPI) CalcOrderCost(order NewOrderInfo) (int, string) {
 	log.Println("FA calulate cost for order: ", order)
 	return 100500, "Good cost!"
 }

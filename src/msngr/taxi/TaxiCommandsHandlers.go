@@ -51,6 +51,9 @@ func FormTaxiBotContext(im *ExternalApiMixin, db_handler *d.DbHandlerMixin, tc c
 
 	context.Settings = make(map[string]interface{})
 	context.Settings["not_send_price"] = tc.Api.NotSendPrice
+	if tc.Markups != nil {
+		context.Settings["markups"] = *tc.Markups
+	}
 
 	log.Printf("For %+v will not send price? %+v\nAll settings is: %+v", tc.Name, tc.Api.NotSendPrice, context.Settings)
 
@@ -261,7 +264,7 @@ func (a *AddressNotHere) Error() string {
 	return fmt.Sprintf("Адрес \n %+v --> %+v \n не поддерживается этим такси.", a.From, a.To)
 }
 
-func _form_order(fields []s.InField, ah *GoogleAddressHandler) (*NewOrder, error) {
+func _form_order(fields []s.InField, ah *GoogleAddressHandler) (*NewOrderInfo, error) {
 	var from_info, to_info, hf, ht string
 	var entrance *string
 	log.Printf("NEW ORDER fields: %+v", fields)
@@ -290,7 +293,7 @@ func _form_order(fields []s.InField, ah *GoogleAddressHandler) (*NewOrder, error
 		}
 	}
 
-	new_order := NewOrder{}
+	new_order := NewOrderInfo{}
 	note_info := "Тестирование."
 	new_order.Notes = &note_info
 
@@ -365,6 +368,14 @@ func (nop *TaxiNewOrderProcessor) ProcessMessage(in *s.InPkg) *s.MessageResult {
 		}
 
 		new_order.Phone = *phone
+		if mrkps, ok := nop.context.Settings["markups"]; ok {
+			markups, ok := mrkps.([]string)
+			if ok {
+				new_order.Markups = &markups
+			}else {
+				log.Printf("markups setting present but it is not []string %+v, %T", mrkps, mrkps)
+			}
+		}
 
 		ans := nop.API.NewOrder(*new_order)
 		log.Printf("Order was created! %+v \n with content: %+v", ans, ans.Content)
