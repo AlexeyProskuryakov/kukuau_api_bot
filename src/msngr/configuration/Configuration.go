@@ -13,7 +13,7 @@ type TaxiApiParams struct {
 					 Host              string `json:"host"`
 					 Login             string `json:"login"`
 					 Password          string `json:"password"`
-					 ConnectionsString string `json:"connection_string"`
+					 ConnectionsStrings []string `json:"connection_strings"`
 					 IdService         string `json:"id_service"`
 					 BearerToken       string `json:"bearer_token"`
 				 } `json:"data"`
@@ -29,8 +29,8 @@ type TaxiApiParams struct {
 func (api TaxiApiParams) GetHost() string {
 	return api.Data.Host
 }
-func (api TaxiApiParams) GetConnectionString() string {
-	return api.Data.ConnectionsString
+func (api TaxiApiParams) GetConnectionStrings() []string {
+	return api.Data.ConnectionsStrings
 }
 func (api TaxiApiParams) GetLogin() string {
 	return api.Data.Login

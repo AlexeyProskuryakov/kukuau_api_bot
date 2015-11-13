@@ -13,6 +13,8 @@ import (
 	"fmt"
 )
 
+const TRY_COUNT = 10
+
 type InfinityService struct {
 	ID                 int64  `json:"id"`
 	Name               string `json:"name"`
@@ -29,7 +31,7 @@ type InfinityCarsInfo struct {
 // infinity - Структура для работы с API infinity.
 type infinity struct {
 	Host          string
-	ConnString    string // Строка подключения к infinity API// default: http://109.202.25.248:8080/WebAPITaxi/
+	ConnStrings   []string // Строка подключения к infinity API// default: http://109.202.25.248:8080/WebAPITaxi/
 	LoginTime     time.Time
 	Cookie        *http.Cookie
 	LoginResponse struct {
@@ -70,14 +72,18 @@ var instance *infinity
 
 func _initInfinity(config t.TaxiAPIConfig) *infinity {
 	result := &infinity{}
-	result.ConnString = config.GetConnectionString()
-	result.Host = config.GetConnectionString()
+	result.ConnStrings = config.GetConnectionStrings()
 	result.Config = config
 
 	logon := result.Login(config.GetLogin(), config.GetPassword())
 
 	if !logon {
-		go result.reconnect()
+		go func() {
+			res := result.ReLogin()
+			if !res {
+				log.Printf("can not connect to infinity %+v :(", result.ConnStrings)
+			}
+		}()
 	}
 
 	return result
@@ -103,30 +109,35 @@ func GetInfinityAddressSupplier(tc t.TaxiAPIConfig) t.AddressSupplier {
 func (p *infinity) Login(login, password string) bool {
 	p.LoginResponse.Success = false
 
-	client := &http.Client{}
-	req, err := http.NewRequest("GET", p.ConnString + "Login", nil)
+	//	client := &http.Client{}
+	//	req, err := http.NewRequest("GET", p.ConnString + "Login", nil)
+	//	if err != nil {
+	//		log.Printf("error at forming request to login, %v", err)
+	//	}
+	//	req.Header.Add("ContentType", "text/html;charset=UTF-8")
+	//
+	//	values := req.URL.Query()
+	//	values.Add("l", login)
+	//	values.Add("p", password)
+	//	values.Add("app", "CxTaxiClient")
+	//	req.URL.RawQuery = values.Encode()
+	//	res, err := client.Do(req)
+	//
+	//	//если нет соединения с infinity то выходим
+	//	if err != nil {
+	//		log.Printf("error at connection to infinity %v", err)
+	//		return false
+	//	}
+	//
+	//	defer res.Body.Close()
+	//	body, err := ioutil.ReadAll(res.Body)
+	//	if err != nil {
+	//		log.Printf("error at reading bytes from response, %v", err)
+	//	}
+	body, err := p._request("Login", map[string]string{"l":login, "p":password, "app":"CxTaxiClient"})
 	if err != nil {
-		log.Printf("error at forming request to login, %v", err)
-	}
-	req.Header.Add("ContentType", "text/html;charset=UTF-8")
-
-	values := req.URL.Query()
-	values.Add("l", login)
-	values.Add("p", password)
-	values.Add("app", "CxTaxiClient")
-	req.URL.RawQuery = values.Encode()
-	res, err := client.Do(req)
-
-	//если нет соединения с infinity то выходим
-	if err != nil {
-		log.Printf("error at connection to infinity %v", err)
+		log.Printf("error at requst to infinity %v", err)
 		return false
-	}
-
-	defer res.Body.Close()
-	body, err := ioutil.ReadAll(res.Body)
-	if err != nil {
-		log.Printf("error at reading bytes from response, %v", err)
 	}
 	err = json.Unmarshal(body, &p.LoginResponse)
 	if err != nil {
@@ -153,101 +164,82 @@ func (p *infinity) IsConnected() bool {
 	return p.LoginResponse.Success
 }
 
-func (p *infinity) reconnect() {
+func (p *infinity) ReLogin() bool {
 	if p.Config.GetLogin() == "" && p.Config.GetPassword() == "" {
-		panic(errors.New("reconnect before connect! I don't know login and password :( "))
+		panic(errors.New("ReLogin before login! I don't know login and password :( "))
 	}
 	sleep_time := time.Duration(1000)
-	for {
+
+	for count := 0; count < TRY_COUNT; count++ {
 		result := p.Login(p.Config.GetLogin(), p.Config.GetPassword())
 		if result {
-			break
+			return result
 		} else {
-			log.Printf("Infinity: reconnect is fail trying next after %+v", sleep_time)
+			log.Printf("Infinity: ReLogin is fail trying next after %+v", sleep_time)
 			time.Sleep(sleep_time * time.Millisecond)
 			sleep_time = time.Duration(float32(sleep_time) * 1.4)
 		}
 	}
+	return false
 }
 
 // Ping возвращает true если запрос выполнен успешно и время сервера infinity в формате yyyy-MM-dd HH:mm:ss.
 // Если запрос выполнен неуспешно возвращает false и пустую строку.
 // Условие: пользователь должен быть авторизован.
-func (p *infinity) Ping() (bool, string) {
-	client := &http.Client{}
-	req, err := http.NewRequest("GET", p.ConnString + "RemoteCall", nil)
-	if err != nil {
-		log.Printf("error at forming new request %v", p.ConnString + "RemoteCall")
-		return false, ""
-	}
-	req.Header.Add("ContentType", "text/html;charset=UTF-8")
-	values := req.URL.Query()
-	values.Add("method", "Taxi.WebAPI.GetDateTime")
-	req.URL.RawQuery = values.Encode()
+//
 
-	//log.Println(req.URL)
+func (p *infinity) _request(conn_suffix string, url_values map[string]string) ([]byte, error) {
+	for i, connString := range p.ConnStrings {
+		req, err := http.NewRequest("GET", connString + conn_suffix, nil)
+		if err != nil {
+			log.Printf("error at forming request %v, %#v\n error: %v", conn_suffix, url_values, err)
+		}
+		req.Header.Add("ContentType", "text/html;charset=UTF-8")
+		values := req.URL.Query()
+		for k, v := range url_values {
+			values.Add(k, v)
+		}
 
-	req.AddCookie(p.Cookie)
-	//log.Println("Cookies in request? ", req.Cookies())
-	res, err := client.Do(req)
-	if res.Status == "403 Forbidden" {
-		err = errors.New("Ошибка авторизации infinity! (Возможно не установлены cookies)")
-		p.reconnect()
-	}
-	if err != nil {
-		log.Printf("error at requesting ")
-	}
-	defer res.Body.Close()
-	body, err := ioutil.ReadAll(res.Body)
-	if err != nil {
-		log.Printf("error at reading response %v", string(body))
-		return false, ""
-	}
+		req.URL.RawQuery = values.Encode()
 
-	//log.Println(string(body))
-	err = json.Unmarshal(body, &p.Message)
-	if err != nil {
-		log.Printf("error at unmarshal response %v", string(body))
-		return false, ""
-	}
-	return p.Message.Success, p.Message.Content
-}
+		if p.Cookie != nil {
+			req.AddCookie(p.Cookie)
+		}
 
-func (p *infinity) _request(conn_suffix string, url_values map[string]string) []byte {
-	req, err := http.NewRequest("GET", p.ConnString + conn_suffix, nil)
-	if err != nil {
-		log.Printf("error at forming request %v, %#v\n error: %v", conn_suffix, url_values, err)
+		client := &http.Client{}
+		res, err := client.Do(req)
+		if err != nil {
+			log.Printf("Error at send request to infinity: %v", err)
+			continue
+		}
+		defer func() {
+			//delete from i position
+			p.ConnStrings = append(p.ConnStrings[:i], p.ConnStrings[i + 1:]...)
+			//paste to head
+			p.ConnStrings = append(p.ConnStrings[:0], append([]string{connString}, p.ConnStrings[0:]...)...)
+		}()
+		if res != nil && res.Status == "403 Forbidden" {
+			log.Println("INF response is: ", res, "; error is:", err, ". I will ReLogin and will retrieve data again after 3s.")
+			time.Sleep(3 * time.Second)
+			p.ReLogin()
+			return p._request(conn_suffix, url_values)
+		}
+		defer res.Body.Close()
+		body, err := ioutil.ReadAll(res.Body)
+		if err != nil {
+			log.Printf("error at reading from response %v", err)
+		}
+		return body, nil
 	}
-	req.Header.Add("ContentType", "text/html;charset=UTF-8")
-	values := req.URL.Query()
-	for k, v := range url_values {
-		values.Add(k, v)
-	}
+	return nil, errors.New("Не могу подключится к АПИ такси :(")
 
-	req.URL.RawQuery = values.Encode()
-	req.AddCookie(p.Cookie)
-
-	client := &http.Client{}
-	res, err := client.Do(req)
-	if res == nil || err != nil || res.Status == "403 Forbidden" {
-		log.Println("INF response is: ", res, "; error is:", err, ". I will reconnect and will retrieve data again after 3s.")
-		time.Sleep(3 * time.Second)
-		p.reconnect()
-		return p._request(conn_suffix, url_values)
-	}
-	defer res.Body.Close()
-	body, err := ioutil.ReadAll(res.Body)
-	if err != nil {
-		log.Printf("error at reading from response %v", err)
-	}
-	return body
 }
 
 // GetServices возвращает информацию об услугах доступных для заказа (filterField is set to true!)
 func (p *infinity) GetServices() []InfinityService {
 	var tmp []InfinityServices
-	body := p._request("GetViewData", map[string]string{"params": "[{\"viewName\":\"Taxi.Services\",\"filterField\":{\"n\":\"AvailableToClients\",\"v\":true}}]"})
-	err := json.Unmarshal(body, &tmp)
+	body, err := p._request("GetViewData", map[string]string{"params": "[{\"viewName\":\"Taxi.Services\",\"filterField\":{\"n\":\"AvailableToClients\",\"v\":true}}]"})
+	err = json.Unmarshal(body, &tmp)
 	if err != nil {
 		log.Printf("error in unmarshal json, %v", err)
 	}
@@ -257,8 +249,11 @@ func (p *infinity) GetServices() []InfinityService {
 // GetCarsInfo возвращает информацию о машинах
 func (p *infinity) GetCarsInfo() []t.CarInfo {
 	var tmp []InfinityCarsInfo
-	body := p._request("GetViewData", map[string]string{"params": "[{\"viewName\":\"Taxi.Cars.InfoEx\"}]"})
-	err := json.Unmarshal(body, &tmp)
+	body, err := p._request("GetViewData", map[string]string{"params": "[{\"viewName\":\"Taxi.Cars.InfoEx\"}]"})
+	if err != nil {
+		return []t.CarInfo{}
+	}
+	err = json.Unmarshal(body, &tmp)
 	if err != nil {
 		log.Printf("error at unmarshal json from infinity %v", string(body))
 		return []t.CarInfo{}
@@ -274,7 +269,10 @@ func (p *infinity) NewOrder(order t.NewOrder) t.Answer {
 		return t.Answer{IsSuccess:false, Message:fmt.Sprint(err)}
 	}
 	log.Printf("INF NEW ORDER (jsonified): %+v", string(param))
-	body := p._request("RemoteCall", map[string]string{"params": string(param), "method": "Taxi.WebAPI.NewOrder"})
+	body, err := p._request("RemoteCall", map[string]string{"params": string(param), "method": "Taxi.WebAPI.NewOrder"})
+	if err != nil {
+		return t.Answer{IsSuccess:false, Message:fmt.Sprint(err)}
+	}
 	var ans t.Answer
 	err = json.Unmarshal(body, &ans)
 	if err != nil {
@@ -291,7 +289,10 @@ func (p *infinity) CalcOrderCost(order t.NewOrder) (int, string) {
 		log.Printf("error at marshal json from infinity %v", order)
 		return -1, ""
 	}
-	body := p._request("RemoteCall", map[string]string{"params": string(param), "method": "Taxi.WebAPI.CalcOrderCost"})
+	body, err := p._request("RemoteCall", map[string]string{"params": string(param), "method": "Taxi.WebAPI.CalcOrderCost"})
+	if err != nil {
+		return 0, fmt.Sprint(err)
+	}
 	var tmp t.Answer
 	err = json.Unmarshal(body, &tmp)
 	if err != nil {
@@ -312,9 +313,9 @@ type PrivateParams struct {
 //Контент:
 //Параметры личного кабинета клиента в виде JSON объекта: { "name" : <Имя клиента>, "login" : <Логин клиента> }
 func (p *infinity) GetPrivateParams() (bool, string, string) {
-	body := p._request("RemoteCall", map[string]string{"method": "Taxi.WebAPI.Client.GetPrivateParams"})
+	body, err := p._request("RemoteCall", map[string]string{"method": "Taxi.WebAPI.Client.GetPrivateParams"})
 	var temp t.Answer
-	err := json.Unmarshal(body, &temp)
+	err = json.Unmarshal(body, &temp)
 	if err != nil {
 		log.Printf("error at unmarshal json from infinity %v", string(body))
 	}
@@ -334,7 +335,7 @@ func (p *infinity) ChangePassword(password string) (bool, string) {
 		log.Printf("error at marshal json to infinity %v", string(password))
 		return false, fmt.Sprint(err)
 	}
-	body := p._request("RemoteCall", map[string]string{"params": string(tmp), "method": "Taxi.WebAPI.Client.ChangePassword"})
+	body, err := p._request("RemoteCall", map[string]string{"params": string(tmp), "method": "Taxi.WebAPI.Client.ChangePassword"})
 	var temp t.Answer
 	err = json.Unmarshal(body, &temp)
 	if err != nil {
@@ -355,7 +356,7 @@ func (p *infinity) ChangeName(name string) (bool, string) {
 		return false, fmt.Sprint(err)
 	}
 
-	body := p._request("RemoteCall", map[string]string{"params": string(tmp), "method": "Taxi.WebAPI.Client.ChangeName"})
+	body, err := p._request("RemoteCall", map[string]string{"params": string(tmp), "method": "Taxi.WebAPI.Client.ChangeName"})
 
 	var temp t.Answer
 	err = json.Unmarshal(body, &temp)
@@ -375,7 +376,7 @@ func (p *infinity) SendMessage(message string) (bool, string /*, string*/) {
 		log.Printf("error at marshal json to infinity %v", string(message))
 		return false, fmt.Sprint(err)
 	}
-	body := p._request("RemoteCall", map[string]string{"params": string(tmp), "method": "Taxi.WebAPI.Client.SendMessage"})
+	body, err := p._request("RemoteCall", map[string]string{"params": string(tmp), "method": "Taxi.WebAPI.Client.SendMessage"})
 	var temp t.Answer
 	err = json.Unmarshal(body, &temp)
 	if err != nil {
@@ -391,7 +392,7 @@ func (p *infinity) CallbackRequest(phone string) (bool, string) {
 		log.Printf("error at marshal json to infinity %v", string(phone))
 		return false, fmt.Sprint(err)
 	}
-	body := p._request("RemoteCall", map[string]string{"params": string(tmp), "method": "Taxi.WebAPI.Client.CallbackRequest"})
+	body, err := p._request("RemoteCall", map[string]string{"params": string(tmp), "method": "Taxi.WebAPI.Client.CallbackRequest"})
 	var temp t.Answer
 	err = json.Unmarshal(body, &temp)
 	if err != nil {
@@ -404,10 +405,10 @@ func (p *infinity) CallbackRequest(phone string) (bool, string) {
 //Taxi.WebAPI.Client.ClearHistory (Очистка истории заказов клиента)
 //Отмечает закрытые заказы клиента как не видимые для личного кабинета (т.е. сама информация о заказе не удаляется)
 func (p *infinity) ClearHistory() (bool, string) {
-	body := p._request("RemoteCall", map[string]string{"method": "Taxi.WebAPI.Client.ClearHistory"})
+	body, err := p._request("RemoteCall", map[string]string{"method": "Taxi.WebAPI.Client.ClearHistory"})
 
 	var temp t.Answer
-	err := json.Unmarshal(body, &temp)
+	err = json.Unmarshal(body, &temp)
 	if err != nil {
 		log.Printf("error at unmarshal json from infinity %v", string(body))
 		return false, fmt.Sprint(err)
@@ -425,8 +426,10 @@ func (p *infinity) CancelOrder(order int64) (bool, string) {
 		return false, fmt.Sprint(err)
 	}
 
-	body := p._request("RemoteCall", map[string]string{"params": string(tmp), "method": "Taxi.WebAPI.Client.CancelOrder"})
-
+	body, err := p._request("RemoteCall", map[string]string{"params": string(tmp), "method": "Taxi.WebAPI.Client.CancelOrder"})
+	if err != nil {
+		return false, fmt.Sprint(err)
+	}
 	var temp t.Answer
 	err = json.Unmarshal(body, &temp)
 	if err != nil {
@@ -444,8 +447,6 @@ func (p *infinity) CancelOrder(order int64) (bool, string) {
 //"rating" : <Оценка (число)>,
 //"notes" : <Текст отзыва>
 //}
-
-
 func (p *infinity) Feedback(inf t.Feedback) (bool, string) {
 	tmp, err := json.Marshal(inf)
 	if err != nil {
@@ -453,8 +454,10 @@ func (p *infinity) Feedback(inf t.Feedback) (bool, string) {
 		return false, fmt.Sprint(err)
 	}
 
-	body := p._request("RemoteCall", map[string]string{"params": string(tmp), "method": "Taxi.WebAPI.Client.Feedback"})
-
+	body, err := p._request("RemoteCall", map[string]string{"params": string(tmp), "method": "Taxi.WebAPI.Client.Feedback"})
+	if err != nil {
+		return false, fmt.Sprint(err)
+	}
 	var temp t.Answer
 	err = json.Unmarshal(body, &temp)
 	if err != nil {
@@ -474,9 +477,10 @@ func (p *infinity) WhereIT(ID int64) (bool, string) {
 		log.Printf("error at marshal json to infinity %v", string(ID))
 		return false, fmt.Sprint(err)
 	}
-
-	body := p._request("RemoteCall", map[string]string{"params": string(tmp), "method": "Taxi.WebAPI.Client.WhereIT"})
-
+	body, err := p._request("RemoteCall", map[string]string{"params": string(tmp), "method": "Taxi.WebAPI.Client.WhereIT"})
+	if err != nil{
+		return false, fmt.Sprint(err)
+	}
 	var temp t.Answer
 	err = json.Unmarshal(body, &temp)
 	if err != nil {
@@ -507,7 +511,7 @@ func (p *infinity) PhonesEdit(phone phonesEdit) (bool, string) {
 		log.Printf("error at marshal json to infinity %+v", phone)
 		return false, fmt.Sprint(err)
 	}
-	body := p._request("RemoteCall", map[string]string{"params": string(tmp), "method": "Taxi.WebAPI.Client.Phones.Edit"})
+	body, err := p._request("RemoteCall", map[string]string{"params": string(tmp), "method": "Taxi.WebAPI.Client.Phones.Edit"})
 	var temp t.Answer
 	err = json.Unmarshal(body, &temp)
 	if err != nil {
@@ -526,7 +530,7 @@ func (p *infinity) PhonesRemove(phone int64) (bool, string) {
 		log.Printf("error at marshal json to infinity %v", string(phone))
 		return false, fmt.Sprint(err)
 	}
-	body := p._request("RemoteCall", map[string]string{"params": string(tmp), "method": "Taxi.WebAPI.Client.Phones.Remove"})
+	body, err := p._request("RemoteCall", map[string]string{"params": string(tmp), "method": "Taxi.WebAPI.Client.Phones.Remove"})
 	var temp t.Answer
 	err = json.Unmarshal(body, &temp)
 	if err != nil {
@@ -566,7 +570,7 @@ func (p *infinity) AddressesEdit(f favorite) (bool, string) {
 		return false, fmt.Sprint(err)
 	}
 
-	body := p._request("RemoteCall", map[string]string{"params": string(tmp), "method": "Taxi.WebAPI.Client.Addresses.Edit"})
+	body, err := p._request("RemoteCall", map[string]string{"params": string(tmp), "method": "Taxi.WebAPI.Client.Addresses.Edit"})
 	var temp t.Answer
 	err = json.Unmarshal(body, &temp)
 	if err != nil {
@@ -578,9 +582,9 @@ func (p *infinity) AddressesEdit(f favorite) (bool, string) {
 }
 
 func (p *infinity) AddressesRemove(id int64) (bool, string) {
-	body := p._request("RemoteCall", map[string]string{"params": string(id), "method": "Taxi.WebAPI.Client.Addresses.Remove"})
+	body, err := p._request("RemoteCall", map[string]string{"params": string(id), "method": "Taxi.WebAPI.Client.Addresses.Remove"})
 	var temp t.Answer
-	err := json.Unmarshal(body, &temp)
+	err = json.Unmarshal(body, &temp)
 	if err != nil {
 		log.Printf("error at unmarshal json from infinity %v", string(body))
 		return false, fmt.Sprint(err)
@@ -595,22 +599,23 @@ type Orders struct {
 
 //Taxi.t.Orders (Заказы: активные и предварительные)
 func (p *infinity) Orders() []t.Order {
-	body := p._request("GetViewData", map[string]string{"params": "[{\"viewName\": \"Taxi.Orders\"}]"})
+	body, err := p._request("GetViewData", map[string]string{"params": "[{\"viewName\": \"Taxi.Orders\"}]"})
+	if err != nil{
+		log.Print("error at connection to inf at orders")
+		return []t.Order{}
+	}
 	temp := []Orders{}
-	//	log.Println(">>>", string(body))
-	err := json.Unmarshal(body, &temp)
+	err = json.Unmarshal(body, &temp)
 	if err != nil {
 		log.Printf("error at unmarshal json from infinity %s", string(body))
 		return []t.Order{}
 	}
-	//	log.Printf(">>> umshld len:%v,\n %+v,", len(temp[0].Rows), temp[0].Rows)
-	result := []t.Order
+	result := []t.Order{}
 	for _, order := range temp[0].Rows {
-
-		if arrival, err := time.Parse("2006-01-02 15:04:05", order.ArrivalTime); err == nil{
+		if arrival, err := time.Parse("2006-01-02 15:04:05", order.ArrivalTime); err == nil {
 			order.TimeArrival = &arrival
 		}
-		if delivery, err:= time.Parse("2006-01-02 15:04:05", order.DeliveryTime); err == nil {
+		if delivery, err := time.Parse("2006-01-02 15:04:05", order.DeliveryTime); err == nil {
 			order.TimeDelivery = &delivery
 		}
 		result = append(result, order)
@@ -618,11 +623,10 @@ func (p *infinity) Orders() []t.Order {
 	return result
 }
 
-//Taxi.t.Orders.Closed.ByDates (История заказов: По датам)
 func (p *infinity) OrdersClosedByDates() []t.Order {
-	body := p._request("GetViewData", map[string]string{"params": "[{\"viewName\": \"Taxi.Orders.Closed.ByDates\"}]"})
+	body, err := p._request("GetViewData", map[string]string{"params": "[{\"viewName\": \"Taxi.Orders.Closed.ByDates\"}]"})
 	temp := []Orders{}
-	err := json.Unmarshal(body, &temp)
+	err = json.Unmarshal(body, &temp)
 	if err != nil {
 		log.Printf("error at unmarshal json from infinity %s", string(body))
 		return []t.Order{}
@@ -630,12 +634,11 @@ func (p *infinity) OrdersClosedByDates() []t.Order {
 	return temp[0].Rows
 }
 
-//Taxi.Orders.Closed.LastN (История заказов: Последние)
 func (p *infinity) OrdersClosedlastN() []t.Order {
-	body := p._request("GetViewData", map[string]string{"params": "[{\"viewName\": \"Taxi.Orders.Closed.LastN\"}]"})
+	body, err := p._request("GetViewData", map[string]string{"params": "[{\"viewName\": \"Taxi.Orders.Closed.LastN\"}]"})
 
 	var temp []t.Order
-	err := json.Unmarshal(body, &temp)
+	err = json.Unmarshal(body, &temp)
 	if err != nil {
 		log.Printf("error at unmarshal json from infinity %s", string(body))
 		return []t.Order{}
@@ -643,15 +646,15 @@ func (p *infinity) OrdersClosedlastN() []t.Order {
 	return temp
 }
 
-//Taxi.Destinations.ByActivet.Order (Пункты назначения: Активные заказы)
-//Taxi.Destinations.ByClosedt.Order (Пункты назначения: Закрытые заказы (история))
-
 //Taxi.Markups (Список доступных наценок)
 func (p *infinity) Markups() []t.Order {
-	body := p._request("GetViewData", map[string]string{"params": "[{\"viewName\": \"Taxi.Markups\"}]"})
-
+	body, err := p._request("GetViewData", map[string]string{"params": "[{\"viewName\": \"Taxi.Markups\"}]"})
+	if err != nil{
+		log.Print("error at connection to inf at markups %( ")
+		return []t.Order{}
+	}
 	var temp []t.Order
-	err := json.Unmarshal(body, &temp)
+	err = json.Unmarshal(body, &temp)
 	if err != nil {
 		log.Printf("error at unmarshal json from infinity %s", string(body))
 		return []t.Order{}
@@ -680,9 +683,13 @@ func (p *infinity) Markups() []t.Order {
 
 
 func (p *infinity) AddressesSearch(text string) t.AddressPackage {
-	body := p._request("GetViewData", map[string]string{"params": "[{\"viewName\": \"Taxi.Addresses.Search\", \"params\": [{\"n\": \"SearchText\", \"v\": \"" + text + "\"}]}]"})
+	body, err := p._request("GetViewData", map[string]string{"params": "[{\"viewName\": \"Taxi.Addresses.Search\", \"params\": [{\"n\": \"SearchText\", \"v\": \"" + text + "\"}]}]"})
+	if err != nil {
+		log.Printf("error at connection to inf %( ")
+		return t.AddressPackage{}
+	}
 	var temp []t.AddressPackage
-	err := json.Unmarshal(body, &temp)
+	err = json.Unmarshal(body, &temp)
 	if err != nil {
 		log.Printf("error at unmarshal json from infinity %s", string(body))
 		return t.AddressPackage{}
@@ -692,9 +699,9 @@ func (p *infinity) AddressesSearch(text string) t.AddressPackage {
 
 //Taxi.ClientAddresses (Адреса клиента)
 func (p *infinity) ClientAddresses() t.AddressPackage {
-	body := p._request("GetViewData", map[string]string{"params": "[{\"viewName\": \"Taxi.ClientAddresses\"}]"})
+	body, err := p._request("GetViewData", map[string]string{"params": "[{\"viewName\": \"Taxi.ClientAddresses\"}]"})
 	var temp []t.AddressPackage
-	err := json.Unmarshal(body, &temp)
+	err = json.Unmarshal(body, &temp)
 	if err != nil {
 		log.Printf("error at unmarshal json from infinity %s", string(body))
 		return t.AddressPackage{}

@@ -482,7 +482,8 @@ func (fp *TaxiFeedbackProcessor) ProcessMessage(in *s.InPkg) *s.MessageResult {
 	}
 
 	if order_id != nil && user != nil {
-		f := Feedback{IdOrder: *order_id, Rating: rate, FeedBackText: fdbk, Phone:user.Phone}
+		phone := user.Phone
+		f := Feedback{IdOrder: *order_id, Rating: rate, FeedBackText: fdbk, Phone:*phone}
 		fp.API.Feedback(f)
 		result_commands, err := FormCommands(in.From, fp.DbHandlerMixin, fp.context)
 		if err != nil {

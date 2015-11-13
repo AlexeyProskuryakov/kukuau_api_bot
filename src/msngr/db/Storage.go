@@ -135,9 +135,6 @@ func (odbh *DbHandlerMixin) reConnect(conn string, dbname string) {
 		Unique:     true,
 		DropDups:   true,
 	}
-
-	log.Printf("oi: %T", orders_index)
-
 	orders_collection.EnsureIndex(orders_index)
 
 	orders_collection.EnsureIndex(mgo.Index{

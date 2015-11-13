@@ -58,7 +58,7 @@ func main() {
 	db := d.NewDbHandler(conf.Main.Database.ConnString, conf.Main.Database.Name)
 
 	for _, taxi_conf := range conf.Taxis {
-		log.Printf("taxi api configuration for %+v: \nconnection str: %+v\nhost: %+v\nid_service: %+v\nlogin: %+v\npassword: %+v", taxi_conf.Name, taxi_conf.Api.GetConnectionString(), taxi_conf.Api.GetHost(), taxi_conf.Api.GetIdService(), taxi_conf.Api.GetLogin(), taxi_conf.Api.GetPassword())
+		log.Printf("taxi api configuration for %+v: \nconnection str: %+v\nhost: %+v\nid_service: %+v\nlogin: %+v\npassword: %+v", taxi_conf.Name, taxi_conf.Api.GetConnectionStrings(), taxi_conf.Api.GetHost(), taxi_conf.Api.GetIdService(), taxi_conf.Api.GetLogin(), taxi_conf.Api.GetPassword())
 		external_api, external_address_supplier, err := GetTaxiAPIInstruments(taxi_conf.Api)
 
 		if err != nil {
