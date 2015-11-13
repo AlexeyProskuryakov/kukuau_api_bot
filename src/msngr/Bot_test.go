@@ -7,6 +7,7 @@ import (
 	d "msngr/db"
 	sh "msngr/shop"
 	t "msngr/test"
+	c "msngr/configuration"
 	"flag"
 
 	"fmt"
@@ -61,7 +62,7 @@ func send_post(fn, url string) []byte {
 
 
 func TestBot(t *testing.T) {
-	conf := ReadConfig()
+	conf := c.ReadConfig()
 	var test = flag.Bool("test", false, "go in test use?")
 	flag.Parse()
 	DEBUG = true
@@ -69,9 +70,9 @@ func TestBot(t *testing.T) {
 	log.Printf("Is test? [%+v] Will delete db? [%+v]", *test, d.DELETE_DB)
 	if d.DELETE_DB {
 		log.Println("!start at test mode!")
-		conf.Database.Name = conf.Database.Name + "_test"
+		conf.Main.Database.Name = conf.Main.Database.Name + "_test"
 	}
-	db := d.NewDbHandler(conf.Database.ConnString, conf.Database.Name)
+	db := d.NewDbHandler(conf.Main.Database.ConnString, conf.Main.Database.Name)
 
 	for _, shop_conf := range conf.Shops {
 		bot_context := sh.FormShopCommands(db, &shop_conf)
