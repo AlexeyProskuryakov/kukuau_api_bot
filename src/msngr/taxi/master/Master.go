@@ -152,7 +152,7 @@ type CreateOrderAnswerWrapper struct {
 	Data CreateOrderAnswer `json:"data"`
 }
 
-const OrderCreatedErrorCodes = map[int]string{
+var OrderCreatedErrorCodes = map[int]string{
 	100:    "Заказ с такими параметрами уже создан",
 	101:    "Тариф не найден",
 	102:    "Группа экипажа не найдена",
@@ -177,7 +177,7 @@ func (m *TaxiMasterAPI)NewOrder(order t.NewOrder) t.Answer {
 		true,
 	)
 	if err != nil {
-		log.Printf("Error at creating TM order, %v" % err)
+		log.Printf("Error at creating TM order, %v", err)
 		return result
 	}
 	coaw := CreateOrderAnswerWrapper{}
@@ -204,13 +204,13 @@ func (m *TaxiMasterAPI)CalcOrderCost(order t.NewOrder) (int, string) {
 	return 0, ""
 }
 func (m *TaxiMasterAPI)Orders() []t.Order {
-	return []t.Order
+	return []t.Order{}
 }
 func (m *TaxiMasterAPI)Feedback(f t.Feedback) (bool, string) {
 	return false, ""
 }
 func (m *TaxiMasterAPI)GetCarsInfo() []t.CarInfo {
-	return []t.CarInfo
+	return []t.CarInfo{}
 }
 
 func (m *TaxiMasterAPI)AddressesSearch(query string) t.AddressPackage {

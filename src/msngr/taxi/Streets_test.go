@@ -1,25 +1,29 @@
-package main
+package taxi
+
+
 import (
 	"net/http"
 	"fmt"
 	"log"
-	t "msngr/taxi"
+	"encoding/json"
+
 	c "msngr/configuration"
 	d "msngr/db"
 	i "msngr/taxi/infinity"
 	u "msngr/utils"
-	"encoding/json"
+	"testing"
+	"os"
 )
 
-func start_serv(conf c.Configuration, threaded bool) (string, *t.GoogleAddressHandler) {
+func start_serv(conf c.Configuration, threaded bool) (string, *GoogleAddressHandler) {
 	taxi_conf := conf.Taxis["fake"]
 
-	address_supplier := t.NewGoogleAddressHandler(conf.Main.GoogleKey, taxi_conf.GeoOrbit, i.GetInfinityAddressSupplier(taxi_conf.Api))
+	address_supplier := NewGoogleAddressHandler(conf.Main.GoogleKey, taxi_conf.GeoOrbit, i.GetInfinityAddressSupplier(taxi_conf.Api))
 
 	streets_address := fmt.Sprintf("/taxi/%v/streets", taxi_conf.Name)
 
 	http.HandleFunc(streets_address, func(w http.ResponseWriter, r *http.Request) {
-		t.StreetsSearchController(w, r, address_supplier)
+		StreetsSearchController(w, r, address_supplier)
 	})
 
 	server_address := fmt.Sprintf(":%v", conf.Main.Port)
@@ -39,36 +43,24 @@ func start_serv(conf c.Configuration, threaded bool) (string, *t.GoogleAddressHa
 }
 
 
-func test_serv() {
+func TestStreetsGlobal(t *testing.T) {
 	conf := c.ReadConfig()
 
 	d.DELETE_DB = true
 	if d.DELETE_DB {
 		log.Println("!start at test mode!")
-		conf.Database.Name = conf.Database.Name + "_test"
-	}
-
-	start_serv(conf, false)
-}
-
-func test_all() {
-	conf := c.ReadConfig()
-
-	d.DELETE_DB = true
-	if d.DELETE_DB {
-		log.Println("!start at test mode!")
-		conf.Database.Name = conf.Database.Name + "_test"
+		conf.Main.Database.Name = conf.Main.Database.Name + "_test"
 	}
 
 	test_url, address_supplier := start_serv(conf, true)
 	taxi_conf := conf.Taxis["fake"]
 
-	last_result := t.DictItem{}
+	last_result := DictItem{}
 	//test is next:
 	for _, q := range []string{"Никола"} {
 		body, err := u.GET(test_url, &map[string]string{"q":q})
 		if body != nil {
-			var results []t.DictItem
+			var results []DictItem
 			err = json.Unmarshal(*body, &results)
 			for _, val := range results {
 				log.Printf("KEY: %v, TITLE: %v, SUBTITLE: %v", val.Key, val.Title, val.SubTitle)
@@ -89,8 +81,5 @@ func test_all() {
 
 	street_id, err := address_supplier.GetStreetInfo(last_result.Key)
 	log.Printf("address err?: %v\n street_id: %#v", err, street_id)
-
-}
-func main() {
-	test_all()
+	os.Exit(0)
 }
