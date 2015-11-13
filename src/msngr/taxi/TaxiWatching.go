@@ -148,18 +148,19 @@ func TaxiOrderWatch(taxiContext *TaxiContext, botContext *s.BotContext) {
 
 				if car_info := taxiContext.Cars.CarInfo(api_order.IDCar); car_info != nil {
 					var notification_data *s.OutPkg
-					delivery_time, err := time.Parse("2006-01-02 15:04:05", api_order.TimeOfArrival)
-					if err != nil {
-						delivery_time, err = time.Parse("2006-01-02 15:04:05", api_order.DeliveryTime)
-						if err != nil{
-							delivery_time = time.Now().Add(5 * time.Minute)
+					arrival_time := api_order.TimeArrival
+					if arrival_time == nil {
+						arrival_time = api_order.TimeDelivery
+						if arrival_time == nil {
+							arrival_time = time.Now().Add(5 * time.Minute)
 						}
 					}
+
 					prev_state, ok := previous_states[api_order.ID]
 					if ok {
-						notification_data = FormNotification(db_order, prev_state, *car_info, delivery_time)
+						notification_data = FormNotification(db_order, prev_state, *car_info, arrival_time)
 					} else {
-						notification_data = FormNotification(db_order, -1, *car_info, delivery_time)
+						notification_data = FormNotification(db_order, -1, *car_info, arrival_time)
 					}
 					if notification_data != nil {
 						notification_data.Message.Commands = form_commands_for_current_order(db_order, botContext.Commands)

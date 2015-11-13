@@ -604,7 +604,18 @@ func (p *infinity) Orders() []t.Order {
 		return []t.Order{}
 	}
 	//	log.Printf(">>> umshld len:%v,\n %+v,", len(temp[0].Rows), temp[0].Rows)
-	return temp[0].Rows
+	result := []t.Order
+	for _, order := range temp[0].Rows {
+
+		if arrival, err := time.Parse("2006-01-02 15:04:05", order.ArrivalTime); err == nil{
+			order.TimeArrival = &arrival
+		}
+		if delivery, err:= time.Parse("2006-01-02 15:04:05", order.DeliveryTime); err == nil {
+			order.TimeDelivery = &delivery
+		}
+		result = append(result, order)
+	}
+	return result
 }
 
 //Taxi.t.Orders.Closed.ByDates (История заказов: По датам)

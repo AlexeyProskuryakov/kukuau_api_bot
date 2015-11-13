@@ -140,27 +140,28 @@ func (odbh *DbHandlerMixin) reConnect(conn string, dbname string) {
 
 	orders_collection.EnsureIndex(orders_index)
 
-	state_index := mgo.Index{
+	orders_collection.EnsureIndex(mgo.Index{
 		Key:        []string{"order_state"},
 		Background: true,
 		Unique:     false,
-	}
-	orders_collection.EnsureIndex(state_index)
+	})
 
-	owners_index := mgo.Index{
+	orders_collection.EnsureIndex(mgo.Index{
 		Key:        []string{"whom"},
 		Background: true,
 		Unique:     false,
-	}
-	orders_collection.EnsureIndex(owners_index)
-
-	when_index := mgo.Index{
+	})
+	orders_collection.EnsureIndex(mgo.Index{
 		Key:        []string{"when"},
 		Background: true,
 		Unique:     false,
-	}
-	orders_collection.EnsureIndex(when_index)
+	})
 
+	orders_collection.EnsureIndex(mgo.Index{
+		Key:    []string{"source"},
+		Background:true,
+		Unique:false,
+	})
 
 	users_collection := session.DB(dbname).C("users")
 	users_collection.EnsureIndex(mgo.Index{
@@ -305,6 +306,18 @@ func (oh *orderHandler) GetByOwner(whom, source string) (*OrderWrapper, error) {
 		return nil, err
 	}
 	return &result, nil
+}
+
+func (oh *orderHandler) GetOrders(q bson.M) ([]OrderWrapper, error) {
+	if oh.collection == nil {
+		return nil, errors.New("БД не доступна")
+	}
+	var result []OrderWrapper
+	err := oh.collection.Find(q).Sort("-when").One(&result)
+	if err != nil && err != mgo.ErrNotFound {
+		return nil, err
+	}
+	return result, nil
 }
 
 func (uh *userHandler) CheckUser(req bson.M) (*UserWrapper, error) {
