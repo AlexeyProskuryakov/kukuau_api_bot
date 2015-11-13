@@ -109,3 +109,13 @@ func (p *FakeTaxiAPI) GetCarsInfo() []CarInfo {
 		},
 	}
 }
+
+func (p *FakeTaxiAPI) WriteDispatcher(message string) (bool, string){
+	log.Printf("I have new message: %s", message)
+	return true,""
+}
+
+func (p *FakeTaxiAPI) CallbackRequest(phone string) (bool, string){
+	log.Printf("I must call to: %s", phone)
+	return true,""
+}

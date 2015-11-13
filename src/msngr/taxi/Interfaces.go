@@ -12,6 +12,9 @@ type TaxiInterface interface {
 	Orders() []Order
 	Feedback(f Feedback) (bool, string)
 	GetCarsInfo() []CarInfo
+
+	WriteDispatcher(message string) (bool, string)
+	CallbackRequest(phone string) (bool, string)
 }
 
 type AddressSupplier interface {

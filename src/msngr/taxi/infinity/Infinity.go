@@ -370,7 +370,7 @@ func (p *infinity) ChangeName(name string) (bool, string) {
 //Taxi.WebAPI.Client.SendMessage (Отправка сообщения оператору) Отправляет операторам системы уведомление с сообщением данного клиента
 //Параметры:
 //Текст сообщения (строка)
-func (p *infinity) SendMessage(message string) (bool, string /*, string*/) {
+func (p *infinity) WriteDispatcher(message string) (bool, string /*, string*/) {
 	tmp, err := json.Marshal(message)
 	if err != nil {
 		log.Printf("error at marshal json to infinity %v", string(message))

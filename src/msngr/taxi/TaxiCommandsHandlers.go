@@ -46,7 +46,8 @@ func FormTaxiBotContext(im *ExternalApiMixin, db_handler *d.DbHandlerMixin, tc c
 		"cancel_order":     &TaxiCancelOrderProcessor{ExternalApiMixin: *im, DbHandlerMixin: *db_handler, context:&context, alert_phone:tc.Information.Phone},
 		"calculate_price":  &TaxiCalculatePriceProcessor{ExternalApiMixin: *im, context:&context, AddressHandler:ah},
 		"feedback":         &TaxiFeedbackProcessor{ExternalApiMixin: *im, DbHandlerMixin: *db_handler, context:&context},
-		"write_dispatcher": &TaxiSupportMessageProcessor{},
+		"write_dispatcher": &TaxiSupportMessageProcessor{ExternalApiMixin: *im},
+		"callback_request": &TaxiCallbackRequestMessageProcessor{ExternalApiMixin:*im},
 	}
 
 	context.Settings = make(map[string]interface{})
@@ -188,10 +189,36 @@ func GetCommands(dictUrl string) map[string]*[]s.OutCommand {
 }
 
 type TaxiSupportMessageProcessor struct {
+	ExternalApiMixin
 }
 
 func (smp *TaxiSupportMessageProcessor) ProcessMessage(in *s.InPkg) *s.MessageResult {
-	return &s.MessageResult{Body:"Спасибо за ваш отзыв!", Type:"chat"}
+	ok, result := smp.API.WriteDispatcher(*in.Message.Body)
+	var text string
+	if ok {
+		text = fmt.Sprintf("Спасибо за ваш отзыв!\n%s", result)
+	} else {
+		text = fmt.Sprintf("Спасибо за ваш отзыв! Но сообщение доставленно с ошибкой\n%s\nопробуйте снова", result)
+	}
+	return &s.MessageResult{Body:text, Type:"chat"}
+}
+
+type TaxiCallbackRequestMessageProcessor struct {
+	ExternalApiMixin
+}
+func (crmp *TaxiCallbackRequestMessageProcessor) ProcessMessage(in *s.InPkg) *s.MessageResult {
+	phone, err := _get_phone(in)
+	if err != nil {
+		return &s.MessageResult{Body:"Ошибка! Не предоставлен номер телефона", Type:"chat"}
+	}
+	ok, result := crmp.API.CallbackRequest(*phone)
+	var text string
+	if ok {
+		text = fmt.Sprintf("Ожидайте звонка оператора\n%s", result)
+	}else {
+		text = fmt.Sprintf("Ошибка при отправке запроса на обратный звонок\n%s", result)
+	}
+	return &s.MessageResult{Body:text, Type:"chat"}
 }
 
 func form_commands_for_current_order(order_wrapper *d.OrderWrapper, commands map[string]*[]s.OutCommand) *[]s.OutCommand {
@@ -225,7 +252,7 @@ type TaxiCommandsProcessor struct {
 
 func (cp *TaxiCommandsProcessor) ProcessRequest(in *s.InPkg) *s.RequestResult {
 	phone, _ := _get_phone(in)
-	if phone != nil{
+	if phone != nil {
 		cp.Users.AddUser(&(in.From), phone)
 	}
 
