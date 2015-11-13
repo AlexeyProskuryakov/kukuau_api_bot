@@ -471,7 +471,7 @@ func (p *infinity) Feedback(inf t.Feedback) (bool, string) {
 //Отправляет операторам системы уведомление «Клиент не видит машину»
 //Параметры:
 //Идентификатор заказа (Int64)
-func (p *infinity) WhereIT(ID int64) (bool, string) {
+func (p *infinity) WhereIt(ID int64) (bool, string) {
 	tmp, err := json.Marshal(ID)
 	if err != nil {
 		log.Printf("error at marshal json to infinity %v", string(ID))

@@ -15,6 +15,7 @@ type TaxiInterface interface {
 
 	WriteDispatcher(message string) (bool, string)
 	CallbackRequest(phone string) (bool, string)
+	WhereIt(order_id int64) (bool, string)
 }
 
 type AddressSupplier interface {

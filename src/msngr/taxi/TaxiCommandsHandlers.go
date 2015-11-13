@@ -48,6 +48,7 @@ func FormTaxiBotContext(im *ExternalApiMixin, db_handler *d.DbHandlerMixin, tc c
 		"feedback":         &TaxiFeedbackProcessor{ExternalApiMixin: *im, DbHandlerMixin: *db_handler, context:&context},
 		"write_dispatcher": &TaxiSupportMessageProcessor{ExternalApiMixin: *im},
 		"callback_request": &TaxiCallbackRequestMessageProcessor{ExternalApiMixin:*im},
+		"where_it":         &TaxiWhereItMessageProcessor{ExternalApiMixin:*im, DbHandlerMixin:*db_handler, context:&context},
 	}
 
 	context.Settings = make(map[string]interface{})
@@ -144,6 +145,16 @@ func GetCommands(dictUrl string) map[string]*[]s.OutCommand {
 				},
 			},
 		},
+		s.OutCommand{
+			Title:    "Заказать обратный звонок",
+			Action:   "callback_request",
+			Position: 2,
+		},
+		s.OutCommand{
+			Title: "Не вижу машины",
+			Action:    "where_it",
+			Position:3,
+		},
 	}
 	result["commands_for_order_feedback"] = &[]s.OutCommand{
 		s.OutCommand{
@@ -219,6 +230,32 @@ func (crmp *TaxiCallbackRequestMessageProcessor) ProcessMessage(in *s.InPkg) *s.
 		text = fmt.Sprintf("Ошибка при отправке запроса на обратный звонок\n%s", result)
 	}
 	return &s.MessageResult{Body:text, Type:"chat"}
+}
+
+
+type TaxiWhereItMessageProcessor struct {
+	ExternalApiMixin
+	d.DbHandlerMixin
+	context *s.BotContext
+}
+func (twmp *TaxiWhereItMessageProcessor) ProcessMessage(in *s.InPkg) *s.MessageResult {
+	order_wrapper, err := twmp.Orders.GetByOwner(in.From, twmp.context.Name)
+	if err != nil {
+		return s.ErrorMessageResult(err, twmp.context.Commands["commands_at_not_created_order"])
+	}
+
+	if order_wrapper != nil && !IsOrderNotAvailable(order_wrapper.OrderState) {
+		ok, result := twmp.API.WhereIt(order_wrapper.OrderId)
+		var text string
+		if ok {
+			text = fmt.Sprintf("О том что вы не видите машину диспетчер уведомлен\n%s", result)
+		}else {
+			text = fmt.Sprintf("Ошибка!\n%s", result)
+		}
+		return &s.MessageResult{Body:text, Type:"chat"}
+	}
+	return s.ErrorMessageResult(errors.New("Не найден идентифкатор заказа"), twmp.context.Commands["commands_at_not_created_order"])
+
 }
 
 func form_commands_for_current_order(order_wrapper *d.OrderWrapper, commands map[string]*[]s.OutCommand) *[]s.OutCommand {
