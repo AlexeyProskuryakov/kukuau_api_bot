@@ -224,11 +224,10 @@ type TaxiCommandsProcessor struct {
 }
 
 func (cp *TaxiCommandsProcessor) ProcessRequest(in *s.InPkg) *s.RequestResult {
-	phone, err := _get_phone(in)
-	if err != nil {
-		return s.ExceptionRequestResult(err, cp.context.Commands["commands_at_not_created_order"])
+	phone, _ := _get_phone(in)
+	if phone != nil{
+		cp.Users.AddUser(&(in.From), phone)
 	}
-	cp.Users.AddUser(&(in.From), phone)
 
 	result, err := FormCommands(in.From, cp.DbHandlerMixin, cp.context)
 	if err != nil {

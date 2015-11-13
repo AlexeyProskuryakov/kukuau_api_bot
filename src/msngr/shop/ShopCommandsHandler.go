@@ -132,19 +132,13 @@ func (cp ShopCommandsProcessor) ProcessRequest(in *s.InPkg) *s.RequestResult {
 	user_state, err := cp.Users.GetUserState(in.From)
 	if err == mgo.ErrNotFound {
 		user_data := in.UserData
-		if user_data == nil {
-			return s.ExceptionRequestResult(errors.New("not user data!"), &NOT_AUTH_COMANDS)
+		if user_data != nil && in.UserData.Phone != "" {
+			phone := in.UserData.Phone
+			cp.Users.AddUser(&(in.From), &phone)
 		}
-		phone := in.UserData.Phone
-		if phone == "" {
-			return s.ExceptionRequestResult(errors.New("not user data phone!"), &NOT_AUTH_COMANDS)
-		}
-		cp.Users.AddUser(&(in.From), &phone)
-	} else if err != nil {
-		return s.ExceptionRequestResult(err, &NOT_AUTH_COMANDS)
 	}
 	commands := []s.OutCommand{}
-	if *user_state == d.LOGIN {
+	if user_state!= nil && *user_state == d.LOGIN {
 		commands = AUTH_COMMANDS
 	} else {
 		commands = NOT_AUTH_COMANDS
