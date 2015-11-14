@@ -73,7 +73,7 @@ func main() {
 
 		google_address_handler := t.NewGoogleAddressHandler(conf.Main.GoogleKey, taxi_conf.GeoOrbit, external_address_supplier)
 
-		botContext := t.FormTaxiBotContext(&apiMixin, db, taxi_conf, google_address_handler)
+		botContext := t.FormTaxiBotContext(&apiMixin, db, taxi_conf, google_address_handler, carsCache)
 		taxiContext := t.TaxiContext{API:external_api, DataBase:db, Cars:carsCache, Notifier:notifier}
 
 		controller := m.FormBotController(botContext)

@@ -6,16 +6,19 @@ type ConnectInterface interface {
 
 type TaxiInterface interface {
 	ConnectInterface
-	NewOrder(order NewOrderInfo) Answer
-	CancelOrder(order_id int64) (bool, string)
-	CalcOrderCost(order NewOrderInfo) (int, string)
-	Orders() []Order
-	Feedback(f Feedback) (bool, string)
-	GetCarsInfo() []CarInfo
+	NewOrder(order NewOrderInfo) Answer //создани нового заказа
+	CalcOrderCost(order NewOrderInfo) (int, string) //рассчет стоймости заказа
+	CancelOrder(order_id int64) (bool, string) //отмена заказа
+	Orders() []Order //запрос списка текущих заказов
+	Feedback(f Feedback) (bool, string) //отправка отзыва
 
-	WriteDispatcher(message string) (bool, string)
-	CallbackRequest(phone string) (bool, string)
-	WhereIt(order_id int64) (bool, string)
+	GetCarsInfo() []CarInfo //запрос списка автомобилей
+
+	WriteDispatcher(message string) (bool, string) //написать диспетчеру
+	CallbackRequest(phone string) (bool, string) //запросить обратный звонок
+	WhereIt(order_id int64) (bool, string) //оповестить что клиент не видит автомобиль
+
+
 }
 
 type AddressSupplier interface {

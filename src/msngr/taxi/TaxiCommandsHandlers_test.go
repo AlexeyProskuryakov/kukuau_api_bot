@@ -39,7 +39,7 @@ func TestOrderPrice(t *testing.T) {
 	gah := NewGoogleAddressHandler(config.Main.GoogleKey, taxi_conf.GeoOrbit, external_address_supplier)
 
 	apiMixin := ExternalApiMixin{API: external_api}
-	botContext := FormTaxiBotContext(&apiMixin, db, taxi_conf, gah)
+	botContext := FormTaxiBotContext(&apiMixin, db, taxi_conf, gah, NewCarsCache(&apiMixin))
 
 	new_order_package := tst.ReadTestFile("new_order_ok.json")
 

@@ -73,6 +73,9 @@ func _create_cars_map(i TaxiInterface) map[int64]CarInfo {
 		time.Sleep(3 * time.Second)
 	}
 	cars_info := i.GetCarsInfo()
+	if len(cars_info) == 0{
+		log.Printf("Cars cache will be empty :( Because api is responsed empty cars list")
+	}
 	for _, info := range cars_info {
 		cars_map[info.ID] = info
 	}
@@ -84,8 +87,11 @@ func NewCarsCache(i TaxiInterface) *CarsCache {
 	handler := CarsCache{cars: cars_map, api: i}
 	return &handler
 }
+func (ch *CarsCache) Reload(){
+	ch.cars = _create_cars_map(ch.api)
+}
 
-func (ch *CarsCache) CarInfo(car_id int64) *CarInfo {
+func (ch *CarsCache) GetCarInfo(car_id int64) *CarInfo {
 	key, ok := ch.cars[car_id]
 	if !ok {
 		ch.cars = _create_cars_map(ch.api)
@@ -146,7 +152,7 @@ func TaxiOrderWatch(taxiContext *TaxiContext, botContext *s.BotContext) {
 					continue
 				}
 
-				if car_info := taxiContext.Cars.CarInfo(api_order.IDCar); car_info != nil {
+				if car_info := taxiContext.Cars.GetCarInfo(api_order.IDCar); car_info != nil {
 					var notification_data *s.OutPkg
 					arrival_time := api_order.TimeArrival
 					if arrival_time == nil {

@@ -15,10 +15,29 @@ import (
 
 const (
 	timeFormat = "2006-01-02 15:04:05"
-
+	car_info_update_time = 5.0
 )
 
-func FormTaxiBotContext(im *ExternalApiMixin, db_handler *d.DbHandlerMixin, tc c.TaxiConfig, ah *GoogleAddressHandler) *s.BotContext {
+type CarInfoProvider struct {
+	Cache      *CarsCache
+	LastUpdate time.Time
+}
+
+func NewCarInfoProvider(cache *CarsCache) *CarInfoProvider {
+	return &CarInfoProvider{Cache:cache, LastUpdate:time.Now()}
+}
+
+func (cip *CarInfoProvider) GetCarInfo(car_id int64) *CarInfo {
+	if time.Now().Sub(cip.LastUpdate).Seconds() > car_info_update_time {
+		cip.Cache.Reload()
+		cip.LastUpdate = time.Now()
+	}
+	car_info := cip.Cache.GetCarInfo(car_id)
+	return car_info
+}
+
+
+func FormTaxiBotContext(im *ExternalApiMixin, db_handler *d.DbHandlerMixin, tc c.TaxiConfig, ah *GoogleAddressHandler, cc *CarsCache) *s.BotContext {
 
 	context := s.BotContext{}
 
@@ -49,6 +68,7 @@ func FormTaxiBotContext(im *ExternalApiMixin, db_handler *d.DbHandlerMixin, tc c
 		"write_dispatcher": &TaxiSupportMessageProcessor{ExternalApiMixin: *im},
 		"callback_request": &TaxiCallbackRequestMessageProcessor{ExternalApiMixin:*im},
 		"where_it":         &TaxiWhereItMessageProcessor{ExternalApiMixin:*im, DbHandlerMixin:*db_handler, context:&context},
+		"car_position":     &TaxiCarPositionMessageProcessor{ExternalApiMixin: *im, DbHandlerMixin:*db_handler, context:&context, Cars:NewCarInfoProvider(cc)},
 	}
 
 	context.Settings = make(map[string]interface{})
@@ -155,6 +175,11 @@ func GetCommands(dictUrl string) map[string]*[]s.OutCommand {
 			Action:    "where_it",
 			Position:3,
 		},
+		//		s.OutCommand{
+		//			Title: "Узнать местонахождение машины",
+		//			Action:    "car_position",
+		//			Position:4,
+		//		},
 	}
 	result["commands_for_order_feedback"] = &[]s.OutCommand{
 		s.OutCommand{
@@ -197,6 +222,40 @@ func GetCommands(dictUrl string) map[string]*[]s.OutCommand {
 	}
 
 	return result
+}
+
+type TaxiCarPositionMessageProcessor struct {
+	ExternalApiMixin
+	d.DbHandlerMixin
+	Cars    *CarInfoProvider
+	context *s.BotContext
+
+}
+
+func (cp *TaxiCarPositionMessageProcessor) ProcessMessage(in *s.InPkg) *s.MessageResult {
+	order_wrapper, err := cp.Orders.GetByOwner(in.From, cp.context.Name)
+	if err != nil {
+		return s.ErrorMessageResult(err, cp.context.Commands["commands_at_not_created_order"])
+	}
+
+	if order_wrapper != nil && !IsOrderNotAvailable(order_wrapper.OrderState) {
+		car_id_ := order_wrapper.OrderData.Get("IDCar")
+		if car_id_ == nil {
+			return &s.MessageResult{Body: "Не найден идентификатор автомобиля у вашего заказа :("}
+		}
+		car_id, ok := car_id_.(int64)
+		if !ok {
+			return &s.MessageResult{Body:fmt.Sprintf("Не понятен идентификатор автомобиля у вашего заказа :( %#v, %T", car_id_, car_id_)}
+		}
+		car_info := cp.Cars.GetCarInfo(car_id)
+		return &s.MessageResult{Body:fmt.Sprintf("Lat:%v;Lon:%v", car_info.Lat, car_info.Lon)}
+
+	}
+	commands, err := FormCommands(in.From, cp.DbHandlerMixin, cp.context)
+	if err != nil {
+		return s.ErrorMessageResult(err, cp.context.Commands["commands_at_not_created_order"])
+	}
+	return &s.MessageResult{Body: "У вас нет активных заказов!", Commands:commands}
 }
 
 type TaxiSupportMessageProcessor struct {
