@@ -262,8 +262,27 @@ type TaxiSupportMessageProcessor struct {
 	ExternalApiMixin
 }
 
+func get_text(in s.InCommand) (s string, err error){
+	if len(in.Form.Fields) > 0 {
+		s = in.Form.Fields[0].Data.Text
+		return s, nil
+	} else{
+		err = errors.New("No fields in input command")
+		return s, err
+	}
+}
+
 func (smp *TaxiSupportMessageProcessor) ProcessMessage(in *s.InPkg) *s.MessageResult {
-	ok, result := smp.API.WriteDispatcher(*in.Message.Body)
+	cmds := in.Message.Commands
+	if cmds == nil {
+		return &s.MessageResult{Body:"Нет данных"}
+	}
+	commands := *cmds
+	message, err := get_text(commands[0])
+	if err != nil{
+		return &s.MessageResult{Body:fmt.Sprintf("Ошибка! %v", err)}
+	}
+	ok, result := smp.API.WriteDispatcher(message)
 	var text string
 	if ok {
 		text = fmt.Sprintf("Спасибо за ваш отзыв!\n%s", result)
