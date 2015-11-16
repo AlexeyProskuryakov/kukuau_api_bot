@@ -4,6 +4,7 @@ import (
 	"msngr/db"
 	"fmt"
 	"time"
+	"strings"
 )
 
 type AddressF struct {
@@ -24,8 +25,24 @@ type AddressF struct {
 	Place      string `json:"Place,omitempty"`
 }
 
+func (a AddressF) String() string {
+	return fmt.Sprintf("[%v][%v] '%v' (%v) at %v %v %v %v \nIDS:\nParent: %v, Region: %v, District: %v, City: %v, Place: %v\n", a.GID, a.ID, a.Name, a.FullName, a.Region, a.City, a.District, a.Place, a.IDParent, a.IDRegion, a.IDDistrict, a.IDCity, a.IDPlace)
+}
+
 type AddressPackage struct {
 	Rows *[]AddressF `json:"rows"`
+}
+
+func (ap AddressPackage) String() string {
+	if ap.Rows != nil {
+		var buf []string
+		for i, row := range *ap.Rows {
+			buf = append(buf, fmt.Sprintf("%v: %+v", i, row))
+		}
+		return fmt.Sprintf("Address Package:\n%s", strings.Join(buf, "\n"))
+	} else {
+		return fmt.Sprintf("Address Package: [empty]")
+	}
 }
 
 type Address struct {
@@ -101,7 +118,7 @@ type NewOrderInfo struct {
 	DeliveryMinutes int64  `json:"deliveryMinutes"`              // <Количество минут до подачи (0-сейчас, но не менее минимального времени на подачу, указанного в настройках системы), не анализируется если задано поле deliveryTime >
 	IdService       string  `json:"idService"`                   //<Идентификатор услуги заказа (не может быть пустым)>
 	Notes           *string `json:"notes,omitempty"`             // <Комментарий к заказу>
-	Markups			*[]string    `json:"markups,omitempty"`											 //Markups           [2]int64 `json:"markups"`           // <Массив идентификаторов наценок заказа>
+	Markups         *[]string    `json:"markups,omitempty"`      //Markups           [2]int64 `json:"markups"`           // <Массив идентификаторов наценок заказа>
 	Attributes      *[2]int64      `json:"attributes,omitempty"` // <Массив идентификаторов дополнительных атрибутов заказа>
 	Delivery        Delivery      `json:"delivery"`              // Инфомация о месте подачи машины
 	Destinations    []Destination `json:"destinations"`          // Пункты назначения заказа (массив, не может быть пустым)
@@ -109,10 +126,10 @@ type NewOrderInfo struct {
 }
 
 type Order struct {
-	/**
-	Key fields is:
-	ID, State, Cost, TimeArrival, TimeDelivery, IDCar
-	 */
+														/**
+														Key fields is:
+														ID, State, Cost, TimeArrival, TimeDelivery, IDCar
+														 */
 	ID                int64  `json:"ID"`                // ID
 	State             int    `json:"State"`             //Состояние заказа
 	Cost              int    `json:"Cost"`              //Стоимость
@@ -160,12 +177,12 @@ type CarInfo struct {
 	/**
 	Key fields: color, model, number, id
 	 */
-	ID       int64   `json:"id"`
-	Number   string  `json:"Number"`
-	Color    string  `json:"Color"`
-	Model    string  `json:"Model"`
-	Lat      float64 `json:"Lat"`
-	Lon      float64 `json:"Lon"`
+	ID     int64   `json:"id"`
+	Number string  `json:"Number"`
+	Color  string  `json:"Color"`
+	Model  string  `json:"Model"`
+	Lat    float64 `json:"Lat"`
+	Lon    float64 `json:"Lon"`
 }
 
 func (car CarInfo) String() string {

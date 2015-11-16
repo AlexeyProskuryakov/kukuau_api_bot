@@ -123,7 +123,7 @@ func process_message_pkg(buff *s.OutPkg, in *s.InPkg, context *s.BotContext) (*s
 					buff.Message.Body = messageResult.Body
 					buff.Message.Commands = messageResult.Commands
 					isDeferred = messageResult.IsDeferred
-					log.Printf("message result type: %+v \n body:%+v\ncommands:%+v\ndeffered?: %+v", messageResult.Type, buff.Message.Body, buff.Message.Commands, isDeferred)
+					log.Printf("message result\ntype: %+v \nbody:%+v\ncommands:%+v\ndeffered?: %+v", messageResult.Type, buff.Message.Body, buff.Message.Commands, isDeferred)
 				}
 			} else {
 				err = errors.New("Команда не поддерживается.")

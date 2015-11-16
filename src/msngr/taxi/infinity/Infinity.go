@@ -30,7 +30,6 @@ type InfinityCarsInfo struct {
 
 // infinity - Структура для работы с API infinity.
 type infinity struct {
-	Host          string
 	ConnStrings   []string // Строка подключения к infinity API// default: http://109.202.25.248:8080/WebAPITaxi/
 	LoginTime     time.Time
 	Cookie        *http.Cookie
@@ -57,18 +56,16 @@ type infinity struct {
 								} `json:"params"`
 					  SessionID string `json:"sessionid"`
 				  }
-	Message       struct {
-					  Success bool   `json:"isSuccess"`
-					  Content string `json:"content"`
-				  }
 	Services      []InfinityServices `json:"InfinityServices"`
-
 	Config        t.TaxiAPIConfig
 }
 
 // Global API variable
 var instance *infinity
 
+func (i infinity) String() string {
+	return fmt.Sprintf("Infinity API processing.\nConnection strings:%+v\nLogon?:%v, time:%v client id:%v\n", i.ConnStrings, i.LoginResponse.Success, i.LoginTime, i.LoginResponse.IDClient)
+}
 
 func _initInfinity(config t.TaxiAPIConfig) *infinity {
 	result := &infinity{}
@@ -478,7 +475,7 @@ func (p *infinity) WhereIt(ID int64) (bool, string) {
 		return false, fmt.Sprint(err)
 	}
 	body, err := p._request("RemoteCall", map[string]string{"params": string(tmp), "method": "Taxi.WebAPI.Client.WhereIT"})
-	if err != nil{
+	if err != nil {
 		return false, fmt.Sprint(err)
 	}
 	var temp t.Answer
@@ -600,7 +597,7 @@ type Orders struct {
 //Taxi.t.Orders (Заказы: активные и предварительные)
 func (p *infinity) Orders() []t.Order {
 	body, err := p._request("GetViewData", map[string]string{"params": "[{\"viewName\": \"Taxi.Orders\"}]"})
-	if err != nil{
+	if err != nil {
 		log.Print("error at connection to inf at orders")
 		return []t.Order{}
 	}
@@ -649,7 +646,7 @@ func (p *infinity) OrdersClosedlastN() []t.Order {
 //Taxi.Markups (Список доступных наценок)
 func (p *infinity) Markups() []t.Order {
 	body, err := p._request("GetViewData", map[string]string{"params": "[{\"viewName\": \"Taxi.Markups\"}]"})
-	if err != nil{
+	if err != nil {
 		log.Print("error at connection to inf at markups %( ")
 		return []t.Order{}
 	}

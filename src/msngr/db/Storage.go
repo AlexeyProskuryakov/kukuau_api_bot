@@ -129,13 +129,12 @@ func (odbh *DbHandlerMixin) reConnect(conn string, dbname string) {
 	}
 	orders_collection := session.DB(dbname).C("orders")
 
-	orders_index := mgo.Index{
+	orders_collection.EnsureIndex(mgo.Index{
 		Key:        []string{"order_id"},
 		Background: true,
 		Unique:     true,
 		DropDups:   true,
-	}
-	orders_collection.EnsureIndex(orders_index)
+	})
 
 	orders_collection.EnsureIndex(mgo.Index{
 		Key:        []string{"order_state"},

@@ -65,7 +65,7 @@ func FormTaxiBotContext(im *ExternalApiMixin, db_handler *d.DbHandlerMixin, tc c
 		"cancel_order":     &TaxiCancelOrderProcessor{ExternalApiMixin: *im, DbHandlerMixin: *db_handler, context:&context, alert_phone:tc.Information.Phone},
 		"calculate_price":  &TaxiCalculatePriceProcessor{ExternalApiMixin: *im, context:&context, AddressHandler:ah},
 		"feedback":         &TaxiFeedbackProcessor{ExternalApiMixin: *im, DbHandlerMixin: *db_handler, context:&context},
-		"write_dispatcher": &TaxiSupportMessageProcessor{ExternalApiMixin: *im},
+		"write_dispatcher": &TaxiWriteDispatcherMessageProcessor{ExternalApiMixin: *im},
 		"callback_request": &TaxiCallbackRequestMessageProcessor{ExternalApiMixin:*im},
 		"where_it":         &TaxiWhereItMessageProcessor{ExternalApiMixin:*im, DbHandlerMixin:*db_handler, context:&context},
 		"car_position":     &TaxiCarPositionMessageProcessor{ExternalApiMixin: *im, DbHandlerMixin:*db_handler, context:&context, Cars:NewCarInfoProvider(cc)},
@@ -258,7 +258,7 @@ func (cp *TaxiCarPositionMessageProcessor) ProcessMessage(in *s.InPkg) *s.Messag
 	return &s.MessageResult{Body: "У вас нет активных заказов!", Commands:commands}
 }
 
-type TaxiSupportMessageProcessor struct {
+type TaxiWriteDispatcherMessageProcessor struct {
 	ExternalApiMixin
 }
 
@@ -272,7 +272,7 @@ func get_text(in s.InCommand) (s string, err error){
 	}
 }
 
-func (smp *TaxiSupportMessageProcessor) ProcessMessage(in *s.InPkg) *s.MessageResult {
+func (smp *TaxiWriteDispatcherMessageProcessor) ProcessMessage(in *s.InPkg) *s.MessageResult {
 	cmds := in.Message.Commands
 	if cmds == nil {
 		return &s.MessageResult{Body:"Нет данных"}

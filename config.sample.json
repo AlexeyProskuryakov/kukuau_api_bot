@@ -51,6 +51,34 @@
         }
       }
     },
+    "academ": {
+      "api": {
+        "name": "infinity",
+        "data": {
+          "id_service": "5000181745",
+          "login": "kukuautest",
+          "password": "789kukuau987",
+          "connection_strings": [
+            "http://212.20.48.191:8080/WebAPITaxi/"
+          ],
+          "host": "212.20.48.191:8080"
+        },
+        "not_send_price": false
+      },
+      "dict_url": "http://127.0.0.1:9191/taxi/academ/streets",
+      "geo_orbit": {
+        "lat": 54.642655,
+        "lon": 83.296285,
+        "radius": 1000000
+      },
+      "information": {
+        "phone": "123-45-67",
+        "text": "Такси академ! Самое лучшее такси в академгородке!"
+      },
+      "key": "Kuku acedem_taxi_key",
+      "markups":["5030781832", "5008745388"],
+      "name": "academ"
+    },
     "fake": {
       "name": "fake",
       "dict_url": "http://localhost:9191/taxi/fake/streets",

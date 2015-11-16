@@ -169,7 +169,7 @@ func (ah *GoogleAddressHandler) GetStreetInfo(place_id string) (*AddressF, error
 		_add_to_set(external_set, nitem.District)
 		_add_to_set(external_set, nitem.Place)
 
-		log.Printf("GetStreetId [%v]:\n %+v <=> %+v", query, external_set, google_set)
+//		log.Printf("GetStreetId [%v]:\n %+v <=> %+v", query, external_set, google_set)
 		if google_set.IsSuperset(external_set) {
 			log.Printf("GetStreetId: [%+v] \nat %v", place_id, nitem.FullName)
 			ah.cache[place_id] = &nitem

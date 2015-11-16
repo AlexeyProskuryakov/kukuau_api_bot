@@ -5,17 +5,18 @@ import (
 	"io/ioutil"
 	"encoding/json"
 	u "msngr/utils"
+	"fmt"
 )
 
 type TaxiApiParams struct {
 	Name         string `json:"name"`
 	Data         struct {
-					 Host              string `json:"host"`
-					 Login             string `json:"login"`
-					 Password          string `json:"password"`
+					 Host               string `json:"host"`
+					 Login              string `json:"login"`
+					 Password           string `json:"password"`
 					 ConnectionsStrings []string `json:"connection_strings"`
-					 IdService         string `json:"id_service"`
-					 BearerToken       string `json:"bearer_token"`
+					 IdService          string `json:"id_service"`
+					 BearerToken        string `json:"bearer_token"`
 				 } `json:"data"`
 	Fake         struct {
 					 SendedStates []int `json:"sended_states"`
@@ -25,6 +26,9 @@ type TaxiApiParams struct {
 	NotSendPrice bool `json:"not_send_price"`
 }
 
+func (api TaxiApiParams) String() string {
+	return fmt.Sprintf("API %s\nAPI data: %+v\nFake?:%+v\nNotSendPrice?:%v", api.Name, api.Data, api.Fake, api.NotSendPrice)
+}
 
 func (api TaxiApiParams) GetHost() string {
 	return api.Data.Host
@@ -59,7 +63,7 @@ type TaxiConfig struct {
 					Text  string `json:"text"`
 				} `json:"information"`
 	GeoOrbit    TaxiGeoOrbit `json:"geo_orbit"`
-	Markups		*[]string `json:"markups,omitempty"`
+	Markups     *[]string `json:"markups,omitempty"`
 }
 
 
