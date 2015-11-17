@@ -104,7 +104,7 @@ type DbHandlerMixin struct {
 	conn    string
 	dbname  string
 
-	session *mgo.Session
+	Session *mgo.Session
 
 	Orders  *orderHandler
 	Users   *userHandler
@@ -115,7 +115,7 @@ type DbHandlerMixin struct {
 var DELETE_DB = false
 
 func (odbh *DbHandlerMixin) IsConnected() bool {
-	return odbh.session != nil
+	return odbh.Session != nil
 }
 
 func (odbh *DbHandlerMixin) reConnect() {
@@ -126,7 +126,7 @@ func (odbh *DbHandlerMixin) reConnect() {
 		session, err = mgo.Dial(odbh.conn)
 		if err == nil {
 			log.Printf("Connection to mongodb established!")
-			odbh.session = session
+			odbh.Session = session
 			break
 		} else {
 			count += count
@@ -136,7 +136,7 @@ func (odbh *DbHandlerMixin) reConnect() {
 	}
 
 	session.SetMode(mgo.Strong, true)
-	odbh.session = session
+	odbh.Session = session
 
 	if (DELETE_DB) {
 		log.Printf("will delete database %+v", odbh.dbname)
@@ -146,22 +146,20 @@ func (odbh *DbHandlerMixin) reConnect() {
 		}
 	}
 	orders_collection := session.DB(odbh.dbname).C("orders")
-	log.Printf("collection %+v", orders_collection)
 	indexes, err := orders_collection.Indexes()
 	if err != nil {
-		log.Printf("Error at index information: %v", err)
+		log.Printf("DB Error at get index information: %v", err)
 	}
-	log.Printf("indexes %+v", indexes)
 
 	if !is_index_key_present(indexes, []string{"order_id"}) {
 		orders_collection.EnsureIndex(mgo.Index{
 			Key:        []string{"order_id"},
 			Background: true,
-			Unique:     true,
+			Unique:     false,
 			DropDups:   true,
 		})
 	}
-	if !is_index_key_present(indexes, []string{"order_state"}){
+	if !is_index_key_present(indexes, []string{"order_state"}) {
 		orders_collection.EnsureIndex(mgo.Index{
 			Key:        []string{"order_state"},
 			Background: true,
@@ -233,10 +231,10 @@ func NewDbHandler(conn, dbname string) *DbHandlerMixin {
 	odbh.Errors = &errorHandler{parent:&odbh}
 
 	odbh.Check = func() (string, bool) {
-		if odbh.session != nil {
+		if odbh.Session != nil && odbh.Session.Ping() == nil {
 			return "OK", true
 		}
-		return "Db is not connected :(", false
+		return "db is not connected :(", false
 	}
 	log.Printf("start reconnecting")
 	go func() {

@@ -30,6 +30,7 @@ INVALID_REQUEST – как правило, отсутствует обязате
 
 var cc_reg = regexp.MustCompilePOSIX("(ул(ица|\\.| )|пр(\\.|оспект|\\-кт)?|пер(\\.|еулок| )|г(ород|\\.|ор\\.| )|обл(асть|\\.| )|р(айон|\\-н )|^с )?")
 
+var NOT_IMPLY_TYPES = []string{"country", "political"}
 const GOOGLE_API_URL = "https://maps.googleapis.com/maps/api"
 
 
@@ -141,15 +142,16 @@ func (ah *GoogleAddressHandler) GetStreetInfo(place_id string) (*AddressF, error
 	if !ok {
 		addr_details, err = ah.GetDetailPlace(place_id)
 		if err != nil || addr_details == nil || addr_details.Status != "OK" {
-			log.Printf("ERROR GetStreetId IN get place %+v", addr_details)
+			log.Printf("ERROR GetStreetId IN get place %+v %v", addr_details, err)
 			return nil, err
 		}
 	}
 	address_components := addr_details.Result.AddressComponents
 	query, google_set := _process_address_components(address_components)
 
-	if query == ""{
-		return nil, errors.New("GetStreetId: Can not imply query for external adress supplier")
+	if query == "" {
+		query = addr_details.Result.Name
+		_add_to_set(google_set, addr_details.Result.Name)
 	}
 	if !ah.ExternalAddressSupplier.IsConnected() {
 		return nil, errors.New("GetStreetId: External service is not avaliable")
@@ -160,17 +162,21 @@ func (ah *GoogleAddressHandler) GetStreetInfo(place_id string) (*AddressF, error
 		return nil, errors.New("GetStreetId: no results at external")
 	}
 	ext_rows := *rows
-	for i := len(ext_rows) -1; i>= 0; i-- {
+
+	for i := len(ext_rows) - 1; i >= 0; i-- {
 		external_set := s.NewSet()
 		nitem := ext_rows[i]
+		if nitem.ShortName == "пл" {
+			nitem.Name = fmt.Sprintf("площадь %s", nitem.Name)
+		}
 		_add_to_set(external_set, nitem.Name)
 		_add_to_set(external_set, nitem.Region)
 		_add_to_set(external_set, nitem.City)
 		_add_to_set(external_set, nitem.District)
 		_add_to_set(external_set, nitem.Place)
 
-//		log.Printf("GetStreetId [%v]:\n %+v <=> %+v", query, external_set, google_set)
-		if google_set.IsSuperset(external_set) {
+		log.Printf("GetStreetId [%v]:\n e: %+v < ? > g: %+v", query, external_set, google_set)
+		if google_set.IsSuperset(external_set) || external_set.IsSuperset(google_set) {
 			log.Printf("GetStreetId: [%+v] \nat %v", place_id, nitem.FullName)
 			ah.cache[place_id] = &nitem
 			return &nitem, nil
@@ -268,7 +274,7 @@ func StreetsSearchController(w http.ResponseWriter, r *http.Request, i AddressSu
 	}
 }
 
-func _clear_address_string(element string) (string){
+func _clear_address_string(element string) (string) {
 	result := strings.ToLower(element)
 	result_raw := cc_reg.ReplaceAllString(result, "")
 	result = string(result_raw)
@@ -289,13 +295,17 @@ func _process_address_components(components []GoogleAddressComponent) (string, s
 	var route string
 	google_set := s.NewSet()
 	for _, component := range components {
-		long_name, err := _add_to_set(google_set, component.LongName)
-		if err != nil{
-			log.Printf("WARN AT PROCESSING ADRESS COMPONENTS: %v", err)
+		if utils.IntersectionS(NOT_IMPLY_TYPES, component.Types) {
 			continue
-		}
-		if utils.InS("route", component.Types) {
-			route = long_name
+		} else {
+			long_name, err := _add_to_set(google_set, component.LongName)
+			if err != nil {
+				log.Printf("WARN AT PROCESSING ADRESS COMPONENTS: %v", err)
+				continue
+			}
+			if utils.InS("route", component.Types) {
+				route = long_name
+			}
 		}
 	}
 	return route, google_set

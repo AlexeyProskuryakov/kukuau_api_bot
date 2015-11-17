@@ -96,6 +96,17 @@ func InS(p string, a []string) bool {
 	return false
 }
 
+func IntersectionS(a1, a2 []string) bool {
+	for _, v1 := range a1 {
+		for _, v2 := range a2 {
+			if v1 == v2 {
+				return true
+			}
+		}
+	}
+	return false
+}
+
 func Contains(container string, elements []string) bool {
 	container_elements := regexp.MustCompile("[a-zA-Zа-яА-Я]+").FindAllString(container, -1)
 	ce_map := make(map[string]bool)
@@ -124,7 +135,7 @@ func SaveToFile(what, fn string) {
 }
 
 func GET(url string, params *map[string]string) (*[]byte, error) {
-	log.Printf("GET > [%+v] |%+v|", url, params)
+	//	log.Printf("GET > [%+v] |%+v|", url, params)
 	req, err := http.NewRequest("GET", url, nil)
 	if err != nil {
 		log.Printf("ERROR IN GET FORM REQUEST! [%v]\n", url, err)

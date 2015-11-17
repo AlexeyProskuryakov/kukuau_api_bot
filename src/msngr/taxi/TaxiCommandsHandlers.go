@@ -262,11 +262,11 @@ type TaxiWriteDispatcherMessageProcessor struct {
 	ExternalApiMixin
 }
 
-func get_text(in s.InCommand) (s string, err error){
+func get_text(in s.InCommand) (s string, err error) {
 	if len(in.Form.Fields) > 0 {
 		s = in.Form.Fields[0].Data.Text
 		return s, nil
-	} else{
+	} else {
 		err = errors.New("No fields in input command")
 		return s, err
 	}
@@ -279,7 +279,7 @@ func (smp *TaxiWriteDispatcherMessageProcessor) ProcessMessage(in *s.InPkg) *s.M
 	}
 	commands := *cmds
 	message, err := get_text(commands[0])
-	if err != nil{
+	if err != nil {
 		return &s.MessageResult{Body:fmt.Sprintf("Ошибка! %v", err)}
 	}
 	ok, result := smp.API.WriteDispatcher(message)
@@ -476,7 +476,6 @@ func _get_phone(in *s.InPkg) (phone *string, err error) {
 
 func (nop *TaxiNewOrderProcessor) ProcessMessage(in *s.InPkg) *s.MessageResult {
 	order_wrapper, err := nop.Orders.GetByOwner(in.From, nop.context.Name)
-	log.Printf("NOP saved_order info: %+v\n", order_wrapper)
 	if err != nil {
 		return s.ErrorMessageResult(err, nop.context.Commands["commands_at_not_created_order"])
 	}
@@ -494,16 +493,18 @@ func (nop *TaxiNewOrderProcessor) ProcessMessage(in *s.InPkg) *s.MessageResult {
 		}
 
 		new_order, err := _form_order(commands[0].Form.Fields, nop.AddressHandler)
-		if err_val, ok := err.(*AddressNotHere); ok {
-			log.Printf("Addrss not here! %+v", err_val)
-			return &s.MessageResult{
-				Body: "Адрес не поддерживается этим такси.",
-				Commands: nop.context.Commands["commands_at_not_created_order"],
-				Type: "chat",
-			}
-		}
 		if err != nil {
-			return s.ErrorMessageResult(errors.New("Не могу определить адрес"), nop.context.Commands["commands_at_not_created_order"])
+			log.Printf("Error at forming order: %+v", err)
+			if err_val, ok := err.(*AddressNotHere); ok {
+				log.Printf("Addrss not here! %+v", err_val)
+				return &s.MessageResult{
+					Body: "Адрес не поддерживается этим такси.",
+					Commands: nop.context.Commands["commands_at_not_created_order"],
+					Type: "chat",
+				}
+			}else {
+				return s.ErrorMessageResult(errors.New("Не могу определить адрес"), nop.context.Commands["commands_at_not_created_order"])
+			}
 		}
 
 		new_order.Phone = *phone
@@ -515,7 +516,7 @@ func (nop *TaxiNewOrderProcessor) ProcessMessage(in *s.InPkg) *s.MessageResult {
 				log.Printf("markups setting present but it is not []string %+v, %T", mrkps, mrkps)
 			}
 		}
-
+		//send command to create order to external api
 		ans := nop.API.NewOrder(*new_order)
 		log.Printf("Order was created! %+v \n with content: %+v", ans, ans.Content)
 		cost := ans.Content.Cost
@@ -541,6 +542,9 @@ func (nop *TaxiNewOrderProcessor) ProcessMessage(in *s.InPkg) *s.MessageResult {
 		//persisting order
 		err = nop.Orders.AddOrderObject(&d.OrderWrapper{OrderState:ORDER_CREATED, Whom:in.From, OrderId:ans.Content.Id, Source:nop.context.Name})
 		if err != nil {
+			//if error we must cancel order at external api
+			ok, message := nop.API.CancelOrder(ans.Content.Id)
+			log.Printf("Error at persist order. Cancelling order at external api with result: %v, %v", ok, message)
 			return s.ErrorMessageResult(err, nop.context.Commands["commands_at_not_created_order"])
 		}
 		//forming text

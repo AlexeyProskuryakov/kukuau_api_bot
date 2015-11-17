@@ -29,6 +29,9 @@ type InField struct {
 	Data InFieldData `json:"data,omitempty"`
 }
 
+func (i InField) String() string{
+	return fmt.Sprintf("\nName:%s\nType:%s\nData:%+v\n", i.Name, i.Type, i.Data)
+}
 type InFieldData struct {
 	Value string `json:"value"`
 	Text  string `json:"text"`

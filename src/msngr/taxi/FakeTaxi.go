@@ -16,7 +16,7 @@ var fakeInstance *FakeTaxiAPI
 
 func GetFakeAPI(params c.TaxiApiParams) TaxiInterface {
 	if fakeInstance == nil {
-		log.Printf("Params fake:%#v",params.Fake)
+		log.Printf("Params fake:%#v", params.Fake)
 		fakeInstance = &FakeTaxiAPI{SleepTime:params.Fake.SleepTime, SendedStates:params.Fake.SendedStates}
 	}
 	return fakeInstance
@@ -33,14 +33,14 @@ func send_states(order_id int64, inf *FakeTaxiAPI) {
 	log.Printf("FA will send fake states for order %v", order_id, inf.SendedStates)
 	for _, i := range inf.SendedStates {
 		time.Sleep(time.Duration(inf.SleepTime) * time.Second)
-		log.Println("FA send state: ", i)
 		inf.set_order_state(order_id, i)
 	}
 }
 
 func (inf *FakeTaxiAPI) set_order_state(order_id int64, new_state int) {
 	for i, order := range inf.orders {
-		if order.ID == order_id {
+		if order.ID == order_id && order.State != ORDER_CANCELED {
+			log.Printf("FA send state %v to order %v", new_state, order_id)
 			inf.orders[i].State = new_state
 		}
 	}
@@ -83,7 +83,7 @@ func (inf *FakeTaxiAPI) CancelOrder(order_id int64) (bool, string) {
 			return true, "test order was cancelled"
 		}
 	}
-	return true, "Test order not found :( "
+	return false, "Test order not found :( "
 }
 
 func (p *FakeTaxiAPI) CalcOrderCost(order NewOrderInfo) (int, string) {
@@ -110,17 +110,17 @@ func (p *FakeTaxiAPI) GetCarsInfo() []CarInfo {
 	}
 }
 
-func (p *FakeTaxiAPI) WriteDispatcher(message string) (bool, string){
+func (p *FakeTaxiAPI) WriteDispatcher(message string) (bool, string) {
 	log.Printf("I have new message: %s", message)
-	return true,""
+	return true, ""
 }
 
-func (p *FakeTaxiAPI) CallbackRequest(phone string) (bool, string){
+func (p *FakeTaxiAPI) CallbackRequest(phone string) (bool, string) {
 	log.Printf("I must call to: %s", phone)
-	return true,""
+	return true, ""
 }
 
-func (p *FakeTaxiAPI) WhereIt(order_id int64) (bool, string){
-	log.Printf("Whre it for %v",order_id)
+func (p *FakeTaxiAPI) WhereIt(order_id int64) (bool, string) {
+	log.Printf("Whre it for %v", order_id)
 	return true, ""
 }
