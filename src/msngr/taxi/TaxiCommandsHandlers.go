@@ -533,12 +533,6 @@ func (nop *TaxiNewOrderProcessor) ProcessMessage(in *s.InPkg) *s.MessageResult {
 				not_send_price = _nsp
 			}
 		}
-		text := ""
-		if not_send_price {
-			text = "Ваш заказ создан!"
-		} else {
-			text = fmt.Sprintf("Ваш заказ создан! Стоймость поездки составит %+v рублей.", cost)
-		}
 		//check is answer of new order in external api has error
 		if !ans.IsSuccess {
 			nop.Errors.StoreError(in.From, ans.Message)
@@ -548,6 +542,13 @@ func (nop *TaxiNewOrderProcessor) ProcessMessage(in *s.InPkg) *s.MessageResult {
 		err = nop.Orders.AddOrderObject(&d.OrderWrapper{OrderState:ORDER_CREATED, Whom:in.From, OrderId:ans.Content.Id, Source:nop.context.Name})
 		if err != nil {
 			return s.ErrorMessageResult(err, nop.context.Commands["commands_at_not_created_order"])
+		}
+		//forming text
+		text := ""
+		if not_send_price {
+			text = "Ваш заказ создан!"
+		} else {
+			text = fmt.Sprintf("Ваш заказ создан! Стоймость поездки составит %+v рублей.", cost)
 		}
 
 		return &s.MessageResult{Body:text, Commands:nop.context.Commands["commands_at_created_order"], Type:"chat"}

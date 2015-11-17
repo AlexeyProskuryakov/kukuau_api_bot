@@ -210,7 +210,6 @@ const (
 	ORDER_NOT_PAYED = 8
 	ORDER_FIXED = 12
 
-//	ID_SERVICE = 5001753333
 )
 var InfinityStatusesName = map[int]string{
 	1:  "Не распределен",
@@ -231,5 +230,5 @@ var InfinityStatusesName = map[int]string{
 
 
 func IsOrderNotAvailable(state int) bool {
-	return utils.In(state, []int{0, 7, 9, 13})
+	return utils.In(state, []int{0, ORDER_PAYED, ORDER_CANCELED, ORDER_NOT_CREATED, ORDER_NOT_PAYED})
 }
