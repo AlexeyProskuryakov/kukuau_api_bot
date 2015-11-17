@@ -60,7 +60,7 @@ func FormTaxiBotContext(im *ExternalApiMixin, db_handler *d.DbHandlerMixin, tc c
 
 	log.Printf("ADDRESS SUPPLIER: %+v", ah.ExternalAddressSupplier)
 	context.Message_commands = map[string]s.MessageCommandProcessor{
-		"information":      &TaxiInformationProcessor{DbHandlerMixin: *db_handler, context:&context, information:&(tc.Information.Text)},
+		"information":      &TaxiInformationProcessor{information:&(tc.Information.Text)},
 		"new_order":        &TaxiNewOrderProcessor{ExternalApiMixin: *im, DbHandlerMixin: *db_handler, context:&context, AddressHandler:ah},
 		"cancel_order":     &TaxiCancelOrderProcessor{ExternalApiMixin: *im, DbHandlerMixin: *db_handler, context:&context, alert_phone:tc.Information.Phone},
 		"calculate_price":  &TaxiCalculatePriceProcessor{ExternalApiMixin: *im, context:&context, AddressHandler:ah},
@@ -379,8 +379,6 @@ func (cp *TaxiCommandsProcessor) ProcessRequest(in *s.InPkg) *s.RequestResult {
 }
 
 type TaxiInformationProcessor struct {
-	d.DbHandlerMixin
-	context     *s.BotContext
 	information *string
 }
 

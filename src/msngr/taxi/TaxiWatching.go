@@ -12,7 +12,7 @@ import (
 
 const (
 	car_arrived = "Машина на месте."
-	car_set_out = "Машина выехала."
+	car_set_out = "Машина выехала"
 	good_passage = "Приятной Вам поездки!"
 	nominated = "Вам назначен: "
 	order_canceled = "Ваш заказ отменен!"
@@ -73,7 +73,7 @@ func _create_cars_map(i TaxiInterface) map[int64]CarInfo {
 		time.Sleep(3 * time.Second)
 	}
 	cars_info := i.GetCarsInfo()
-	if len(cars_info) == 0{
+	if len(cars_info) == 0 {
 		log.Printf("Cars cache will be empty :( Because api is responsed empty cars list")
 	}
 	for _, info := range cars_info {
@@ -87,7 +87,7 @@ func NewCarsCache(i TaxiInterface) *CarsCache {
 	handler := CarsCache{cars: cars_map, api: i}
 	return &handler
 }
-func (ch *CarsCache) Reload(){
+func (ch *CarsCache) Reload() {
 	ch.cars = _create_cars_map(ch.api)
 }
 
@@ -115,10 +115,11 @@ func TaxiOrderWatch(taxiContext *TaxiContext, botContext *s.BotContext) {
 	previous_states := map[int64]int{}
 	for {
 		api_orders := taxiContext.API.Orders()
+//		log.Printf("result of orders request: %v", len(api_orders))
 		for _, api_order := range api_orders {
 			db_order, err := taxiContext.DataBase.Orders.GetById(api_order.ID, botContext.Name)
 			if err != nil {
-				log.Printf("WATCH some error in retrieve order [%+v]", api_order)
+				log.Printf("WATCH some error in retrieve order: %v\nOrder:\n[%+v]", err, api_order)
 				continue
 			}
 			if db_order == nil {

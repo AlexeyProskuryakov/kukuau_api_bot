@@ -8,7 +8,10 @@ import (
 	"time"
 	"errors"
 	"fmt"
+	"io"
 	"msngr/structs"
+
+	"reflect"
 )
 
 const (
@@ -22,6 +25,15 @@ func phash(pwd *string) (*string) {
 	output := md5.Sum(input)
 	result := string(output[:])
 	return &result
+}
+
+func is_index_key_present(currentIndexes []mgo.Index, key []string) bool {
+	for _, index := range currentIndexes {
+		if reflect.DeepEqual(key, index.Key) {
+			return true
+		}
+	}
+	return false
 }
 
 type OrderData struct {
@@ -75,17 +87,23 @@ type Loaded interface {
 
 type orderHandler struct {
 	collection *mgo.Collection
+	parent     *DbHandlerMixin
 }
 
 type userHandler struct {
 	collection *mgo.Collection
+	parent     *DbHandlerMixin
 }
 
 type errorHandler struct {
 	collection *mgo.Collection
+	parent     *DbHandlerMixin
 }
 
 type DbHandlerMixin struct {
+	conn    string
+	dbname  string
+
 	session *mgo.Session
 
 	Orders  *orderHandler
@@ -100,47 +118,56 @@ func (odbh *DbHandlerMixin) IsConnected() bool {
 	return odbh.session != nil
 }
 
-func (odbh *DbHandlerMixin) reConnect(conn string, dbname string) {
+func (odbh *DbHandlerMixin) reConnect() {
 	var session *mgo.Session
 	count := 2500 * time.Millisecond
 	for {
 		var err error
-		session, err = mgo.Dial(conn)
+		session, err = mgo.Dial(odbh.conn)
 		if err == nil {
 			log.Printf("Connection to mongodb established!")
 			odbh.session = session
 			break
 		} else {
 			count += count
-			log.Printf("error, will sleep %+v", count)
+			log.Printf("can not connect to db, will sleep %+v and try", count)
 			time.Sleep(count)
 		}
 	}
 
-	session.SetMode(mgo.Monotonic, true)
+	session.SetMode(mgo.Strong, true)
 	odbh.session = session
 
 	if (DELETE_DB) {
-		log.Printf("will delete database %+v", dbname)
-		err := session.DB(dbname).DropDatabase()
+		log.Printf("will delete database %+v", odbh.dbname)
+		err := session.DB(odbh.dbname).DropDatabase()
 		if err != nil {
 			log.Println("db must be dropped but errr:\n", err)
 		}
 	}
-	orders_collection := session.DB(dbname).C("orders")
+	orders_collection := session.DB(odbh.dbname).C("orders")
+	log.Printf("collection %+v", orders_collection)
+	indexes, err := orders_collection.Indexes()
+	if err != nil {
+		log.Printf("Error at index information: %v", err)
+	}
+	log.Printf("indexes %+v", indexes)
 
-	orders_collection.EnsureIndex(mgo.Index{
-		Key:        []string{"order_id"},
-		Background: true,
-		Unique:     true,
-		DropDups:   true,
-	})
-
-	orders_collection.EnsureIndex(mgo.Index{
-		Key:        []string{"order_state"},
-		Background: true,
-		Unique:     false,
-	})
+	if !is_index_key_present(indexes, []string{"order_id"}) {
+		orders_collection.EnsureIndex(mgo.Index{
+			Key:        []string{"order_id"},
+			Background: true,
+			Unique:     true,
+			DropDups:   true,
+		})
+	}
+	if !is_index_key_present(indexes, []string{"order_state"}){
+		orders_collection.EnsureIndex(mgo.Index{
+			Key:        []string{"order_state"},
+			Background: true,
+			Unique:     false,
+		})
+	}
 
 	orders_collection.EnsureIndex(mgo.Index{
 		Key:        []string{"whom"},
@@ -159,7 +186,7 @@ func (odbh *DbHandlerMixin) reConnect(conn string, dbname string) {
 		Unique:false,
 	})
 
-	users_collection := session.DB(dbname).C("users")
+	users_collection := session.DB(odbh.dbname).C("users")
 	users_collection.EnsureIndex(mgo.Index{
 		Key:        []string{"user_id"},
 		Background: true,
@@ -182,7 +209,7 @@ func (odbh *DbHandlerMixin) reConnect(conn string, dbname string) {
 		Background: true,
 	})
 
-	error_collection := session.DB(dbname).C("errors")
+	error_collection := session.DB(odbh.dbname).C("errors")
 
 	error_collection.EnsureIndex(mgo.Index{
 		Key: []string{"username"},
@@ -199,11 +226,11 @@ func (odbh *DbHandlerMixin) reConnect(conn string, dbname string) {
 }
 
 func NewDbHandler(conn, dbname string) *DbHandlerMixin {
-	odbh := DbHandlerMixin{}
+	odbh := DbHandlerMixin{conn:conn, dbname:dbname}
 
-	odbh.Users = &userHandler{}
-	odbh.Orders = &orderHandler{}
-	odbh.Errors = &errorHandler{}
+	odbh.Users = &userHandler{parent:&odbh}
+	odbh.Orders = &orderHandler{parent:&odbh}
+	odbh.Errors = &errorHandler{parent:&odbh}
 
 	odbh.Check = func() (string, bool) {
 		if odbh.session != nil {
@@ -213,7 +240,7 @@ func NewDbHandler(conn, dbname string) *DbHandlerMixin {
 	}
 	log.Printf("start reconnecting")
 	go func() {
-		odbh.reConnect(conn, dbname)
+		odbh.reConnect()
 	}()
 	return &odbh
 }
@@ -225,6 +252,10 @@ func (oh *orderHandler) GetById(order_id int64, source string) (*OrderWrapper, e
 	result := OrderWrapper{}
 	err := oh.collection.Find(bson.M{"order_id": order_id, "source":source}).One(&result)
 	if err != nil && err != mgo.ErrNotFound {
+		if err == io.EOF {
+			oh.parent.reConnect()
+			oh = oh.parent.Orders
+		}
 		return nil, err
 	}
 	return &result, nil
