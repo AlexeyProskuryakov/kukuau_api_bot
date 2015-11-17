@@ -229,6 +229,6 @@ var InfinityStatusesName = map[int]string{
 }
 
 
-func IsOrderNotAvailable(state int) bool {
+func IsOrderNotActual(state int) bool {
 	return utils.In(state, []int{0, ORDER_PAYED, ORDER_CANCELED, ORDER_NOT_CREATED, ORDER_NOT_PAYED})
 }

@@ -233,12 +233,12 @@ type TaxiCarPositionMessageProcessor struct {
 }
 
 func (cp *TaxiCarPositionMessageProcessor) ProcessMessage(in *s.InPkg) *s.MessageResult {
-	order_wrapper, err := cp.Orders.GetByOwner(in.From, cp.context.Name)
+	order_wrapper, err := cp.Orders.GetByOwner(in.From, cp.context.Name, true)
 	if err != nil {
 		return s.ErrorMessageResult(err, cp.context.Commands["commands_at_not_created_order"])
 	}
 
-	if order_wrapper != nil && !IsOrderNotAvailable(order_wrapper.OrderState) {
+	if order_wrapper != nil && !IsOrderNotActual(order_wrapper.OrderState) {
 		car_id_ := order_wrapper.OrderData.Get("IDCar")
 		if car_id_ == nil {
 			return &s.MessageResult{Body: "Не найден идентификатор автомобиля у вашего заказа :("}
@@ -317,12 +317,12 @@ type TaxiWhereItMessageProcessor struct {
 	context *s.BotContext
 }
 func (twmp *TaxiWhereItMessageProcessor) ProcessMessage(in *s.InPkg) *s.MessageResult {
-	order_wrapper, err := twmp.Orders.GetByOwner(in.From, twmp.context.Name)
+	order_wrapper, err := twmp.Orders.GetByOwner(in.From, twmp.context.Name, true)
 	if err != nil {
 		return s.ErrorMessageResult(err, twmp.context.Commands["commands_at_not_created_order"])
 	}
 
-	if order_wrapper != nil && !IsOrderNotAvailable(order_wrapper.OrderState) {
+	if order_wrapper != nil && !IsOrderNotActual(order_wrapper.OrderState) {
 		ok, result := twmp.API.WhereIt(order_wrapper.OrderId)
 		var text string
 		if ok {
@@ -351,7 +351,7 @@ func form_commands_for_current_order(order_wrapper *d.OrderWrapper, commands map
 }
 
 func FormCommands(username string, db d.DbHandlerMixin, context *s.BotContext) (*[]s.OutCommand, error) {
-	order_wrapper, err := db.Orders.GetByOwner(username, context.Name)
+	order_wrapper, err := db.Orders.GetByOwnerLast(username, context.Name)
 	if err != nil && err != mgo.ErrNotFound {
 		return nil, err
 	} else if err == mgo.ErrNotFound {
@@ -475,12 +475,12 @@ func _get_phone(in *s.InPkg) (phone *string, err error) {
 }
 
 func (nop *TaxiNewOrderProcessor) ProcessMessage(in *s.InPkg) *s.MessageResult {
-	order_wrapper, err := nop.Orders.GetByOwner(in.From, nop.context.Name)
+	order_wrapper, err := nop.Orders.GetByOwnerLast(in.From, nop.context.Name)
 	if err != nil {
 		return s.ErrorMessageResult(err, nop.context.Commands["commands_at_not_created_order"])
 	}
 
-	if order_wrapper == nil || IsOrderNotAvailable(order_wrapper.OrderState) {
+	if order_wrapper == nil || order_wrapper.Active == false {
 		commands := *in.Message.Commands
 		phone, err := _get_phone(in)
 		if err != nil {
@@ -557,7 +557,8 @@ func (nop *TaxiNewOrderProcessor) ProcessMessage(in *s.InPkg) *s.MessageResult {
 
 		return &s.MessageResult{Body:text, Commands:nop.context.Commands["commands_at_created_order"], Type:"chat"}
 	}
-	return &s.MessageResult{Body: "Заказ уже создан!", Commands: nop.context.Commands["commands_at_created_order"], Type:"chat"}
+	order_state, _ := InfinityStatusesName[order_wrapper.OrderState]
+	return &s.MessageResult{Body: fmt.Sprintf("Заказ уже создан! Потому что в состоянии %v", order_state), Commands: nop.context.Commands["commands_at_created_order"], Type:"chat"}
 }
 
 type TaxiCancelOrderProcessor struct {
@@ -568,20 +569,32 @@ type TaxiCancelOrderProcessor struct {
 }
 
 func (cop *TaxiCancelOrderProcessor) ProcessMessage(in *s.InPkg) *s.MessageResult {
-	order_wrapper, err := cop.Orders.GetByOwner(in.From, cop.context.Name)
+	order_wrapper, err := cop.Orders.GetByOwnerLast(in.From, cop.context.Name)
 	if err != nil {
 		return s.ErrorMessageResult(err, cop.context.Commands["commands_at_not_created_order"])
 	}
-
-	if order_wrapper != nil && !IsOrderNotAvailable(order_wrapper.OrderState) {
-		is_success, message := cop.API.CancelOrder(order_wrapper.OrderId)
-		if is_success {
-			cop.Orders.SetState(order_wrapper.OrderId, cop.context.Name, ORDER_CANCELED, nil)
-			return &s.MessageResult{Body:"Ваш заказ отменен!", Commands: cop.context.Commands["commands_at_not_created_order"], Type:"chat"}
-		} else {
-			return &s.MessageResult{Body:fmt.Sprintf("Проблемы с отменой заказа %v\nЗвони скорее: %+v ", message, cop.alert_phone), Commands: cop.context.Commands["commands_at_not_created_order"], Type:"chat"}
-		}
+	if order_wrapper == nil || order_wrapper.Active == false {
+		return s.ErrorMessageResult(errors.New("Order for it operation is unsuitable :("), cop.context.Commands["commands_at_not_created_order"])
 	}
+	is_success, message := cop.API.CancelOrder(order_wrapper.OrderId)
+	if is_success {
+		err := cop.Orders.SetState(order_wrapper.OrderId, cop.context.Name, ORDER_CANCELED, nil)
+		log.Println(err)
+		err = cop.Orders.SetActive(order_wrapper.OrderId, order_wrapper.Source, false)
+		log.Println(err)
+		if err != nil {
+			s.StartAfter(cop.DbHandlerMixin.Check, func() {
+				err = cop.Orders.SetActive(order_wrapper.OrderId, order_wrapper.Source, false)
+				log.Println(err)
+				err = cop.Orders.SetState(order_wrapper.OrderId, cop.context.Name, ORDER_CANCELED, nil)
+				log.Println(err)
+			})
+		}
+		return &s.MessageResult{Body:"Ваш заказ отменен!", Commands: cop.context.Commands["commands_at_not_created_order"], Type:"chat"}
+	} else {
+		return &s.MessageResult{Body:fmt.Sprintf("Проблемы с отменой заказа %v\nЗвони скорее: %+v ", message, cop.alert_phone), Commands: cop.context.Commands["commands_at_not_created_order"], Type:"chat"}
+	}
+
 	commands, err := FormCommands(in.From, cop.DbHandlerMixin, cop.context)
 	if err != nil {
 		return s.ErrorMessageResult(err, cop.context.Commands["commands_at_not_created_order"])

@@ -83,7 +83,7 @@ func (inf *FakeTaxiAPI) CancelOrder(order_id int64) (bool, string) {
 			return true, "test order was cancelled"
 		}
 	}
-	return false, "Test order not found :( "
+	return true, "Test order not found :( "
 }
 
 func (p *FakeTaxiAPI) CalcOrderCost(order NewOrderInfo) (int, string) {

@@ -18,7 +18,7 @@ const (
 	order_canceled = "Ваш заказ отменен!"
 )
 
-func FormNotification(ow *d.OrderWrapper, previous_state int, car_info CarInfo, deliv_time time.Time) *s.OutPkg {
+func FormNotification(context *TaxiContext, ow *d.OrderWrapper, previous_state int, car_info CarInfo, deliv_time time.Time) *s.OutPkg {
 	var text string
 
 	switch ow.OrderState {
@@ -40,8 +40,10 @@ func FormNotification(ow *d.OrderWrapper, previous_state int, car_info CarInfo, 
 		} else {
 			text = fmt.Sprintf("%v %v", car_arrived, good_passage)
 		}
+
 	case ORDER_PAYED:
 		text = "Заказ выполнен! Спасибо что воспользовались услугами нашей компании."
+		context.DataBase.Orders.SetActive(ow.OrderId, ow.Source, false)
 
 	case ORDER_CANCELED:
 		if !u.In(previous_state, []int{ORDER_PAYED, ORDER_NOT_PAYED}) {
@@ -49,6 +51,8 @@ func FormNotification(ow *d.OrderWrapper, previous_state int, car_info CarInfo, 
 		} else {
 			text = order_canceled
 		}
+		context.DataBase.Orders.SetActive(ow.OrderId, ow.Source, false)
+
 	//	default:
 	//		status, _ := StatusesMap[state]
 	//		text = fmt.Sprintf("Машина %v %v c номером %v перешла в состояние [%v]", car_info.Color, car_info.Model, car_info.Number, status)
@@ -150,9 +154,9 @@ func process_state_change(taxiContext *TaxiContext, botContext *s.BotContext, ap
 
 		prev_state, ok := previous_states[api_order.ID]
 		if ok {
-			notification_data = FormNotification(db_order, prev_state, *car_info, *arrival_time)
+			notification_data = FormNotification(taxiContext, db_order, prev_state, *car_info, *arrival_time)
 		} else {
-			notification_data = FormNotification(db_order, -1, *car_info, *arrival_time)
+			notification_data = FormNotification(taxiContext, db_order, -1, *car_info, *arrival_time)
 		}
 		if notification_data != nil {
 			notification_data.Message.Commands = form_commands_for_current_order(db_order, botContext.Commands)

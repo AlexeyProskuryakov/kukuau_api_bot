@@ -151,7 +151,7 @@ func (ah *GoogleAddressHandler) GetStreetInfo(place_id string) (*AddressF, error
 
 	if query == "" {
 		query = addr_details.Result.Name
-		_add_to_set(google_set, addr_details.Result.Name)
+//		_add_to_set(google_set, addr_details.Result.Name)
 	}
 	if !ah.ExternalAddressSupplier.IsConnected() {
 		return nil, errors.New("GetStreetId: External service is not avaliable")
@@ -295,9 +295,9 @@ func _process_address_components(components []GoogleAddressComponent) (string, s
 	var route string
 	google_set := s.NewSet()
 	for _, component := range components {
-		if utils.IntersectionS(NOT_IMPLY_TYPES, component.Types) {
-			continue
-		} else {
+//		if utils.IntersectionS(NOT_IMPLY_TYPES, component.Types) {
+//			continue
+//		} else {
 			long_name, err := _add_to_set(google_set, component.LongName)
 			if err != nil {
 				log.Printf("WARN AT PROCESSING ADRESS COMPONENTS: %v", err)
@@ -306,7 +306,7 @@ func _process_address_components(components []GoogleAddressComponent) (string, s
 			if utils.InS("route", component.Types) {
 				route = long_name
 			}
-		}
+//		}
 	}
 	return route, google_set
 }

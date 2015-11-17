@@ -60,6 +60,7 @@ type OrderWrapper struct {
 	OrderData  OrderData `bson:"data"`
 	Feedback   string
 	Source     string
+	Active     bool
 }
 
 
@@ -124,6 +125,8 @@ func (odbh *DbHandlerMixin) reConnect() {
 	for {
 		var err error
 		session, err = mgo.Dial(odbh.conn)
+		session.SetMode(mgo.Strong, true)
+		err = session.Ping()
 		if err == nil {
 			log.Printf("Connection to mongodb established!")
 			odbh.Session = session
@@ -135,7 +138,7 @@ func (odbh *DbHandlerMixin) reConnect() {
 		}
 	}
 
-	session.SetMode(mgo.Strong, true)
+
 	odbh.Session = session
 
 	if (DELETE_DB) {
@@ -145,82 +148,93 @@ func (odbh *DbHandlerMixin) reConnect() {
 			log.Println("db must be dropped but errr:\n", err)
 		}
 	}
-	orders_collection := session.DB(odbh.dbname).C("orders")
-	indexes, err := orders_collection.Indexes()
-	if err != nil {
-		log.Printf("DB Error at get index information: %v", err)
+	for {
+		if err := session.Ping(); err != nil {
+			log.Printf("will slepp 1 s ")
+			time.Sleep(time.Second)
+			session, err := mgo.Dial(odbh.conn)
+			err = session.Ping()
+			if err == nil {
+				log.Printf("Connection to mongodb established!")
+				odbh.Session = session
+				continue
+			} else {
+				count += count
+				log.Printf("can not connect to db, will sleep %+v and try", count)
+				time.Sleep(count)
+			}
+		} else {
+			orders_collection := session.DB(odbh.dbname).C("orders")
+
+			if err != nil {
+				log.Printf("DB Error at get index information: %v", err)
+			}
+			orders_collection.EnsureIndex(mgo.Index{
+				Key:        []string{"order_id"},
+				Background: true,
+				DropDups:   true,
+			})
+			orders_collection.EnsureIndex(mgo.Index{
+				Key:        []string{"order_state"},
+				Background: true,
+			})
+			orders_collection.EnsureIndex(mgo.Index{
+				Key:[]string{"active"},
+				Background:true,
+			})
+			orders_collection.EnsureIndex(mgo.Index{
+				Key:        []string{"whom"},
+				Background: true,
+
+			})
+			orders_collection.EnsureIndex(mgo.Index{
+				Key:        []string{"when"},
+				Background: true,
+			})
+			orders_collection.EnsureIndex(mgo.Index{
+				Key:    []string{"source"},
+				Background:true,
+				Unique:false,
+			})
+
+			users_collection := session.DB(odbh.dbname).C("users")
+			users_collection.EnsureIndex(mgo.Index{
+				Key:        []string{"user_id"},
+				Background: true,
+				Unique:     true,
+				DropDups:   true,
+			})
+			users_collection.EnsureIndex(mgo.Index{
+				Key:        []string{"last_update"},
+				Background: true,
+			})
+			users_collection.EnsureIndex(mgo.Index{
+				Key:        []string{"user_state"},
+				Background: true,
+			})
+			users_collection.EnsureIndex(mgo.Index{
+				Key:        []string{"user_name"},
+				Background: true,
+			})
+
+			error_collection := session.DB(odbh.dbname).C("errors")
+
+			error_collection.EnsureIndex(mgo.Index{
+				Key: []string{"username"},
+				Unique:false,
+			})
+			error_collection.EnsureIndex(mgo.Index{
+				Key:[]string{"time"},
+				Unique:false,
+			})
+
+			odbh.Users.collection = users_collection
+			odbh.Orders.collection = orders_collection
+			odbh.Errors.collection = error_collection
+
+			break
+		}
 	}
-
-	if !is_index_key_present(indexes, []string{"order_id"}) {
-		orders_collection.EnsureIndex(mgo.Index{
-			Key:        []string{"order_id"},
-			Background: true,
-			Unique:     false,
-			DropDups:   true,
-		})
-	}
-	if !is_index_key_present(indexes, []string{"order_state"}) {
-		orders_collection.EnsureIndex(mgo.Index{
-			Key:        []string{"order_state"},
-			Background: true,
-			Unique:     false,
-		})
-	}
-
-	orders_collection.EnsureIndex(mgo.Index{
-		Key:        []string{"whom"},
-		Background: true,
-		Unique:     false,
-	})
-	orders_collection.EnsureIndex(mgo.Index{
-		Key:        []string{"when"},
-		Background: true,
-		Unique:     false,
-	})
-
-	orders_collection.EnsureIndex(mgo.Index{
-		Key:    []string{"source"},
-		Background:true,
-		Unique:false,
-	})
-
-	users_collection := session.DB(odbh.dbname).C("users")
-	users_collection.EnsureIndex(mgo.Index{
-		Key:        []string{"user_id"},
-		Background: true,
-		Unique:     true,
-		DropDups:   true,
-	})
-	users_collection.EnsureIndex(mgo.Index{
-		Key:        []string{"last_update"},
-		Unique:     false,
-		Background: true,
-	})
-	users_collection.EnsureIndex(mgo.Index{
-		Key:        []string{"user_state"},
-		Unique:     false,
-		Background: true,
-	})
-	users_collection.EnsureIndex(mgo.Index{
-		Key:        []string{"user_name"},
-		Unique:     false,
-		Background: true,
-	})
-
-	error_collection := session.DB(odbh.dbname).C("errors")
-
-	error_collection.EnsureIndex(mgo.Index{
-		Key: []string{"username"},
-		Unique:false,
-	})
-	error_collection.EnsureIndex(mgo.Index{
-		Key:[]string{"time"},
-		Unique:false,
-	})
-
-	odbh.Users.collection = users_collection
-	odbh.Orders.collection = orders_collection
-	odbh.Errors.collection = error_collection
 }
 
 func NewDbHandler(conn, dbname string) *DbHandlerMixin {
@@ -259,21 +273,38 @@ func (oh *orderHandler) GetById(order_id int64, source string) (*OrderWrapper, e
 	return &result, nil
 }
 
+func (oh *orderHandler) SetActive(order_id int64, source string, state bool) error {
+	if oh.collection == nil {
+		return errors.New("БД не доступна")
+	}
+	err := oh.collection.Update(bson.M{"order_id": order_id, "source":source}, bson.M{"$set":bson.M{"active":state}})
+	if err == mgo.ErrNotFound {
+		log.Printf("update not existed %v %v to active %v", order_id, source, state)
+		return nil
+	}
+	return err
+}
+
 func (oh *orderHandler) SetState(order_id int64, source string, new_state int, order_data *OrderData) error {
 	if oh.collection == nil {
 		return errors.New("БД не доступна")
 	}
 	var to_set bson.M
 	if order_data != nil {
-		to_set = bson.M{"order_state": new_state, "when": time.Now(), "data": order_data}
+		to_set = bson.M{"order_state": new_state, "when": time.Now(), "data": order_data, "active":true}
 	} else {
 		to_set = bson.M{"order_state": new_state, "when": time.Now()}
 	}
+
 	change := bson.M{"$set": to_set}
-	log.Println("change:", change["$set"])
+	log.Println("DB: change:", change["$set"])
 	err := oh.collection.Update(bson.M{"order_id": order_id, "source":source}, change)
 	if err != nil && err != mgo.ErrNotFound {
+		log.Println(err)
 		return err
+	}
+	if err == mgo.ErrNotFound {
+		log.Printf("DB: for order %v at %v not found :(( ", order_id, source)
 	}
 	return nil
 }
@@ -319,7 +350,7 @@ func (oh *orderHandler) AddOrderObject(order *OrderWrapper) error {
 	return err
 }
 
-func (oh *orderHandler) GetByOwner(whom, source string) (*OrderWrapper, error) {
+func (oh *orderHandler) GetByOwnerLast(whom, source string) (*OrderWrapper, error){
 	if oh.collection == nil {
 		return nil, errors.New("БД не доступна")
 	}
@@ -332,6 +363,22 @@ func (oh *orderHandler) GetByOwner(whom, source string) (*OrderWrapper, error) {
 	}
 	return &result, nil
 }
+
+func (oh *orderHandler) GetByOwner(whom, source string, active bool) (*OrderWrapper, error) {
+	if oh.collection == nil {
+		return nil, errors.New("БД не доступна")
+	}
+	result := OrderWrapper{}
+	err := oh.collection.Find(bson.M{"whom": whom, "source":source, "active":true}).Sort("-when").One(&result)
+	if err == mgo.ErrNotFound {
+		return nil, nil
+	}else if err != nil {
+		return nil, err
+	}
+	return &result, nil
+}
+
+
 
 func (oh *orderHandler) GetOrders(q bson.M) ([]OrderWrapper, error) {
 	if oh.collection == nil {
