@@ -78,6 +78,7 @@ type Configuration struct {
 	Main   struct {
 			   Port         int    `json:"port"`
 			   CallbackAddr string `json:"callback_addr"`
+			   ConsoleAddr  string `json:"console_addr"`
 			   LoggingFile  string `json:"log_file"`
 			   GoogleKey    string `json:"google_key"`
 			   Database     struct {

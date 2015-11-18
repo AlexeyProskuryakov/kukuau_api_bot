@@ -197,9 +197,9 @@ func get_changes(api_order Order, db_order *d.OrderWrapper) []string {
 
 }
 
+var PreviousStates = make(map[int64]int)
 
 func TaxiOrderWatch(taxiContext *TaxiContext, botContext *s.BotContext) {
-	previous_states := map[int64]int{}
 	for {
 		api_orders := taxiContext.API.Orders()
 		//		log.Printf("result of orders request: %v", len(api_orders))
@@ -217,13 +217,12 @@ func TaxiOrderWatch(taxiContext *TaxiContext, botContext *s.BotContext) {
 			for _, el := range get_changes(api_order, db_order) {
 				switch el {
 				case CHANGE_STATE:
-					process_state_change(taxiContext, botContext, api_order, db_order, previous_states)
+					process_state_change(taxiContext, botContext, api_order, db_order, PreviousStates)
 				case CHANGE_CAR:
 					process_car_state(taxiContext, botContext, api_order, db_order)
 				}
 			}
-
-			previous_states[api_order.ID] = api_order.State
+			PreviousStates[api_order.ID] = api_order.State
 		}
 		time.Sleep(1 * time.Second)
 	}

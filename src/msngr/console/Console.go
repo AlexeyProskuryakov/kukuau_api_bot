@@ -4,14 +4,16 @@ import (
 	"github.com/go-martini/martini"
 	"github.com/martini-contrib/auth"
 	"github.com/martini-contrib/render"
+
+	"gopkg.in/mgo.v2/bson"
+
 	"fmt"
 	"time"
-	d "msngr/db"
-	msngr "msngr"
-	t "msngr/taxi"
-	i "msngr/taxi/infinity"
 	"log"
-	"gopkg.in/mgo.v2/bson"
+
+	c "msngr/configuration"
+	d "msngr/db"
+	t "msngr/taxi"
 )
 
 var users = map[string]string{
@@ -34,7 +36,7 @@ type ConsoleInfo struct {
 	ShopLoginUsers  []string
 
 }
-func Run(config msngr.Configuration, db *d.DbHandlerMixin) {
+func Run(config c.Configuration, db *d.DbHandlerMixin) {
 	m := martini.Classic()
 
 	martini.Env = martini.Dev
@@ -73,7 +75,7 @@ func Run(config msngr.Configuration, db *d.DbHandlerMixin) {
 			if res != nil {
 				order := res[0]
 				state_id := order.OrderState
-				state, ok := i.StatusesMap[state_id]
+				state, ok := t.InfinityStatusesName[state_id]
 				if ok {
 					user_order_statuses[order.Whom] = state
 				}
@@ -104,6 +106,7 @@ func Run(config msngr.Configuration, db *d.DbHandlerMixin) {
 	m.Get("/statistic", func(user auth.User) (int, string) {
 		return 200, fmt.Sprintf("This is statistic! %v", user)
 	})
-	log.Printf("will work at addr: %v", config.Main.ConsoleAddr)
+
+	log.Printf("Console will work at addr: %v", config.Main.ConsoleAddr)
 	m.RunOnAddr(config.Main.ConsoleAddr)
 }
