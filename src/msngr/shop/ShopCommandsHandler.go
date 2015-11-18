@@ -4,24 +4,26 @@ import (
 	"bytes"
 	"fmt"
 	"math/rand"
-	"regexp"
-	"strings"
 	"time"
 
 	d "msngr/db"
 	s "msngr/structs"
+	u "msngr/utils"
+	c "msngr/configuration"
 	"errors"
 	"gopkg.in/mgo.v2"
 )
 
-func FormShopCommands(db *d.DbHandlerMixin) *s.BotContext {
+
+
+func FormShopCommands(db *d.DbHandlerMixin, config *c.ShopConfig) *s.BotContext {
 	var ShopRequestCommands = map[string]s.RequestCommandProcessor{
 		"commands": ShopCommandsProcessor{DbHandlerMixin: *db},
 	}
 
 	var ShopMessageCommands = map[string]s.MessageCommandProcessor{
-		"information":     ShopInformationProcessor{},
-		"authorise":       ShopAuthoriseProcessor{DbHandlerMixin: *db},
+		"information":     ShopInformationProcessor{Info:config.Info},
+		"authorise":       ShopLogInMessageProcessor{DbHandlerMixin: *db},
 		"log_out":         ShopLogOutMessageProcessor{DbHandlerMixin: *db},
 		"orders_state":    ShopOrderStateProcessor{DbHandlerMixin: *db},
 		"support_message": ShopSupportMessageProcessor{},
@@ -29,13 +31,20 @@ func FormShopCommands(db *d.DbHandlerMixin) *s.BotContext {
 	}
 
 	context := s.BotContext{}
-	context.Check = func() (string, bool) { return "", true }
 	context.Message_commands = ShopMessageCommands
 	context.Request_commands = ShopRequestCommands
+	context.Check = func() (string, bool) {
+		if !db.IsConnected() {
+			return "Ошибка в подключении к БД попробуйте позже", false
+		}
+		return "All ok!", true
+
+
+	}
 	return &context
 }
 
-var authorised_commands = []s.OutCommand{
+var AUTH_COMMANDS = []s.OutCommand{
 	s.OutCommand{
 		Title:    "Мои заказы",
 		Action:   "orders_state",
@@ -72,7 +81,7 @@ var authorised_commands = []s.OutCommand{
 		Position: 3,
 	},
 }
-var not_authorised_commands = []s.OutCommand{
+var NOT_AUTH_COMANDS = []s.OutCommand{
 	s.OutCommand{
 		Title:    "Авторизоваться",
 		Action:   "authorise",
@@ -123,55 +132,18 @@ func (cp ShopCommandsProcessor) ProcessRequest(in *s.InPkg) *s.RequestResult {
 	user_state, err := cp.Users.GetUserState(in.From)
 	if err == mgo.ErrNotFound {
 		user_data := in.UserData
-		if user_data == nil {
-			return s.ExceptionRequestResult(errors.New("not user data !"), &not_authorised_commands)
+		if user_data != nil && in.UserData.Phone != "" {
+			phone := in.UserData.Phone
+			cp.Users.AddUser(&(in.From), &phone)
 		}
-		phone := in.UserData.Phone
-		if phone == "" {
-			return s.ExceptionRequestResult(errors.New("not user data phone!"), &not_authorised_commands)
-		}
-		cp.Users.AddUser(&(in.From), &phone)
-	} else {
-		return s.ExceptionRequestResult(err, &not_authorised_commands)
 	}
 	commands := []s.OutCommand{}
-	if *user_state == d.LOGIN {
-		commands = authorised_commands
+	if user_state!= nil && *user_state == d.LOGIN {
+		commands = AUTH_COMMANDS
 	} else {
-		commands = not_authorised_commands
+		commands = NOT_AUTH_COMANDS
 	}
 	return &s.RequestResult{Commands:&commands}
-}
-
-type ShopAuthoriseProcessor struct {
-	d.DbHandlerMixin
-}
-
-func (sap ShopAuthoriseProcessor) ProcessMessage(in *s.InPkg) *s.MessageResult {
-	command := *in.Message.Commands
-	user, password := _get_user_and_password(command[0].Form.Fields)
-	if user == nil || password == nil {
-		return s.ExceptionMessageResult(errors.New("Не могу извлечь логин и (или) пароль."))
-	}
-
-	check, err := sap.Users.CheckUserPassword(user, password)
-	if err != nil && err != mgo.ErrNotFound {
-		return s.ExceptionMessageResult(err)
-	}
-
-	var body string
-	var commands []s.OutCommand
-
-	if *check {
-		sap.Users.SetUserState(&(in.From), d.LOGIN)
-		body = "Добро пожаловать в интернет магазин Desprice Markt!"
-		commands = authorised_commands
-	}else {
-		body = "Не правильные логин или пароль :("
-		commands = not_authorised_commands
-	}
-	return &s.MessageResult{Body:body, Commands:&commands}
-
 }
 
 type ShopOrderStateProcessor struct {
@@ -193,41 +165,28 @@ var order_products = [4]string{"Ноутбук Apple MacBook Air", "Электр
 func (osp ShopOrderStateProcessor) ProcessMessage(in *s.InPkg) *s.MessageResult {
 	user_state, err := osp.Users.GetUserState(in.From)
 	if err != nil && err != mgo.ErrNotFound {
-		return s.ExceptionMessageResult(err)
+		return s.ErrorMessageResult(err, &NOT_AUTH_COMANDS)
 	}
 
 	var result string
 	var commands []s.OutCommand
 	if *user_state == d.LOGIN {
 		result = fmt.Sprintf("Ваш заказ #%v (%v) %v.", rand.Int31n(10000), __choiceString(order_products[:]), __choiceString(order_states[:]))
-		commands = authorised_commands
+		commands = AUTH_COMMANDS
 	} else {
 		result = "Авторизуйтесь пожалуйста!"
-		commands = not_authorised_commands
+		commands = NOT_AUTH_COMANDS
 	}
-	return &s.MessageResult{Body:result, Commands:&commands}
+	return &s.MessageResult{Body:result, Commands:&commands, Type:"chat"}
 }
 
 type ShopSupportMessageProcessor struct{}
-
-func contains(container string, elements []string) bool {
-	container_elements := regexp.MustCompile("[a-zA-Zа-яА-Я]+").FindAllString(container, -1)
-	ce_map := make(map[string]bool)
-	for _, ce_element := range container_elements {
-		ce_map[strings.ToLower(ce_element)] = true
-	}
-	result := true
-	for _, element := range elements {
-		_, ok := ce_map[element]
-		result = result && ok
-	}
-	return result
-}
 
 func make_one_string(fields []s.InField) string {
 	var buffer bytes.Buffer
 	for _, field := range fields {
 		buffer.WriteString(field.Data.Value)
+		buffer.WriteString(" ")
 		buffer.WriteString(field.Data.Text)
 	}
 	return buffer.String()
@@ -236,9 +195,9 @@ func make_one_string(fields []s.InField) string {
 func (sm ShopSupportMessageProcessor) ProcessMessage(in *s.InPkg) *s.MessageResult {
 	commands := *in.Message.Commands
 	var body string
-
+	input := make_one_string(commands[0].Form.Fields)
 	if commands != nil {
-		if contains(make_one_string(commands[0].Form.Fields), []string{"где", "забрать", "заказ"}) {
+		if u.Contains(input, []string{"где", "забрать", "заказ"}) {
 			body = "Ваш заказ вы можете забрать по адресу: ул. Николаева д. 11."
 		} else {
 			body = "Спасибо за вопрос. Мы ответим Вам в ближайшее время."
@@ -246,30 +205,68 @@ func (sm ShopSupportMessageProcessor) ProcessMessage(in *s.InPkg) *s.MessageResu
 	} else {
 		body = "Спасибо за вопрос. Мы ответим Вам в ближайшее время."
 	}
-	return &s.MessageResult{Body:body}
+	u.SaveToFile(fmt.Sprintf("\n%v | %v", input, in.From), "shop_revue.txt")
+	return &s.MessageResult{Body:body, Type:"chat"}
 }
 
-type ShopInformationProcessor struct{}
+type ShopInformationProcessor struct {
+	Info string
+}
 
 func (ih ShopInformationProcessor) ProcessMessage(in *s.InPkg) *s.MessageResult {
-	return &s.MessageResult{Body:"Desprice Markt - интернет-магазин бытовой техники и электроники в Новосибирске и других городах России. Каталог товаров мировых брендов."}
+	info := ih.Info
+	if info == "" {
+		info = "Desprice Markt - интернет-магазин бытовой техники и электроники в Новосибирске и других городах России. Каталог товаров мировых брендов."
+	}
+	return &s.MessageResult{Body:info, Type:"chat"}
 }
 
 type ShopLogOutMessageProcessor struct {
 	d.DbHandlerMixin
 }
 
+type ShopLogInMessageProcessor struct {
+	d.DbHandlerMixin
+}
+
+func (sap ShopLogInMessageProcessor) ProcessMessage(in *s.InPkg) *s.MessageResult {
+	command := *in.Message.Commands
+	user, password := _get_user_and_password(command[0].Form.Fields)
+	if user == nil || password == nil {
+		return s.ErrorMessageResult(errors.New("Не могу извлечь логин и (или) пароль."), &NOT_AUTH_COMANDS)
+	}
+
+	check, err := sap.Users.CheckUserPassword(user, password)
+	if err != nil && err != mgo.ErrNotFound {
+		return s.ErrorMessageResult(err, &NOT_AUTH_COMANDS)
+	}
+
+	var body string
+	var commands []s.OutCommand
+
+	if *check {
+		sap.Users.SetUserState(&(in.From), d.LOGIN)
+		body = "Добро пожаловать в интернет магазин Desprice Markt!"
+		commands = AUTH_COMMANDS
+	}else {
+		body = "Не правильные логин или пароль :("
+		commands = NOT_AUTH_COMANDS
+	}
+	return &s.MessageResult{Body:body, Commands:&commands, Type:"chat"}
+
+}
+
 func (lop ShopLogOutMessageProcessor) ProcessMessage(in *s.InPkg) *s.MessageResult {
 	err := lop.Users.SetUserState(&(in.From), d.LOGOUT)
-	if err != nil {
-		return s.ExceptionMessageResult(err)
+	if err != nil && err != mgo.ErrNotFound {
+		return s.ErrorMessageResult(err, &NOT_AUTH_COMANDS)
 	}
-	return &s.MessageResult{Body:"До свидания! ", Commands:&not_authorised_commands}
+	return &s.MessageResult{Body:"До свидания! ", Commands:&NOT_AUTH_COMANDS, Type:"chat"}
 }
 
 type ShopBalanceProcessor struct {
 }
 
 func (sbp ShopBalanceProcessor) ProcessMessage(in *s.InPkg) *s.MessageResult {
-	return &s.MessageResult{Body: fmt.Sprintf("Ваш баланс на %v составляет %v бонусных баллов.", time.Now().Format("01.02.2006"), rand.Int31n(1000) + 10), Commands: &authorised_commands}
+	return &s.MessageResult{Body: fmt.Sprintf("Ваш баланс на %v составляет %v бонусных баллов.", time.Now().Format("01.02.2006"), rand.Int31n(1000) + 10), Commands: &AUTH_COMMANDS, Type:"chat"}
 }

@@ -1,0 +1,129 @@
+{
+  "main": {
+    "port": 9191,
+    "callback_addr": "http://127.0.0.1:9876/notify",
+    "database": {
+      "name": "bot",
+      "connection_string": "localhost:27017"
+    },
+    "google_key": "AIzaSyBXW3UaS5e4FtOt-XJqLFHGpvrFlf45DV4"
+  },
+  "taxis": {
+    "marka": {
+      "name": "marka",
+      "dict_url": "http://127.0.0.1:9191/taxi/marka/streets",
+      "key": "Kuku marka_taxi_key",
+      "information": {
+        "phone": "+7 (383) 777-33-33",
+        "text": "Такси марка! Самое лучшее такси в академгородке!"
+      },
+      "markups": [
+        "5059339030"
+      ],
+      "geo_orbit": {
+        "lat": 54.642655,
+        "lon": 83.296285,
+        "radius": 1000000
+      },
+      "api": {
+        "name": "infinity",
+        "data": {
+          "id_service": "5001753333",
+          "login": "test1",
+          "password": "test1",
+          "connection_strings": [
+            "http://109.202.25.248:8080/WebAPITaxi/",
+            "http://212.20.51.250:8080/WebAPITaxi/"
+          ],
+          "host": "109.202.25.248:8080"
+        }
+      }
+    },
+    "fake": {
+      "api": {
+        "name": "fake",
+        "data": {
+          "login": "test1",
+          "password": "test1",
+          "connection_strings": [
+            "http://109.202.25.248:8080/WebAPITaxi/",
+            "http://212.20.51.250:8080/WebAPITaxi/"
+          ],
+          "host": "109.202.25.248:8080"
+        },
+        "not_send_price": true,
+        "fake": {
+          "sended_states": [
+            2,
+            4,
+            5,
+            6,
+            7,
+            8
+          ],
+          "sleep_time": 1
+        }
+      },
+      "dict_url": "http://127.0.0.1:9191/taxi/fake/streets",
+      "geo_orbit": {
+        "lat": 54.642655,
+        "lon": 83.296285,
+        "radius": 1000000
+      },
+      "information": {
+        "phone": "123-45-67",
+        "text": "Такси Fake! Самое лучшее такси в академгородке!"
+      },
+      "key": "Kuku fake_taxi_key",
+      "markups":["100500600", "TEST"],
+      "name": "fake"
+    },
+    "academ": {
+      "api": {
+        "name": "infinity",
+        "data": {
+          "id_service": "5001753333",
+          "login": "kukuautest",
+          "password": "789kukuautest987",
+          "connection_strings": [
+            "http://212.20.48.191:8080/WebAPITaxi/"
+          ],
+          "host": "212.20.48.191:8080"
+        },
+        "not_send_price": false
+      },
+      "dict_url": "http://127.0.0.1:9191/taxi/fake/streets",
+      "geo_orbit": {
+        "lat": 54.642655,
+        "lon": 83.296285,
+        "radius": 1000000
+      },
+      "information": {
+        "phone": "123-45-67",
+        "text": "Такси академ! Самое лучшее такси в академгородке!"
+      },
+      "key": "Kuku acedem_taxi_key",
+      "markups":["100500600", "TEST"],
+      "name": "fake"
+    }
+  },
+  "shops": {
+    "test_shop": {
+      "name": "test_shop",
+      "key": "Kuku demo_shop_key"
+    }
+  },
+  "posts": {
+    "ru": {
+      "info": "Почта России.\nБесплатно.\nБез регистрации и смс.\nИнформация по почтовому номеру.\nReally?",
+      "external_url": "http://rupost.info/json",
+      "work_url": "posts/russian_post"
+    },
+    "GP": {
+      "info": "Поиск и отслеживание. Отслеживание еще в разработке. И будет только с почтой России видимо.",
+      "external_url": "http://gdeposylka.ru/api/v3/jsonrpc",
+      "work": "posts/gdeposylka",
+      "api_key": "a60ad81c98e51dc31d7be4e3332947a7b2601fcccf51442742ce218c2a337ae3c20da1823525a1cd"
+    }
+  }
+}
