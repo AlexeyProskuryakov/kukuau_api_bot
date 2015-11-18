@@ -1,0 +1,69 @@
+{
+  "to": "TEST",
+  "message": {
+    "id": "4751997750760398084",
+    "type": "chat",
+    "thread": "2c474723-ff4d-4fad-a31f-18e8063bdff2",
+    "body": "Ошибка! not found",
+    "commands": [
+      {
+        "title": "Вызвать такси",
+        "action": "new_order",
+        "position": 0,
+        "fixed": false,
+        "repeated": true,
+        "form": {
+          "title": "Форма вsызова такси",
+          "text": "Откуда: ?(street_from), ?(house_from), ?(entrance). Куда: ?(street_to), ?(house_to).",
+          "type": "form",
+          "name": "call_taxi",
+          "fields": [
+            {
+              "name": "street_from",
+              "type": "dict",
+              "attrs": {
+                "label": "улица",
+                "required": true,
+                "url": "http://127.0.0.1:9191/taxi/fake/streets"
+              }
+            },
+            {
+              "name": "house_from",
+              "type": "text",
+              "attrs": {
+                "label": "дом",
+                "required": true
+              }
+            },
+            {
+              "name": "entrance",
+              "type": "number",
+              "attrs": {
+                "label": "подъезд",
+                "required": false,
+                "empty_text": "не указан"
+              }
+            },
+            {
+              "name": "street_to",
+              "type": "dict",
+              "attrs": {
+                "label": "улицa",
+                "required": true,
+                "url": "http://127.0.0.1:9191/taxi/fake/streets"
+              }
+            },
+            {
+              "name": "house_to",
+              "type": "text",
+              "attrs": {
+                "label": "дом",
+                "required": true
+              }
+            }
+          ]
+        }
+      }
+    ]
+  }
+}

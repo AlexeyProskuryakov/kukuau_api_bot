@@ -32,3 +32,41 @@
       :
       "OK"
       }
+
+  "data":{
+    "order_id":1,
+    "state_id":12,
+    "state_kind":"car_at_place",
+    "crew_id":1,
+    "prior_crew_id":0,
+    "driver_id":2,
+    "car_id":3,
+    "start_time":"20130117125641",
+    "source_time":"20130117132617",
+    "finish_time":"20130117130343",
+    "source":"1",
+    "destination":"2",
+    "passenger":"Слепаков",
+    "phone":"8800",
+    "client_id":1,
+    "order_crew_group_id":1,
+    "tariff_id":1,
+    "car_mark":"Ауди",
+    "car_model":"Q7",
+    "car_color":"черный",
+    "car_number":"А777АА",
+    "confirmed":"confirmed_by_oper",
+    "crew_coords": {
+      "lat": 56.833981,
+      "lon": 53.220249
+    },
+    "order_params":[
+     1,
+     2,
+     5
+    ],
+    "creation_way":"operator"
+  }
+
+      demakova: 54.863707,83.105662 \\ChIJv42ZY_LD30IRy1qoLLjkNk4
+      lenina: 55.033041, 82.902601 \\ChIJ6XLJTDLk30IRONaQvylCt-U

@@ -4,9 +4,8 @@ import (
 	"gopkg.in/mgo.v2"
 	"gopkg.in/mgo.v2/bson"
 
-	d "msngr/db"
-	t "msngr/taxi"
 	"log"
+	"time"
 )
 
 type SubDoc struct {
@@ -19,38 +18,21 @@ type Doc struct {
 	SubDoc  SubDoc
 }
 
-//func test_db_taxi(){
-//	dbh := d.NewDbHandler("localhost:27017", "test")
-//	order_id := int64(1)
-//
-////	o:=dbh.Orders.GetByOrderId(order_id)
-////	if o == nil {
-////		dbh.Orders.AddOrder(order_id, "foo")
-////	}
-////
-//	dbh.Orders.AddOrder(order_id, "foo", "fake")
-//
-//	order := t.Order{IDCar:100500, ID:100500600, Cost:100400}
-//	order_data := order.ToOrderData()
-//	log.Printf("insert: %+v",order_data)
-//
-//	dbh.Orders.SetState(order_id, 1, order_data)
-//
-//	order_wrpr := dbh.Orders.GetOrderById(order_id, "fake")
-//	log.Printf("wrpr: %+v", order_wrpr)
-//	log.Printf("result: %+v", order_wrpr.OrderData)
-//	idcar := order_wrpr.OrderData.Get("IDCar")
-//	log.Printf("result field: %+v %T", idcar, idcar)
-//
-//	idfoo := order_wrpr.OrderData.Get("IDFoo")
-//	log.Printf("result field: %+v %T", idfoo, idfoo)
-//}
+type Person struct {
+	ID        bson.ObjectId `bson:"_id,omitempty"`
+	Name      string
+	Phone     string
+	Timestamp time.Time
+}
 
+var (
+	IsDrop = true
+)
 
-func test_fundamental(){
+func test_fundamental() {
 	session, _ := mgo.Dial("localhost:27017")
 
-	collection:=session.DB("test").C("test")
+	collection := session.DB("test").C("test")
 
 	collection.RemoveAll(bson.M{})
 	doc := Doc{Content:"foo"}
@@ -64,13 +46,84 @@ func test_fundamental(){
 	_ = collection.Find(find_key).One(&doc)
 
 	log.Println(doc.SubDoc.SubC, "\n", doc.SubDoc.SubCS)
+	
+	session, err := mgo.Dial("127.0.0.1")
+	if err != nil {
+		panic(err)
+	}
+
+	defer session.Close()
+
+	session.SetMode(mgo.Monotonic, true)
+
+	// Drop Database
+	if IsDrop {
+		err = session.DB("test").DropDatabase()
+		if err != nil {
+			panic(err)
+		}
+	}
+
+	// Collection People
+	c := session.DB("test").C("people")
+
+	// Index
+	index := mgo.Index{
+		Key:        []string{"name", "phone"},
+		Unique:     true,
+		DropDups:   true,
+		Background: true,
+		Sparse:     true,
+	}
+
+	err = c.EnsureIndex(index)
+	if err != nil {
+		panic(err)
+	}
+
+	// Insert Datas
+	err = c.Insert(&Person{Name: "Ale", Phone: "+55 53 1234 4321", Timestamp: time.Now()},
+		&Person{Name: "Cla", Phone: "+66 33 1234 5678", Timestamp: time.Now()})
+
+	if err != nil {
+		panic(err)
+	}
+
+	// Query One
+	result := Person{}
+	err = c.Find(bson.M{"name": "Ale"}).Select(bson.M{"phone": 0}).One(&result)
+	if err != nil {
+		panic(err)
+	}
+	log.Println("Phone", result)
+
+	// Query All
+	var results []Person
+	err = c.Find(bson.M{"name": "Ale"}).Sort("-timestamp").All(&results)
+
+	if err != nil {
+		panic(err)
+	}
+	log.Println("Results All: ", results)
+
+	// Update
+	colQuerier := bson.M{"name": "Ale"}
+	change := bson.M{"$set": bson.M{"phone": "+86 99 8888 7777", "timestamp": time.Now()}}
+	err = c.Update(colQuerier, change)
+	if err != nil {
+		panic(err)
+	}
+
+	// Query All
+	err = c.Find(bson.M{"name": "Ale"}).Sort("-timestamp").All(&results)
+
+	if err != nil {
+		panic(err)
+	}
+	log.Println("Results All: ", results)
+
 }
-
-func main() {
-
-
-	test_db_taxi()
+//
+//func main() {
 //	test_fundamental()
-
-
-}
+//}

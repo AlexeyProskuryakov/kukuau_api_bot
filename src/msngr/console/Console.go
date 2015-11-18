@@ -7,7 +7,7 @@ import (
 	"fmt"
 	"time"
 	d "msngr/db"
-	m "msngr"
+	msngr "msngr"
 	t "msngr/taxi"
 	i "msngr/taxi/infinity"
 	"log"
@@ -34,7 +34,7 @@ type ConsoleInfo struct {
 	ShopLoginUsers  []string
 
 }
-func Run(config m.Configuration, db *d.DbHandlerMixin) {
+func Run(config msngr.Configuration, db *d.DbHandlerMixin) {
 	m := martini.Classic()
 
 	martini.Env = martini.Dev

@@ -1,0 +1,17 @@
+{
+  "message": {
+    "commands": [
+      {
+        "action": "balance"
+      }
+    ],
+    "thread": "2c474723-ff4d-4fad-a31f-18e8063bdff2",
+    "body": "Скажи мой баланс!?",
+    "type": "chat",
+    "id": "TESTTESTTEST"
+  },
+  "from": "TEST",
+  "userdata": {
+    "phone": "TESTPHONE"
+  }
+}

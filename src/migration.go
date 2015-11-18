@@ -1,24 +1,33 @@
 package main
 
 import (
+	db "msngr/db"
+	c "msngr/configuration"
+	s "msngr/structs"
 	"gopkg.in/mgo.v2"
-	m "msngr"
+	"log"
 )
 
 func main() {
-	conf := m.ReadConfig()
+	conf := c.ReadConfig()
+	handler := db.NewDbHandler(conf.Main.Database.ConnString, conf.Main.Database.Name)
+	s.StartAfter(handler.Check, func() {
+		log.Printf("connection established....")
+	})
 
-	session, err := mgo.Dial(conf.Database.ConnString)
+	log.Println("Starting migration...")
+	orders_collection := handler.Session.DB(conf.Main.Database.Name).C("orders")
+	err := orders_collection.DropIndex("order_id")
 	if err != nil {
 		panic(err)
 	}
+	err = orders_collection.EnsureIndex(mgo.Index{
+		Key:        []string{"order_id"},
+		Background: true,
+		Unique:     false,
+		DropDups:   true,
+	})
+	log.Printf("Index for order_id field is recreated...%v", err)
 
-	defer session.Close()
 
-	session.SetMode(mgo.Monotonic, true)
-
-	err = session.DB(conf.Database.Name).DropDatabase()
-	if err != nil {
-		panic(err)
-	}
 }

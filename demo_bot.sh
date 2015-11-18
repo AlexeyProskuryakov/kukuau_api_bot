@@ -1,3 +1,4 @@
+#!/usr/bin/env bash
 ### BEGIN INIT INFO
 # Provides:          sayme_quotations
 # Required-Start:    $local_fs $remote_fs $network $syslog
@@ -9,7 +10,7 @@
 ### END INIT INFO
 
 GOHOME="/usr/local/go"
-HOME="/home/alesha/go"
+HOME="/home/alesha/msngr/kuku_api_bot"
 EXEC=${GOHOME}/bin/go
 PID=${HOME}/sdb.pid
 LOG=${HOME}/logs/sdb.logs
@@ -18,10 +19,22 @@ LOG=${HOME}/logs/sdb.logs
 start()
 {   
     export GOPATH=${HOME}
+
     ${EXEC} get github.com/looplab/fsm
-    ${EXEC} build ${HOME}/src/start_demo_bot.go
-    ${HOME}/start_demo_bot >  ${LOG} 2>&1 &
-    pidof start_demo_bot > ${PID} 
+    ${EXEC} get gopkg.in/mgo.v2
+    ${EXEC} get github.com/go-martini/martini
+    ${EXEC} get github.com/martini-contrib/auth
+    ${EXEC} get github.com/martini-contrib/render
+
+    mkdir -p ${HOME}/build
+    mkdir -p ${HOME}/logs
+
+    ${EXEC} build -o ${HOME}/build/start_demo_bot ${HOME}/src/start_demo_bot.go
+    cp ${HOME}/config.json ${HOME}/build/config.json
+
+    ${HOME}/build/start_demo_bot >  ${LOG} 2>&1 &
+
+    pidof start_demo_bot > ${PID}
 }
 
 stop()

@@ -6,13 +6,14 @@ import (
 	"fmt"
 	"encoding/json"
 	"msngr/utils"
-	"io/ioutil"
 	"math"
 	"errors"
-	s "msngr/taxi/set"
-	u "msngr/utils"
 	"regexp"
 	"strings"
+
+	s "msngr/taxi/set"
+	u "msngr/utils"
+	c "msngr/configuration"
 )
 
 /*
@@ -27,16 +28,11 @@ REQUEST_DENIED – означает, что запрос отклонен, ка�
 INVALID_REQUEST – как правило, отсутствует обязательный параметр запроса (location или radius).
 */
 
-var cc_reg = regexp.MustCompilePOSIX("(ул(ица|\\.)?|прос(\\.|пект)?|пер(\\.|еулок)?|г(ород|\\.|(ор(\\.)?))?|обл(асть|\\.))?")
+var cc_reg = regexp.MustCompilePOSIX("(ул(ица|\\.| )|пр(\\.|оспект|\\-кт)?|пер(\\.|еулок| )|г(ород|\\.|ор\\.| )|обл(асть|\\.| )|р(айон|\\-н )|^с )?")
 
+var NOT_IMPLY_TYPES = []string{"country", "political"}
 const GOOGLE_API_URL = "https://maps.googleapis.com/maps/api"
 
-
-type TaxiGeoOrbit struct {
-	Lat    float64 `json:"lat"`
-	Lon    float64 `json:"lon"`
-	Radius float64 `json:"radius"`
-}
 
 type GoogleTerm struct {
 	Offset int16 `json:"offset"`
@@ -77,25 +73,25 @@ type GoogleAddressHandler struct {
 	AddressSupplier
 
 	key                     string
-	orbit                   TaxiGeoOrbit
+	orbit                   c.TaxiGeoOrbit
 
-	cache                   map[string]*FastAddressRow
+	cache                   map[string]*AddressF
 	cache_dests             map[string]*GoogleDetailPlaceResult
 
 	ExternalAddressSupplier AddressSupplier
 }
 
 
-func NewGoogleAddressHandler(key string, orbit TaxiGeoOrbit, external AddressSupplier) *GoogleAddressHandler {
+func NewGoogleAddressHandler(key string, orbit c.TaxiGeoOrbit, external AddressSupplier) *GoogleAddressHandler {
 	result := GoogleAddressHandler{key:key, orbit:orbit}
-	result.cache = make(map[string]*FastAddressRow)
+	result.cache = make(map[string]*AddressF)
 	result.cache_dests = make(map[string]*GoogleDetailPlaceResult)
 	result.ExternalAddressSupplier = external
 	return &result
 }
 
 func (ah *GoogleAddressHandler) GetDetailPlace(place_id string) (*GoogleDetailPlaceResult, error) {
-	from_info, err := GET(GOOGLE_API_URL + "/place/details/json", &map[string]string{
+	from_info, err := u.GET(GOOGLE_API_URL + "/place/details/json", &map[string]string{
 		"placeid":place_id,
 		"key":ah.key,
 		"language":"ru",
@@ -136,7 +132,7 @@ func (ah *GoogleAddressHandler)IsHere(place_id string) bool {
 	return distance < ah.orbit.Radius
 }
 
-func (ah *GoogleAddressHandler) GetStreetId(place_id string) (*FastAddressRow, error) {
+func (ah *GoogleAddressHandler) GetStreetInfo(place_id string) (*AddressF, error) {
 	street_id, ok := ah.cache[place_id]
 	if ok {
 		return street_id, nil
@@ -146,13 +142,17 @@ func (ah *GoogleAddressHandler) GetStreetId(place_id string) (*FastAddressRow, e
 	if !ok {
 		addr_details, err = ah.GetDetailPlace(place_id)
 		if err != nil || addr_details == nil || addr_details.Status != "OK" {
-			log.Printf("ERROR GetStreetId IN get place %+v", addr_details)
+			log.Printf("ERROR GetStreetId IN get place %+v %v", addr_details, err)
 			return nil, err
 		}
 	}
 	address_components := addr_details.Result.AddressComponents
 	query, google_set := _process_address_components(address_components)
 
+	if query == "" {
+		query = addr_details.Result.Name
+//		_add_to_set(google_set, addr_details.Result.Name)
+	}
 	if !ah.ExternalAddressSupplier.IsConnected() {
 		return nil, errors.New("GetStreetId: External service is not avaliable")
 	}
@@ -161,22 +161,23 @@ func (ah *GoogleAddressHandler) GetStreetId(place_id string) (*FastAddressRow, e
 	if rows == nil {
 		return nil, errors.New("GetStreetId: no results at external")
 	}
+	ext_rows := *rows
 
-	for _, nitem := range *rows {
+	for i := len(ext_rows) - 1; i >= 0; i-- {
 		external_set := s.NewSet()
+		nitem := ext_rows[i]
+		if nitem.ShortName == "пл" {
+			nitem.Name = fmt.Sprintf("площадь %s", nitem.Name)
+		}
 		_add_to_set(external_set, nitem.Name)
-		_add_to_set(external_set, nitem.FullName)
-		_add_to_set(external_set, nitem.ShortName)
+		_add_to_set(external_set, nitem.Region)
 		_add_to_set(external_set, nitem.City)
 		_add_to_set(external_set, nitem.District)
 		_add_to_set(external_set, nitem.Place)
 
-		intersect := google_set.Intersect(external_set)
-
-		//		log.Printf("GetStreetId [%v]:\n %+v <=> %+v", query, external_set, google_set)
-		if intersect.Contains(query) {
-			result := fmt.Sprintf("%v", nitem.ID)
-			log.Printf("GetStreetId: [%+v] at %v %v %v", result, nitem.Name, nitem.FullName, nitem.City)
+		log.Printf("GetStreetId [%v]:\n e: %+v < ? > g: %+v", query, external_set, google_set)
+		if google_set.IsSuperset(external_set) || external_set.IsSuperset(google_set) {
+			log.Printf("GetStreetId: [%+v] \nat %v", place_id, nitem.FullName)
 			ah.cache[place_id] = &nitem
 			return &nitem, nil
 		}
@@ -186,14 +187,12 @@ func (ah *GoogleAddressHandler) GetStreetId(place_id string) (*FastAddressRow, e
 }
 
 
-
-
-func (ah *GoogleAddressHandler) AddressesSearch(q string) FastAddress {
-	rows := []FastAddressRow{}
-	result := FastAddress{Rows:&rows}
+func (ah *GoogleAddressHandler) AddressesSearch(q string) AddressPackage {
+	rows := []AddressF{}
+	result := AddressPackage{Rows:&rows}
 	suff := "/place/autocomplete/json"
 	url := GOOGLE_API_URL + suff
-
+	log.Printf(fmt.Sprintf("location= %v,%v", ah.orbit.Lat, ah.orbit.Lon))
 	address_result := GoogleResultAddress{}
 	params := map[string]string{
 		"components": "country:ru",
@@ -204,10 +203,10 @@ func (ah *GoogleAddressHandler) AddressesSearch(q string) FastAddress {
 		"input": q,
 		"key":ah.key,
 	}
-	body, err := GET(url, &params)
+	body, err := u.GET(url, &params)
 	err = json.Unmarshal(*body, &address_result)
 	if err != nil {
-		log.Printf("ERROR! GAS unmarshal error [%+v]", string(*body))
+		log.Printf("ERROR! Google Adress Supplier unmarshal error [%+v]", string(*body))
 		return result
 	}
 
@@ -242,7 +241,7 @@ func StreetsSearchController(w http.ResponseWriter, r *http.Request, i AddressSu
 			if rows == nil {
 				return
 			}
-			log.Printf("was returned some data...")
+			log.Printf("was returned: %v rows", len(*rows))
 			for _, nitem := range *rows {
 				var item DictItem
 
@@ -258,7 +257,11 @@ func StreetsSearchController(w http.ResponseWriter, r *http.Request, i AddressSu
 
 				}
 				item.Key = string(key)
-				item.Title = fmt.Sprintf("%v %v", nitem.Name, nitem.ShortName)
+				if nitem.ShortName != "" {
+					item.Title = fmt.Sprintf("%v %v", nitem.Name, nitem.ShortName)
+				}else {
+					item.Title = nitem.Name
+				}
 				item.SubTitle = fmt.Sprintf("%v", utils.FirstOf(nitem.Place, nitem.District, nitem.City, nitem.Region))
 				results = append(results, item)
 			}
@@ -267,40 +270,51 @@ func StreetsSearchController(w http.ResponseWriter, r *http.Request, i AddressSu
 		if err != nil {
 			log.Printf("SSC: ERROR At unmarshal:%+v", err)
 		}
-
 		fmt.Fprintf(w, "%s", string(ans))
 	}
 }
 
-func _add_to_set(set s.Set, element string) string {
+func _clear_address_string(element string) (string) {
 	result := strings.ToLower(element)
 	result_raw := cc_reg.ReplaceAllString(result, "")
 	result = string(result_raw)
 	result = strings.TrimSpace(result)
+	return result
+}
 
+func _add_to_set(set s.Set, element string) (string, error) {
+	result := _clear_address_string(element)
 	if result != "" {
 		set.Add(result)
-		return result
+		return result, nil
 	}
-	return element
+	return element, errors.New(fmt.Sprintf("can not imply %+v ==> %+v", element, result))
 }
 
 func _process_address_components(components []GoogleAddressComponent) (string, s.Set) {
 	var route string
 	google_set := s.NewSet()
 	for _, component := range components {
-		long_name := _add_to_set(google_set, component.LongName)
-		if utils.InS("route", component.Types) {
-			route = long_name
-		}
+//		if utils.IntersectionS(NOT_IMPLY_TYPES, component.Types) {
+//			continue
+//		} else {
+			long_name, err := _add_to_set(google_set, component.LongName)
+			if err != nil {
+				log.Printf("WARN AT PROCESSING ADRESS COMPONENTS: %v", err)
+				continue
+			}
+			if utils.InS("route", component.Types) {
+				route = long_name
+			}
+//		}
 	}
 	return route, google_set
 }
 
-func _to_fast_address(input GoogleResultAddress) FastAddress {
-	rows := []FastAddressRow{}
+func _to_fast_address(input GoogleResultAddress) AddressPackage {
+	rows := []AddressF{}
 	for _, prediction := range input.Predictions {
-		row := FastAddressRow{}
+		row := AddressF{}
 		terms_len := len(prediction.Terms)
 		if terms_len > 0 {
 			row.Name, row.ShortName = _get_street_name_shortname(prediction.Terms[0].Value)
@@ -314,19 +328,26 @@ func _to_fast_address(input GoogleResultAddress) FastAddress {
 		row.GID = prediction.PlaceId
 		rows = append(rows, row)
 	}
-	result := FastAddress{Rows:&rows}
+	result := AddressPackage{Rows:&rows}
 	return result
 }
 
 func _get_street_name_shortname(input string) (string, string) {
 	addr_split := strings.Split(input, " ")
-	if len(addr_split) == 2 {
-		if u.InS(addr_split[0], []string{"улица", "проспект", "площадь", "переулок", "шоссе", "магистраль"}) {
-			return addr_split[1], _shorten_street_type(addr_split[0])
+	var street_type, street_name string
+	for _, sn_part := range addr_split {
+		if u.InS(sn_part, []string{"улица", "проспект", "площадь", "переулок", "шоссе", "магистраль"}) {
+			street_type = _shorten_street_type(sn_part)
+		} else {
+			if street_name == "" {
+				street_name += sn_part
+			}else {
+				street_name += " "
+				street_name += sn_part
+			}
 		}
-		return addr_split[0], _shorten_street_type(addr_split[1])
 	}
-	return strings.Join(addr_split, " "), ""
+	return street_name, street_type
 }
 
 func _shorten_street_type(input string) string {
@@ -339,33 +360,6 @@ func _shorten_street_type(input string) string {
 	return string(runes_array)
 }
 
-func GET(url string, params *map[string]string) (*[]byte, error) {
-	log.Println("GET > \n", url, "\n|", params, "|")
-	req, err := http.NewRequest("GET", url, nil)
-	if err != nil {
-		log.Printf("ERROR! GAS With reqest [%v] ", url)
-		return nil, err
-	}
-
-	if params != nil {
-		values := req.URL.Query()
-		for k, v := range *params {
-			values.Add(k, v)
-		}
-		req.URL.RawQuery = values.Encode()
-	}
-
-	client := &http.Client{}
-	res, err := client.Do(req)
-	if res == nil || err != nil {
-		log.Println("ERROR! GAS response is: ", res, "; error is:", err, ". I will reconnect and will retrieve data again after 3s.")
-		return nil, err
-	}
-	defer res.Body.Close()
-	body, err := ioutil.ReadAll(res.Body)
-	log.Printf("GET < \n%v\n", string(body), )
-	return &body, err
-}
 
 type DictItem struct {
 	Key      string `json:"key"`
