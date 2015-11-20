@@ -122,7 +122,7 @@ func (ah *GoogleAddressHandler)IsHere(place_id string) bool {
 		var err error
 		addr_details, err = ah.GetDetailPlace(place_id)
 		if err != nil || addr_details == nil {
-			return true
+			return false
 		}
 		ah.cache_dests[place_id] = addr_details
 	}
@@ -145,6 +145,7 @@ func (ah *GoogleAddressHandler) GetStreetInfo(place_id string) (*AddressF, error
 			log.Printf("ERROR GetStreetId IN get place %+v %v", addr_details, err)
 			return nil, err
 		}
+		ah.cache_dests[place_id] = addr_details
 	}
 	address_components := addr_details.Result.AddressComponents
 	query, google_set := _process_address_components(address_components)

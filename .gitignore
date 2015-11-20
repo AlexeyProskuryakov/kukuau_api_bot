@@ -11,3 +11,7 @@ config.json
 /temp.json
 test_foo.go
 shop_revue.txt
+
+#for my win
+run.bat
+start_demo_bot.exe

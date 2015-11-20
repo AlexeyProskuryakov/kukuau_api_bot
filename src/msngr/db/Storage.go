@@ -125,10 +125,14 @@ func (odbh *DbHandlerMixin) reConnect() {
 	for {
 		var err error
 		session, err = mgo.Dial(odbh.conn)
-		session.SetMode(mgo.Strong, true)
-		err = session.Ping()
 		if err == nil {
 			log.Printf("Connection to mongodb established!")
+			session.SetMode(mgo.Strong, true)
+			err = session.Ping()
+			if err != nil {
+				log.Printf("Connection to mongodb is not verified")
+				continue
+			}
 			odbh.Session = session
 			break
 		} else {
@@ -366,7 +370,7 @@ func (oh *orderHandler) GetBy(req bson.M) ([]OrderWrapper, error) {
 	return result, err
 }
 
-func (oh *orderHandler) GetByOwnerLast(whom, source string) (*OrderWrapper, error){
+func (oh *orderHandler) GetByOwnerLast(whom, source string) (*OrderWrapper, error) {
 	if oh.collection == nil {
 		return nil, errors.New("БД не доступна")
 	}
