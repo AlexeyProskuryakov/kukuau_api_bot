@@ -103,8 +103,27 @@ func Run(config c.Configuration, db *d.DbHandlerMixin) {
 		r.HTML(200, "console", result_map)
 	})
 
-	m.Get("/statistic", func(user auth.User) (int, string) {
-		return 200, fmt.Sprintf("This is statistic! %v", user)
+	type SourceCount struct {
+		Source string `bson:"_id"`
+		Count  int `bson:"count"`
+		ActiveCount int `bson:"active_count"`
+	}
+
+	m.Get("/statistic", func(user auth.User, r render.Render) {
+		pipe := db.Orders.Collection.Pipe([]bson.M{
+			bson.M{"$match":bson.M{"$exists":bson.M{"source":true}}},
+			bson.M{"$group":bson.M{"_id":"$source",
+									"count":bson.M{"$sum":1},
+									"active_count":bson.M{"$add":[]bson.M{bson.M{"$eq":bson.M{"active":true}}}},
+			}},
+		})
+		result := []SourceCount{}
+		err := pipe.All(&result)
+		if err != nil {
+			log.Printf("error at get aggregate result")
+		}
+
+		r.HTML(200, "statistic", result)
 	})
 
 	log.Printf("Console will work at addr: %v", config.Main.ConsoleAddr)

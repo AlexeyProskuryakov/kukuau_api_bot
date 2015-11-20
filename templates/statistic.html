@@ -1,0 +1,9 @@
+<h1>
+    Orders counts by source
+</h1>
+
+{{ range $sc := . }}
+<span>
+    Заказов с {{ $sc.Source }} : {{ $sc.Count }} штук. (Активных $sc.ActiveCount штук)
+</span>
+{{ end }}
