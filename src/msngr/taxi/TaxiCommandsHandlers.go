@@ -44,7 +44,7 @@ func FormTaxiBotContext(im *ExternalApiMixin, db_handler *d.DbHandlerMixin, tc c
 	context.Check = func() (detail string, ok bool) {
 		ok = im.API.IsConnected()
 		if !ok {
-			detail = "Ошибка в подключении к сервису попробуйте позже"
+			detail = "Ошибка в подключении к сервису. Попробуйте позже."
 		} else {
 			return db_handler.Check()
 		}

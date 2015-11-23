@@ -13,6 +13,7 @@ import (
 	"net/http"
 	"io/ioutil"
 	"path"
+	"crypto/md5"
 )
 
 
@@ -22,6 +23,14 @@ func GenId() string {
 	r := rand.New(s)
 	return fmt.Sprintf("%d", r.Int63())
 }
+
+func PHash(pwd *string) (*string) {
+	input := []byte(*pwd)
+	output := md5.Sum(input)
+	result := string(output[:])
+	return &result
+}
+
 
 func FoundFile(fname string) *string {
 	dir, err := os.Getwd()

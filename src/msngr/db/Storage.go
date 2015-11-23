@@ -1,7 +1,6 @@
 package db
 
 import (
-	"crypto/md5"
 	"gopkg.in/mgo.v2"
 	"gopkg.in/mgo.v2/bson"
 	"log"
@@ -9,9 +8,9 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"msngr/structs"
 
-	"reflect"
+	"msngr/structs"
+	"msngr/utils"
 )
 
 const (
@@ -19,22 +18,6 @@ const (
 	LOGIN = "LOGIN"
 	REGISTERED = "REGISTERED"
 )
-
-func phash(pwd *string) (*string) {
-	input := []byte(*pwd)
-	output := md5.Sum(input)
-	result := string(output[:])
-	return &result
-}
-
-func is_index_key_present(currentIndexes []mgo.Index, key []string) bool {
-	for _, index := range currentIndexes {
-		if reflect.DeepEqual(key, index.Key) {
-			return true
-		}
-	}
-	return false
-}
 
 type OrderData struct {
 	Content map[string]interface{}
@@ -63,8 +46,6 @@ type OrderWrapper struct {
 	Active     bool
 }
 
-
-
 type UserWrapper struct {
 	State      string `bson:"user_state"`
 	UserId     *string `bson:"user_id"`
@@ -85,7 +66,6 @@ type Loaded interface {
 	isLoaded() bool
 }
 
-
 type orderHandler struct {
 	Collection *mgo.Collection
 	parent     *DbHandlerMixin
@@ -102,28 +82,97 @@ type errorHandler struct {
 }
 
 type DbHandlerMixin struct {
-	conn    string
-	dbname  string
+	conn           string
+	dbname         string
+	try_to_connect bool
 
-	Session *mgo.Session
+	Session        *mgo.Session
 
-	Orders  *orderHandler
-	Users   *userHandler
-	Errors  *errorHandler
-	Check   structs.CheckFunc
+	Orders         *orderHandler
+	Users          *userHandler
+	Errors         *errorHandler
+	Check          structs.CheckFunc
 }
 
 var DELETE_DB = false
 
 func (odbh *DbHandlerMixin) IsConnected() bool {
-	return odbh.Session != nil
+	return odbh.Session != nil && odbh.Session.Ping() == nil
+}
+
+func (odbh *DbHandlerMixin) ensureIndexes() {
+	orders_collection := odbh.Session.DB(odbh.dbname).C("orders")
+	orders_collection.EnsureIndex(mgo.Index{
+		Key:        []string{"order_id"},
+		Background: true,
+		DropDups:   true,
+	})
+	orders_collection.EnsureIndex(mgo.Index{
+		Key:        []string{"order_state"},
+		Background: true,
+	})
+	orders_collection.EnsureIndex(mgo.Index{
+		Key:[]string{"active"},
+		Background:true,
+	})
+	orders_collection.EnsureIndex(mgo.Index{
+		Key:        []string{"whom"},
+		Background: true,
+
+	})
+	orders_collection.EnsureIndex(mgo.Index{
+		Key:        []string{"when"},
+		Background: true,
+	})
+	orders_collection.EnsureIndex(mgo.Index{
+		Key:    []string{"source"},
+		Background:true,
+		Unique:false,
+	})
+
+	users_collection := odbh.Session.DB(odbh.dbname).C("users")
+	users_collection.EnsureIndex(mgo.Index{
+		Key:        []string{"user_id"},
+		Background: true,
+		Unique:     true,
+		DropDups:   true,
+	})
+	users_collection.EnsureIndex(mgo.Index{
+		Key:        []string{"last_update"},
+		Background: true,
+	})
+	users_collection.EnsureIndex(mgo.Index{
+		Key:        []string{"user_state"},
+		Background: true,
+	})
+	users_collection.EnsureIndex(mgo.Index{
+		Key:        []string{"user_name"},
+		Background: true,
+	})
+
+	error_collection := odbh.Session.DB(odbh.dbname).C("errors")
+
+	error_collection.EnsureIndex(mgo.Index{
+		Key: []string{"username"},
+		Unique:false,
+	})
+	error_collection.EnsureIndex(mgo.Index{
+		Key:[]string{"time"},
+		Unique:false,
+	})
+
+	odbh.Users.Collection = users_collection
+	odbh.Orders.Collection = orders_collection
+	odbh.Errors.Collection = error_collection
 }
 
 func (odbh *DbHandlerMixin) reConnect() {
-	var session *mgo.Session
+	odbh.try_to_connect = true
 	count := 2500 * time.Millisecond
+	var err error
+	var session *mgo.Session
+
 	for {
-		var err error
 		session, err = mgo.Dial(odbh.conn)
 		if err == nil {
 			log.Printf("Connection to mongodb established!")
@@ -134,6 +183,7 @@ func (odbh *DbHandlerMixin) reConnect() {
 				continue
 			}
 			odbh.Session = session
+			log.Printf("Db session is establised")
 			break
 		} else {
 			count += count
@@ -142,103 +192,15 @@ func (odbh *DbHandlerMixin) reConnect() {
 		}
 	}
 
-
-	odbh.Session = session
-
 	if (DELETE_DB) {
 		log.Printf("will delete database %+v", odbh.dbname)
-		err := session.DB(odbh.dbname).DropDatabase()
+		err := odbh.Session.DB(odbh.dbname).DropDatabase()
 		if err != nil {
 			log.Println("db must be dropped but errr:\n", err)
 		}
 	}
-	for {
-		if err := session.Ping(); err != nil {
-			log.Printf("will slepp 1 s ")
-			time.Sleep(time.Second)
-			session, err := mgo.Dial(odbh.conn)
-			err = session.Ping()
-			if err == nil {
-				log.Printf("Connection to mongodb established!")
-				odbh.Session = session
-				continue
-			} else {
-				count += count
-				log.Printf("can not connect to db, will sleep %+v and try", count)
-				time.Sleep(count)
-			}
-		} else {
-			orders_collection := session.DB(odbh.dbname).C("orders")
-
-			if err != nil {
-				log.Printf("DB Error at get index information: %v", err)
-			}
-			orders_collection.EnsureIndex(mgo.Index{
-				Key:        []string{"order_id"},
-				Background: true,
-				DropDups:   true,
-			})
-			orders_collection.EnsureIndex(mgo.Index{
-				Key:        []string{"order_state"},
-				Background: true,
-			})
-			orders_collection.EnsureIndex(mgo.Index{
-				Key:[]string{"active"},
-				Background:true,
-			})
-			orders_collection.EnsureIndex(mgo.Index{
-				Key:        []string{"whom"},
-				Background: true,
-
-			})
-			orders_collection.EnsureIndex(mgo.Index{
-				Key:        []string{"when"},
-				Background: true,
-			})
-			orders_collection.EnsureIndex(mgo.Index{
-				Key:    []string{"source"},
-				Background:true,
-				Unique:false,
-			})
-
-			users_collection := session.DB(odbh.dbname).C("users")
-			users_collection.EnsureIndex(mgo.Index{
-				Key:        []string{"user_id"},
-				Background: true,
-				Unique:     true,
-				DropDups:   true,
-			})
-			users_collection.EnsureIndex(mgo.Index{
-				Key:        []string{"last_update"},
-				Background: true,
-			})
-			users_collection.EnsureIndex(mgo.Index{
-				Key:        []string{"user_state"},
-				Background: true,
-			})
-			users_collection.EnsureIndex(mgo.Index{
-				Key:        []string{"user_name"},
-				Background: true,
-			})
-
-			error_collection := session.DB(odbh.dbname).C("errors")
-
-			error_collection.EnsureIndex(mgo.Index{
-				Key: []string{"username"},
-				Unique:false,
-			})
-			error_collection.EnsureIndex(mgo.Index{
-				Key:[]string{"time"},
-				Unique:false,
-			})
-
-			odbh.Users.Collection = users_collection
-			odbh.Orders.Collection = orders_collection
-			odbh.Errors.Collection = error_collection
-
-			break
-		}
-	}
+	odbh.ensureIndexes()
+	odbh.try_to_connect = false
 }
 
 func NewDbHandler(conn, dbname string) *DbHandlerMixin {
@@ -252,12 +214,13 @@ func NewDbHandler(conn, dbname string) *DbHandlerMixin {
 		if odbh.Session != nil && odbh.Session.Ping() == nil {
 			return "OK", true
 		}
+		if !odbh.try_to_connect {
+			go odbh.reConnect()
+		}
 		return "db is not connected :(", false
 	}
 	log.Printf("start reconnecting")
-	go func() {
-		odbh.reConnect()
-	}()
+	go odbh.reConnect()
 	return &odbh
 }
 
@@ -464,11 +427,11 @@ func (uh *userHandler) SetUserPassword(username, password *string) error {
 	if tmp == nil {
 		err := uh.Collection.Insert(&UserWrapper{UserId: username, UserName: username, Password: password, State: REGISTERED, LastUpdate: time.Now()})
 		return err
-	} else if phash(password) != tmp.Password {
+	} else if utils.PHash(password) != tmp.Password {
 		log.Println("changing password! for user ", username)
 		err := uh.Collection.Update(
 			bson.M{"user_name": username},
-			bson.M{"$set": bson.M{"password": phash(password), "last_update": time.Now()}},
+			bson.M{"$set": bson.M{"password": utils.PHash(password), "last_update": time.Now()}},
 		)
 		return err
 	}
@@ -489,7 +452,7 @@ func (uh *userHandler) CheckUserPassword(username, password *string) (*bool, err
 		return nil, errors.New("БД не доступна")
 	}
 	tmp := UserWrapper{}
-	err := uh.Collection.Find(bson.M{"user_name": username, "password": phash(password)}).One(&tmp)
+	err := uh.Collection.Find(bson.M{"user_name": username, "password": utils.PHash(password)}).One(&tmp)
 	result := (err != nil)
 	return &result, err
 }
