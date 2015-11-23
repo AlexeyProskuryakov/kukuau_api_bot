@@ -42,7 +42,13 @@ type GooglePrediction struct {
 	Description string `json:"description"`
 	PlaceId     string `json:"place_id"`
 	Terms       []GoogleTerm `json:"terms"`
+	Types       []string `json:"types"`
 }
+
+func (gp GooglePrediction) String() string {
+	return fmt.Sprintf("GP: %s\n%s\nTerms:%+v\nTypes:%+v\n", gp.Description, gp.PlaceId, gp.Terms, gp.Types)
+}
+
 type GoogleResultAddress struct {
 	Predictions []GooglePrediction `json:"predictions"`
 	Status      string `json:"status"`
@@ -152,7 +158,7 @@ func (ah *GoogleAddressHandler) GetStreetInfo(place_id string) (*AddressF, error
 
 	if query == "" {
 		query = addr_details.Result.Name
-//		_add_to_set(google_set, addr_details.Result.Name)
+		//		_add_to_set(google_set, addr_details.Result.Name)
 	}
 	if !ah.ExternalAddressSupplier.IsConnected() {
 		return nil, errors.New("GetStreetId: External service is not avaliable")
@@ -296,9 +302,10 @@ func _process_address_components(components []GoogleAddressComponent) (string, s
 	var route string
 	google_set := s.NewSet()
 	for _, component := range components {
-//		if utils.IntersectionS(NOT_IMPLY_TYPES, component.Types) {
-//			continue
-//		} else {
+		if utils.IntersectionS(NOT_IMPLY_TYPES, component.Types) {
+			log.Printf("component type %+v \ncontains not imply types: %v", component, component.Types)
+			continue
+		} else {
 			long_name, err := _add_to_set(google_set, component.LongName)
 			if err != nil {
 				log.Printf("WARN AT PROCESSING ADRESS COMPONENTS: %v", err)
@@ -307,7 +314,7 @@ func _process_address_components(components []GoogleAddressComponent) (string, s
 			if utils.InS("route", component.Types) {
 				route = long_name
 			}
-//		}
+		}
 	}
 	return route, google_set
 }
@@ -315,19 +322,23 @@ func _process_address_components(components []GoogleAddressComponent) (string, s
 func _to_fast_address(input GoogleResultAddress) AddressPackage {
 	rows := []AddressF{}
 	for _, prediction := range input.Predictions {
-		row := AddressF{}
-		terms_len := len(prediction.Terms)
-		if terms_len > 0 {
-			row.Name, row.ShortName = _get_street_name_shortname(prediction.Terms[0].Value)
+		if utils.InS("route", prediction.Types) {
+			row := AddressF{}
+			terms_len := len(prediction.Terms)
+			if terms_len > 0 {
+				row.Name, row.ShortName = _get_street_name_shortname(prediction.Terms[0].Value)
+			}
+			if terms_len > 1 {
+				row.City = prediction.Terms[1].Value
+			}
+			if terms_len > 2 {
+				row.Region = prediction.Terms[2].Value
+			}
+			row.GID = prediction.PlaceId
+			rows = append(rows, row)
+		} else {
+			log.Printf("Adress is not route :( \n%+v", prediction)
 		}
-		if terms_len > 1 {
-			row.City = prediction.Terms[1].Value
-		}
-		if terms_len > 2 {
-			row.Region = prediction.Terms[2].Value
-		}
-		row.GID = prediction.PlaceId
-		rows = append(rows, row)
 	}
 	result := AddressPackage{Rows:&rows}
 	return result
