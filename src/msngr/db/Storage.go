@@ -462,6 +462,10 @@ func (uh *userHandler) GetUserById(user_id string) (*UserWrapper, error) {
 	}
 	result := UserWrapper{}
 	err := uh.Collection.Find(bson.M{"user_id": user_id}).One(&result)
+	if err != nil && err != mgo.ErrNotFound {
+		log.Printf("Ощибка определения пользователя %v",err)
+		return nil, err
+	}
 	return &result, err
 }
 

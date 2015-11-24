@@ -89,7 +89,7 @@ func _initInfinity(config t.TaxiAPIConfig) *infinity {
 
 func GetInfinityAPI(tc t.TaxiAPIConfig) t.TaxiInterface {
 	instance := _initInfinity(tc)
-	if msngr.DEBUG{
+	if msngr.DEBUG {
 		log.Printf("Getting INFINITY API %+v", instance)
 	}
 	return instance
@@ -97,7 +97,7 @@ func GetInfinityAPI(tc t.TaxiAPIConfig) t.TaxiInterface {
 
 func GetInfinityAddressSupplier(tc t.TaxiAPIConfig) t.AddressSupplier {
 	instance := _initInfinity(tc)
-	if msngr.DEBUG{
+	if msngr.DEBUG {
 		log.Printf("Getting INFINITY Address supplier %+v", instance)
 	}
 	return instance
@@ -205,8 +205,7 @@ func (p *infinity) _request(conn_suffix string, url_values map[string]string) ([
 		if p.Cookie != nil {
 			req.AddCookie(p.Cookie)
 		}
-
-		client := &http.Client{}
+		client := &http.Client{Timeout:15 * time.Second}
 		res, err := client.Do(req)
 		if err != nil {
 			log.Printf("Error at send request to infinity: %v", err)
@@ -392,6 +391,7 @@ func (p *infinity) CallbackRequest(phone string) (bool, string) {
 		log.Printf("error at marshal json to infinity %v", string(phone))
 		return false, fmt.Sprint(err)
 	}
+	log.Printf("Callback request (jsoned) %s", tmp)
 	body, err := p._request("RemoteCall", map[string]string{"params": string(tmp), "method": "Taxi.WebAPI.Client.CallbackRequest"})
 	var temp t.Answer
 	err = json.Unmarshal(body, &temp)

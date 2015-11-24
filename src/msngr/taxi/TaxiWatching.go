@@ -33,7 +33,7 @@ func FormNotification(context *TaxiContext, ow *d.OrderWrapper, previous_state i
 			text = fmt.Sprintf("%v %v", car_arrived, good_passage)
 		}
 	case ORDER_IN_PROCESS:
-		if previous_state == ORDER_CLIENT_WAIT {
+		if u.In(previous_state, []int{ORDER_CLIENT_WAIT, ORDER_DOWNTIME}) {
 			return nil
 		} else if previous_state == ORDER_CREATED {
 			text = fmt.Sprintf("%v %v %v %v.", car_arrived, good_passage, nominated, car_info)
@@ -162,7 +162,7 @@ func process_state_change(taxiContext *TaxiContext, botContext *s.BotContext, ap
 		if notification_data != nil {
 			notification_data.Message.Commands = form_commands_for_current_order(db_order, botContext.Commands)
 			taxiContext.Notifier.Notify(*notification_data)
-			log.Printf("WATCH [%v] sended for order [%+v]:\n %#v \n and notify that: \n %#v",botContext.Name, db_order.OrderId, notification_data.Message.Commands, *notification_data)
+			log.Printf("WATCH [%v] sended for order [%+v]:\n %#v \n and notify that: \n %#v", botContext.Name, db_order.OrderId, notification_data.Message.Commands, *notification_data)
 		}
 	}
 }
@@ -176,7 +176,7 @@ func process_car_state(taxiContext *TaxiContext, botContext *s.BotContext, api_o
 		log.Printf("ALERT! CAR CHANGED TO NOT RECOGNIZED ID")
 		return
 	}
-	result.Message.Body = fmt.Sprintf("Ваша машина изменилась на %v", car_info)
+	result.Message = &s.OutMessage{Body:fmt.Sprintf("Ваша машина изменилась на %v", car_info)}
 	taxiContext.Notifier.Notify(result)
 }
 

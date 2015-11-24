@@ -641,19 +641,22 @@ func _get_feedback(fields []s.InField) (fdb string, rate int) {
 func (fp *TaxiFeedbackProcessor) ProcessMessage(in *s.InPkg) *s.MessageResult {
 	commands := *in.Message.Commands
 	fdbk, rate := _get_feedback(commands[0].Form.Fields)
+	phone, err := _get_phone(in)
+	if phone == nil {
+		user, uerr := fp.Users.GetUserById(in.From)
+		if uerr != nil {
+			log.Printf("Error at implying user by id %v", in.From)
+			return s.ErrorMessageResult(err, fp.context.Commands["commands_for_order_feedback"])
+		}else{
+			phone = user.Phone
+		}
+	}
 
 	order_id, err := fp.Orders.SetFeedback(in.From, ORDER_PAYED, fdbk, fp.context.Name)
 	if err != nil {
 		return s.ErrorMessageResult(err, fp.context.Commands["commands_at_not_created_order"])
 	}
-
-	user, err := fp.Users.GetUserById(in.From)
-	if err != nil {
-		log.Printf("Error at implying user by id %v", in.From)
-	}
-
-	if order_id != nil && user != nil {
-		phone := user.Phone
+	if order_id != nil{
 		f := Feedback{IdOrder: *order_id, Rating: rate, FeedBackText: fdbk, Phone:*phone}
 		fp.API.Feedback(f)
 		result_commands, err := FormCommands(in.From, fp.DbHandlerMixin, fp.context)
@@ -663,8 +666,6 @@ func (fp *TaxiFeedbackProcessor) ProcessMessage(in *s.InPkg) *s.MessageResult {
 		return &s.MessageResult{Body:"Спасибо! Ваш отзыв очень важен для нас:)", Commands: result_commands, Type:"chat"}
 	} else if order_id == nil {
 		return &s.MessageResult{Body:"Оплаченный заказ не найден :( Отзывы могут быть только для оплаченных заказов", Commands:fp.context.Commands["commands_at_not_created_order"], Type:"chat"}
-	} else if user == nil {
-		return &s.MessageResult{Body:"Не найдена информация о пользователе...", Commands:fp.context.Commands["commands_at_not_created_order"], Type:"chat"}
 	} else {
 		return &s.MessageResult{Body:"Нет ни пользователя ни заказа с нужным состоянием :(", Commands:fp.context.Commands["commands_at_not_created_order"], Type:"chat"}
 	}
