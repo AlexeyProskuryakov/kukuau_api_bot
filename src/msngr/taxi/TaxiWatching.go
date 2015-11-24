@@ -115,11 +115,11 @@ type TaxiContext struct {
 	Notifier *n.Notifier
 }
 func process_state_change(taxiContext *TaxiContext, botContext *s.BotContext, api_order Order, db_order *d.OrderWrapper, previous_states map[int64]int) {
-	log.Printf("WATCH state of: %+v is updated (api: %v != db: %v)", api_order.ID, api_order.State, db_order.OrderState)
+	log.Printf("WATCH [%v] state of: %+v is updated (api: %v != db: %v)", botContext.Name, api_order.ID, api_order.State, db_order.OrderState)
 	order_data := api_order.ToOrderData()
 	err := taxiContext.DataBase.Orders.SetState(api_order.ID, botContext.Name, api_order.State, &order_data)
 	if err != nil {
-		log.Printf("WATCH for order %+v can not update status %+v", api_order.ID, api_order.State)
+		log.Printf("WATCH [%v] for order %+v can not update status %+v", botContext.Name, api_order.ID, api_order.State)
 		return
 	}
 	db_order.OrderState = api_order.State
@@ -127,7 +127,7 @@ func process_state_change(taxiContext *TaxiContext, botContext *s.BotContext, ap
 
 	//если заказ отменил не пользователь
 	if api_order.State == ORDER_CANCELED {
-		log.Printf("WATCH NOTIFYING THAT ORDER IS CANCELED")
+		log.Printf("WATCH [%v] NOTIFYING THAT ORDER IS CANCELED", botContext.Name)
 		taxiContext.Notifier.Notify(s.OutPkg{
 			To:db_order.Whom,
 			Message: &s.OutMessage{
@@ -138,6 +138,7 @@ func process_state_change(taxiContext *TaxiContext, botContext *s.BotContext, ap
 			},
 		})
 		previous_states[api_order.ID] = api_order.State
+		taxiContext.DataBase.Orders.SetActive(api_order.ID, botContext.Name, false)
 		return
 	}
 	//
@@ -161,7 +162,7 @@ func process_state_change(taxiContext *TaxiContext, botContext *s.BotContext, ap
 		if notification_data != nil {
 			notification_data.Message.Commands = form_commands_for_current_order(db_order, botContext.Commands)
 			taxiContext.Notifier.Notify(*notification_data)
-			log.Printf("WATCH sended for order [%+v]:\n %#v \n and notify that: \n %#v", db_order.OrderId, notification_data.Message.Commands, *notification_data)
+			log.Printf("WATCH [%v] sended for order [%+v]:\n %#v \n and notify that: \n %#v",botContext.Name, db_order.OrderId, notification_data.Message.Commands, *notification_data)
 		}
 	}
 }
@@ -206,11 +207,11 @@ func TaxiOrderWatch(taxiContext *TaxiContext, botContext *s.BotContext) {
 		for _, api_order := range api_orders {
 			db_order, err := taxiContext.DataBase.Orders.GetById(api_order.ID, botContext.Name)
 			if err != nil {
-				log.Printf("WATCH some error in retrieve order: %v\nOrder:\n[%+v]", err, api_order)
+				log.Printf("WATCH [%v] some error in retrieve order: %v\nOrder:\n[%+v]", botContext.Name, err, api_order)
 				continue
 			}
 			if db_order == nil {
-				log.Printf("WATCH order [%+v] is not present in system :(\n", api_order)
+				log.Printf("WATCH [%v] order [%+v] is not present in system :(\n", botContext.Name, api_order)
 				continue
 			}
 

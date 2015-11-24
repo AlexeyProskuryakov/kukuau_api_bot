@@ -11,6 +11,7 @@ import (
 	"time"
 	t "msngr/taxi"
 	"fmt"
+	"msngr"
 )
 
 const TRY_COUNT = 10
@@ -64,7 +65,7 @@ type infinity struct {
 var instance *infinity
 
 func (i infinity) String() string {
-	return fmt.Sprintf("Infinity API processing.\nConnection strings:%+v\nLogon?:%v, time:%v client id:%v\n", i.ConnStrings, i.LoginResponse.Success, i.LoginTime, i.LoginResponse.IDClient)
+	return fmt.Sprintf("\nInfinity API processing.\nConnection strings:%+v\nLogon?:%v, time:%v client id:%v\nid_service: %v", i.ConnStrings, i.LoginResponse.Success, i.LoginTime, i.LoginResponse.IDClient, i.Config.GetIdService())
 }
 
 func _initInfinity(config t.TaxiAPIConfig) *infinity {
@@ -87,15 +88,17 @@ func _initInfinity(config t.TaxiAPIConfig) *infinity {
 }
 
 func GetInfinityAPI(tc t.TaxiAPIConfig) t.TaxiInterface {
-	if instance == nil {
-		instance = _initInfinity(tc)
+	instance := _initInfinity(tc)
+	if msngr.DEBUG{
+		log.Printf("Getting INFINITY API %+v", instance)
 	}
 	return instance
 }
 
 func GetInfinityAddressSupplier(tc t.TaxiAPIConfig) t.AddressSupplier {
-	if instance == nil {
-		instance = _initInfinity(tc)
+	instance := _initInfinity(tc)
+	if msngr.DEBUG{
+		log.Printf("Getting INFINITY Address supplier %+v", instance)
 	}
 	return instance
 }
@@ -265,7 +268,7 @@ func (p *infinity) NewOrder(order t.NewOrderInfo) t.Answer {
 		log.Printf("error at marshal json to infinity %+v", order)
 		return t.Answer{IsSuccess:false, Message:fmt.Sprint(err)}
 	}
-	log.Printf("INF NEW ORDER (jsonified): %+v", string(param))
+	log.Printf("INF NEW ORDER (jsonified): %+v at INF:%+v", string(param), p)
 	body, err := p._request("RemoteCall", map[string]string{"params": string(param), "method": "Taxi.WebAPI.NewOrder"})
 	if err != nil {
 		return t.Answer{IsSuccess:false, Message:fmt.Sprint(err)}

@@ -58,7 +58,6 @@ func FormTaxiBotContext(im *ExternalApiMixin, db_handler *d.DbHandlerMixin, tc c
 		"commands": &TaxiCommandsProcessor{DbHandlerMixin: *db_handler, context: &context},
 	}
 
-	log.Printf("ADDRESS SUPPLIER: %+v", ah.ExternalAddressSupplier)
 	context.Message_commands = map[string]s.MessageCommandProcessor{
 		"information":      &TaxiInformationProcessor{information:&(tc.Information.Text)},
 		"new_order":        &TaxiNewOrderProcessor{ExternalApiMixin: *im, DbHandlerMixin: *db_handler, context:&context, AddressHandler:ah},
@@ -77,7 +76,7 @@ func FormTaxiBotContext(im *ExternalApiMixin, db_handler *d.DbHandlerMixin, tc c
 		context.Settings["markups"] = *tc.Markups
 	}
 
-	log.Printf("For %+v will not send price? %+v\nAll settings is: %+v", tc.Name, tc.Api.NotSendPrice, context.Settings)
+	log.Printf("[%v] settings is: %+v", tc.Name, context.Settings)
 
 	return &context
 }
@@ -518,6 +517,12 @@ func (nop *TaxiNewOrderProcessor) ProcessMessage(in *s.InPkg) *s.MessageResult {
 		}
 		//send command to create order to external api
 		ans := nop.API.NewOrder(*new_order)
+		//check is answer of new order in external api has error
+		if !ans.IsSuccess {
+			nop.Errors.StoreError(in.From, ans.Message)
+			return s.ErrorMessageResult(errors.New(ans.Message), nop.context.Commands["commands_at_not_created_order"])
+		}
+
 		log.Printf("Order was created! %+v \n with content: %+v", ans, ans.Content)
 		cost := ans.Content.Cost
 		if cost == 0 {
@@ -534,13 +539,9 @@ func (nop *TaxiNewOrderProcessor) ProcessMessage(in *s.InPkg) *s.MessageResult {
 				not_send_price = _nsp
 			}
 		}
-		//check is answer of new order in external api has error
-		if !ans.IsSuccess {
-			nop.Errors.StoreError(in.From, ans.Message)
-			return s.ErrorMessageResult(errors.New(ans.Message), nop.context.Commands["commands_at_not_created_order"])
-		}
 		//persisting order
 		err = nop.Orders.AddOrderObject(&d.OrderWrapper{OrderState:ORDER_CREATED, Whom:in.From, OrderId:ans.Content.Id, Source:nop.context.Name})
+		err = nop.Orders.SetActive(ans.Content.Id, nop.context.Name, true)
 		if err != nil {
 			//if error we must cancel order at external api
 			ok, message := nop.API.CancelOrder(ans.Content.Id)
@@ -574,20 +575,22 @@ func (cop *TaxiCancelOrderProcessor) ProcessMessage(in *s.InPkg) *s.MessageResul
 		return s.ErrorMessageResult(err, cop.context.Commands["commands_at_not_created_order"])
 	}
 	if order_wrapper == nil || order_wrapper.Active == false {
+		if order_wrapper != nil {
+			log.Printf("Order is %v active? (%v)", order_wrapper, order_wrapper.Active)
+		} else {
+			log.Printf("Order not found...")
+		}
 		return s.ErrorMessageResult(errors.New("Order for it operation is unsuitable :("), cop.context.Commands["commands_at_not_created_order"])
 	}
 	is_success, message := cop.API.CancelOrder(order_wrapper.OrderId)
 	if is_success {
-		err := cop.Orders.SetState(order_wrapper.OrderId, cop.context.Name, ORDER_CANCELED, nil)
-		log.Println(err)
-		err = cop.Orders.SetActive(order_wrapper.OrderId, order_wrapper.Source, false)
-		log.Println(err)
+		cop.Orders.SetState(order_wrapper.OrderId, cop.context.Name, ORDER_CANCELED, nil)
+		cop.Orders.SetActive(order_wrapper.OrderId, order_wrapper.Source, false)
 		if err != nil {
+			log.Printf("Can not persists cancel order state because: %v", err)
 			s.StartAfter(cop.DbHandlerMixin.Check, func() {
 				err = cop.Orders.SetActive(order_wrapper.OrderId, order_wrapper.Source, false)
-				log.Println(err)
 				err = cop.Orders.SetState(order_wrapper.OrderId, cop.context.Name, ORDER_CANCELED, nil)
-				log.Println(err)
 			})
 		}
 		return &s.MessageResult{Body:"Ваш заказ отменен!", Commands: cop.context.Commands["commands_at_not_created_order"], Type:"chat"}

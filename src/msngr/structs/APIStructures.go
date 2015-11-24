@@ -134,6 +134,10 @@ type BotContext struct {
 	Settings         map[string]interface{}
 }
 
+func (bc BotContext) String() string {
+	check, ok := bc.Check()
+	return fmt.Sprintf("\nBot context for %v\nChecked?: %v (%v)\nRequestCommands: %+v\n MessageCommands: %+v\nCommands: %+v\nSettings: %+v\n", bc.Name, ok, check, bc.Request_commands, bc.Message_commands, bc.Commands, bc.Settings)
+}
 type MessageResult struct {
 	Commands   *[]OutCommand
 	Body       string

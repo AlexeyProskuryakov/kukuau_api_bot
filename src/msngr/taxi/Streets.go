@@ -30,7 +30,7 @@ INVALID_REQUEST – как правило, отсутствует обязате
 
 var cc_reg = regexp.MustCompilePOSIX("(ул(ица|\\.| )|пр(\\.|оспект|\\-кт)?|пер(\\.|еулок| )|г(ород|\\.|ор\\.| )|обл(асть|\\.| )|р(айон|\\-н )|^с )?")
 
-var NOT_IMPLY_TYPES = []string{"country", "political"}
+var NOT_IMPLY_TYPES = []string{"country"}
 const GOOGLE_API_URL = "https://maps.googleapis.com/maps/api"
 
 
@@ -154,12 +154,14 @@ func (ah *GoogleAddressHandler) GetStreetInfo(place_id string) (*AddressF, error
 		ah.cache_dests[place_id] = addr_details
 	}
 	address_components := addr_details.Result.AddressComponents
+	log.Printf(">>> [%v]\n%+v", place_id, address_components)
 	query, google_set := _process_address_components(address_components)
 
 	if query == "" {
 		query = addr_details.Result.Name
 		//		_add_to_set(google_set, addr_details.Result.Name)
 	}
+	log.Printf("<<< [%v]\n%+v", query, google_set)
 	if !ah.ExternalAddressSupplier.IsConnected() {
 		return nil, errors.New("GetStreetId: External service is not avaliable")
 	}

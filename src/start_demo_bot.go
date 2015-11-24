@@ -78,13 +78,14 @@ func main() {
 		google_address_handler := t.NewGoogleAddressHandler(conf.Main.GoogleKey, taxi_conf.GeoOrbit, external_address_supplier)
 
 		botContext := t.FormTaxiBotContext(&apiMixin, db, taxi_conf, google_address_handler, carsCache)
+		log.Printf("Was create bot context: %+v", botContext)
 		taxiContext := t.TaxiContext{API:external_api, DataBase:db, Cars:carsCache, Notifier:notifier}
-
 		controller := m.FormBotController(botContext)
 
 		http.HandleFunc(fmt.Sprintf("/taxi/%v", taxi_conf.Name), controller)
 
 		s.StartAfter(botContext.Check, func() {
+			log.Printf("Will start order watcher for [%v]", botContext.Name)
 			t.TaxiOrderWatch(&taxiContext, botContext)
 		})
 

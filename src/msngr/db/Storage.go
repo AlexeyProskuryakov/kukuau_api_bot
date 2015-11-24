@@ -247,7 +247,6 @@ func (oh *orderHandler) SetActive(order_id int64, source string, state bool) err
 	err := oh.Collection.Update(bson.M{"order_id": order_id, "source":source}, bson.M{"$set":bson.M{"active":state}})
 	if err == mgo.ErrNotFound {
 		log.Printf("update not existed %v %v to active %v", order_id, source, state)
-		return nil
 	}
 	return err
 }
@@ -267,13 +266,13 @@ func (oh *orderHandler) SetState(order_id int64, source string, new_state int, o
 	log.Println("DB: change:", change["$set"])
 	err := oh.Collection.Update(bson.M{"order_id": order_id, "source":source}, change)
 	if err != nil && err != mgo.ErrNotFound {
-		log.Println(err)
+		log.Printf("State [%v] for order [%v] %v is not stated because order is not found", new_state, order_id, source)
 		return err
 	}
 	if err == mgo.ErrNotFound {
 		log.Printf("DB: for order %v at %v not found :(( ", order_id, source)
 	}
-	return nil
+	return err
 }
 
 func (oh *orderHandler) SetFeedback(for_whom string, for_state int, feedback string, source string) (*int64, error) {
