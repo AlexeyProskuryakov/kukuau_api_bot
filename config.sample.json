@@ -79,6 +79,32 @@
       "markups":["5030781832", "5008745388"],
       "name": "academ"
     },
+    "karavan":{
+      "name": "karavan",
+      "dict_url": "http://localhost:9191/taxi/karavan/streets",
+      "key": "Kuku karavan_taxi_key",
+      "information": {
+        "phone": "123-45-67",
+        "text": "Такси Караван! Самое лучшее такси в Бердске!"
+      },
+      "geo_orbit": {
+        "lat": 54.760457,
+        "lon": 83.103499,
+        "radius": 50000
+      },
+      "api": {
+        "name": "infinity",
+        "data": {
+          "login": "kukuau",
+          "password": "89831395746",
+          "connection_strings": [
+            "http://212.164.216.216:8080/WebAPITaxi/"
+          ],
+          "id_service":"5000360106"
+        },
+        "not_send_price": false
+      }
+    },
     "fake": {
       "name": "fake",
       "dict_url": "http://localhost:9191/taxi/fake/streets",
