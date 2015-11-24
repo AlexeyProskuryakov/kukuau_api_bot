@@ -664,9 +664,7 @@ func (fp *TaxiFeedbackProcessor) ProcessMessage(in *s.InPkg) *s.MessageResult {
 			return s.ErrorMessageResult(err, fp.context.Commands["commands_at_not_created_order"])
 		}
 		return &s.MessageResult{Body:"Спасибо! Ваш отзыв очень важен для нас:)", Commands: result_commands, Type:"chat"}
-	} else if order_id == nil {
-		return &s.MessageResult{Body:"Оплаченный заказ не найден :( Отзывы могут быть только для оплаченных заказов", Commands:fp.context.Commands["commands_at_not_created_order"], Type:"chat"}
 	} else {
-		return &s.MessageResult{Body:"Нет ни пользователя ни заказа с нужным состоянием :(", Commands:fp.context.Commands["commands_at_not_created_order"], Type:"chat"}
+		return &s.MessageResult{Body:"Оплаченный заказ не найден :( Отзывы могут быть только для оплаченных заказов", Commands:fp.context.Commands["commands_at_not_created_order"], Type:"chat"}
 	}
 }
