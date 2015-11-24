@@ -38,9 +38,7 @@ func (cip *CarInfoProvider) GetCarInfo(car_id int64) *CarInfo {
 
 
 func FormTaxiBotContext(im *ExternalApiMixin, db_handler *d.DbHandlerMixin, tc c.TaxiConfig, ah *GoogleAddressHandler, cc *CarsCache) *s.BotContext {
-
 	context := s.BotContext{}
-
 	context.Check = func() (detail string, ok bool) {
 		ok = im.API.IsConnected()
 		if !ok {
@@ -50,14 +48,11 @@ func FormTaxiBotContext(im *ExternalApiMixin, db_handler *d.DbHandlerMixin, tc c
 		}
 		return detail, ok
 	}
-
 	context.Commands = GetCommands(tc.DictUrl)
 	context.Name = tc.Name
-
 	context.Request_commands = map[string]s.RequestCommandProcessor{
 		"commands": &TaxiCommandsProcessor{DbHandlerMixin: *db_handler, context: &context},
 	}
-
 	context.Message_commands = map[string]s.MessageCommandProcessor{
 		"information":      &TaxiInformationProcessor{information:&(tc.Information.Text)},
 		"new_order":        &TaxiNewOrderProcessor{ExternalApiMixin: *im, DbHandlerMixin: *db_handler, context:&context, AddressHandler:ah},
@@ -69,15 +64,12 @@ func FormTaxiBotContext(im *ExternalApiMixin, db_handler *d.DbHandlerMixin, tc c
 		"where_it":         &TaxiWhereItMessageProcessor{ExternalApiMixin:*im, DbHandlerMixin:*db_handler, context:&context},
 		"car_position":     &TaxiCarPositionMessageProcessor{ExternalApiMixin: *im, DbHandlerMixin:*db_handler, context:&context, Cars:NewCarInfoProvider(cc)},
 	}
-
 	context.Settings = make(map[string]interface{})
 	context.Settings["not_send_price"] = tc.Api.NotSendPrice
 	if tc.Markups != nil {
 		context.Settings["markups"] = *tc.Markups
 	}
-
-	log.Printf("[%v] settings is: %+v", tc.Name, context.Settings)
-
+	log.Printf("CONTEXT TAXI: \n%v", context)
 	return &context
 }
 
@@ -647,7 +639,7 @@ func (fp *TaxiFeedbackProcessor) ProcessMessage(in *s.InPkg) *s.MessageResult {
 		if uerr != nil {
 			log.Printf("Error at implying user by id %v", in.From)
 			return s.ErrorMessageResult(err, fp.context.Commands["commands_for_order_feedback"])
-		}else{
+		}else {
 			phone = user.Phone
 		}
 	}
@@ -656,7 +648,7 @@ func (fp *TaxiFeedbackProcessor) ProcessMessage(in *s.InPkg) *s.MessageResult {
 	if err != nil {
 		return s.ErrorMessageResult(err, fp.context.Commands["commands_at_not_created_order"])
 	}
-	if order_id != nil{
+	if order_id != nil {
 		f := Feedback{IdOrder: *order_id, Rating: rate, FeedBackText: fdbk, Phone:*phone}
 		fp.API.Feedback(f)
 		result_commands, err := FormCommands(in.From, fp.DbHandlerMixin, fp.context)
