@@ -31,7 +31,7 @@
           "password": "test1",
           "connection_string": "http://109.202.25.248:8080/WebAPITaxi/",
           "host": "109.202.25.248:8080",
-          "id_service":"5001753333"
+          "id_service": "5001753333"
         }
       }
     },
@@ -76,10 +76,13 @@
         "text": "Такси академ! Самое лучшее такси в академгородке!"
       },
       "key": "Kuku acedem_taxi_key",
-      "markups":["5030781832", "5008745388"],
+      "markups": [
+        "5030781832",
+        "5008745388"
+      ],
       "name": "academ"
     },
-    "karavan":{
+    "karavan": {
       "name": "karavan",
       "dict_url": "http://localhost:9191/taxi/karavan/streets",
       "key": "Kuku karavan_taxi_key",
@@ -100,7 +103,34 @@
           "connection_strings": [
             "http://212.164.216.216:8080/WebAPITaxi/"
           ],
-          "id_service":"5000360106"
+          "id_service": "5000360106"
+        },
+        "not_send_price": false
+      }
+    },
+    "kd": {
+      "name": "kd",
+      "dict_url": "http://localhost:9191/taxi/kd/streets",
+      "key": "Kuku karavan_taxi_key",
+      "information": {
+        "phone": "8 (383) 292-92-92",
+        "text": "Такси Каретный Двор! Самое лучшее такси в Новосибирске!"
+      },
+      "geo_orbit": {
+        "lat": 55.053353,
+        "lon": 82.965899,
+        "radius": 100000
+      },
+      "api": {
+        "name": "infinity",
+        "data": {
+          "login": "kukuau",
+          "password": "89831395746",
+          "connection_strings": [
+            "http://37.192.247.206:18080/WebAPITaxi/",
+            "http://89.189.190.35:18080/WebAPITaxi/"
+          ],
+          "id_service": "5002204175"
         },
         "not_send_price": false
       }
@@ -126,7 +156,7 @@
           "connection_string": "http://109.202.25.248:8080/WebAPITaxi/",
           "host": "109.202.25.248:8080"
         },
-        "not_send_price":true,
+        "not_send_price": true,
         "fake": {
           "sended_states": [
             2,

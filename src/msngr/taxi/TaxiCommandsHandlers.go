@@ -323,7 +323,7 @@ func (twmp *TaxiWhereItMessageProcessor) ProcessMessage(in *s.InPkg) *s.MessageR
 		}
 		return &s.MessageResult{Body:text, Type:"chat"}
 	}
-	return s.ErrorMessageResult(errors.New("Не найден идентифкатор заказа"), twmp.context.Commands["commands_at_not_created_order"])
+	return s.ErrorMessageResult(errors.New("Не найден активный заказ"), twmp.context.Commands["commands_at_not_created_order"])
 
 }
 
