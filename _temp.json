@@ -38,7 +38,7 @@ curl -XPOST "http://localhost:9200/autocomplete" -d '{
         }
       }
     },
-        "street": {
+    "street": {
       "_all": {
         "enabled": false
       },

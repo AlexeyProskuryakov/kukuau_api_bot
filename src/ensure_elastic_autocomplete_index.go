@@ -3,6 +3,7 @@ import (
 	"gopkg.in/olivere/elastic.v2"
 	"log"
 	"reflect"
+	"fmt"
 )
 
 type OsmName struct {
@@ -47,7 +48,7 @@ func main() {
 			_, err = client.Index().
 			Index("autocomplete").
 			Type("osm_hw").
-			Id(entity.OSM_ID).
+			Id(fmt.Sprintf("%v", entity.OSM_ID)).
 			BodyJson(entity).
 			Do()
 			if err != nil {
