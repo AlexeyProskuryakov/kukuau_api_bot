@@ -14,6 +14,8 @@ import (
 	s "msngr/taxi/set"
 	u "msngr/utils"
 	c "msngr/configuration"
+	"gopkg.in/olivere/elastic.v2"
+	"reflect"
 )
 
 /*
@@ -75,15 +77,21 @@ type GooglePoint struct {
 	Lon float64 `json:"lng"`
 }
 
+type AddressHandler interface {
+	GetExternalInfo(key string) (*AddressF, error)
+	IsHere(key string) bool
+}
+
 type GoogleAddressHandler struct {
 	AddressSupplier
+	AddressHandler
 
 	key                     string
-	orbit                   c.TaxiGeoOrbit
 
 	cache                   map[string]*AddressF
 	cache_dests             map[string]*GoogleDetailPlaceResult
 
+	orbit                   c.TaxiGeoOrbit
 	ExternalAddressSupplier AddressSupplier
 }
 
@@ -122,15 +130,15 @@ func (ah *GoogleAddressHandler) GetDetailPlace(place_id string) (*GoogleDetailPl
 	return &addr_details, nil
 }
 
-func (ah *GoogleAddressHandler)IsHere(place_id string) bool {
-	addr_details, ok := ah.cache_dests[place_id]
+func (ah *GoogleAddressHandler) IsHere(key string) bool {
+	addr_details, ok := ah.cache_dests[key]
 	if !ok {
 		var err error
-		addr_details, err = ah.GetDetailPlace(place_id)
+		addr_details, err = ah.GetDetailPlace(key)
 		if err != nil || addr_details == nil {
 			return false
 		}
-		ah.cache_dests[place_id] = addr_details
+		ah.cache_dests[key] = addr_details
 	}
 	point := addr_details.Result.Geometry.Location
 	distance := Distance(point.Lat, point.Lon, ah.orbit.Lat, ah.orbit.Lon)
@@ -138,23 +146,23 @@ func (ah *GoogleAddressHandler)IsHere(place_id string) bool {
 	return distance < ah.orbit.Radius
 }
 
-func (ah *GoogleAddressHandler) GetStreetInfo(place_id string) (*AddressF, error) {
-	street_id, ok := ah.cache[place_id]
+func (ah *GoogleAddressHandler) GetExternalInfo(key string) (*AddressF, error) {
+	street_id, ok := ah.cache[key]
 	if ok {
 		return street_id, nil
 	}
 	var err error
-	addr_details, ok := ah.cache_dests[place_id]
+	addr_details, ok := ah.cache_dests[key]
 	if !ok {
-		addr_details, err = ah.GetDetailPlace(place_id)
+		addr_details, err = ah.GetDetailPlace(key)
 		if err != nil || addr_details == nil || addr_details.Status != "OK" {
 			log.Printf("ERROR GetStreetId IN get place %+v %v", addr_details, err)
 			return nil, err
 		}
-		ah.cache_dests[place_id] = addr_details
+		ah.cache_dests[key] = addr_details
 	}
 	address_components := addr_details.Result.AddressComponents
-	log.Printf(">>> [%v]\n%+v", place_id, address_components)
+	log.Printf(">>> [%v]\n%+v", key, address_components)
 	query, google_set := _process_address_components(address_components)
 
 	if query == "" {
@@ -173,21 +181,13 @@ func (ah *GoogleAddressHandler) GetStreetInfo(place_id string) (*AddressF, error
 	ext_rows := *rows
 
 	for i := len(ext_rows) - 1; i >= 0; i-- {
-		external_set := s.NewSet()
 		nitem := ext_rows[i]
-		if nitem.ShortName == "пл" {
-			nitem.Name = fmt.Sprintf("площадь %s", nitem.Name)
-		}
-		_add_to_set(external_set, nitem.Name)
-		_add_to_set(external_set, nitem.Region)
-		_add_to_set(external_set, nitem.City)
-		_add_to_set(external_set, nitem.District)
-		_add_to_set(external_set, nitem.Place)
+		external_set := nitem.GetSet()
 
 		log.Printf("GetStreetId [%v]:\n e: %+v < ? > g: %+v", query, external_set, google_set)
 		if google_set.IsSuperset(external_set) || external_set.IsSuperset(google_set) {
-			log.Printf("GetStreetId: [%+v] \nat %v", place_id, nitem.FullName)
-			ah.cache[place_id] = &nitem
+			log.Printf("GetStreetId: [%+v] \nat %v", key, nitem.FullName)
+			ah.cache[key] = &nitem
 			return &nitem, nil
 		}
 	}
@@ -227,7 +227,144 @@ func (ah *GoogleAddressHandler) IsConnected() bool {
 	return true
 }
 
+type OwnAddressHandler struct {
+	AddressSupplier
+	AddressHandler
 
+	ExternalAddressSupplier AddressSupplier
+	orbit                   c.TaxiGeoOrbit
+	client                  *elastic.Client
+	connect_string          string
+}
+
+func NewOwnAddressHandler(conn_str string, orbit c.TaxiGeoOrbit, external AddressSupplier) *OwnAddressHandler {
+	client, err := elastic.NewClient(elastic.SetURL(conn_str))
+	if err != nil {
+		log.Printf("Error at connect to elastic")
+		return nil
+	}
+	result := OwnAddressHandler{client:client, connect_string:conn_str}
+	result.orbit = orbit
+	result.ExternalAddressSupplier = external
+	return &result
+}
+
+func (oh *OwnAddressHandler) IsConnected() bool {
+	result, _, err := oh.client.Ping().Do()
+	if err != nil {
+		return false
+	}
+	if result != nil {
+		return true
+	}
+	return false
+}
+
+
+type OsmAutocompleteEntity struct {
+	Name   string `json:"name"`
+	OSM_ID int64 `json:"osm_id"`
+	City   string `json:"city"`
+}
+
+func get_own_result(client *elastic.Client, t_query elastic.TermQuery) []AddressF {
+	rows := []AddressF{}
+	s_result, err := client.Search().Index("autocomplete").Query(t_query).Do()
+	if err != nil {
+		log.Printf("error in own address handler search at search in elastic %v", err)
+	}
+	var oae OsmAutocompleteEntity
+	for _, osm_hit := range s_result.Each(reflect.TypeOf(oae)) {
+		if entity, ok := osm_hit.(OsmAutocompleteEntity); ok {
+			rows = append(rows, AddressF{OSM_ID:entity.OSM_ID, Name:entity.Name, City:entity.City})
+		}
+	}
+	return rows
+}
+
+func (oh *OwnAddressHandler) AddressesSearch(q string) AddressPackage {
+	rows := []AddressF{}
+	result := AddressPackage{Rows:&rows}
+	t_query := elastic.NewTermQuery("name", q)
+	rows = get_own_result(oh.client, t_query)
+	return result
+}
+
+func (oh *OwnAddressHandler) IsHere(key string) bool {
+	coords := oh.GetCoordinates(key)
+	if coords != nil {
+		coordinates := *coords
+		distance := Distance(coordinates.Lat, coordinates.Lon, oh.orbit.Lat, oh.orbit.Lon)
+		return distance < oh.orbit.Radius
+	}
+	return false
+}
+
+type OsmName struct {
+	Default string `json:"default"`
+	Ru      string `json:"ru"`
+}
+
+type Coordinates struct {
+	Lat float64 `json:"lat"`
+	Lon float64 `json:"lon"`
+}
+
+type OwnGeoCodeResult struct {
+	Coordinates Coordinates `json:"coordinate"`
+	State       OsmName `json:"state"`
+	City        OsmName `json:"city"`
+	Name        OsmName `json:"name"`
+	Street      OsmName `json:"street"`
+	OSM_ID      int64 `json:"osm_id"`
+}
+
+func (oh *OwnAddressHandler) GetCoordinates(key string) *Coordinates {
+	t_query := elastic.NewTermQuery("osm_id", key)
+	s_result, err := oh.client.Search().Index("photon").Query(t_query).Do()
+	if err != nil {
+		log.Printf("error in own address handler search at search in elastic %v", err)
+	}
+	var ogcr OwnGeoCodeResult
+	for _, osm_hit := range s_result.Each(reflect.TypeOf(ogcr)) {
+		if entity, ok := osm_hit.(OwnGeoCodeResult); ok {
+			return &entity.Coordinates
+		}
+	}
+	return nil
+}
+
+func (oh *OwnAddressHandler) GetExternalInfo(key string) (*AddressF, error) {
+	t_query := elastic.NewTermQuery("osm_id", key)
+	s_result, err := oh.client.Search().Index("photon").Query(t_query).Do()
+	if err != nil {
+		log.Printf("error in own address handler search at search in elastic %v", err)
+	}
+	var ogcr OwnGeoCodeResult
+	for _, osm_hit := range s_result.Each(reflect.TypeOf(ogcr)) {
+		if entity, ok := osm_hit.(OwnGeoCodeResult); ok {
+			local_set := s.NewSet()
+			name := _clear_address_string(u.FirstOf(entity.Name.Ru, entity.Name.Default).(string))
+			_add_to_set(local_set, name)
+			_add_to_set(local_set, _clear_address_string(u.FirstOf(entity.City.Ru, entity.City.Default).(string)))
+
+			rows := oh.ExternalAddressSupplier.AddressesSearch(name).Rows
+			if rows == nil {
+				return nil, errors.New("GetStreetId: no results at external")
+			}
+			ext_rows := *rows
+
+			for i := len(ext_rows) - 1; i >= 0; i-- {
+				nitem := ext_rows[i]
+				ext_set := nitem.GetSet()
+				if ext_set.IsSuperset(local_set) || local_set.IsSuperset(ext_set) {
+					return &nitem, nil
+				}
+			}
+		}
+	}
+	return nil, errors.New(fmt.Sprintf("No any results for [%v] address in external source", key))
+}
 
 func StreetsSearchController(w http.ResponseWriter, r *http.Request, i AddressSupplier) {
 	w.Header().Set("Content-type", "application/json")
@@ -257,13 +394,14 @@ func StreetsSearchController(w http.ResponseWriter, r *http.Request, i AddressSu
 				var key string
 				if nitem.GID != "" {
 					key = nitem.GID
+				}else if nitem.OSM_ID != 0 {
+					key = fmt.Sprint(nitem.OSM_ID)
 				}else {
 					key_raw, err := json.Marshal(nitem)
 					key = string(key_raw)
 					if err != nil {
 						log.Printf("SSC: ERROR At unmarshal:%+v", err)
 					}
-
 				}
 				item.Key = string(key)
 				if nitem.ShortName != "" {

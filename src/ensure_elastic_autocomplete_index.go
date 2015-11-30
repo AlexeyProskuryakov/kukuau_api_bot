@@ -4,6 +4,7 @@ import (
 	"log"
 	"reflect"
 	"fmt"
+	"math"
 )
 
 type OsmName struct {
@@ -41,7 +42,7 @@ func main() {
 	searchPhotonResult, err := client.Search().
 	Index("photon").// search in index "twitter"
 	Query(&termQuery).// specify the query
-	Size(100000000).
+	Size(math.MaxInt64).
 	Pretty(true).// pretty print request and response JSON
 	Do()                // execute
 	if err != nil {

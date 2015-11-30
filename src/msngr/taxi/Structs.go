@@ -5,9 +5,11 @@ import (
 	"fmt"
 	"time"
 	"strings"
+	s "msngr/taxi/set"
 )
 
 type AddressF struct {
+	OSM_ID     int64    `json:"osm_id"`
 	GID        string
 	ID         int64  `json:"ID"`
 	IDParent   int64  `json:"IDParent,omitempty"`
@@ -27,6 +29,20 @@ type AddressF struct {
 
 func (a AddressF) String() string {
 	return fmt.Sprintf("[%v][%v] '%v' (%v) at %v %v %v %v \nIDS:\nParent: %v, Region: %v, District: %v, City: %v, Place: %v\n", a.GID, a.ID, a.Name, a.FullName, a.Region, a.City, a.District, a.Place, a.IDParent, a.IDRegion, a.IDDistrict, a.IDCity, a.IDPlace)
+}
+
+func (a AddressF) GetSet() s.Set {
+	external_set := s.NewSet()
+	nitem := a
+	if nitem.ShortName == "пл" {
+		nitem.Name = fmt.Sprintf("площадь %s", nitem.Name)
+	}
+	_add_to_set(external_set, nitem.Name)
+	_add_to_set(external_set, nitem.Region)
+	_add_to_set(external_set, nitem.City)
+	_add_to_set(external_set, nitem.District)
+	_add_to_set(external_set, nitem.Place)
+	return external_set
 }
 
 type AddressPackage struct {

@@ -81,6 +81,7 @@ type Configuration struct {
 			   ConsoleAddr  string `json:"console_addr"`
 			   LoggingFile  string `json:"log_file"`
 			   GoogleKey    string `json:"google_key"`
+		       ElasticConn	string `json:"elastic_conn"`
 			   Database     struct {
 								ConnString string `json:"connection_string"`
 								Name       string `json:"name"`

@@ -37,7 +37,7 @@ func (cip *CarInfoProvider) GetCarInfo(car_id int64) *CarInfo {
 }
 
 
-func FormTaxiBotContext(im *ExternalApiMixin, db_handler *d.DbHandlerMixin, tc c.TaxiConfig, ah *GoogleAddressHandler, cc *CarsCache) *s.BotContext {
+func FormTaxiBotContext(im *ExternalApiMixin, db_handler *d.DbHandlerMixin, tc c.TaxiConfig, ah AddressHandler, cc *CarsCache) *s.BotContext {
 	context := s.BotContext{}
 	context.Check = func() (detail string, ok bool) {
 		ok = im.API.IsConnected()
@@ -394,7 +394,7 @@ func (a *AddressNotHere) Error() string {
 	return fmt.Sprintf("Адрес \n %+v --> %+v \n не поддерживается этим такси.", a.From, a.To)
 }
 
-func _form_order(fields []s.InField, ah *GoogleAddressHandler) (*NewOrderInfo, error) {
+func _form_order(fields []s.InField, ah AddressHandler) (*NewOrderInfo, error) {
 	var from_info, to_info, hf, ht string
 	var entrance *string
 	log.Printf("NEW ORDER fields: %+v", fields)
@@ -433,11 +433,11 @@ func _form_order(fields []s.InField, ah *GoogleAddressHandler) (*NewOrderInfo, e
 	if !ah.IsHere(from_info) && !ah.IsHere(to_info) {
 		return nil, &AddressNotHere{From:from_info, To:to_info}
 	}
-	delivery_street_info, err := ah.GetStreetInfo(from_info)
+	delivery_street_info, err := ah.GetExternalInfo(from_info)
 	if err != nil {
 		return nil, err
 	}
-	destination_street_info, err := ah.GetStreetInfo(to_info)
+	destination_street_info, err := ah.GetExternalInfo(to_info)
 	if err != nil {
 		return nil, err
 	}
@@ -452,7 +452,7 @@ func _form_order(fields []s.InField, ah *GoogleAddressHandler) (*NewOrderInfo, e
 type TaxiNewOrderProcessor struct {
 	ExternalApiMixin
 	d.DbHandlerMixin
-	AddressHandler *GoogleAddressHandler
+	AddressHandler AddressHandler
 	context        *s.BotContext
 }
 
@@ -600,7 +600,7 @@ func (cop *TaxiCancelOrderProcessor) ProcessMessage(in *s.InPkg) *s.MessageResul
 type TaxiCalculatePriceProcessor struct {
 	ExternalApiMixin
 	context        *s.BotContext
-	AddressHandler *GoogleAddressHandler
+	AddressHandler AddressHandler
 }
 
 func (cpp *TaxiCalculatePriceProcessor) ProcessMessage(in *s.InPkg) *s.MessageResult {
