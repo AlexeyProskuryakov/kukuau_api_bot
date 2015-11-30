@@ -35,7 +35,6 @@ func main() {
 	searchPhotonResult, err := client.Search().
 	Index("photon").// search in index "twitter"
 	Query(&termQuery).// specify the query
-	Sort("user", true).// sort by "user" field, ascending
 	Pretty(true).// pretty print request and response JSON
 	Do()                // execute
 	if err != nil {
