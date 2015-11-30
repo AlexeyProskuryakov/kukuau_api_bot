@@ -17,12 +17,18 @@ type Coordinates struct {
 }
 
 type ElEntity struct {
-	Coordinates Coordinates `json:"coordinates"`
+	Coordinates Coordinates `json:"coordinate"`
 	State       OsmName `json:"state"`
 	City        OsmName `json:"city"`
 	Name        OsmName `json:"name"`
 	Street      OsmName `json:"street"`
 	OSM_ID      int64 `json:"osm_id"`
+}
+
+type AutocompleteEntity struct {
+	Name string `json:"name"`
+	OSM_ID int64 `json:"osm_id"`
+	City string `json:"city"`
 }
 
 func main() {
@@ -35,26 +41,46 @@ func main() {
 	searchPhotonResult, err := client.Search().
 	Index("photon").// search in index "twitter"
 	Query(&termQuery).// specify the query
+	Size(100000000).
 	Pretty(true).// pretty print request and response JSON
 	Do()                // execute
 	if err != nil {
 		// Handle error
 		panic(err)
 	}
+	log.Println(searchPhotonResult)
 	var eet ElEntity
+	var prev_state string
+	var count int
 	for _, photon_hit := range searchPhotonResult.Each(reflect.TypeOf(eet)) {
 		if entity, ok := photon_hit.(ElEntity); ok {
+			index_el := AutocompleteEntity{}
+			if entity.Name.Ru != ""{
+				index_el.Name = entity.Name.Ru
+			} else if entity.Name.Default != ""{
+				index_el.Name = entity.Name.Default
+			} else{
+				continue
+			}
+			index_el.OSM_ID = entity.OSM_ID
+			index_el.City = entity.City.Default
+
 			_, err = client.Index().
 			Index("autocomplete").
-			Type("osm_hw").
+			Type("name").
 			Id(fmt.Sprintf("%v", entity.OSM_ID)).
-			BodyJson(entity).
+			BodyJson(index_el).
 			Do()
 			if err != nil {
 				// Handle error
 				log.Printf("add el erro: %v", err)
 				continue
 			}
+			if prev_state != entity.State.Default {
+				log.Printf("load for: %v, loaded: %v", entity.State.Default, count)
+				prev_state = entity.State.Default
+			}
+			count += 1
 		}
 
 	}
