@@ -67,14 +67,16 @@ func main() {
 	d.DELETE_DB = *test
 	m.DEBUG = *test
 
+	log.Printf("configuration for db:\nconnection string: %+v\ndatabase name: %+v", conf.Main.Database.ConnString, conf.Main.Database.Name)
+	db := d.NewDbHandler(conf.Main.Database.ConnString, conf.Main.Database.Name)
+
 	log.Printf("Is delete DB? [%+v] Is debug? [%v]", d.DELETE_DB, m.DEBUG)
 	if d.DELETE_DB {
 		log.Println("!!!!!!!!!!start at test mode!!!!!!!!!!!!!")
 		conf.Main.Database.Name = conf.Main.Database.Name + "_test"
-	}
+		db.Session.DB(conf.Main.Database.Name).DropDatabase()
 
-	log.Printf("configuration for db:\nconnection string: %+v\ndatabase name: %+v", conf.Main.Database.ConnString, conf.Main.Database.Name)
-	db := d.NewDbHandler(conf.Main.Database.ConnString, conf.Main.Database.Name)
+	}
 
 	for taxi_name, taxi_conf := range conf.Taxis {
 		log.Printf("taxi api configuration for %+v: \nconnection str: %+v\nhost: %+v\nid_service: %+v\nlogin: %+v\npassword: %+v", taxi_conf.Name, taxi_conf.Api.GetConnectionStrings(), taxi_conf.Api.GetHost(), taxi_conf.Api.GetIdService(), taxi_conf.Api.GetLogin(), taxi_conf.Api.GetPassword())

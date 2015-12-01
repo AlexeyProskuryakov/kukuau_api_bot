@@ -170,3 +170,16 @@ func GET(url string, params *map[string]string) (*[]byte, error) {
 	return &body, err
 }
 
+type Predicate func () (bool)
+
+func After(p Predicate, what func ()){
+	go func() {
+		for {
+			if p(){
+				what()
+				break
+			}
+			time.Sleep(2*time.Second)
+		}
+	}()
+}

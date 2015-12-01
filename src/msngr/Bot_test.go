@@ -83,7 +83,9 @@ func TestBot(t *testing.T) {
 	}
 
 	server_address := fmt.Sprintf(":%v", conf.Main.Port)
-	s.StartAfter(db.Check, func() {
+	s.StartAfter(func() (string, bool) {
+		return "", db.Check()
+	}, func() {
 		log.Printf("\nStart listen and serving at: %v\n", server_address)
 		server := &http.Server{
 			Addr: server_address,

@@ -11,7 +11,9 @@ import (
 func main() {
 	conf := c.ReadConfig()
 	handler := db.NewDbHandler(conf.Main.Database.ConnString, conf.Main.Database.Name)
-	s.StartAfter(handler.Check, func() {
+	s.StartAfter(func() (string bool) {
+		return "", handler.Check()
+	}, func() {
 		log.Printf("connection established....")
 	})
 

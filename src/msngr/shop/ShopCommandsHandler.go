@@ -34,7 +34,7 @@ func FormShopCommands(db *d.DbHandlerMixin, config *c.ShopConfig) *s.BotContext 
 	context.Message_commands = ShopMessageCommands
 	context.Request_commands = ShopRequestCommands
 	context.Check = func() (string, bool) {
-		if !db.IsConnected() {
+		if !db.Check() {
 			return "Ошибка в подключении к БД попробуйте позже", false
 		}
 		return "All ok!", true

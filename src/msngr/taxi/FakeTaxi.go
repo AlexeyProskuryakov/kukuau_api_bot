@@ -6,6 +6,7 @@ import (
 	"time"
 	"encoding/json"
 	c "msngr/configuration"
+	"sync"
 )
 
 //////////////////////////////////////////////////////////////////////////
@@ -24,6 +25,8 @@ func GetFakeAPI(params c.TaxiApiParams) TaxiInterface {
 
 
 type FakeTaxiAPI struct {
+	sync.Mutex
+
 	SleepTime    int
 	SendedStates []int
 	orders       []Order
@@ -72,6 +75,8 @@ func (inf *FakeTaxiAPI) NewOrder(order NewOrderInfo) Answer {
 }
 
 func (inf *FakeTaxiAPI) Orders() []Order {
+	inf.Lock()
+	defer inf.Unlock()
 	return inf.orders
 }
 

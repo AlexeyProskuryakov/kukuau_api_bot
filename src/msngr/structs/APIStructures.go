@@ -186,5 +186,4 @@ func StartAfter(check CheckFunc, what func()) {
 		}
 	}
 	go what()
-
 }

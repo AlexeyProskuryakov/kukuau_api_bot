@@ -44,7 +44,7 @@ func FormTaxiBotContext(im *ExternalApiMixin, db_handler *d.DbHandlerMixin, tc c
 		if !ok {
 			detail = "Ошибка в подключении к сервису. Попробуйте позже."
 		} else {
-			return db_handler.Check()
+			return "", db_handler.Check()
 		}
 		return detail, ok
 	}
@@ -578,13 +578,6 @@ func (cop *TaxiCancelOrderProcessor) ProcessMessage(in *s.InPkg) *s.MessageResul
 	if is_success {
 		cop.Orders.SetState(order_wrapper.OrderId, cop.context.Name, ORDER_CANCELED, nil)
 		cop.Orders.SetActive(order_wrapper.OrderId, order_wrapper.Source, false)
-		if err != nil {
-			log.Printf("Can not persists cancel order state because: %v", err)
-			s.StartAfter(cop.DbHandlerMixin.Check, func() {
-				err = cop.Orders.SetActive(order_wrapper.OrderId, order_wrapper.Source, false)
-				err = cop.Orders.SetState(order_wrapper.OrderId, cop.context.Name, ORDER_CANCELED, nil)
-			})
-		}
 		return &s.MessageResult{Body:"Ваш заказ отменен!", Commands: cop.context.Commands["commands_at_not_created_order"], Type:"chat"}
 	} else {
 		return &s.MessageResult{Body:fmt.Sprintf("Проблемы с отменой заказа %v\nЗвони скорее: %+v ", message, cop.alert_phone), Commands: cop.context.Commands["commands_at_not_created_order"], Type:"chat"}
