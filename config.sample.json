@@ -157,6 +157,16 @@
           "host": "109.202.25.248:8080"
         },
         "not_send_price": true,
+        "available_commands": {
+          "created_order": [
+            "where_it",
+            "callback_request",
+            "car_position"
+          ]
+        },
+        "markups": [
+          "5059339030"
+        ],
         "fake": {
           "sended_states": [
             2,
