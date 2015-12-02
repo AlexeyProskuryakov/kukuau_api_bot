@@ -57,7 +57,7 @@ func get_address_instruments(c c.Configuration, taxi_name string, external_suppl
 		return google, google
 	}
 	log.Printf("Will use own addresses")
-	return own,own
+	return own, own
 }
 func main() {
 	conf := c.ReadConfig()
@@ -95,7 +95,7 @@ func main() {
 		address_handler, address_supplier := get_address_instruments(conf, taxi_name, external_address_supplier)
 
 		botContext := t.FormTaxiBotContext(&apiMixin, db, taxi_conf, address_handler, carsCache)
-		log.Printf("Was create bot context: %+v", botContext)
+		log.Printf("Was create bot context: %+v\n", botContext)
 		taxiContext := t.TaxiContext{API:external_api, DataBase:db, Cars:carsCache, Notifier:notifier}
 		controller := m.FormBotController(botContext)
 

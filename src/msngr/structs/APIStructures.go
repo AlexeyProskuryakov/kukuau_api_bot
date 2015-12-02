@@ -3,6 +3,7 @@ import (
 	"fmt"
 	"time"
 	"log"
+	"strings"
 )
 
 type FieldAttribute struct {
@@ -32,6 +33,7 @@ type InField struct {
 func (i InField) String() string {
 	return fmt.Sprintf("\nName:%s\nType:%s\nData:%+v\n", i.Name, i.Type, i.Data)
 }
+
 type InFieldData struct {
 	Value string `json:"value"`
 	Text  string `json:"text"`
@@ -97,6 +99,10 @@ type OutCommand struct {
 	Form     *OutForm `json:"form,omitempty"`
 }
 
+func (oc OutCommand) String() string {
+	return fmt.Sprintf("Command to send:\n\t%v[%v], position:%v, fixed? %v, repeated? %v, \n\t\tform: %+v;", oc.Title, oc.Action, oc.Position, oc.Fixed, oc.Repeated, oc.Form)
+}
+
 type OutMessage struct {
 	ID       string        `json:"id"`
 	Type     string        `json:"type,omitempty"`
@@ -136,8 +142,17 @@ type BotContext struct {
 
 func (bc BotContext) String() string {
 	check, ok := bc.Check()
-	return fmt.Sprintf("\nBot context for %v\nChecked?: %v (%v)\nRequestCommands: %+v\n MessageCommands: %+v\nCommands: %+v\nSettings: %+v\n", bc.Name, ok, check, bc.Request_commands, bc.Message_commands, bc.Commands, bc.Settings)
+	var available_cmds string
+	for name, cmds := range bc.Commands {
+		cmds_represent := []string{}
+		for _, cmd := range *cmds {
+			cmds_represent = append(cmds_represent, cmd.String())
+		}
+		available_cmds += fmt.Sprintf("\n\tFor state: [%v] next commands: \n\t%v", name, strings.Join(cmds_represent, "\n\t"))
+	}
+	return fmt.Sprintf("\nBot context for %v\nChecked?: %v (%v)\nRequestCommands: %+v\nMessageCommands: %+v\nAvailable commands: %+v\nSettings: %+v\n", bc.Name, ok, check, bc.Request_commands, bc.Message_commands, available_cmds, bc.Settings)
 }
+
 type MessageResult struct {
 	Commands   *[]OutCommand
 	Body       string
