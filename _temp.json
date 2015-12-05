@@ -1,65 +1,91 @@
-curl -XPOST "http://localhost:9200/autocomplete" -d '{
-  "settings": {
-    "index": {
-      "analysis": {
-        "analyzer": {
-          "autocomplete_analyzer": {
-            "type": "custom",
-            "tokenizer": "lowercase",
-            "filter": [
-              "asciifolding",
-              "title_ngram"
-            ]
-          }
-        },
-        "filter": {
-          "title_ngram": {
-            "type": "nGram",
-            "min_gram": 3,
-            "max_gram": 5
-          }
+{
+  "LoginInfo": {
+    "ID": -1,
+    "AccountID": -1,
+    "Login": "",
+    "Name": "",
+    "Nick": "",
+    "Patronymic": "",
+    "SecondName": "",
+    "Email": "",
+    "Description": "",
+    "RegistrationDate": new
+    Date
+    (
+    1449342759795
+    ),
+    "Photo": false,
+    "Mobile": -1,
+    "AnonymousOrder": false,
+    "IsAnonymous": true,
+    "IsWebDispatcher": false,
+    "IsManager": false,
+    "IsCustomer": false,
+    "IsVip": false,
+    "IsDriver": false,
+    "IsEmployee": false,
+    "IsAdmin": false,
+    "IsSiteAdmin": false,
+    "IsGeoController": false,
+    "IsGeoObject": false,
+    "IsFarmer": false,
+    "AffilateOrders": false,
+    "AllowCustomerCost": true,
+    "AllowAuction": true,
+    "AllowCalc": true,
+    "Balance": {
+      "AccountID": -1,
+      "Currency": "?",
+      "Credit": 0.0,
+      "Locked": 0.0,
+      "Value": 0.0
+    },
+    "Phones": [],
+    "Addresses": [
+      {
+        "Id": 426472,
+        "CountryName": "Russia",
+        "CityName": "Москва",
+        "LocalityName": "",
+        "PostalCode": "",
+        "StreetName": "",
+        "ObjectName": "",
+        "HouseNumber": "",
+        "ApartmentNumber": "",
+        "EntranceNumber": 0,
+        "GeoPoint": {
+          "Latitude": 55.755786,
+          "Longitude": 37.617633
         }
       }
+    ],
+    "Culture": "ru-ru",
+    "Currency": "?",
+    "Affiliate": true,
+    "Promocode": -1,
+    "Owner": {
+      "Desc": "",
+      "Phones": [
+        "+74950000000"
+      ],
+      "Type": {
+        "Name": "TaxiDrivers",
+        "ID": "taxidrivers"
+      },
+      "CashlessOrder": true,
+      "AccountID": 1248,
+      "StartPayment": 100.0,
+      "Currency": "?",
+      "GroupRating": 0.2933537057968933639249522448,
+      "GroupRatingWithoutCredit": 0.132750918567641557705705671,
+      "UseRatingForDirectRegistration": true,
+      "DefaultCommission": 0.03,
+      "AndroidApp": "https://play.google.com/store/apps/details?id=ru.sedi.customer.taximaster",
+      "IOSApp": "http://store.apple.com",
+      "AllowDriversQueryForWeb": true,
+      "ID": 48,
+      "Name": "Test"
     }
   },
-  "mappings": {
-    "name": {
-      "_all": {
-        "enabled": false
-      },
-      "properties": {
-        "default": {
-          "type": "string",
-          "analyzer": "autocomplete_analyzer"
-        },
-        "ru": {
-          "type": "string",
-          "analyzer": "autocomplete_analyzer"
-        }
-      }
-    },
-    "street": {
-      "_all": {
-        "enabled": false
-      },
-      "properties": {
-        "default": {
-          "type": "string",
-          "analyzer": "autocomplete_analyzer"
-        },
-        "ru": {
-          "type": "string",
-          "analyzer": "autocomplete_analyzer"
-        }
-      }
-    },
-    "osm_id": {
-      "properties": {
-        "osm_id": {
-          "type": "long",
-          "index": "not_analyzed"
-        }
-      }
-    }
-  }
-}'
+  "Success": true
+}

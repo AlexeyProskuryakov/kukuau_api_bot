@@ -421,5 +421,5 @@ func (m *TaxiMasterAPI)AddressesSearch(query string) t.AddressPackage {
 }
 
 func (m *TaxiMasterAPI)IsConnected() bool {
-	return false
+	return true
 }

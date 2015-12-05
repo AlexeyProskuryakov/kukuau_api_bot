@@ -12,6 +12,8 @@ import (
 	t "msngr/taxi"
 	"fmt"
 	"msngr"
+	"net/url"
+	"net"
 )
 
 const TRY_COUNT = 10
@@ -61,8 +63,11 @@ type infinity struct {
 	Config        t.TaxiAPIConfig
 }
 
-// Global API variable
-var instance *infinity
+func get_domain(conn_string string) string {
+	u, _ := url.Parse(conn_string)
+	host, _, _ := net.SplitHostPort(u.Host)
+	return host
+}
 
 func (i infinity) String() string {
 	return fmt.Sprintf("\nInfinity API processing.\nConnection strings:%+v\nLogon?:%v, time:%v client id:%v\nid_service: %v", i.ConnStrings, i.LoginResponse.Success, i.LoginTime, i.LoginResponse.IDClient, i.Config.GetIdService())
@@ -151,7 +156,7 @@ func (p *infinity) Login(login, password string) bool {
 			Name:   "JSESSIONID",
 			Value:  p.LoginResponse.SessionID,
 			Path:   "/",
-			Domain: "109.202.25.248",
+			Domain: get_domain(p.ConnStrings[0]),
 		}
 		p.LoginTime = time.Now()
 
