@@ -30,7 +30,7 @@ const (
 	CAN_NOT_ESTIMATE_COST = "Предложите свою стоимость за поездку"
 
 	ORDER_INFO_DATE_FORMAT = time.RFC3339
-	ORDER_REFRESH_TIME = 12
+	ORDER_REFRESH_TIME = 11.0
 )
 
 func isCanCheck(message string) bool {
@@ -105,6 +105,10 @@ func NewSediAPI(api_data *configuration.ApiData) *SediAPI {
 type SediResponse struct {
 	Success bool `json:"Success"`
 	Message string `json:"Message"`
+}
+
+func (s *SediAPI) IsConnected() bool {
+	return s.userkey != ""
 }
 
 func (s *SediAPI) updateCookies(cookies []*http.Cookie) {
@@ -574,7 +578,7 @@ func (s *SediAPI) AddressesSearch(text string) t.AddressPackage {
 	result := t.AddressPackage{}
 
 	req, err := http.NewRequest("GET", s.Host + AUTOCOMPLETE_POSTFIX, nil)
-//	req, err := http.NewRequest("GET", "http://api.sedi.ru" + AUTOCOMPLETE_POSTFIX, nil)
+	//	req, err := http.NewRequest("GET", "http://api.sedi.ru" + AUTOCOMPLETE_POSTFIX, nil)
 	if err != nil {
 		log.Printf("SEDI GET request error in request")
 	}
@@ -760,7 +764,7 @@ func (s *SediAPI)Orders() []t.Order {
 	result := []t.Order{}
 	response := SediOrdersResponse{}
 
-	if time.Now().Sub(s.LastOrderRequestTime).Seconds() > ORDER_REFRESH_TIME && s.LastOrderResponse != nil {
+	if time.Now().Sub(s.LastOrderRequestTime).Seconds() < ORDER_REFRESH_TIME && s.LastOrderResponse != nil {
 		response = *s.LastOrderResponse
 	} else {
 		res, err := s.SimpleGetRequest("get_orders", map[string]string{})
@@ -773,14 +777,14 @@ func (s *SediAPI)Orders() []t.Order {
 			log.Printf("SEDI ORDERS INFO UNMARSHALL ERROR %v, \nres %s", err, res)
 			return result
 		}
-	}
-	if !response.Success {
-		log.Printf("SEDI ORDERS INFO ERROR %v", response.Message)
-		return result
+		if !response.Success {
+			log.Printf("SEDI ORDERS INFO ERROR %v", response.Message)
+			return result
+		}
+		s.LastOrderResponse = &response
+		s.LastOrderRequestTime = time.Now()
 	}
 
-	s.LastOrderResponse = &response
-	s.LastOrderRequestTime = time.Now()
 	return s.toInternalOrders(response)
 }
 func (s *SediAPI)Feedback(f t.Feedback) (bool, string) {

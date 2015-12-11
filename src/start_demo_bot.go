@@ -3,6 +3,7 @@ package main
 import (
 	"fmt"
 	"log"
+
 	m "msngr"
 	t "msngr/taxi"
 	i "msngr/taxi/infinity"
@@ -13,6 +14,8 @@ import (
 	cnsl "msngr/console"
 	rp "msngr/ruposts"
 	c "msngr/configuration"
+	"msngr/taxi/sedi"
+
 	"net/http"
 	"time"
 	"errors"
@@ -27,6 +30,10 @@ func GetTaxiAPIInstruments(params c.TaxiApiParams) (t.TaxiInterface, t.AddressSu
 		return i.GetInfinityAPI(params), i.GetInfinityAddressSupplier(params), nil
 	case "fake":
 		return t.GetFakeAPI(params), i.GetInfinityAddressSupplier(params), nil
+	case "sedi":
+		api_data := params.Data
+		sedi_api := sedi.NewSediAPI(&api_data)
+		return sedi_api, sedi_api, nil
 	}
 	return nil, nil, errors.New("Not imply name of api")
 }
@@ -47,7 +54,6 @@ func InsertTestUser(db *d.DbHandlerMixin, user, pwd *string) {
 func get_address_instruments(c c.Configuration, taxi_name string, external_supplier t.AddressSupplier) (t.AddressHandler, t.AddressSupplier) {
 	own := t.NewOwnAddressHandler(c.Main.ElasticConn, c.Taxis[taxi_name].GeoOrbit, external_supplier)
 	if own == nil {
-
 		google := t.NewGoogleAddressHandler(c.Main.GoogleKey, c.Taxis[taxi_name].GeoOrbit, external_supplier)
 		if google == nil {
 			log.Printf("Will use external address receiver")
@@ -107,7 +113,6 @@ func main() {
 		})
 
 		http.HandleFunc(fmt.Sprintf("/taxi/%v/streets", taxi_conf.Name), func(w http.ResponseWriter, r *http.Request) {
-			//			t.StreetsSearchController(w, r, google_address_handler)
 			t.StreetsSearchController(w, r, address_supplier)
 		})
 	}
