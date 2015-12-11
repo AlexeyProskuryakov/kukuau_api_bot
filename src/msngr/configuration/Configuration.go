@@ -7,17 +7,28 @@ import (
 	u "msngr/utils"
 	"fmt"
 )
+type ApiData struct {
+	Host               string `json:"host"`
+	Login              string `json:"login"`
+	Password           string `json:"password"`
+	ConnectionsStrings []string `json:"connection_strings"`
+	IdService          string `json:"id_service"`
+
+	BearerToken        string `json:"bearer_token"`
+
+	AppKey             string `json:"app_key"`
+	ApiKey             string `json:"api_key"`
+	City               string `json:"city"`
+	Phone              string `json:"phone"`
+	Name               string `json:"name"`
+	SaleKeyword        string `json:"sale_kw"`
+
+}
+
 
 type TaxiApiParams struct {
 	Name         string `json:"name"`
-	Data         struct {
-					 Host               string `json:"host"`
-					 Login              string `json:"login"`
-					 Password           string `json:"password"`
-					 ConnectionsStrings []string `json:"connection_strings"`
-					 IdService          string `json:"id_service"`
-					 BearerToken        string `json:"bearer_token"`
-				 } `json:"data"`
+	Data         ApiData `json:"data"`
 	Fake         struct {
 					 SendedStates []int `json:"sended_states"`
 					 SleepTime    int `json:"sleep_time"`
@@ -46,6 +57,9 @@ func (api TaxiApiParams) GetIdService() string {
 	return api.Data.IdService
 }
 
+func (api TaxiApiParams) GetAPIData() ApiData {
+	return api.Data
+}
 
 type TaxiGeoOrbit struct {
 	Lat    float64 `json:"lat"`
@@ -54,16 +68,16 @@ type TaxiGeoOrbit struct {
 }
 
 type TaxiConfig struct {
-	Api         TaxiApiParams `json:"api"`
-	DictUrl     string `json:"dict_url"`
-	Key         string `json:"key"`
-	Name        string `json:"name"`
-	Information struct {
-					Phone string `json:"phone"`
-					Text  string `json:"text"`
-				} `json:"information"`
-	GeoOrbit    TaxiGeoOrbit `json:"geo_orbit"`
-	Markups     *[]string `json:"markups,omitempty"`
+	Api               TaxiApiParams `json:"api"`
+	DictUrl           string `json:"dict_url"`
+	Key               string `json:"key"`
+	Name              string `json:"name"`
+	Information       struct {
+						  Phone string `json:"phone"`
+						  Text  string `json:"text"`
+					  } `json:"information"`
+	GeoOrbit          TaxiGeoOrbit `json:"geo_orbit"`
+	Markups           *[]string `json:"markups,omitempty"`
 	AvailableCommands map[string][]string `json:"available_commands"`
 }
 
@@ -82,7 +96,7 @@ type Configuration struct {
 			   ConsoleAddr  string `json:"console_addr"`
 			   LoggingFile  string `json:"log_file"`
 			   GoogleKey    string `json:"google_key"`
-		       ElasticConn	string `json:"elastic_conn"`
+			   ElasticConn  string `json:"elastic_conn"`
 			   Database     struct {
 								ConnString string `json:"connection_string"`
 								Name       string `json:"name"`
@@ -96,7 +110,6 @@ type Configuration struct {
 			   WorkUrl     string `json:"work_url"`
 		   } `json:"ru_post"`
 }
-
 
 
 func ReadConfig() Configuration {

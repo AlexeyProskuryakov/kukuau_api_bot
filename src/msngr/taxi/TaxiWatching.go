@@ -23,9 +23,13 @@ func FormNotification(context *TaxiContext, ow *d.OrderWrapper, previous_state i
 
 	switch ow.OrderState {
 	case ORDER_ASSIGNED:
-		text = fmt.Sprintf("%v %v, время подачи %v.", nominated, car_info, deliv_time.Format("15:04"))
+		if previous_state != ORDER_ASSIGNED{
+			text = fmt.Sprintf("%v %v, время подачи %v.", nominated, car_info, deliv_time.Format("15:04"))
+		}
 	case ORDER_CAR_SET_OUT:
-		text = fmt.Sprintf("%v, время подачи %v", car_set_out, deliv_time.Format("15:04"))
+		if previous_state != ORDER_CAR_SET_OUT{
+			text = fmt.Sprintf("%v, время подачи %v", car_set_out, deliv_time.Format("15:04"))
+		}
 	case ORDER_CLIENT_WAIT:
 		if previous_state == ORDER_CREATED {
 			text = fmt.Sprintf("%v %v %v %v.", car_arrived, good_passage, nominated, car_info)

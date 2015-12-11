@@ -153,8 +153,14 @@
         "data": {
           "login": "test1",
           "password": "test1",
-          "connection_strings": ["http://109.202.25.248:8080/WebAPITaxi/"],
-          "host": "109.202.25.248:8080"
+          "connection_strings": [],
+          "host": "http://test2.sedi.ru",
+          "api_key": "76E3F6C3-285C-4BC8-BCB6-E0CF26B39FE1",
+          "user_key": "6_kilogram_tarelok%)",
+          "city": "Санкт-Петербург",
+          "phone": "+79811064022",
+          "name": "4ikist",
+          "sale_kw":""
         },
         "not_send_price": true,
         "available_commands": {

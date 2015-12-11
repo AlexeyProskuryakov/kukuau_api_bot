@@ -1,5 +1,6 @@
 package taxi
 
+import "msngr/configuration"
 
 type TaxiAPIConfig interface {
 	GetHost() string
@@ -7,4 +8,5 @@ type TaxiAPIConfig interface {
 	GetLogin() string
 	GetPassword() string
 	GetIdService() string
+	GetAPIData() configuration.ApiData
 }

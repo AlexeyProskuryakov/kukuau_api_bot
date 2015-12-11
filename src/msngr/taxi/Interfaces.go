@@ -5,6 +5,9 @@ type ConnectInterface interface {
 }
 
 type TaxiInterface interface {
+	/**
+	Сия херь переопределяется остальными таксоматорскими АПИшками...
+	 */
 	ConnectInterface
 	NewOrder(order NewOrderInfo) Answer //создани нового заказа
 	CalcOrderCost(order NewOrderInfo) (int, string) //рассчет стоймости заказа

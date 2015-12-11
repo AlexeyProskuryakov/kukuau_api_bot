@@ -9,22 +9,30 @@ import (
 )
 
 type AddressF struct {
-	OSM_ID     int64    `json:"osm_id"`
-	GID        string
-	ID         int64  `json:"ID"`
-	IDParent   int64  `json:"IDParent,omitempty"`
-	Name       string `json:"Name"`
-	ShortName  string `json:"ShortName,omitempty"`
-	ItemType   int64  `json:"ItemType,omitempty"`
-	FullName   string `json:"FullName"`
-	IDRegion   int64  `json:"IDRegion"`
-	IDDistrict int64  `json:"IDDistrict"`
-	IDCity     int64  `json:"IDCity"`
-	IDPlace    int64  `json:"IDPlace"`
-	Region     string `json:"Region,omitempty"`
-	District   string `json:"District,omitempty"`
-	City       string `json:"City"`
-	Place      string `json:"Place,omitempty"`
+
+	Coordinates Coordinates
+
+	OSM_ID      int64  `json:"osm_id"`
+	GID         string
+	ID          int64  `json:"ID"`
+
+	Name        string `json:"Name"`
+	City        string `json:"City"`
+
+	IDParent    int64  `json:"IDParent,omitempty"`
+	ShortName   string `json:"ShortName,omitempty"`
+	ItemType    int64  `json:"ItemType,omitempty"`
+	FullName    string `json:"FullName"`
+	IDRegion    int64  `json:"IDRegion"`
+	IDDistrict  int64  `json:"IDDistrict"`
+	IDCity      int64  `json:"IDCity"`
+	IDPlace     int64  `json:"IDPlace"`
+	Region      string `json:"Region,omitempty"`
+	District    string `json:"District,omitempty"`
+	Place       string `json:"Place,omitempty"`
+
+	PostalCode  string
+	HouseNumber string
 }
 
 func (a AddressF) String() string {
@@ -101,6 +109,23 @@ type Destination struct {
 	IdFastAddress *string  `json:"idFastAddress,omitempty"` // : <ID быстрого адреса. Дополнительное информационное поле, описывающее быстрый адрес, связанный с указанным адресом. Значение учитывается только при указании idAddress>
 }
 
+func (d Destination) String() string {
+	return fmt.Sprintf("[%v] [Region:%v, Street:%v] Street: %v, House: %v {Building: %v, Fraction: %v, Entrance: %v, Apartment: %v}(IDS place: %v, city: %v, district: %v)\n",
+		d.IdAddress,
+		d.IdRegion,
+		d.IdDistrict,
+		d.Street,
+		d.House,
+		d.Building,
+		d.Fraction,
+		d.Entrance,
+		d.Apartment,
+		d.IdPlace,
+		d.IdCity,
+		d.IdDistrict,
+	)
+}
+
 type Delivery struct {
 
 	IdRegion      int64 `json:"idRegion"`                   // <Идентификатор региона (Int64)>,
@@ -127,6 +152,23 @@ type Delivery struct {
 
 }
 
+func (d Delivery) String() string {
+	return fmt.Sprintf("[%v] [Region:%v, Street:%v] Street: %v, House: %v {Building: %v, Fraction: %v, Entrance: %v, Apartment: %v}(IDS place: %v, city: %v, district: %v)",
+		d.IdAddress,
+		d.IdRegion,
+		d.IdDistrict,
+		d.Street,
+		d.House,
+		d.Building,
+		d.Fraction,
+		d.Entrance,
+		d.Apartment,
+		d.IdPlace,
+		d.IdCity,
+		d.IdDistrict,
+	)
+}
+
 type NewOrderInfo struct {
 																 //request
 	Phone           string `json:"phone"`
@@ -139,6 +181,21 @@ type NewOrderInfo struct {
 	Delivery        Delivery      `json:"delivery"`              // Инфомация о месте подачи машины
 	Destinations    []Destination `json:"destinations"`          // Пункты назначения заказа (массив, не может быть пустым)
 	IsNotCash       *bool          `json:"isNotCash,omitempty"`  //: // Флаг безналичного заказа <true или false (bool)>
+}
+
+func (o *NewOrderInfo) String() string {
+	return fmt.Sprintf("New Order Info:\n\tPhone: %s; \n\tDelivery time: %v, after: %v minutes; \n\tIdService: %v, Notes: %+v, Markups: %+v, Attributes: %+v, Not cash? %v\n\tDelivery: %v\n\tDestinations: %+v\n",
+		o.Phone,
+		o.DeliveryTime,
+		o.DeliveryMinutes,
+		o.IdService,
+		o.Notes,
+		o.Markups,
+		o.Attributes,
+		o.IsNotCash,
+		o.Delivery,
+		o.Destinations,
+	)
 }
 
 type Order struct {
@@ -171,6 +228,13 @@ type Order struct {
 func (o *Order) ToOrderData() db.OrderData {
 	odc, _ := utils.ToMap(o, "json")
 	return db.NewOrderData(odc)
+}
+
+func (o Order) String() string {
+	return fmt.Sprintf("Order [%v]\n\tState:%v, Cost:%v, TimeArrival:%+v, TimeDelivery:%+v, IdCar:%v",
+		o.ID,
+		o.State, o.Cost, o.TimeArrival, o.TimeDelivery, o.IDCar,
+	)
 }
 
 type AnswerContent struct {

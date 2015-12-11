@@ -99,7 +99,7 @@ var CommandsData = map[string]s.OutCommand{
 
 }
 
-func EnsureAvailableCommands(default_cmds map[string]*[]s.OutCommand, available_cmds_info map[string][]string) map[string] *[]s.OutCommand{
+func EnsureAvailableCommands(default_cmds map[string]*[]s.OutCommand, available_cmds_info map[string][]string) map[string]*[]s.OutCommand {
 	//ensuring commands
 	for cmd_type, cmd_names := range available_cmds_info {
 		if cmds_p, ok := default_cmds[cmd_type]; ok {
@@ -537,6 +537,8 @@ func (nop *TaxiNewOrderProcessor) ProcessMessage(in *s.InPkg) *s.MessageResult {
 				log.Printf("markups setting present but it is not []string %+v, %T", mrkps, mrkps)
 			}
 		}
+		//get info about cost
+		cost, _ := nop.API.CalcOrderCost(*new_order)
 		//send command to create order to external api
 		ans := nop.API.NewOrder(*new_order)
 		//check is answer of new order in external api has error
@@ -544,15 +546,8 @@ func (nop *TaxiNewOrderProcessor) ProcessMessage(in *s.InPkg) *s.MessageResult {
 			nop.Errors.StoreError(in.From, ans.Message)
 			return s.ErrorMessageResult(errors.New(ans.Message), nop.context.Commands[CMDS_NOT_CREATED_ORDER])
 		}
-
 		log.Printf("Order was created! %+v \n with content: %+v", ans, ans.Content)
-		cost := ans.Content.Cost
-		if cost == 0 {
-			cost, _ = nop.API.CalcOrderCost(*new_order)
-			if cost == 0 {
-				log.Printf("ALERT! Создан заказ [%+v] без денег!", ans.Content.Id)
-			}
-		}
+
 		//not send price settings
 		not_send_price := false
 		nsp_, ok := nop.context.Settings["not_send_price"]

@@ -30,7 +30,7 @@ REQUEST_DENIED – означает, что запрос отклонен, ка�
 INVALID_REQUEST – как правило, отсутствует обязательный параметр запроса (location или radius).
 */
 
-var cc_reg = regexp.MustCompilePOSIX("(ул(ица|\\.| )|пр(\\.|оспект|\\-кт)?|пер(\\.|еулок| )|г(ород|\\.|ор\\.| )|обл(асть|\\.| )|р(айон|\\-н )|^с )?")
+var CC_REGEXP = regexp.MustCompilePOSIX("(ул(ица|\\.| )|пр(\\.|оспект|\\-кт)?|пер(\\.|еулок| )|г(ород|\\.|ор\\.| )|обл(асть|\\.| )|р(айон|\\-н )|^с )?")
 
 var NOT_IMPLY_TYPES = []string{"country"}
 const GOOGLE_API_URL = "https://maps.googleapis.com/maps/api"
@@ -423,7 +423,7 @@ func StreetsSearchController(w http.ResponseWriter, r *http.Request, i AddressSu
 
 func _clear_address_string(element string) (string) {
 	result := strings.ToLower(element)
-	result_raw := cc_reg.ReplaceAllString(result, "")
+	result_raw := CC_REGEXP.ReplaceAllString(result, "")
 	result = string(result_raw)
 	result = strings.TrimSpace(result)
 	return result

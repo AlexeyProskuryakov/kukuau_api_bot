@@ -1,91 +1,131 @@
 {
-  "LoginInfo": {
-    "ID": -1,
-    "AccountID": -1,
-    "Login": "",
-    "Name": "",
-    "Nick": "",
-    "Patronymic": "",
-    "SecondName": "",
-    "Email": "",
-    "Description": "",
-    "RegistrationDate": new
-    Date
-    (
-    1449342759795
-    ),
-    "Photo": false,
-    "Mobile": -1,
-    "AnonymousOrder": false,
-    "IsAnonymous": true,
-    "IsWebDispatcher": false,
-    "IsManager": false,
-    "IsCustomer": false,
-    "IsVip": false,
-    "IsDriver": false,
-    "IsEmployee": false,
-    "IsAdmin": false,
-    "IsSiteAdmin": false,
-    "IsGeoController": false,
-    "IsGeoObject": false,
-    "IsFarmer": false,
-    "AffilateOrders": false,
-    "AllowCustomerCost": true,
-    "AllowAuction": true,
-    "AllowCalc": true,
-    "Balance": {
-      "AccountID": -1,
-      "Currency": "?",
-      "Credit": 0.0,
-      "Locked": 0.0,
-      "Value": 0.0
-    },
-    "Phones": [],
-    "Addresses": [
-      {
-        "Id": 426472,
-        "CountryName": "Russia",
-        "CityName": "Москва",
-        "LocalityName": "",
-        "PostalCode": "",
-        "StreetName": "",
-        "ObjectName": "",
-        "HouseNumber": "",
-        "ApartmentNumber": "",
-        "EntranceNumber": 0,
-        "GeoPoint": {
-          "Latitude": 55.755786,
-          "Longitude": 37.617633
-        }
-      }
-    ],
-    "Culture": "ru-ru",
-    "Currency": "?",
-    "Affiliate": true,
-    "Promocode": -1,
-    "Owner": {
-      "Desc": "",
-      "Phones": [
-        "+74950000000"
-      ],
-      "Type": {
-        "Name": "TaxiDrivers",
-        "ID": "taxidrivers"
+  "Orders": [
+    {
+      "Owner": {
+        "Desc": "",
+        "Phones": [
+          "+79612183729"
+        ],
+        "Type": {
+          "Name": "TaxiDrivers",
+          "ID": "taxidrivers"
+        },
+        "CashlessOrder": false,
+        "Currency": "?",
+        "GroupRating": 10000.0600,
+        "GroupRatingWithoutCredit": 10000.0600,
+        "UseRatingForDirectRegistration": true,
+        "DefaultCommission": 0.03,
+        "AllowDriversQueryForWeb": true,
+        "ID": 817,
+        "Name": "КуКу-Ау"
       },
-      "CashlessOrder": true,
-      "AccountID": 1248,
-      "StartPayment": 100.0,
+      "Status": {
+        "Name": "Заказвпоискеводителя",
+        "ID": "search"
+      },
+      "Date": 1449786096083.0,
+      "Type": {
+        "Name": "Предварительный",
+        "ID": "preliminary"
+      },
+      "Route": {
+        "Points": [
+          {
+            "CountryName": "Russia",
+            "PostalCode": "630117",
+            "CityName": "Новосибирск",
+            "StreetName": "Российскаяулица",
+            "HouseNumber": "3",
+            "ObjectName": "",
+            "EntranceNumber": -1,
+            "GeoPoint": {
+              "Lon": 83.093401,
+              "Lat": 54.867191
+            },
+            "WaitTime": 0,
+            "ID": 1988633
+          },
+          {
+            "CountryName": "Russia",
+            "PostalCode": "630055",
+            "CityName": "Новосибирск",
+            "StreetName": "Российскаяулица",
+            "HouseNumber": "28",
+            "ObjectName": "",
+            "EntranceNumber": -1,
+            "GeoPoint": {
+              "Lon": 83.080743,
+              "Lat": 54.870294
+            },
+            "WaitTime": 0,
+            "ID": 1988635
+          }
+        ],
+        "Length": 0.88
+      },
+      "Cost": 124.0,
       "Currency": "?",
-      "GroupRating": 0.2933537057968933639249522448,
-      "GroupRatingWithoutCredit": 0.132750918567641557705705671,
-      "UseRatingForDirectRegistration": true,
-      "DefaultCommission": 0.03,
-      "AndroidApp": "https://play.google.com/store/apps/details?id=ru.sedi.customer.taximaster",
-      "IOSApp": "http://store.apple.com",
-      "AllowDriversQueryForWeb": true,
-      "ID": 48,
-      "Name": "Test"
+      "Tariff": {
+        "ID": 20812,
+        "Name": "test"
+      },
+      "RentHours": 0.0,
+      "Cashless": false,
+      "CarType": {
+        "ID": -1
+      },
+      "Customer": {
+        "AccountID": 0,
+        "Phone": "+79811064022",
+        "ID": -1,
+        "Name": "KUKUAPIBOT"
+      },
+      "Description": "test",
+      "Distance": -1.0,
+      "Registrator": {
+        "ID": -1,
+        "Name": ""
+      },
+      "Driver": {
+        "Photo": false,
+        "Rating": 0.0,
+        "AccountID": 0,
+        "ID": -1,
+        "Name": ""
+      },
+      "ChangeFare": false,
+      "ID": 993531,
+      "Props": {
+        "Category": {
+          "Name": "Taxi",
+          "ID": "taxi"
+        },
+        "Type": {
+          "ID": 2,
+          "Name": "Легковоетакси"
+        },
+        "Properties": [
+          {
+            "Key": "places",
+            "Type": "int",
+            "Required": true,
+            "Value": {
+              "ID": 12,
+              "Name": 4
+            },
+            "ID": 2,
+            "Name": "Количествомест"
+          }
+        ]
+      },
+      "CanCancel": true,
+      "CanEdit": false,
+      "CanMark": false,
+      "CanRefuse": false,
+      "CanDelegate": false,
+      "CanEditMode": true
     }
-  },
+  ],
   "Success": true
 }
