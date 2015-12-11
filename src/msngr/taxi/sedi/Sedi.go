@@ -687,7 +687,16 @@ var STATES_MAPPING = map[string]int{
 	"inway": 3,
 	"nearcustomer": 3,
 }
-
+type SediProperty struct {
+	Key   string `json:"Key"`
+	Type  string `json:"Type"`
+	Value struct {
+			  Id   int64 `json:"ID"`
+			  Name string `json:"Name"`
+		  } `json:"Value"`
+	Id    int64 `json:"ID"`
+	Name  string `json:"Name"`
+}
 
 type SediOrderInfo struct {
 	OrderId  int64 `json:"ID"`
@@ -714,6 +723,9 @@ type SediOrderInfo struct {
 			Number string `json:"Number"`
 			Id     int64 `json:"ID"`
 			Name   string `json:"Name"`
+			Props  *struct {
+				Properties []SediProperty `json:"Properties"`
+			}
 		} `json:"car,omitempty"`
 		Phone string `json:"Phone"`
 		Id    int64 `json:"ID"`
@@ -751,12 +763,25 @@ func (s *SediAPI) toInternalOrders(sor SediOrdersResponse) []t.Order {
 		}
 
 		if order.Driver != nil && order.Driver.Car != nil {
-			id_car := order.Driver.Car.Id
+			car := order.Driver.Car
+			id_car := car.Id
 			int_order.IDCar = id_car
+
 			if s.Cars == nil {
 				s.Cars = make(map[int64]t.CarInfo, 10)
 			}
-			s.Cars[id_car] = t.CarInfo{Model:order.Driver.Car.Name, Number:order.Driver.Car.Number, ID:id_car}
+
+			var color string
+			if car.Props != nil {
+				for _, prop := range car.Props.Properties {
+					if prop.Key == "color" {
+						color = prop.Value.Name
+						break
+					}
+				}
+			}
+			s.Cars[id_car] = t.CarInfo{Model:car.Name, Number:car.Number, ID:id_car, Color:color}
+
 		}
 		result = append(result, int_order)
 	}
