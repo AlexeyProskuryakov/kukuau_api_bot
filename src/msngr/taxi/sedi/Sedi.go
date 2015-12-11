@@ -753,6 +753,9 @@ func (s *SediAPI) toInternalOrders(sor SediOrdersResponse) []t.Order {
 		if order.Driver != nil && order.Driver.Car != nil {
 			id_car := order.Driver.Car.Id
 			int_order.IDCar = id_car
+			if s.Cars == nil {
+				s.Cars = make(map[int64]t.CarInfo, 10)
+			}
 			s.Cars[id_car] = t.CarInfo{Model:order.Driver.Car.Name, Number:order.Driver.Car.Number, ID:id_car}
 		}
 		result = append(result, int_order)
