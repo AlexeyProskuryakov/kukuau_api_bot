@@ -106,29 +106,25 @@ func process_message_pkg(buff *s.OutPkg, in *s.InPkg, context *s.BotContext) (*s
 	}
 
 	in_commands := in.Message.Commands
-	if in_commands == nil {
-		err = errors.New("Команд не найдено.")
-	} else {
-		for _, command := range *in_commands {
-			action := command.Action
-			if commandProcessor, ok := context.Message_commands[action]; ok {
-				messageResult := commandProcessor.ProcessMessage(in)
-				if messageResult.Error != nil {
-					err = messageResult.Error
-				}else {
-					//normal buff message forming
-					if messageResult.Type != "" {
-						buff.Message.Type = messageResult.Type
-					}
-					buff.Message.Body = messageResult.Body
-					buff.Message.Commands = messageResult.Commands
-					isDeferred = messageResult.IsDeferred
-					log.Printf("message result\ntype: %+v \nbody:%+v\ncommands:%+v\ndeffered?: %+v", messageResult.Type, buff.Message.Body, buff.Message.Commands, isDeferred)
+	for _, command := range *in_commands {
+		action := command.Action
+		if commandProcessor, ok := context.Message_commands[action]; ok {
+			messageResult := commandProcessor.ProcessMessage(in)
+			if messageResult.Error != nil {
+				err = messageResult.Error
+			}else {
+				//normal buff message forming
+				if messageResult.Type != "" {
+					buff.Message.Type = messageResult.Type
 				}
-			} else {
-				err = errors.New("Команда не поддерживается.")
-				buff.Message.Body = err.Error()
+				buff.Message.Body = messageResult.Body
+				buff.Message.Commands = messageResult.Commands
+				isDeferred = messageResult.IsDeferred
+				log.Printf("message result\ntype: %+v \nbody:%+v\ncommands:%+v\ndeffered?: %+v", messageResult.Type, buff.Message.Body, buff.Message.Commands, isDeferred)
 			}
+		} else {
+			err = errors.New("Команда не поддерживается.")
+			buff.Message.Body = err.Error()
 		}
 	}
 	return buff, isDeferred, err
@@ -163,6 +159,9 @@ func FormBotController(context *s.BotContext) controllerHandler {
 				out, request_error = process_request_pkg(out, in, context)
 			}
 			if in.Message != nil {
+				if in.Message.Commands == nil {
+					log.Printf("warn will sended message without commands: %v from %v (userdata: %v)", in.Message, in.From, in.UserData)
+				}
 				out, isDeferred, message_error = process_message_pkg(out, in, context)
 			}
 			if in.Message == nil && in.Request == nil {
