@@ -96,9 +96,11 @@ func NewSediAPI(api_data *configuration.ApiData) *SediAPI {
 		appkey:api_data.AppKey,
 
 		UserTariffs:map[string]*SediTariff{},
+		Cars:map[int64]t.CarInfo,
 	}
 	s.AuthorizeCustomer(api_data.Name, api_data.Phone)
 	s.Info, _ = s.GetProfile()
+	s.Cars[-1] = t.CarInfo{}
 	return &s
 }
 
@@ -766,10 +768,6 @@ func (s *SediAPI) toInternalOrders(sor SediOrdersResponse) []t.Order {
 			car := order.Driver.Car
 			id_car := car.Id
 			int_order.IDCar = id_car
-
-			if s.Cars == nil {
-				s.Cars = make(map[int64]t.CarInfo, 10)
-			}
 
 			var color string
 			if car.Props != nil {

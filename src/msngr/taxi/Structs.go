@@ -266,6 +266,9 @@ type CarInfo struct {
 }
 
 func (car CarInfo) String() string {
+	if car.Model == "" && car.Number == ""{
+		return fmt.Sprintf("Не опознана")
+	}
 	return fmt.Sprintf("%v %v с номером %v", car.Color, car.Model, car.Number)
 }
 
