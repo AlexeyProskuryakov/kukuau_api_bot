@@ -74,7 +74,35 @@ type SediAPI struct {
 	l                    *sync.Mutex
 }
 
-func (s *SediAPI) GetLastOrdersInfo() (*SediOrdersResponse, time.Time) {
+func (s *SediAPI) updateUserOrders(orders []SediOrderInfo) {
+	s.l.Lock()
+	for _, order := range orders {
+		s.userOrders[order.OrderId] = &order
+	}
+	s.l.Unlock()
+}
+
+func (s *SediAPI) deleteUserOrder(order_id int64) {
+	s.l.Lock()
+	delete(s.userOrders, order_id)
+	s.l.Unlock()
+}
+
+func (s *SediAPI) setCar(id int64, model, number, color string) {
+	s.l.Lock()
+	s.cars[id] = t.CarInfo{Model:model, Number:number, ID:id, Color:color}
+	s.l.Unlock()
+}
+
+func (s *SediAPI) setLastOrderResponse(sor *SediOrdersResponse) {
+	s.l.Lock()
+	s.lastOrderResponse = sor
+	s.lastOrderRequestTime = time.Now()
+	s.l.Unlock()
+}
+
+
+func (s *SediAPI) getLastOrdersInfo() (*SediOrdersResponse, time.Time) {
 	s.l.Lock()
 	lr, lt := s.lastOrderResponse, s.lastOrderRequestTime
 	s.l.Unlock()
@@ -117,6 +145,7 @@ func login(s *SediAPI, name, phone string) {
 	profile, _ := s.GetProfile()
 	s.Info = profile
 }
+
 func NewSediAPI(params cfg.TaxiApiParams) *SediAPI {
 	s := SediAPI{
 		Host:params.Data.Host,
@@ -739,7 +768,7 @@ func (s *SediAPI) toInternalOrders(sor *SediOrdersResponse) []t.Order {
 	for _, order := range sor.Orders {
 		order_state, ok := STATES_MAPPING[order.Status.Id]
 		if !ok {
-			log.Printf("SEDI WARNING for order %v \ncan not recognize state [%v]", order, order.Status)
+			continue
 		}
 		time_delivery := time.Unix(int64(order.Date), 0)
 		int_order := t.Order{
@@ -763,15 +792,8 @@ func (s *SediAPI) toInternalOrders(sor *SediOrdersResponse) []t.Order {
 					}
 				}
 			}
-			s.l.Lock()
-			s.cars[id_car] = t.CarInfo{Model:car.Name, Number:car.Number, ID:id_car, Color:color}
-			s.l.Unlock()
-
+			s.setCar(id_car, car.Name, car.Number, color)
 		}
-		s.l.Lock()
-		s.userOrders[order.OrderId] = &order
-		s.l.Unlock()
-
 		result = append(result, int_order)
 	}
 	return result
@@ -780,7 +802,7 @@ func (s *SediAPI) toInternalOrders(sor *SediOrdersResponse) []t.Order {
 func (s *SediAPI)Orders() []t.Order {
 	result := []t.Order{}
 	response := &SediOrdersResponse{}
-	lr, lt := s.GetLastOrdersInfo()
+	lr, lt := s.getLastOrdersInfo()
 	if time.Now().Sub(lt).Seconds() < ORDER_REFRESH_TIME && lr != nil {
 		response = lr
 	} else {
@@ -798,15 +820,12 @@ func (s *SediAPI)Orders() []t.Order {
 			log.Printf("SEDI ORDERS INFO ERROR %v", response.Message)
 			return result
 		}
-		s.l.Lock()
-		s.lastOrderResponse = response
-		s.lastOrderRequestTime = time.Now()
-		s.l.Unlock()
-
+		s.updateUserOrders(response.Orders)
 		order_ids := []string{}
 		for order_id, _ := range s.userOrders {
 			if !response.IsContains(order_id) {
 				order_ids = append(order_ids, strconv.FormatInt(order_id, 10))
+				s.deleteUserOrder(order_id)
 			}
 		}
 		if len(order_ids) > 0 {
@@ -821,9 +840,11 @@ func (s *SediAPI)Orders() []t.Order {
 			err = json.Unmarshal(add_res, &add_response)
 			if err != nil {
 				log.Printf("SEDi ORDERS ADDITIONAL INFO UNMARSHAL ERROR: %v\n%s", err, add_res)
+				return s.toInternalOrders(response)
 			}
 			response.Orders = append(response.Orders, add_response.Orders...)
 		}
+		s.setLastOrderResponse(response)
 	}
 	return s.toInternalOrders(response)
 }
