@@ -14,6 +14,7 @@ import (
 	s "msngr/taxi/set"
 	u "msngr/utils"
 	c "msngr/configuration"
+	m "msngr"
 	"gopkg.in/olivere/elastic.v2"
 	"reflect"
 )
@@ -77,11 +78,6 @@ type GooglePoint struct {
 	Lon float64 `json:"lng"`
 }
 
-type AddressHandler interface {
-	GetExternalInfo(key string) (*AddressF, error)
-	IsHere(key string) bool
-}
-
 type GoogleAddressHandler struct {
 	AddressSupplier
 	AddressHandler
@@ -94,7 +90,6 @@ type GoogleAddressHandler struct {
 	orbit                   c.TaxiGeoOrbit
 	ExternalAddressSupplier AddressSupplier
 }
-
 
 func NewGoogleAddressHandler(key string, orbit c.TaxiGeoOrbit, external AddressSupplier) *GoogleAddressHandler {
 	result := GoogleAddressHandler{key:key, orbit:orbit}
@@ -146,7 +141,7 @@ func (ah *GoogleAddressHandler) IsHere(key string) bool {
 	return distance < ah.orbit.Radius
 }
 
-func (ah *GoogleAddressHandler) GetExternalInfo(key string) (*AddressF, error) {
+func (ah *GoogleAddressHandler) GetExternalInfo(key, name string) (*AddressF, error) {
 	street_id, ok := ah.cache[key]
 	if ok {
 		return street_id, nil
@@ -174,7 +169,11 @@ func (ah *GoogleAddressHandler) GetExternalInfo(key string) (*AddressF, error) {
 		return nil, errors.New("GetStreetId: External service is not avaliable")
 	}
 
-	rows := ah.ExternalAddressSupplier.AddressesSearch(query).Rows
+	if m.DEBUG {
+		log.Printf("query is equal name? %v", query == name)
+	}
+
+	rows := ah.ExternalAddressSupplier.AddressesAutocomplete(query).Rows
 	if rows == nil {
 		return nil, errors.New("GetStreetId: no results at external")
 	}
@@ -195,8 +194,7 @@ func (ah *GoogleAddressHandler) GetExternalInfo(key string) (*AddressF, error) {
 	return nil, errors.New(fmt.Sprintf("No any results for [%v] address in external source", query))
 }
 
-
-func (ah *GoogleAddressHandler) AddressesSearch(q string) AddressPackage {
+func (ah *GoogleAddressHandler) AddressesAutocomplete(q string) AddressPackage {
 	rows := []AddressF{}
 	result := AddressPackage{Rows:&rows}
 	suff := "/place/autocomplete/json"
@@ -227,6 +225,10 @@ func (ah *GoogleAddressHandler) IsConnected() bool {
 	return true
 }
 
+
+/*
+Open street map and elastic search handler
+*/
 type OwnAddressHandler struct {
 	AddressSupplier
 	AddressHandler
@@ -260,7 +262,6 @@ func (oh *OwnAddressHandler) IsConnected() bool {
 	return false
 }
 
-
 type OsmAutocompleteEntity struct {
 	Name   string `json:"name"`
 	OSM_ID int64 `json:"osm_id"`
@@ -282,7 +283,7 @@ func get_own_result(client *elastic.Client, t_query elastic.TermQuery) []Address
 	return rows
 }
 
-func (oh *OwnAddressHandler) AddressesSearch(q string) AddressPackage {
+func (oh *OwnAddressHandler) AddressesAutocomplete(q string) AddressPackage {
 	rows := []AddressF{}
 	result := AddressPackage{Rows:&rows}
 	t_query := elastic.NewTermQuery("name", q)
@@ -334,7 +335,7 @@ func (oh *OwnAddressHandler) GetCoordinates(key string) *Coordinates {
 	return nil
 }
 
-func (oh *OwnAddressHandler) GetExternalInfo(key string) (*AddressF, error) {
+func (oh *OwnAddressHandler) GetExternalInfo(key, name string) (*AddressF, error) {
 	t_query := elastic.NewTermQuery("osm_id", key)
 	s_result, err := oh.client.Search().Index("photon").Query(t_query).Do()
 	if err != nil {
@@ -344,11 +345,13 @@ func (oh *OwnAddressHandler) GetExternalInfo(key string) (*AddressF, error) {
 	for _, osm_hit := range s_result.Each(reflect.TypeOf(ogcr)) {
 		if entity, ok := osm_hit.(OwnGeoCodeResult); ok {
 			local_set := s.NewSet()
-			name := _clear_address_string(u.FirstOf(entity.Name.Ru, entity.Name.Default).(string))
-			_add_to_set(local_set, name)
+			_name := _clear_address_string(u.FirstOf(entity.Name.Ru, entity.Name.Default).(string))
+			_add_to_set(local_set, _name)
 			_add_to_set(local_set, _clear_address_string(u.FirstOf(entity.City.Ru, entity.City.Default).(string)))
-
-			rows := oh.ExternalAddressSupplier.AddressesSearch(name).Rows
+			if m.DEBUG{
+				log.Printf("OWN GEI name == _name ? %v", name == _name)
+			}
+			rows := oh.ExternalAddressSupplier.AddressesAutocomplete(_name).Rows
 			if rows == nil {
 				return nil, errors.New("GetStreetId: no results at external")
 			}
@@ -365,6 +368,8 @@ func (oh *OwnAddressHandler) GetExternalInfo(key string) (*AddressF, error) {
 	}
 	return nil, errors.New(fmt.Sprintf("No any results for [%v] address in external source", key))
 }
+
+
 
 func StreetsSearchController(w http.ResponseWriter, r *http.Request, i AddressSupplier) {
 	w.Header().Set("Content-type", "application/json")
@@ -383,7 +388,7 @@ func StreetsSearchController(w http.ResponseWriter, r *http.Request, i AddressSu
 				return
 			}
 			log.Printf("connected. All ok. Start querying for: %+v", query)
-			rows := i.AddressesSearch(query).Rows
+			rows := i.AddressesAutocomplete(query).Rows
 			if rows == nil {
 				return
 			}
@@ -420,6 +425,7 @@ func StreetsSearchController(w http.ResponseWriter, r *http.Request, i AddressSu
 		fmt.Fprintf(w, "%s", string(ans))
 	}
 }
+
 
 func _clear_address_string(element string) (string) {
 	result := strings.ToLower(element)
@@ -518,7 +524,6 @@ type DictItem struct {
 	Title    string `json:"title"`
 	SubTitle string `json:"subtitle"`
 }
-
 
 type InPlace struct {
 	StreetId   int64 `json:"ID"`

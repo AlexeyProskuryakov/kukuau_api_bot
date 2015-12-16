@@ -8,7 +8,8 @@
       "name": "bot",
       "connection_string": "localhost:27017"
     },
-    "google_key": "AIzaSyBXW3UaS5e4FtOt-XJqLFHGpvrFlf45DV4"
+    "google_key": "AIzaSyBXW3UaS5e4FtOt-XJqLFHGpvrFlf45DV4",
+    "elastic_conn": "http://localhost:9200/"
   },
   "taxis": {
     "marka": {
@@ -19,12 +20,12 @@
         "text": "Такси марка! Самое лучшее такси в академгородке!"
       },
       "name": "marka",
-      "geo_orbit": {
-        "lat": 54.642655,
-        "lon": 83.296285,
-        "radius": 1000000
-      },
       "api": {
+        "geo_orbit": {
+          "lat": 54.642655,
+          "lon": 83.296285,
+          "radius": 1000000
+        },
         "name": "infinity",
         "data": {
           "login": "test1",
@@ -66,11 +67,6 @@
         "not_send_price": false
       },
       "dict_url": "http://127.0.0.1:9191/taxi/academ/streets",
-      "geo_orbit": {
-        "lat": 54.642655,
-        "lon": 83.296285,
-        "radius": 1000000
-      },
       "information": {
         "phone": "123-45-67",
         "text": "Такси академ! Самое лучшее такси в академгородке!"
@@ -90,12 +86,12 @@
         "phone": "123-45-67",
         "text": "Такси Караван! Самое лучшее такси в Бердске!"
       },
-      "geo_orbit": {
-        "lat": 54.760457,
-        "lon": 83.103499,
-        "radius": 50000
-      },
       "api": {
+        "geo_orbit": {
+          "lat": 54.760457,
+          "lon": 83.103499,
+          "radius": 50000
+        },
         "name": "infinity",
         "data": {
           "login": "kukuau",
@@ -116,12 +112,12 @@
         "phone": "8 (383) 292-92-92",
         "text": "Такси Каретный Двор! Самое лучшее такси в Новосибирске!"
       },
-      "geo_orbit": {
-        "lat": 55.053353,
-        "lon": 82.965899,
-        "radius": 100000
-      },
       "api": {
+        "geo_orbit": {
+          "lat": 55.053353,
+          "lon": 82.965899,
+          "radius": 100000
+        },
         "name": "infinity",
         "data": {
           "login": "kukuau",
@@ -143,12 +139,12 @@
         "phone": "123-45-67",
         "text": "Такси ! Самое лучшее такси в академгородке!"
       },
-      "geo_orbit": {
-        "lat": 54.8580438,
-        "lon": 83.1100316,
-        "radius": 50000
-      },
       "api": {
+        "geo_orbit": {
+          "lat": 54.8580438,
+          "lon": 83.1100316,
+          "radius": 50000
+        },
         "name": "fake",
         "data": {
           "login": "test1",
@@ -160,7 +156,7 @@
           "city": "Санкт-Петербург",
           "phone": "+79811064022",
           "name": "4ikist",
-          "sale_kw":""
+          "sale_kw": ""
         },
         "not_send_price": true,
         "available_commands": {

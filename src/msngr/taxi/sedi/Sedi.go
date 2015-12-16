@@ -11,14 +11,16 @@ import (
 	"strconv"
 	"strings"
 	"time"
+	"sync"
 
 	t "msngr/taxi"
-	"msngr/configuration"
+	s "msngr/taxi/set"
+	cfg "msngr/configuration"
 	"msngr"
-
 )
 
 const (
+	SEDI = "sedi"
 	MAX_TRY_COUNT = 5
 
 	HOST_POSTFIX = "/handlers/sedi/api.ashx"
@@ -56,28 +58,44 @@ type SediAPI struct {
 	cookies              []*http.Cookie
 
 	Info                 *SediLoginInfo
-	City                 string
 	SaleKeyword          string
-
+	GeoOrbit             cfg.TaxiGeoOrbit
 	//some fields for hacking work
-	UserTariffs          map[string]*SediTariff
+	userTariffs          map[string]*SediTariff
+	userOrders           map[int64]*SediOrderInfo
 
-	LastOrderResponse    *SediOrdersResponse
-	LastOrderRequestTime time.Time
+	lastOrderResponse    *SediOrdersResponse
+	lastOrderRequestTime time.Time
 
-	Cars                 map[int64]t.CarInfo
+
+	cars                 map[int64]t.CarInfo
+	addressKeys          s.Set
+
+	l                    *sync.Mutex
+}
+
+func (s *SediAPI) GetLastOrdersInfo() (*SediOrdersResponse, time.Time) {
+	s.l.Lock()
+	lr, lt := s.lastOrderResponse, s.lastOrderRequestTime
+	s.l.Unlock()
+	return lr, lt
 }
 
 func (s *SediAPI) String() string {
-	return fmt.Sprintf("\nSEDI API: \n\tHost:%v, \n\tapi_key = %v, app_key = %v, user_key = %v \ninfo:%v \nUserTariffs: %v\nLastOrderResponseTime:%v, LastOrderResponse:%v\nCars:%v",
+	s.l.Lock()
+	res := fmt.Sprintf("\nSEDI API: \n\tHost:%v, \n\tapi_key = %v, app_key = %v, user_key = %v \ninfo:%v \nUserTariffs: %v\nLastOrderResponseTime:%v, LastOrderResponse:%v\nCars:%v\nAdressKeys:%+v",
 		s.Host,
 		s.apikey, s.appkey, s.userkey,
 		s.Info,
-		s.UserTariffs,
-		s.LastOrderRequestTime, s.LastOrderResponse,
-		s.Cars,
+		s.userTariffs,
+		s.lastOrderRequestTime, s.lastOrderResponse,
+		s.cars,
+		s.addressKeys,
 	)
+	s.l.Unlock()
+	return res
 }
+
 func prepareResponse(input []byte) []byte {
 	reg := regexp.MustCompile("new Date\\((?P<time_stamp>\\d+)\\)")
 	output := reg.ReplaceAll(input, []byte("$time_stamp.0"))
@@ -86,21 +104,37 @@ func prepareResponse(input []byte) []byte {
 	return output
 }
 
-func NewSediAPI(api_data *configuration.ApiData) *SediAPI {
-	s := SediAPI{
-		Host:api_data.Host,
-		City:api_data.City,
-		SaleKeyword:api_data.SaleKeyword,
-
-		apikey:api_data.ApiKey,
-		appkey:api_data.AppKey,
-
-		UserTariffs:map[string]*SediTariff{},
-		Cars:map[int64]t.CarInfo,
+func login(s *SediAPI, name, phone string) {
+	for {
+		_, err := s.AuthorizeCustomer(name, phone)
+		if err == nil {
+			break
+		} else {
+			log.Printf("SEDI Will try to reconnect to API server...")
+		}
+		time.Sleep(5 * time.Second)
 	}
-	s.AuthorizeCustomer(api_data.Name, api_data.Phone)
-	s.Info, _ = s.GetProfile()
-	s.Cars[-1] = t.CarInfo{}
+	profile, _ := s.GetProfile()
+	s.Info = profile
+}
+func NewSediAPI(params cfg.TaxiApiParams) *SediAPI {
+	s := SediAPI{
+		Host:params.Data.Host,
+		SaleKeyword:params.Data.SaleKeyword,
+
+		GeoOrbit:params.GeoOrbit,
+		apikey:params.Data.ApiKey,
+		appkey:params.Data.AppKey,
+
+		userTariffs:map[string]*SediTariff{},
+		userOrders:map[int64]*SediOrderInfo{},
+
+		cars:map[int64]t.CarInfo{},
+		l:&sync.Mutex{},
+		addressKeys: s.NewSet(),
+	}
+	go login(&s, params.Data.Name, params.Data.Phone)
+	s.cars[-1] = t.CarInfo{}
 	return &s
 }
 
@@ -110,7 +144,10 @@ type SediResponse struct {
 }
 
 func (s *SediAPI) IsConnected() bool {
-	return s.userkey != ""
+	s.l.Lock()
+	res := s.userkey != ""
+	s.l.Unlock()
+	return res
 }
 
 func (s *SediAPI) updateCookies(cookies []*http.Cookie) {
@@ -159,7 +196,7 @@ func (s *SediAPI) doReq(req *http.Request) ([]byte, error) {
 	return []byte{}, errors.New(fmt.Sprintf("Error at do request... %#v", req))
 }
 
-func (s *SediAPI) SimpleGetRequest(q string, params map[string]string) ([]byte, error) {
+func (s *SediAPI) getRequest(q string, params map[string]string) ([]byte, error) {
 	if s.apikey == "" || s.appkey == "" {
 		panic("Before simple request api key and user key required")
 	}
@@ -199,7 +236,7 @@ type EnumsResponse struct {
 
 func (s *SediAPI) GetOrderStatuses() ([]OrderStatus, error) {
 	result := []OrderStatus{}
-	res, err := s.SimpleGetRequest("get_enums", map[string]string{})
+	res, err := s.getRequest("get_enums", map[string]string{})
 	if err != nil {
 		log.Printf("SA Error at get order statuses")
 		return result, err
@@ -235,7 +272,7 @@ type ActivationKeyResponse struct {
 Но нахуя все это знать читающему этот комментарий?
 */
 func (s *SediAPI) GetActivationKey(phone string) (uint, error) {
-	res, err := s.SimpleGetRequest("get_activation_key", map[string]string{"phone":phone})
+	res, err := s.getRequest("get_activation_key", map[string]string{"phone":phone})
 	if err != nil {
 		log.Printf("SA Error at get activation key")
 		return 0, err
@@ -304,7 +341,7 @@ type SediLoginInfoResponse struct {
 }
 
 func (s *SediAPI) auth(q string, prms map[string]string) (*SediLoginInfoResponse, error) {
-	res, err := s.SimpleGetRequest(q, prms)
+	res, err := s.getRequest(q, prms)
 
 	if err != nil {
 		log.Printf("SA AUTH Error at %v [%v] %v", q, prms, err)
@@ -341,10 +378,16 @@ func (s *SediAPI) GetProfile() (*SediLoginInfo, error) {
 
 func (s *SediAPI) AuthorizeCustomer(name, phone string) (*SediLoginInfo, error) {
 	resp_info, err := s.auth("authorize_customer", map[string]string{"name":name, "phone":phone})
+	if err != nil {
+		log.Printf("SEDI can not auth :( For name:%v, phone:%v", name, phone)
+		return nil, err
+	}
 	if resp_info.Success {
 		for _, cookie := range s.cookies {
 			if cookie.Name == "auth" {
+				s.l.Lock()
 				s.userkey = cookie.Value
+				s.l.Unlock()
 				break
 			}
 		}
@@ -353,23 +396,34 @@ func (s *SediAPI) AuthorizeCustomer(name, phone string) (*SediLoginInfo, error) 
 	return nil, err
 }
 
+func GeoToString(lat, lon float64) (string, string) {
+	f := func(in float64) string {
+		return strconv.FormatFloat(in, 'f', 6, 64)
+	}
+	return f(lat), f(lon)
+}
+
 func (s *SediAPI) prepareOrderParams(order t.NewOrderInfo) map[string]string {
 	params := map[string]string{
-		"city0":s.City,
 		"street0":order.Delivery.Street,
 		"house0":order.Delivery.House,
 	}
 	if order.Delivery.IdAddress != nil {
 		params["addrid0"] = *order.Delivery.IdAddress
 	}
+	if order.Delivery.Lat != nil && order.Delivery.Lon != nil {
+		params["lat0"], params["lon0"] = GeoToString(*order.Delivery.Lat, *order.Delivery.Lon)
+	}
 
 	for i, destination := range order.Destinations {
 		address_number := i + 1
-		params[fmt.Sprintf("city%v", address_number)] = s.City
 		params[fmt.Sprintf("street%v", address_number)] = destination.Street
 		params[fmt.Sprintf("house%v", address_number)] = destination.House
 		if destination.IdAddress != nil {
 			params[fmt.Sprintf("addrid%v", address_number)] = *destination.IdAddress
+		}
+		if destination.Lat != nil && destination.Lon != nil {
+			params[fmt.Sprintf("lat%v", address_number)], params[fmt.Sprintf("lon%v", address_number)] = GeoToString(*destination.Lat, *destination.Lon)
 		}
 	}
 
@@ -393,17 +447,26 @@ type SediNewOrderResponse struct {
 	OrderId int64 `json:"ObjectId"`
 }
 
+func (s *SediAPI) getUserTariff(phone string) (*SediTariff, bool) {
+	s.l.Lock()
+	res, ok := s.userTariffs[phone];
+	s.l.Unlock()
+	return res, ok
+}
 
 func (s *SediAPI)NewOrder(order t.NewOrderInfo) t.Answer {
 	params := s.prepareOrderParams(order)
+
 	order_tariff := &SediTariff{}
-	if tariff, ok := s.UserTariffs[order.Phone]; ok {
+	if tariff, ok := s.getUserTariff(order.Phone); ok {
 		order_tariff = tariff
 	}else {
 		if cost, message := s.CalcOrderCost(order); cost < 0 {
 			return t.Answer{IsSuccess:false, Message:message}
 		}
-		tariff, ok = s.UserTariffs[order.Phone]
+		s.l.Lock()
+		tariff, ok = s.userTariffs[order.Phone]
+		s.l.Unlock()
 		order_tariff = tariff
 	}
 	params["tariff"] = fmt.Sprintf("%v", order_tariff.TariffId)
@@ -411,7 +474,7 @@ func (s *SediAPI)NewOrder(order t.NewOrderInfo) t.Answer {
 	params["name"] = "KUKUAPIBOT"
 	params["phone"] = order.Phone
 
-	res, err := s.SimpleGetRequest("add_order", params)
+	res, err := s.getRequest("add_order", params)
 	if err != nil {
 		log.Printf("SEDI NEW ORDER ERROR :%v\n params: %+v", err, params)
 	}
@@ -449,6 +512,11 @@ type SediAddress struct {
 				 } `json:"GeoPoint"`
 }
 
+func (s SediAddress) String() string {
+	return fmt.Sprintf("\n\tSEDI Address [%v]: \n\t\tCity: %v, Street: %v, House: %v, PostalCode: %v, LocalityName: %v, \n\t\tGeo point:%v\n", s.ID,
+		s.CityName, s.StreetName, s.HouseNumber, s.PostalCode, s.LocalityName, s.GeoPoint)
+}
+
 type SediCalcResponse struct {
 	SediResponse
 	Tariffs   []SediTariff  `json:"Tariffs"`
@@ -459,7 +527,13 @@ type SediCalcResponse struct {
 }
 
 func (csr SediCalcResponse) String() string {
-	return fmt.Sprintf("SEDI Calc order response. Ok? %v, %s\n\tDuration: %v, Distance: %v, TariffsCount: %v, AdressesCount: %v\n\tTariffs:%+v\n\tAddresses:%+v", csr.Success, csr.Message, csr.Duration, csr.Distance, len(csr.Tariffs), len(csr.Addresses), csr.Tariffs, csr.Addresses)
+	return fmt.Sprintf("SEDI Calc order response. Ok? %v, %s" +
+	"\n\tDuration: %v, Distance: %v, TariffsCount: %v, AdressesCount: %v" +
+	"\n\tTariffs:%+v" +
+	"\n\tAddresses:%+v",
+		csr.Success, csr.Message,
+		csr.Duration, csr.Distance, len(csr.Tariffs), len(csr.Addresses),
+		csr.Tariffs, csr.Addresses)
 }
 
 func (csr SediCalcResponse) GetMinCost() (int, *SediTariff) {
@@ -493,8 +567,9 @@ func (csr SediCalcResponse) GetMinCost() (int, *SediTariff) {
 func checkAddressEquals(address_one SediAddress, house string, street string) bool {
 	st1 := strings.TrimSpace(t.CC_REGEXP.ReplaceAllString(street, ""))
 	st2 := strings.TrimSpace(t.CC_REGEXP.ReplaceAllString(address_one.StreetName, ""))
-	return st1 == st2 && strings.TrimSpace(address_one.HouseNumber) == strings.TrimSpace(house)
-
+	result := st1 == st2 && strings.TrimSpace(address_one.HouseNumber) == strings.TrimSpace(house)
+	log.Printf("SEDI CHECKING ADDRESSES EQUALS : %v  == ? %v Street: %v, House: %v", address_one, result, street, house)
+	return result
 }
 func checkOrderAddress(res []byte, order *t.NewOrderInfo) (*t.NewOrderInfo, error) {
 	response_object := SediGeoCodingResult{}
@@ -526,7 +601,7 @@ func (s *SediAPI)CalcOrderCost(order t.NewOrderInfo) (int, string) {
 		return 0, "No destinations at order"
 	}
 	params := s.prepareOrderParams(order)
-	res, err := s.SimpleGetRequest("Calccost", params)
+	res, err := s.getRequest("Calccost", params)
 	response_result := SediCalcResponse{}
 	err = json.Unmarshal(res, &response_result)
 	if err != nil {
@@ -547,114 +622,16 @@ func (s *SediAPI)CalcOrderCost(order t.NewOrderInfo) (int, string) {
 	}
 	cost, tariff := response_result.GetMinCost()
 	if tariff != nil {
-		s.UserTariffs[order.Phone] = tariff
+		s.l.Lock()
+		s.userTariffs[order.Phone] = tariff
+		s.l.Unlock()
 		return cost, "OK"
 	}
 	return -1, CAN_NOT_IMPLY_TARIFF
 }
 
-type SediAddressF struct {
-	Name string `json:"v"`
-	City string `json:"c"`
-	Type string `json:"t"`
-	Id   int64 `json:"n"`
-	Geo  struct {
-			 Lat float64 `json:"lat"`
-			 Lon float64 `json:"lon"`
-		 } `json:"g"`
-}
-
-type SediAutocompleteResponse []SediAddressF
-
-func (s SediAutocompleteResponse) ToAddressPackage() t.AddressPackage {
-	result := t.AddressPackage{}
-	rows := []t.AddressF{}
-	for _, s_addr_f := range s {
-		rows = append(rows, t.AddressF{ID:s_addr_f.Id, Name:s_addr_f.Name, City:s_addr_f.City})
-	}
-	result.Rows = &rows
-	return result
-}
-
-func (s *SediAPI) AddressesSearch(text string) t.AddressPackage {
-	result := t.AddressPackage{}
-
-	req, err := http.NewRequest("GET", s.Host + AUTOCOMPLETE_POSTFIX, nil)
-	//	req, err := http.NewRequest("GET", "http://api.sedi.ru" + AUTOCOMPLETE_POSTFIX, nil)
-	if err != nil {
-		log.Printf("SEDI GET request error in request")
-	}
-	values := req.URL.Query()
-
-	values.Add("q", "addr")
-
-	values.Add("apikey", s.apikey)
-	values.Add("key", s.appkey)
-	values.Add("userkey", s.userkey)
-
-	values.Add("streetobj", text)
-	values.Add("city", s.City)
-
-	req.URL.RawQuery = values.Encode()
-	log.Printf("SEDI >>> %v\n", req.URL)
-
-	res, err := s.doReq(req)
-
-	log.Printf("SEDI <<< \n%s\n", res)
-	if err != nil {
-		log.Printf("SEDI AUTOCMPLETE ERROR: %v", err)
-		return result
-	}
-	response_object := SediAutocompleteResponse{}
-	err = json.Unmarshal(res, &response_object)
-	if err != nil {
-		log.Printf("SEDI AUTOCOMPLETE UNMARSHALL ERROR: %v\nres:[%s]", err, res)
-	}
-	return response_object.ToAddressPackage()
-}
-
-type SediGeoCodingResult struct {
-	SediResponse
-	Addresses []SediAddress `json:"Addresses"`
-}
-
-func (sgcr SediGeoCodingResult) toAddressPackage() t.AddressPackage {
-	rows := []t.AddressF{}
-	for _, address_res := range sgcr.Addresses {
-		rows = append(rows, t.AddressF{
-			ID:address_res.ID,
-			City:address_res.CityName,
-			Name:address_res.StreetName,
-			PostalCode:address_res.PostalCode,
-			HouseNumber:address_res.HouseNumber,
-			Coordinates: t.Coordinates{Lat:address_res.GeoPoint.Lat, Lon:address_res.GeoPoint.Lon},
-		})
-	}
-	result := t.AddressPackage{}
-	result.Rows = &rows
-	return result
-}
-func (s *SediAPI) GeoCoding(lat, lon float64) t.AddressPackage {
-	result := t.AddressPackage{}
-
-	lat_s := strconv.FormatFloat(lat, 'f', 6, 64)
-	lon_s := strconv.FormatFloat(lon, 'f', 6, 64)
-	res, err := s.SimpleGetRequest("get_address", map[string]string{"lat":lat_s, "lon":lon_s})
-	if err != nil {
-		log.Printf("SEDI GEOCODING ERROR: %v", err)
-		return result
-	}
-	result_object := SediGeoCodingResult{}
-	err = json.Unmarshal(res, &result_object)
-	if err != nil {
-		log.Printf("SEDI GEOCODING ERROR UNMARSHAL: %v \n[%s]", err, res)
-		return result
-	}
-	return result_object.toAddressPackage()
-}
-
 func (s *SediAPI)CancelOrder(order_id int64) (bool, string) {
-	res, err := s.SimpleGetRequest("cancel_order", map[string]string{"orderid":strconv.FormatInt(order_id, 10)})
+	res, err := s.getRequest("cancel_order", map[string]string{"orderid":strconv.FormatInt(order_id, 10)})
 	if err != nil {
 		log.Printf("SEDI CANCEL ORDER ERROR %v", err)
 		return false, fmt.Sprintf("Ошибка! %v", err)
@@ -666,6 +643,7 @@ func (s *SediAPI)CancelOrder(order_id int64) (bool, string) {
 	}
 	return response.Success, response.Message
 }
+
 var STATES_MAPPING = map[string]int{
 	"unknown":  1,
 	"driverwaitcustomer":  4,
@@ -699,7 +677,6 @@ type SediProperty struct {
 	Id    int64 `json:"ID"`
 	Name  string `json:"Name"`
 }
-
 type SediOrderInfo struct {
 	OrderId  int64 `json:"ID"`
 
@@ -748,13 +725,21 @@ type SediOrdersResponse struct {
 	Orders []SediOrderInfo `json:"Orders"`
 }
 
-func (s *SediAPI) toInternalOrders(sor SediOrdersResponse) []t.Order {
+func (sor SediOrdersResponse) IsContains(order_id int64) bool {
+	for _, order := range sor.Orders {
+		if order.OrderId == order_id {
+			return true
+		}
+	}
+	return false
+}
+
+func (s *SediAPI) toInternalOrders(sor *SediOrdersResponse) []t.Order {
 	result := []t.Order{}
 	for _, order := range sor.Orders {
 		order_state, ok := STATES_MAPPING[order.Status.Id]
 		if !ok {
 			log.Printf("SEDI WARNING for order %v \ncan not recognize state [%v]", order, order.Status)
-			continue
 		}
 		time_delivery := time.Unix(int64(order.Date), 0)
 		int_order := t.Order{
@@ -778,9 +763,15 @@ func (s *SediAPI) toInternalOrders(sor SediOrdersResponse) []t.Order {
 					}
 				}
 			}
-			s.Cars[id_car] = t.CarInfo{Model:car.Name, Number:car.Number, ID:id_car, Color:color}
+			s.l.Lock()
+			s.cars[id_car] = t.CarInfo{Model:car.Name, Number:car.Number, ID:id_car, Color:color}
+			s.l.Unlock()
 
 		}
+		s.l.Lock()
+		s.userOrders[order.OrderId] = &order
+		s.l.Unlock()
+
 		result = append(result, int_order)
 	}
 	return result
@@ -788,17 +779,17 @@ func (s *SediAPI) toInternalOrders(sor SediOrdersResponse) []t.Order {
 
 func (s *SediAPI)Orders() []t.Order {
 	result := []t.Order{}
-	response := SediOrdersResponse{}
-
-	if time.Now().Sub(s.LastOrderRequestTime).Seconds() < ORDER_REFRESH_TIME && s.LastOrderResponse != nil {
-		response = *s.LastOrderResponse
+	response := &SediOrdersResponse{}
+	lr, lt := s.GetLastOrdersInfo()
+	if time.Now().Sub(lt).Seconds() < ORDER_REFRESH_TIME && lr != nil {
+		response = lr
 	} else {
-		res, err := s.SimpleGetRequest("get_orders", map[string]string{})
+		res, err := s.getRequest("get_orders", map[string]string{})
 		if err != nil {
 			log.Printf("SEDI ORDERS INFO ERROR: %v", err)
 			return result
 		}
-		err = json.Unmarshal(res, &response)
+		err = json.Unmarshal(res, response)
 		if err != nil {
 			log.Printf("SEDI ORDERS INFO UNMARSHALL ERROR %v, \nres %s", err, res)
 			return result
@@ -807,14 +798,37 @@ func (s *SediAPI)Orders() []t.Order {
 			log.Printf("SEDI ORDERS INFO ERROR %v", response.Message)
 			return result
 		}
-		s.LastOrderResponse = &response
-		s.LastOrderRequestTime = time.Now()
-	}
+		s.l.Lock()
+		s.lastOrderResponse = response
+		s.lastOrderRequestTime = time.Now()
+		s.l.Unlock()
 
+		order_ids := []string{}
+		for order_id, _ := range s.userOrders {
+			if !response.IsContains(order_id) {
+				order_ids = append(order_ids, strconv.FormatInt(order_id, 10))
+			}
+		}
+		if len(order_ids) > 0 {
+			order_ids_param := strings.Join(order_ids, ",")
+			log.Printf("SEDI getting additional info for orders: %+v", order_ids_param)
+			add_res, err := s.getRequest("get_orders", map[string]string{"orderids":order_ids_param})
+			if err != nil {
+				log.Printf("SEDI ORDERS ADDITIONAL INFO ERROR %v", err)
+				return s.toInternalOrders(response)
+			}
+			add_response := &SediOrdersResponse{}
+			err = json.Unmarshal(add_res, &add_response)
+			if err != nil {
+				log.Printf("SEDi ORDERS ADDITIONAL INFO UNMARSHAL ERROR: %v\n%s", err, add_res)
+			}
+			response.Orders = append(response.Orders, add_response.Orders...)
+		}
+	}
 	return s.toInternalOrders(response)
 }
 func (s *SediAPI)Feedback(f t.Feedback) (bool, string) {
-	res, err := s.SimpleGetRequest("set_rating", map[string]string{
+	res, err := s.getRequest("set_rating", map[string]string{
 		"orderid":strconv.FormatInt(f.IdOrder, 10),
 		"rating":strconv.Itoa(f.Rating),
 		"comment":f.FeedBackText})
@@ -831,9 +845,12 @@ func (s *SediAPI)Feedback(f t.Feedback) (bool, string) {
 }
 
 func (s *SediAPI)GetCarsInfo() []t.CarInfo {
-	result := make([]t.CarInfo, len(s.Cars), len(s.Cars))
+	s.l.Lock()
+	cars := s.cars
+	s.l.Unlock()
+	result := make([]t.CarInfo, len(cars), len(cars))
 	idx := 0
-	for _, car_info := range s.Cars {
+	for _, car_info := range cars {
 		result[idx] = car_info
 		idx++
 	}

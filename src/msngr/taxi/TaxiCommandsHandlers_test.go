@@ -19,7 +19,7 @@ func (f FakeAddressSupplier)IsConnected() bool {
 	return true
 }
 
-func (f FakeAddressSupplier)AddressesSearch(query string) AddressPackage {
+func (f FakeAddressSupplier)AddressesAutocomplete(query string) AddressPackage {
 	return AddressPackage{}
 }
 

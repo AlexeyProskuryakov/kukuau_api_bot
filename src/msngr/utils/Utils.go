@@ -14,6 +14,7 @@ import (
 	"io/ioutil"
 	"path"
 	"crypto/md5"
+	"strconv"
 )
 
 
@@ -31,24 +32,48 @@ func PHash(pwd *string) (*string) {
 	return &result
 }
 
+func get_parent_path(path string)string{
+	separator := RuneToAscii(os.PathSeparator)
+	path_elements := strings.Split(path, separator)
+	return strings.Join(path_elements[:len(path_elements)-1], separator)
+}
 
+func RuneToAscii(r rune) string {
+    if r < 128 {
+        return string(r)
+    } else {
+        return "\\u" + strconv.FormatInt(int64(r), 16)
+    }
+}
 func FoundFile(fname string) *string {
+	log.Printf("Path sep: %s", RuneToAscii(os.PathSeparator))
 	dir, err := os.Getwd()
+	prev_dir := dir
 	if err != nil {
 		return nil
 	}
 	for {
+		log.Printf("Search config at: %v", dir)
 		files, err := ioutil.ReadDir(dir)
 		if err != nil {
 			return nil
 		}
+		log.Printf("files: %+v", files)
 		for _, f := range files {
+			log.Printf("analyse file %v", f)
 			if fname == f.Name() {
 				result := path.Join(dir, fname)
 				return &result
 			}
 		}
-		dir = path.Dir(dir)
+		dir = get_parent_path(dir)
+		if prev_dir == dir {
+			log.Printf("Can not found file: %v", fname)
+			return nil
+		}else {
+			prev_dir = dir
+		}
+		log.Printf("now dir is: %v", dir)
 
 	}
 	return nil
@@ -170,16 +195,16 @@ func GET(url string, params *map[string]string) (*[]byte, error) {
 	return &body, err
 }
 
-type Predicate func () (bool)
+type Predicate func() (bool)
 
-func After(p Predicate, what func ()){
+func After(p Predicate, what func()) {
 	go func() {
 		for {
-			if p(){
+			if p() {
 				what()
 				break
 			}
-			time.Sleep(2*time.Second)
+			time.Sleep(2 * time.Second)
 		}
 	}()
 }

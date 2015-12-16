@@ -11,6 +11,7 @@ import (
 	u "msngr/utils"
 	c "msngr/configuration"
 	"gopkg.in/mgo.v2"
+	"encoding/json"
 )
 
 const (
@@ -425,15 +426,17 @@ func (a *AddressNotHere) Error() string {
 }
 
 func _form_order(fields []s.InField, ah AddressHandler) (*NewOrderInfo, error) {
-	var from_info, to_info, hf, ht string
+	var from_key, from_name, to_key, to_name, hf, ht string
 	var entrance *string
 	log.Printf("NEW ORDER fields: %+v", fields)
 	for _, field := range fields {
 		switch fn := field.Name; fn {
 		case "street_from":
-			from_info = u.FirstOf(field.Data.Value, field.Data.Text).(string)
+			from_key = field.Data.Value
+			from_name = field.Data.Text
 		case "street_to":
-			to_info = u.FirstOf(field.Data.Value, field.Data.Text).(string)
+			to_key = field.Data.Value
+			to_name = field.Data.Text
 		case "house_to":
 			ht = u.FirstOf(field.Data.Value, field.Data.Text).(string)
 		case "house_from":
@@ -457,25 +460,39 @@ func _form_order(fields []s.InField, ah AddressHandler) (*NewOrderInfo, error) {
 	note_info := "Тестирование."
 	new_order.Notes = &note_info
 
-	//	new_order.Attributes = [2]int64{1000113000, 1000113002}
-	//	end fucking hardcode
+	var dest, deliv AddressF
+	if ah != nil {
+		if !ah.IsHere(from_key) && !ah.IsHere(to_key) {
+			return nil, &AddressNotHere{From:from_key, To:to_key}
+		}
+		del_id_street_, err := ah.GetExternalInfo(from_key, from_name)
+		dest_id_street_, err := ah.GetExternalInfo(to_key, to_name)
+		if err != nil {
+			return nil, err
+		}
 
-	if !ah.IsHere(from_info) && !ah.IsHere(to_info) {
-		return nil, &AddressNotHere{From:from_info, To:to_info}
+		deliv = *del_id_street_
+		dest = *dest_id_street_
+	} else {
+		log.Printf("Address handler is nil. Using street id and name values... [%v] %v --> [%v] %v", from_key, from_name, to_key, to_name)
+		err := json.Unmarshal([]byte(from_key), &deliv)
+		if err != nil {
+			log.Printf("FORM ORDER Error at unmarshal address from; %v\n%v", err, from_key)
+		}
+		err = json.Unmarshal([]byte(to_key), &dest)
+		if err != nil {
+			log.Printf("FORM ORDER Error at unmarshal address to; %v\n%v", err, to_key)
+		}
+		log.Printf("\nDelivery: %v\nDestination: %v", deliv, dest)
 	}
-	delivery_street_info, err := ah.GetExternalInfo(from_info)
-	if err != nil {
-		return nil, err
-	}
-	destination_street_info, err := ah.GetExternalInfo(to_info)
-	if err != nil {
-		return nil, err
-	}
-	delivery := Delivery{IdStreet:delivery_street_info.ID, Street:delivery_street_info.Name, House:hf, Entrance:entrance, IdRegion:delivery_street_info.IDRegion}
-	destination := Destination{IdStreet:destination_street_info.ID, Street:delivery_street_info.Name, House:ht, IdRegion:destination_street_info.IDRegion}
+	deliv_id := strconv.FormatInt(deliv.ID, 10)
+	dest_id := strconv.FormatInt(dest.ID, 10)
+
+	delivery := Delivery{IdStreet:deliv.ID, Street:deliv.Name, House:hf, Entrance:entrance, IdRegion:deliv.IDRegion, IdAddress:&deliv_id}
+	destination := Destination{IdStreet:dest.ID, Street:dest.Name, House:ht, IdRegion:dest.IDRegion, IdAddress:&dest_id}
 	new_order.Delivery = delivery
 	new_order.Destinations = []Destination{destination}
-	log.Printf("NEW ORDER: \ndelivery:%+v\ndestination:%+v", delivery, destination)
+	log.Printf("NEW ORDER: \n%v\n%v", delivery, destination)
 	return &new_order, nil
 }
 

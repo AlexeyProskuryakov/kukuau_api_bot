@@ -12,12 +12,8 @@ import (
 	"strings"
 )
 
-func _check(e error) {
-	if e != nil {
-		panic(e)
-	}
-}
 var DEBUG bool
+
 func getInPackage(r *http.Request) (*s.InPkg, error) {
 	var in s.InPkg
 	if !strings.Contains(r.Header.Get("Content-Type"), "application/json") {
@@ -160,7 +156,8 @@ func FormBotController(context *s.BotContext) controllerHandler {
 			}
 			if in.Message != nil {
 				if in.Message.Commands == nil {
-					log.Printf("warn will sended message without commands: %v from %v (userdata: %v)", in.Message, in.From, in.UserData)
+					log.Printf("warn will sended message without commands: %v\n from %v (userdata: %v)", in.Message, in.From, in.UserData)
+					return
 				}
 				out, isDeferred, message_error = process_message_pkg(out, in, context)
 			}

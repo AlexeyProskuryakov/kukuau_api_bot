@@ -79,7 +79,7 @@ func TestStreetsGlobal(t *testing.T) {
 	external_suppier := i.GetInfinityAddressSupplier(taxi_conf.Api)
 	address_supplier.ExternalAddressSupplier = external_suppier
 
-	street_id, err := address_supplier.GetExternalInfo(last_result.Key)
+	street_id, err := address_supplier.GetExternalInfo(last_result.Key, last_result.Title)
 	log.Printf("address err?: %v\n street_id: %#v", err, street_id)
 	os.Exit(0)
 }

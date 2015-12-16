@@ -8,6 +8,7 @@ import (
 	s "msngr/taxi/set"
 )
 
+
 type AddressF struct {
 
 	Coordinates Coordinates
@@ -36,7 +37,7 @@ type AddressF struct {
 }
 
 func (a AddressF) String() string {
-	return fmt.Sprintf("[%v][%v] '%v' (%v) at %v %v %v %v \nIDS:\nParent: %v, Region: %v, District: %v, City: %v, Place: %v\n", a.GID, a.ID, a.Name, a.FullName, a.Region, a.City, a.District, a.Place, a.IDParent, a.IDRegion, a.IDDistrict, a.IDCity, a.IDPlace)
+	return fmt.Sprintf("[%v]g[%v]o[%v] '%v' (%v) at %v %v %v %v \nIDS:\nParent: %v, Region: %v, District: %v, City: %v, Place: %v\n", a.ID, a.GID, a.OSM_ID, a.Name, a.FullName, a.Region, a.City, a.District, a.Place, a.IDParent, a.IDRegion, a.IDDistrict, a.IDCity, a.IDPlace)
 }
 
 func (a AddressF) GetSet() s.Set {
@@ -110,10 +111,10 @@ type Destination struct {
 }
 
 func (d Destination) String() string {
-	return fmt.Sprintf("[%v] [Region:%v, Street:%v] Street: %v, House: %v {Building: %v, Fraction: %v, Entrance: %v, Apartment: %v}(IDS place: %v, city: %v, district: %v)\n",
-		d.IdAddress,
+	return fmt.Sprintf("Destination: [%v] [Region:%v, Street:%v] Street: %v, House: %v \n\t{Building: %v, Fraction: %v, Entrance: %v, Apartment: %v}\n\t(IDS place: %v, city: %v, district: %v)\n",
+		*d.IdAddress,
 		d.IdRegion,
-		d.IdDistrict,
+		d.IdStreet,
 		d.Street,
 		d.House,
 		d.Building,
@@ -153,10 +154,10 @@ type Delivery struct {
 }
 
 func (d Delivery) String() string {
-	return fmt.Sprintf("[%v] [Region:%v, Street:%v] Street: %v, House: %v {Building: %v, Fraction: %v, Entrance: %v, Apartment: %v}(IDS place: %v, city: %v, district: %v)",
-		d.IdAddress,
+	return fmt.Sprintf("Delivery :[%v] [Region:%v, Street:%v] Street: %v, House: %v \n\t{Building: %v, Fraction: %v, Entrance: %v, Apartment: %v}\n\t(IDS place: %v, city: %v, district: %v)",
+		*d.IdAddress,
 		d.IdRegion,
-		d.IdDistrict,
+		d.IdStreet,
 		d.Street,
 		d.House,
 		d.Building,
@@ -266,10 +267,10 @@ type CarInfo struct {
 }
 
 func (car CarInfo) String() string {
-	if car.Model == "" && car.Number == ""{
-		return fmt.Sprintf("Не опознана")
+	if car.Model == "" && car.Number == "" {
+		return fmt.Sprintf("не опознана. [%v %v]", car.Lat, car.Lon)
 	}
-	return fmt.Sprintf("%v %v с номером %v", car.Color, car.Model, car.Number)
+	return fmt.Sprintf("%v %v с номером %v ", car.Color, car.Model, car.Number)
 }
 
 type Feedback struct {

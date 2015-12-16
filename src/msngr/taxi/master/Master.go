@@ -46,7 +46,10 @@ var OrderStateMap = map[string]int{
 	"finished":t.ORDER_PAYED,
 	"aborted":t.ORDER_CANCELED,
 }
-const MAX_TRY_COUNT = 5
+const (
+	MAX_TRY_COUNT = 5
+	MASTER = "master"
+)
 
 func doReq(req *http.Request) ([]byte, error) {
 	count := 0
@@ -416,7 +419,7 @@ func (m *TaxiMasterAPI)GetCarsInfo() []t.CarInfo {
 	return result
 }
 
-func (m *TaxiMasterAPI)AddressesSearch(query string) t.AddressPackage {
+func (m *TaxiMasterAPI)AddressesAutocomplete(query string) t.AddressPackage {
 	return t.AddressPackage{}
 }
 

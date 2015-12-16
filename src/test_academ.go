@@ -23,8 +23,8 @@ func main() {
 
 	as := i.GetInfinityAddressSupplier(tc.Api)
 	log.Printf("is connected? %v", as.IsConnected())
-	log.Println(as.AddressesSearch("Никол"))
-	log.Println(as.AddressesSearch("Росс"))
-	log.Println(as.AddressesSearch("ман"))
-	log.Println(as.AddressesSearch("клав"))
+	log.Println(as.AddressesAutocomplete("Никол"))
+	log.Println(as.AddressesAutocomplete("Росс"))
+	log.Println(as.AddressesAutocomplete("ман"))
+	log.Println(as.AddressesAutocomplete("клав"))
 }

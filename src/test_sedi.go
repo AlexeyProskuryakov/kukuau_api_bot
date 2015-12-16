@@ -33,8 +33,8 @@ func main() {
 
 	log.Println(s)
 
-	address_from := s.AddressesSearch(my_address_from)
-	adress_to := s.AddressesSearch(my_street_to)
+	address_from := s.AddressesAutocomplete(my_address_from)
+	adress_to := s.AddressesAutocomplete(my_street_to)
 	log.Printf("\nFrom %+v\nTo %+v\n", address_from, adress_to)
 
 

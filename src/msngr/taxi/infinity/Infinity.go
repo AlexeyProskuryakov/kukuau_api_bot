@@ -16,7 +16,10 @@ import (
 	"net"
 )
 
-const TRY_COUNT = 10
+const (
+	TRY_COUNT = 10
+	INFINITY = "infinity"
+)
 
 type InfinityService struct {
 	ID                 int64  `json:"id"`
@@ -687,7 +690,7 @@ func (p *infinity) Markups() []t.Order {
 //Тип адреса/быстрого адреса в виде строки
 
 
-func (p *infinity) AddressesSearch(text string) t.AddressPackage {
+func (p *infinity) AddressesAutocomplete(text string) t.AddressPackage {
 	body, err := p._request("GetViewData", map[string]string{"params": "[{\"viewName\": \"Taxi.Addresses.Search\", \"params\": [{\"n\": \"SearchText\", \"v\": \"" + text + "\"}]}]"})
 	if err != nil {
 		log.Printf("error at connection to inf %( ")

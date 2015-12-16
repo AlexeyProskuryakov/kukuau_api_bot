@@ -15,6 +15,7 @@ import (
 	rp "msngr/ruposts"
 	c "msngr/configuration"
 	"msngr/taxi/sedi"
+	"msngr/taxi/geo"
 
 	"net/http"
 	"time"
@@ -26,13 +27,13 @@ import (
 
 func GetTaxiAPIInstruments(params c.TaxiApiParams) (t.TaxiInterface, t.AddressSupplier, error) {
 	switch api_name := params.Name; api_name{
-	case "infinity":
+	case i.INFINITY:
 		return i.GetInfinityAPI(params), i.GetInfinityAddressSupplier(params), nil
-	case "fake":
+	case t.FAKE:
 		return t.GetFakeAPI(params), i.GetInfinityAddressSupplier(params), nil
-	case "sedi":
-		api_data := params.Data
-		sedi_api := sedi.NewSediAPI(&api_data)
+
+	case sedi.SEDI:
+		sedi_api := sedi.NewSediAPI(params)
 		return sedi_api, sedi_api, nil
 	}
 	return nil, nil, errors.New("Not imply name of api")
@@ -52,17 +53,21 @@ func InsertTestUser(db *d.DbHandlerMixin, user, pwd *string) {
 }
 
 func get_address_instruments(c c.Configuration, taxi_name string, external_supplier t.AddressSupplier) (t.AddressHandler, t.AddressSupplier) {
-	own := t.NewOwnAddressHandler(c.Main.ElasticConn, c.Taxis[taxi_name].GeoOrbit, external_supplier)
+	if c.Taxis[taxi_name].Api.Name == sedi.SEDI {
+		log.Printf("For %v Will use SEDI address supplier no any address handler", taxi_name)
+		return nil, external_supplier
+	}
+	own := geo.NewOwnAddressHandler(c.Main.ElasticConn, c.Taxis[taxi_name].Api.GeoOrbit, external_supplier)
 	if own == nil {
-		google := t.NewGoogleAddressHandler(c.Main.GoogleKey, c.Taxis[taxi_name].GeoOrbit, external_supplier)
+		google := geo.NewGoogleAddressHandler(c.Main.GoogleKey, c.Taxis[taxi_name].Api.GeoOrbit, external_supplier)
 		if google == nil {
-			log.Printf("Will use external address receiver")
+			log.Printf("For %v Will use external address supplier and no any address handler", taxi_name)
 			return nil, external_supplier
 		}
-		log.Printf("Will use google addresses")
+		log.Printf("For %v Will use google addresses", taxi_name)
 		return google, google
 	}
-	log.Printf("Will use own addresses")
+	log.Printf("For %v Will use own addresses", taxi_name)
 	return own, own
 }
 func main() {
@@ -85,7 +90,7 @@ func main() {
 	}
 
 	for taxi_name, taxi_conf := range conf.Taxis {
-		log.Printf("taxi api configuration for %+v: \nconnection str: %+v\nhost: %+v\nid_service: %+v\nlogin: %+v\npassword: %+v", taxi_conf.Name, taxi_conf.Api.GetConnectionStrings(), taxi_conf.Api.GetHost(), taxi_conf.Api.GetIdService(), taxi_conf.Api.GetLogin(), taxi_conf.Api.GetPassword())
+		log.Printf("taxi api configuration for %+v:\n%v", taxi_conf.Name, taxi_conf.Api)
 		external_api, external_address_supplier, err := GetTaxiAPIInstruments(taxi_conf.Api)
 
 		if err != nil {
@@ -113,7 +118,7 @@ func main() {
 		})
 
 		http.HandleFunc(fmt.Sprintf("/taxi/%v/streets", taxi_conf.Name), func(w http.ResponseWriter, r *http.Request) {
-			t.StreetsSearchController(w, r, address_supplier)
+			geo.StreetsSearchController(w, r, address_supplier)
 		})
 	}
 

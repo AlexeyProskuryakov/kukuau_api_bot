@@ -22,23 +22,23 @@ type ApiData struct {
 	Phone              string `json:"phone"`
 	Name               string `json:"name"`
 	SaleKeyword        string `json:"sale_kw"`
-
 }
 
 
 type TaxiApiParams struct {
 	Name         string `json:"name"`
 	Data         ApiData `json:"data"`
+	GeoOrbit     TaxiGeoOrbit `json:"geo_orbit"`
+	NotSendPrice bool `json:"not_send_price"`
+
 	Fake         struct {
 					 SendedStates []int `json:"sended_states"`
 					 SleepTime    int `json:"sleep_time"`
 				 } `json:"fake"`
-
-	NotSendPrice bool `json:"not_send_price"`
 }
 
 func (api TaxiApiParams) String() string {
-	return fmt.Sprintf("API %s\nAPI data: %+v\nFake?:%+v\nNotSendPrice?:%v", api.Name, api.Data, api.Fake, api.NotSendPrice)
+	return fmt.Sprintf("API %s\nAPI data: %+v\nFake?:%+v\nNotSendPrice?:%v\nGeoOrbit:%v", api.Name, api.Data, api.Fake, api.NotSendPrice, api.GeoOrbit)
 }
 
 func (api TaxiApiParams) GetHost() string {
@@ -76,7 +76,6 @@ type TaxiConfig struct {
 						  Phone string `json:"phone"`
 						  Text  string `json:"text"`
 					  } `json:"information"`
-	GeoOrbit          TaxiGeoOrbit `json:"geo_orbit"`
 	Markups           *[]string `json:"markups,omitempty"`
 	AvailableCommands map[string][]string `json:"available_commands"`
 }

@@ -1,0 +1,57 @@
+{
+  "message": {
+    "commands": [
+      {
+        "form": {
+          "fields": [
+            {
+              "data": {
+                "value": "{\"Coordinates\":{\"lat\":59.907619,\"lon\":30.345783},\"osm_id\":0,\"GID\":\"\",\"ID\":1970324,\"Name\":\"Лиговский + Расстанная\",\"City\":\"Санкт-Петербург\",\"FullName\":\"\",\"IDRegion\":0,\"IDDistrict\":0,\"IDCity\":0,\"IDPlace\":0,\"PostalCode\":\"\",\"HouseNumber\":\"\"}",
+                "text": "Лиговский + Расстанная"
+              },
+              "type": "dict",
+              "name": "street_from"
+            },
+            {
+              "type": "number",
+              "name": "entrance"
+            },
+            {
+              "data": {
+                "value": "{\"Coordinates\":{\"lat\":59.920811,\"lon\":30.355056},\"osm_id\":0,\"GID\":\"\",\"ID\":193472,\"Name\":\"Лиговский проспект станция метро\",\"City\":\"Санкт-Петербург\",\"FullName\":\"\",\"IDRegion\":0,\"IDDistrict\":0,\"IDCity\":0,\"IDPlace\":0,\"PostalCode\":\"\",\"HouseNumber\":\"\"}",
+                "text": "Лиговский проспект станция метро"
+              },
+              "type": "dict",
+              "name": "street_to"
+            },
+            {
+              "data": {
+                "value": "202"
+              },
+              "type": "text",
+              "name": "house_from"
+            },
+            {
+              "data": {
+                "value": "80"
+              },
+              "type": "text",
+              "name": "house_to"
+            }
+          ]
+        },
+        "repeated": "true",
+        "fixed": "false",
+        "action": "new_order"
+      }
+    ],
+    "thread": "2c474723-ff4d-4fad-a31f-18e8063bdff2",
+    "body": "Увези меня большая черепаха",
+    "type": "chat",
+    "id": "T6rqU-93"
+  },
+  "from": "113c32ee9f65586882284425376e5d9d",
+  "userdata": {
+    "phone": "+79046105885"
+  }
+}
