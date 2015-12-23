@@ -3,7 +3,6 @@ package geo
 import (
 	"log"
 	"fmt"
-	"msngr/utils"
 	"errors"
 	"strings"
 	"reflect"
@@ -150,7 +149,7 @@ func (oh *OwnAddressHandler) GetExternalInfo(key, name string) (*t.AddressF, err
 
 			for i := len(ext_rows) - 1; i >= 0; i-- {
 				nitem := ext_rows[i]
-				ext_set := nitem.GetSet()
+				ext_set := GetSetOfAddressF(nitem)
 				if ext_set.IsSuperset(local_set) || local_set.IsSuperset(ext_set) {
 					return &nitem, nil
 				}
@@ -182,26 +181,6 @@ func add_to_set(set s.Set, element string) (string, error) {
 	return element, errors.New(fmt.Sprintf("can not imply %+v ==> %+v", element, result))
 }
 
-func _process_address_components(components []GoogleAddressComponent) (string, s.Set) {
-	var route string
-	google_set := s.NewSet()
-	for _, component := range components {
-		if utils.IntersectionS(NOT_IMPLY_TYPES, component.Types) {
-			log.Printf("component type %+v \ncontains not imply types: %v", component, component.Types)
-			continue
-		} else {
-			long_name, err := add_to_set(google_set, component.LongName)
-			if err != nil {
-				log.Printf("WARN AT PROCESSING ADRESS COMPONENTS: %v", err)
-				continue
-			}
-			if utils.InS("route", component.Types) {
-				route = long_name
-			}
-		}
-	}
-	return route, google_set
-}
 
 func _get_street_name_shortname(input string) (string, string) {
 	addr_split := strings.Split(input, " ")

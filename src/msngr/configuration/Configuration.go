@@ -131,7 +131,7 @@ func ReadConfig() Configuration {
 	}
 
 	if conf.Main.LoggingFile != "" {
-		f, err := os.OpenFile("demo_bot.log", os.O_RDWR | os.O_CREATE | os.O_TRUNC, 0666)
+		f, err := os.OpenFile(conf.Main.LoggingFile, os.O_RDWR | os.O_CREATE | os.O_TRUNC, 0666)
 		if err != nil {
 			log.Fatalf("error opening log file: %v", err)
 		}

@@ -215,7 +215,6 @@ func TaxiOrderWatch(taxiContext *TaxiContext, botContext *s.BotContext) {
 				continue
 			}
 			if db_order == nil {
-//				Bolog.Printf("WATCH [%v] order [%+v] is not present in system :(\n", botContext.Name, api_order)
 				continue
 			}
 

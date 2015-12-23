@@ -1,7 +1,7 @@
 bin
 build
 logs
-demo_bot.log
+*.log
 pkg
 *.pid
 .idea

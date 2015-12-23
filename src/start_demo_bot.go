@@ -5,28 +5,27 @@ import (
 	"log"
 
 	m "msngr"
-	t "msngr/taxi"
-	i "msngr/taxi/infinity"
-	sh "msngr/shop"
+	c "msngr/configuration"
+	cnsl "msngr/console"
 	d "msngr/db"
 	n "msngr/notify"
-	s "msngr/structs"
-	cnsl "msngr/console"
 	rp "msngr/ruposts"
-	c "msngr/configuration"
-	"msngr/taxi/sedi"
+	sh "msngr/shop"
+	s "msngr/structs"
+	t "msngr/taxi"
 	"msngr/taxi/geo"
+	i "msngr/taxi/infinity"
+	"msngr/taxi/sedi"
 
-	"net/http"
-	"time"
 	"errors"
 	"flag"
-
+	"net/http"
+	"time"
 )
 
-
 func GetTaxiAPIInstruments(params c.TaxiApiParams) (t.TaxiInterface, t.AddressSupplier, error) {
-	switch api_name := params.Name; api_name{
+
+	switch api_name := params.Name; api_name {
 	case i.INFINITY:
 		return i.GetInfinityAPI(params), i.GetInfinityAddressSupplier(params), nil
 	case t.FAKE:
@@ -107,7 +106,7 @@ func main() {
 
 		botContext := t.FormTaxiBotContext(&apiMixin, db, taxi_conf, address_handler, carsCache)
 		log.Printf("Was create bot context: %+v\n", botContext)
-		taxiContext := t.TaxiContext{API:external_api, DataBase:db, Cars:carsCache, Notifier:notifier}
+		taxiContext := t.TaxiContext{API: external_api, DataBase: db, Cars: carsCache, Notifier: notifier}
 		controller := m.FormBotController(botContext)
 
 		http.HandleFunc(fmt.Sprintf("/taxi/%v", taxi_conf.Name), controller)

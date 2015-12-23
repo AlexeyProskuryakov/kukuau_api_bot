@@ -426,8 +426,7 @@ func (a *AddressNotHere) Error() string {
 }
 
 func _form_order(fields []s.InField, ah AddressHandler) (*NewOrderInfo, error) {
-	var from_key, from_name, to_key, to_name, hf, ht string
-	var entrance *string
+	var from_key, from_name, to_key, to_name, hf, ht, entrance string
 	log.Printf("NEW ORDER fields: %+v", fields)
 	for _, field := range fields {
 		switch fn := field.Name; fn {
@@ -442,8 +441,7 @@ func _form_order(fields []s.InField, ah AddressHandler) (*NewOrderInfo, error) {
 		case "house_from":
 			hf = u.FirstOf(field.Data.Value, field.Data.Text).(string)
 		case "entrance":
-			entrance_ := u.FirstOf(field.Data.Value, field.Data.Text).(string)
-			entrance = &entrance_
+			entrance = u.FirstOf(field.Data.Value, field.Data.Text).(string)
 
 		// case "time": //todo see time! with exceptions
 		// 	when = field.Data.Value
@@ -458,7 +456,7 @@ func _form_order(fields []s.InField, ah AddressHandler) (*NewOrderInfo, error) {
 
 	new_order := NewOrderInfo{}
 	note_info := "Тестирование."
-	new_order.Notes = &note_info
+	new_order.Notes = note_info
 
 	var dest, deliv AddressF
 	if ah != nil {
@@ -488,11 +486,22 @@ func _form_order(fields []s.InField, ah AddressHandler) (*NewOrderInfo, error) {
 	deliv_id := strconv.FormatInt(deliv.ID, 10)
 	dest_id := strconv.FormatInt(dest.ID, 10)
 
-	delivery := Delivery{IdStreet:deliv.ID, Street:deliv.Name, House:hf, Entrance:entrance, IdRegion:deliv.IDRegion, IdAddress:&deliv_id}
-	destination := Destination{IdStreet:dest.ID, Street:dest.Name, House:ht, IdRegion:dest.IDRegion, IdAddress:&dest_id}
-	new_order.Delivery = delivery
-	new_order.Destinations = []Destination{destination}
-	log.Printf("NEW ORDER: \n%v\n%v", delivery, destination)
+	delivery := Delivery{
+		Street:u.FirstOf(from_name, deliv.Name).(string),
+		House:hf,
+		City:deliv.City,
+		Entrance:entrance,
+		IdRegion:deliv.IDRegion,
+		IdAddress:deliv_id}
+	destination := Destination{
+		Street:u.FirstOf(to_name, dest.Name).(string),
+		House:ht,
+		IdRegion:dest.IDRegion,
+		IdAddress:dest_id,
+		City:dest.City}
+
+	new_order.Delivery = &delivery
+	new_order.Destinations = []*Destination{&destination}
 	return &new_order, nil
 }
 
@@ -549,7 +558,7 @@ func (nop *TaxiNewOrderProcessor) ProcessMessage(in *s.InPkg) *s.MessageResult {
 		if mrkps, ok := nop.context.Settings["markups"]; ok {
 			markups, ok := mrkps.([]string)
 			if ok {
-				new_order.Markups = &markups
+				new_order.Markups = markups
 			}else {
 				log.Printf("markups setting present but it is not []string %+v, %T", mrkps, mrkps)
 			}

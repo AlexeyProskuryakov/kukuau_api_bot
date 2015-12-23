@@ -16,7 +16,10 @@ import (
 	t "msngr/taxi"
 	s "msngr/taxi/set"
 	cfg "msngr/configuration"
+	g "msngr/taxi/geo"
+
 	"msngr"
+	"msngr/utils"
 )
 
 const (
@@ -50,28 +53,59 @@ type SediTariff struct {
 }
 
 type SediAPI struct {
-	Host                 string
-	apikey               string
-	appkey               string
-	userkey              string
+	Host                  string
+	apikey                string
+	appkey                string
+	userkey               string
 
-	cookies              []*http.Cookie
+	cookies               []*http.Cookie
 
-	Info                 *SediLoginInfo
-	SaleKeyword          string
-	GeoOrbit             cfg.TaxiGeoOrbit
+	Info                  *SediLoginInfo
+	SaleKeyword           string
+	GeoOrbit              cfg.TaxiGeoOrbit
+	City                  string
 	//some fields for hacking work
-	userTariffs          map[string]*SediTariff
-	userOrders           map[int64]*SediOrderInfo
+	userTariffs           map[string]*SediTariff
+	userOrders            map[int64]*SediOrderInfo
+	lastSuccessUserOrders map[string]*t.NewOrderInfo
+	cars                  map[int64]t.CarInfo
+	addressKeys           s.Set
 
-	lastOrderResponse    *SediOrdersResponse
-	lastOrderRequestTime time.Time
+	//for taxi watching with not intersection
+	lastOrderResponse     *SediOrdersResponse
+	lastOrderRequestTime  time.Time
 
+	l                     *sync.Mutex
+}
 
-	cars                 map[int64]t.CarInfo
-	addressKeys          s.Set
+func NewSediAPI(params cfg.TaxiApiParams) *SediAPI {
+	s := SediAPI{
+		Host:params.Data.Host,
+		SaleKeyword:params.Data.SaleKeyword,
+		City:params.Data.City,
+		GeoOrbit:params.GeoOrbit,
+		apikey:params.Data.ApiKey,
+		appkey:params.Data.AppKey,
 
-	l                    *sync.Mutex
+		//todo it must be more persistable...
+		lastSuccessUserOrders:map[string]*t.NewOrderInfo{},
+		userTariffs:map[string]*SediTariff{},
+		userOrders:map[int64]*SediOrderInfo{},
+		cars:map[int64]t.CarInfo{},
+
+		addressKeys: s.NewSet(),
+
+		l:&sync.Mutex{},
+	}
+	go login(&s, params.Data.Name, params.Data.Phone)
+	s.cars[-1] = t.CarInfo{}
+	return &s
+}
+
+func (s *SediAPI) getUserOrders() map[int64]*SediOrderInfo {
+	s.l.Lock()
+	defer s.l.Unlock()
+	return s.userOrders
 }
 
 func (s *SediAPI) updateUserOrders(orders []SediOrderInfo) {
@@ -146,26 +180,6 @@ func login(s *SediAPI, name, phone string) {
 	s.Info = profile
 }
 
-func NewSediAPI(params cfg.TaxiApiParams) *SediAPI {
-	s := SediAPI{
-		Host:params.Data.Host,
-		SaleKeyword:params.Data.SaleKeyword,
-
-		GeoOrbit:params.GeoOrbit,
-		apikey:params.Data.ApiKey,
-		appkey:params.Data.AppKey,
-
-		userTariffs:map[string]*SediTariff{},
-		userOrders:map[int64]*SediOrderInfo{},
-
-		cars:map[int64]t.CarInfo{},
-		l:&sync.Mutex{},
-		addressKeys: s.NewSet(),
-	}
-	go login(&s, params.Data.Name, params.Data.Phone)
-	s.cars[-1] = t.CarInfo{}
-	return &s
-}
 
 type SediResponse struct {
 	Success bool `json:"Success"`
@@ -226,6 +240,9 @@ func (s *SediAPI) doReq(req *http.Request) ([]byte, error) {
 }
 
 func (s *SediAPI) getRequest(q string, params map[string]string) ([]byte, error) {
+	s.l.Lock()
+	defer s.l.Unlock()
+
 	if s.apikey == "" || s.appkey == "" {
 		panic("Before simple request api key and user key required")
 	}
@@ -287,7 +304,7 @@ type ActivationKeyResponse struct {
 	Count uint
 }
 
-/*Send SMS to phone and return state of user in Sedi system       \
+/*Send SMS to phone and return state of user in Sedi system
 0 введенный номер не неизвестен, и для регистрации нового
 пользователя необходимо будет запросить его имя
 
@@ -436,33 +453,36 @@ func (s *SediAPI) prepareOrderParams(order t.NewOrderInfo) map[string]string {
 	params := map[string]string{
 		"street0":order.Delivery.Street,
 		"house0":order.Delivery.House,
+		"city0":utils.FirstOf(order.Delivery.City, s.City).(string),
 	}
-	if order.Delivery.IdAddress != nil {
-		params["addrid0"] = *order.Delivery.IdAddress
-	}
-	if order.Delivery.Lat != nil && order.Delivery.Lon != nil {
-		params["lat0"], params["lon0"] = GeoToString(*order.Delivery.Lat, *order.Delivery.Lon)
+	if order.Delivery.IdAddress != "" {
+		params["addrid0"] = order.Delivery.IdAddress
 	}
 
 	for i, destination := range order.Destinations {
+		if destination == nil {
+			continue
+		}
 		address_number := i + 1
 		params[fmt.Sprintf("street%v", address_number)] = destination.Street
 		params[fmt.Sprintf("house%v", address_number)] = destination.House
-		if destination.IdAddress != nil {
-			params[fmt.Sprintf("addrid%v", address_number)] = *destination.IdAddress
+		params[fmt.Sprintf("city%v", address_number)] = utils.FirstOf(destination.City, s.City).(string)
+
+		if destination.IdAddress != "" {
+			params[fmt.Sprintf("addrid%v", address_number)] = destination.IdAddress
 		}
-		if destination.Lat != nil && destination.Lon != nil {
-			params[fmt.Sprintf("lat%v", address_number)], params[fmt.Sprintf("lon%v", address_number)] = GeoToString(*destination.Lat, *destination.Lon)
+		if destination.Lat != 0.0 && destination.Lon != 0.0 {
+			params[fmt.Sprintf("lat%v", address_number)], params[fmt.Sprintf("lon%v", address_number)] = GeoToString(destination.Lat, destination.Lon)
 		}
 	}
 
-	if order.DeliveryTime != nil {
-		t, _ := time.Parse("2006-01-02 15:04:05", *order.DeliveryTime)
+	if order.DeliveryTime != "" {
+		t, _ := time.Parse("2006-01-02 15:04:05", order.DeliveryTime)
 		params["date"] = "new Date(" + fmt.Sprintf("%v", t) + ")"
 		params["ordertype"] = "preliminary"
 	} else {
 		params["date"] = "new Date(" + fmt.Sprintf("%v", time.Now().Unix() + 60 * (1 + order.DeliveryMinutes)) + ")"
-		params["ordertyep"] = "rush"
+		params["ordertype"] = "rush"
 	}
 
 	if s.SaleKeyword != "" {
@@ -476,32 +496,114 @@ type SediNewOrderResponse struct {
 	OrderId int64 `json:"ObjectId"`
 }
 
+func (s *SediAPI) getLastSuccessOrder(phone string) (*t.NewOrderInfo, bool) {
+	s.l.Lock()
+	res, ok := s.lastSuccessUserOrders[phone]
+	s.l.Unlock()
+	return res, ok
+}
+
 func (s *SediAPI) getUserTariff(phone string) (*SediTariff, bool) {
 	s.l.Lock()
 	res, ok := s.userTariffs[phone];
 	s.l.Unlock()
 	return res, ok
 }
+var CS_REGEXP = regexp.MustCompilePOSIX("[\\+\\(](.*)")
+
+func getNormalStreetName(street string) string {
+	return CS_REGEXP.ReplaceAllString(street, "")
+}
+
+func ensureOrderDelivery(order *t.NewOrderInfo) t.NewOrderInfo {
+	/**
+	Устанавливаем названия улиц для места отправления. Нельзя удалять слово улица проспект переулок и прочую ересь, но нужно удалить "+" и все что после него
+	 */
+	new_order := *order
+	new_order.Delivery.Street = getNormalStreetName(order.Delivery.Street)
+	new_order.Delivery.IdAddress = ""
+	return new_order
+}
+
+func ensureOrderDestinations(order *t.NewOrderInfo) t.NewOrderInfo {
+	/**
+	Устанавливаем названия улиц для места прибытия. Нельзя удалять слово улица проспект переулок и прочую ересь, но нужно удалить "+" и все что после него
+	 */
+	new_order := *order
+	new_order.Destinations = make([]*t.Destination, len(order.Destinations))
+	for i, p_dest := range order.Destinations {
+		new_order.Destinations[i] = p_dest
+		new_order.Destinations[i].Street = getNormalStreetName(p_dest.Street)
+		new_order.Destinations[i].IdAddress = ""
+	}
+	return new_order
+}
+
 
 func (s *SediAPI)NewOrder(order t.NewOrderInfo) t.Answer {
-	params := s.prepareOrderParams(order)
+	log.Printf("SEDI NEW ORDER. Input new order info details is here: \nFrom: %v %v %v\nTo: %v %v %v",
+		order.Delivery.House, order.Delivery.Street, order.Delivery.City,
+		order.Destinations[0].House, order.Destinations[0].Street, order.Destinations[0].City,
+	)
 
+	_order := order
+	params := s.prepareOrderParams(_order)
+
+	if (order.Delivery.Lat == 0.0 || order.Delivery.Lon == 0.0) {
+		/**
+		Ебучий седи. То есть либо ты даешь ему ид адреса, либо ебись с названиями.
+		Вообще исходя из того что мы в любом случае перед этим методом получаем инфу из автокомплита, то алгоритм такой:
+	 	*/
+		//Извлекаем название улицы. Нельзя удалять слово улица проспект переулок и прочую ересь, но нужно удалить "+" либо "(" и все что после него
+		order_with_string_delivery := ensureOrderDelivery(&_order)
+		order_with_string_delivery_and_dest := ensureOrderDestinations(&order_with_string_delivery)
+		//Пробуем создать заказ с обновленной улицей.
+		log.Printf("SEDI NEW ORDER! try street like...\n%v", order_with_string_delivery_and_dest)
+		se_cost, _ := s.CalcOrderCost(order_with_string_delivery_and_dest)
+		if se_cost == -1 {
+			log.Printf("SEDI NEW ORDER! not dest and del:( Maybe only del?\n%v", order_with_string_delivery)
+			se_cost, _ = s.CalcOrderCost(order_with_string_delivery)
+			if se_cost == -1 {
+				order_with_string_dest := ensureOrderDestinations(&_order)
+				log.Printf("SEDI NEW ORDER! not del:( May be only dest?\n%v", order_with_string_dest)
+				se_cost, _ = s.CalcOrderCost(order_with_string_dest)
+			}
+		}
+		//Если стоймость рассчиталась то заказ валиден и должен быть и последний заказец с самыми валидными данными.
+		if __order, ok := s.getLastSuccessOrder(order.Phone); ok && se_cost != -1 {
+			//вот его-то и берем
+			_order = *__order
+			log.Printf("SEDI NEW ORDER! USING STREET EQUALS ORDER! \n%v\n\t%v", _order, __order)
+			params = s.prepareOrderParams(_order) //и параметрый нахуй все по новой...
+		} else {
+			//иначе видимо был поиск по объектам и идем по идентификаторам адресов которые были в
+			//начальном ордере и отправляем.
+			log.Printf("SEDI NEW ORDER! Can not found last success order/ Then i think that orders del/dest is in map objects \n%v", _order)
+		}
+	} else {
+		//ну а если координаты то вообще на все поебать.
+		params["lat0"], params["lon0"] = GeoToString(order.Delivery.Lat, order.Delivery.Lon)
+	}
+
+	log.Printf("SEDI NEW ORDER FINAL ORDER INFORMATION \nFROM: Street: %v, House: %v, City: %v, Id: %v;\nTO: Street: %v, House: %v, City: %v, Id: %v;",
+		_order.Delivery.Street, _order.Delivery.House, _order.Delivery.City, _order.Delivery.IdAddress,
+		_order.Destinations[0].Street, _order.Destinations[0].House, _order.Destinations[0].City, _order.Destinations[0].IdAddress,
+	)
+
+	//ебаные тарифы... тарифы должны быть сохранены после успешных калькуляций
 	order_tariff := &SediTariff{}
-	if tariff, ok := s.getUserTariff(order.Phone); ok {
+	if tariff, ok := s.getUserTariff(_order.Phone); ok {
 		order_tariff = tariff
-	}else {
-		if cost, message := s.CalcOrderCost(order); cost < 0 {
+	} else { //и если они не сохранены, то калькулируем чтобы сохранить
+		if cost, message := s.CalcOrderCost(_order); cost == -1 {
 			return t.Answer{IsSuccess:false, Message:message}
 		}
-		s.l.Lock()
-		tariff, ok = s.userTariffs[order.Phone]
-		s.l.Unlock()
-		order_tariff = tariff
+		order_tariff, _ = s.getUserTariff(_order.Phone)
 	}
 	params["tariff"] = fmt.Sprintf("%v", order_tariff.TariffId)
 	params["cost"] = fmt.Sprintf("%v", order_tariff.CostFull)
-	params["name"] = "KUKUAPIBOT"
-	params["phone"] = order.Phone
+	params["name"] = _order.Phone
+	params["phone"] = _order.Phone
 
 	res, err := s.getRequest("add_order", params)
 	if err != nil {
@@ -515,10 +617,7 @@ func (s *SediAPI)NewOrder(order t.NewOrderInfo) t.Answer {
 	result := t.Answer{IsSuccess:new_order_response.Success, Message:new_order_response.Message}
 	if !new_order_response.Success {
 		if isCanCheck(new_order_response.Message) {
-			updated_order, err := checkOrderAddress(res, &order)
-			if err == nil {
-				return s.NewOrder(*updated_order)
-			}
+			log.Printf("SEDI ... Interested is why it was exeuted this string...(566)")
 		}
 		log.Printf("SEDI ERROR at create order %v", new_order_response.Message)
 		return result
@@ -566,6 +665,10 @@ func (csr SediCalcResponse) String() string {
 }
 
 func (csr SediCalcResponse) GetMinCost() (int, *SediTariff) {
+	/*
+	Возвращат минимальную стоимость (либо та которая имеется с признаком самамя минимальная либо
+	просто минимальную из предложенных)
+			*/
 	costs := map[SediTariff]int{}
 	for _, tarif := range csr.Tariffs {
 		if tarif.IsMinimumCost {
@@ -589,18 +692,34 @@ func (csr SediCalcResponse) GetMinCost() (int, *SediTariff) {
 	}
 	return 0, nil
 }
-/*
-Ебучий костыль для адреса. Иначе никак (по крайней мере на такую голову...).
 
-*/
-func checkAddressEquals(address_one SediAddress, house string, street string) bool {
-	st1 := strings.TrimSpace(t.CC_REGEXP.ReplaceAllString(street, ""))
-	st2 := strings.TrimSpace(t.CC_REGEXP.ReplaceAllString(address_one.StreetName, ""))
-	result := st1 == st2 && strings.TrimSpace(address_one.HouseNumber) == strings.TrimSpace(house)
+func checkAddressEquals(address_one SediAddress, house, street string) bool {
+	/*
+	Сравниваем оставляя только введеное название улиц. Дома лишь лоувятся
+	 */
+	pre_str := func(street string) string {
+		return strings.TrimSpace(g.CC_REGEXP.ReplaceAllString(strings.ToLower(street), ""))
+	}
+	pre_house := func(house string) string {
+		return strings.ToLower(strings.TrimSpace(house))
+	}
+	st1, st2 := pre_str(street), pre_str(address_one.StreetName)
+	h1, h2 := pre_house(address_one.HouseNumber), pre_house(house)
+
+	result := st1 == st2 && h1 == h2
+
 	log.Printf("SEDI CHECKING ADDRESSES EQUALS : %v  == ? %v Street: %v, House: %v", address_one, result, street, house)
 	return result
 }
-func checkOrderAddress(res []byte, order *t.NewOrderInfo) (*t.NewOrderInfo, error) {
+
+func checkAndUpdateOrderAddress(res []byte, order *t.NewOrderInfo) (*t.NewOrderInfo, error) {
+	/**
+	Проверка и обновление адресов создаваемого заказа.
+	Так как седи может отвечать ошибкой и предлагать варианты адресов то мы просматриваем
+	то что пришло от седи и то что уже есть.
+	В итоге возвращается информация о заказе с проставленными идентификатоами адресов отправления и прибытия которые
+	которые дало седи или просто тот же самый ордер если в ответе от седи нет инфы об адресах или эта информация не равнозначна
+	 */
 	response_object := SediGeoCodingResult{}
 	err := json.Unmarshal(res, &response_object)
 	if err != nil {
@@ -611,13 +730,13 @@ func checkOrderAddress(res []byte, order *t.NewOrderInfo) (*t.NewOrderInfo, erro
 	for _, resp_address := range response_object.Addresses {
 		if checkAddressEquals(resp_address, order.Delivery.House, order.Delivery.Street) {
 			address_id_str := strconv.FormatInt(resp_address.ID, 10)
-			order.Delivery.IdAddress = &address_id_str
+			order.Delivery.IdAddress = address_id_str
 			continue
 		}
 		for i, dest_address := range order.Destinations {
 			if checkAddressEquals(resp_address, dest_address.House, dest_address.Street) {
 				address_id_str := strconv.FormatInt(resp_address.ID, 10)
-				order.Destinations[i].IdAddress = &address_id_str
+				order.Destinations[i].IdAddress = address_id_str
 				break
 			}
 		}
@@ -630,16 +749,20 @@ func (s *SediAPI)CalcOrderCost(order t.NewOrderInfo) (int, string) {
 		return 0, "No destinations at order"
 	}
 	params := s.prepareOrderParams(order)
+	if order.Delivery.Lat != 0.0 && order.Delivery.Lon != 0.0 {
+		params["lat0"], params["lon0"] = GeoToString(order.Delivery.Lat, order.Delivery.Lon)
+	}
+	log.Printf("Request cost:\n%v", order)
 	res, err := s.getRequest("Calccost", params)
 	response_result := SediCalcResponse{}
 	err = json.Unmarshal(res, &response_result)
 	if err != nil {
-		return -1, fmt.Sprintf("Error unmarshal: %+v \nFor response: %s", err, res)
+		return -1, fmt.Sprintf("SEDI Calc order Error unmarshal: %+v \nFor response: %s", err, res)
 	}
-	log.Printf("Response costs:\n%v", response_result)
+	log.Printf("Response costs:\n%v\n>>>\n%v", order, response_result)
 	if !response_result.Success {
 		if isCanCheck(response_result.Message) {
-			updated_order, err := checkOrderAddress(res, &order)
+			updated_order, err := checkAndUpdateOrderAddress(res, &order)
 			if err == nil {
 				return s.CalcOrderCost(*updated_order)
 			}
@@ -653,6 +776,7 @@ func (s *SediAPI)CalcOrderCost(order t.NewOrderInfo) (int, string) {
 	if tariff != nil {
 		s.l.Lock()
 		s.userTariffs[order.Phone] = tariff
+		s.lastSuccessUserOrders[order.Phone] = &order
 		s.l.Unlock()
 		return cost, "OK"
 	}
@@ -783,16 +907,16 @@ func (s *SediAPI) toInternalOrders(sor *SediOrdersResponse) []t.Order {
 			id_car := car.Id
 			int_order.IDCar = id_car
 
-			var color string
+			var car_color string
 			if car.Props != nil {
 				for _, prop := range car.Props.Properties {
 					if prop.Key == "color" {
-						color = prop.Value.Name
+						car_color = prop.Value.Name
 						break
 					}
 				}
 			}
-			s.setCar(id_car, car.Name, car.Number, color)
+			s.setCar(id_car, car.Name, car.Number, car_color)
 		}
 		result = append(result, int_order)
 	}
@@ -822,7 +946,7 @@ func (s *SediAPI)Orders() []t.Order {
 		}
 		s.updateUserOrders(response.Orders)
 		order_ids := []string{}
-		for order_id, _ := range s.userOrders {
+		for order_id, _ := range s.getUserOrders() {
 			if !response.IsContains(order_id) {
 				order_ids = append(order_ids, strconv.FormatInt(order_id, 10))
 				s.deleteUserOrder(order_id)
@@ -831,6 +955,12 @@ func (s *SediAPI)Orders() []t.Order {
 		if len(order_ids) > 0 {
 			order_ids_param := strings.Join(order_ids, ",")
 			log.Printf("SEDI getting additional info for orders: %+v", order_ids_param)
+			_, lt = s.getLastOrdersInfo()
+
+			wait_time := ORDER_REFRESH_TIME / 2
+			log.Printf("SEDI ORDERS WILL SLEEP before get orders response time is arrive...%v", wait_time)
+			time.Sleep(time.Duration(wait_time) * time.Second)
+
 			add_res, err := s.getRequest("get_orders", map[string]string{"orderids":order_ids_param})
 			if err != nil {
 				log.Printf("SEDI ORDERS ADDITIONAL INFO ERROR %v", err)
@@ -842,6 +972,7 @@ func (s *SediAPI)Orders() []t.Order {
 				log.Printf("SEDi ORDERS ADDITIONAL INFO UNMARSHAL ERROR: %v\n%s", err, add_res)
 				return s.toInternalOrders(response)
 			}
+			log.Printf("SEDI ORDERS EXTEND ORDERS %+v", add_response.Orders)
 			response.Orders = append(response.Orders, add_response.Orders...)
 		}
 		s.setLastOrderResponse(response)

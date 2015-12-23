@@ -157,3 +157,4 @@ func NewThreadUnsafeSetFromSlice(s []interface{}) Set {
 	}
 	return a
 }
+

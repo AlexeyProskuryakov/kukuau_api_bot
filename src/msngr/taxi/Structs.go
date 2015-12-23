@@ -2,12 +2,16 @@ package taxi
 import (
 	"msngr/utils"
 	"msngr/db"
+
 	"fmt"
 	"time"
 	"strings"
-	s "msngr/taxi/set"
 )
 
+type Coordinates struct {
+	Lat float64 `json:"lat"`
+	Lon float64 `json:"lon"`
+}
 
 type AddressF struct {
 
@@ -37,21 +41,10 @@ type AddressF struct {
 }
 
 func (a AddressF) String() string {
-	return fmt.Sprintf("[%v]g[%v]o[%v] '%v' (%v) at %v %v %v %v \nIDS:\nParent: %v, Region: %v, District: %v, City: %v, Place: %v\n", a.ID, a.GID, a.OSM_ID, a.Name, a.FullName, a.Region, a.City, a.District, a.Place, a.IDParent, a.IDRegion, a.IDDistrict, a.IDCity, a.IDPlace)
-}
-
-func (a AddressF) GetSet() s.Set {
-	external_set := s.NewSet()
-	nitem := a
-	if nitem.ShortName == "пл" {
-		nitem.Name = fmt.Sprintf("площадь %s", nitem.Name)
-	}
-	_add_to_set(external_set, nitem.Name)
-	_add_to_set(external_set, nitem.Region)
-	_add_to_set(external_set, nitem.City)
-	_add_to_set(external_set, nitem.District)
-	_add_to_set(external_set, nitem.Place)
-	return external_set
+	return fmt.Sprintf("[%v]g[%v]o[%v] '%v' (%v) (%v) at %v %v %v %v %v\nIDS:\tParent: %v, Region: %v, District: %v, City: %v, Place: %v\n",
+		a.ID, a.GID, a.OSM_ID,
+		a.Name, a.FullName, a.ShortName, a.HouseNumber, a.City, a.Region, a.District, a.Place,
+		a.IDParent, a.IDRegion, a.IDDistrict, a.IDCity, a.IDPlace)
 }
 
 type AddressPackage struct {
@@ -88,112 +81,70 @@ type Address struct {
 }
 
 type Destination struct {
-	IdRegion      int64   `json:"idRegion"`                 // : <Идентификатор региона (Int64)>,
-	IdStreet      int64   `json:"idStreet"`                 // : <Идентификатор улицы (Int64)>,
+	IdRegion      int64   `json:"idRegion"`                // : <Идентификатор региона (Int64)>,
+	IdStreet      int64   `json:"idStreet"`                // : <Идентификатор улицы (Int64)>,
 
-	House         string  `json:"house"`                    // : <№ дома (строка)>,
+	House         string  `json:"house"`                   // : <№ дома (строка)>,
 	Street        string
+	City          string
 
-	Lat           *float64 `json:"lat,omitempty"`           // : <Широта координаты адреса (при указании места на карте). Если указано, информация о доставке по указанию и адресе игнорируется>,
-	Lon           *float64 `json:"lon,omitempty"`           // : <Долгота координаты адреса (при указании места на карте). Если указано, информация о доставке по указанию и адресе игнорируется>,"isByDirection" : <Заказ машины с указанием пункта назначения при подаче (если задано в true,информация о адресе игнонрируются)>,
+	Lat           float64 `json:"lat,omitempty"`           // : <Широта координаты адреса (при указании места на карте). Если указано, информация о доставке по указанию и адресе игнорируется>,
+	Lon           float64 `json:"lon,omitempty"`           // : <Долгота координаты адреса (при указании места на карте). Если указано, информация о доставке по указанию и адресе игнорируется>,"isByDirection" : <Заказ машины с указанием пункта назначения при подаче (если задано в true,информация о адресе игнонрируются)>,
 
-	IdDistrict    *int64   `json:"idDistrict"`              // : <Идентификатор района (Int64)>,
-	IdCity        *int64   `json:"idCity"`                  // : <Идентификатор города (Int64)>,
-	IdPlace       *int64   `json:"idPlace"`                 // : <Идентификатор поселения (Int64)>,
+	IdDistrict    int64   `json:"idDistrict"`              // : <Идентификатор района (Int64)>,
+	IdCity        int64   `json:"idCity"`                  // : <Идентификатор города (Int64)>,
+	IdPlace       int64   `json:"idPlace"`                 // : <Идентификатор поселения (Int64)>,
 
-	Building      *string  `json:"building,omitempty"`      // : <Строение (строка)>,
-	Fraction      *string  `json:"fraction,omitempty"`      // : <Корпус (строка)>,
-	Entrance      *string  `json:"entrance,omitempty"`      // : <Подъезд (строка)>,
-	Apartment     *string  `json:"apartment,omitempty"`     // : <№ квартиры (строка)> ,
+	Building      string  `json:"building,omitempty"`      // : <Строение (строка)>,
+	Fraction      string  `json:"fraction,omitempty"`      // : <Корпус (строка)>,
+	Entrance      string  `json:"entrance,omitempty"`      // : <Подъезд (строка)>,
+	Apartment     string  `json:"apartment,omitempty"`     // : <№ квартиры (строка)> ,
 
-	IdAddress     *string  `json:"idAddress,omitempty"`     // : <Идентификатор существующего описания адреса (адрес дома или объекта)>,
-	IdFastAddress *string  `json:"idFastAddress,omitempty"` // : <ID быстрого адреса. Дополнительное информационное поле, описывающее быстрый адрес, связанный с указанным адресом. Значение учитывается только при указании idAddress>
+	IdAddress     string  `json:"idAddress,omitempty"`     // : <Идентификатор существующего описания адреса (адрес дома или объекта)>,
+	IdFastAddress string  `json:"idFastAddress,omitempty"` // : <ID быстрого адреса. Дополнительное информационное поле, описывающее быстрый адрес, связанный с указанным адресом. Значение учитывается только при указании idAddress>
 }
 
 func (d Destination) String() string {
-	return fmt.Sprintf("Destination: [%v] [Region:%v, Street:%v] Street: %v, House: %v \n\t{Building: %v, Fraction: %v, Entrance: %v, Apartment: %v}\n\t(IDS place: %v, city: %v, district: %v)\n",
-		*d.IdAddress,
-		d.IdRegion,
-		d.IdStreet,
+	return fmt.Sprintf("\tDestination [%v] City: %v, Street: %v, House: %v, Entrance: %v\n",
+		d.IdAddress,
+		d.City,
 		d.Street,
 		d.House,
-		d.Building,
-		d.Fraction,
 		d.Entrance,
-		d.Apartment,
-		d.IdPlace,
-		d.IdCity,
-		d.IdDistrict,
 	)
 }
 
-type Delivery struct {
-
-	IdRegion      int64 `json:"idRegion"`                   // <Идентификатор региона (Int64)>,
-	IdStreet      int64  `json:"idStreet"`                  // : <Идентификатор улицы (Int64)>,
-
-	House         string `json:"house"`                     // : <№ дома (строка)>,
-	Street        string
-
-	Lat           *float64 `json:"lat,omitempty"`           // : <Широта координаты адреса (при указании места на карте). Если указано, информация о адресе игнорируется>,
-	Lon           *float64 `json:"lon,omitempty"`           // : <Долгота координаты адреса (при указании места на карте). Если указано, информация о адресе игнорируется>,
-
-	Building      *string `json:"building,omitempty"`       // : <Строение (строка)>,
-	Fraction      *string `json:"fraction,omitempty"`       // : <Корпус (строка)>,
-	Entrance      *string `json:"entrance,omitempty"`       // : <Подъезд (строка)>,
-	Apartment     *string `json:"apartment,omitempty"`      // : <№ квартиры (строка)>,
-
-
-	IdPlace       *int64 `json:"idPlace"`                   //IdPlace       int64  `json:"idPlace"`       //: <Идентификатор поселения (Int64)>,
-	IdCity        *int64 `json:"idCity"`                    //IdCity        int64  `json:"idCity"`        // : <Идентификатор города (Int64)>,
-	IdDistrict    *int64 `json:"idDistrict"`                //IdDistrict    int64  `json:"idDistrict"`    // : <Идентификатор района (Int64)>,
-
-	IdAddress     *string `json:"idAddress,omitempty"`      // <Идентификатор существующего описания адреса (адрес дома или объекта)>,
-	IdFastAddress *string  `json:"idFastAddress,omitempty"` //: <ID быстрого адреса. Дополнительное информационное поле, описывающее быстрый адрес, связанный с указанным адресом. Значение учитывается только при указании idAddress>
-
-}
+type Delivery Destination
 
 func (d Delivery) String() string {
-	return fmt.Sprintf("Delivery :[%v] [Region:%v, Street:%v] Street: %v, House: %v \n\t{Building: %v, Fraction: %v, Entrance: %v, Apartment: %v}\n\t(IDS place: %v, city: %v, district: %v)",
-		*d.IdAddress,
-		d.IdRegion,
-		d.IdStreet,
+	return fmt.Sprintf("\tDelivery [%v] City: %v, Street: %v, House: %v, Entrance: %v\n",
+		d.IdAddress,
+		d.City,
 		d.Street,
 		d.House,
-		d.Building,
-		d.Fraction,
 		d.Entrance,
-		d.Apartment,
-		d.IdPlace,
-		d.IdCity,
-		d.IdDistrict,
 	)
 }
 
-type NewOrderInfo struct {
-																 //request
+
+type NewOrderInfo struct {                                             //request
 	Phone           string `json:"phone"`
-	DeliveryTime    *string `json:"deliveryTime,omitempty"`      //<Время подачи в формате yyyy-MM-dd HH:mm:ss>
-	DeliveryMinutes int64  `json:"deliveryMinutes"`              // <Количество минут до подачи (0-сейчас, но не менее минимального времени на подачу, указанного в настройках системы), не анализируется если задано поле deliveryTime >
-	IdService       string  `json:"idService"`                   //<Идентификатор услуги заказа (не может быть пустым)>
-	Notes           *string `json:"notes,omitempty"`             // <Комментарий к заказу>
-	Markups         *[]string    `json:"markups,omitempty"`      //Markups           [2]int64 `json:"markups"`           // <Массив идентификаторов наценок заказа>
-	Attributes      *[2]int64      `json:"attributes,omitempty"` // <Массив идентификаторов дополнительных атрибутов заказа>
-	Delivery        Delivery      `json:"delivery"`              // Инфомация о месте подачи машины
-	Destinations    []Destination `json:"destinations"`          // Пункты назначения заказа (массив, не может быть пустым)
-	IsNotCash       *bool          `json:"isNotCash,omitempty"`  //: // Флаг безналичного заказа <true или false (bool)>
+	DeliveryTime    string `json:"deliveryTime,omitempty"`             //<Время подачи в формате yyyy-MM-dd HH:mm:ss>
+	DeliveryMinutes int64  `json:"deliveryMinutes"`                    // <Количество минут до подачи (0-сейчас, но не менее минимального времени на подачу, указанного в настройках системы), не анализируется если задано поле deliveryTime >
+	IdService       string  `json:"idService"`                         //<Идентификатор услуги заказа (не может быть пустым)>
+	Notes           string `json:"notes,omitempty"`                    // <Комментарий к заказу>
+	Markups         []string    `json:"markups,omitempty"`             //Markups           [2]int64 `json:"markups"`           // <Массив идентификаторов наценок заказа>
+	Attributes      [2]int64      `json:"attributes,omitempty"`        // <Массив идентификаторов дополнительных атрибутов заказа>
+	Delivery        *Delivery      `json:"delivery"`                   // Инфомация о месте подачи машины
+	Destinations    []*Destination `json:"destinations"`               // Пункты назначения заказа (массив, не может быть пустым)
+	IsNotCash       bool          `json:"isNotCash,omitempty"`         //: // Флаг безналичного заказа <true или false (bool)>
 }
 
-func (o *NewOrderInfo) String() string {
-	return fmt.Sprintf("New Order Info:\n\tPhone: %s; \n\tDelivery time: %v, after: %v minutes; \n\tIdService: %v, Notes: %+v, Markups: %+v, Attributes: %+v, Not cash? %v\n\tDelivery: %v\n\tDestinations: %+v\n",
+func (o NewOrderInfo) String() string {
+	return fmt.Sprintf("New Order Info for %s;" +
+	"\n\t FROM %v " +
+	"\n\t TO %v \n",
 		o.Phone,
-		o.DeliveryTime,
-		o.DeliveryMinutes,
-		o.IdService,
-		o.Notes,
-		o.Markups,
-		o.Attributes,
-		o.IsNotCash,
 		o.Delivery,
 		o.Destinations,
 	)
@@ -267,10 +218,17 @@ type CarInfo struct {
 }
 
 func (car CarInfo) String() string {
-	if car.Model == "" && car.Number == "" {
-		return fmt.Sprintf("не опознана. [%v %v]", car.Lat, car.Lon)
+	var result string
+	if car.Number != "" && car.Color != "" && car.Model != "" {
+		result = fmt.Sprintf("%v %v с номером %v ", car.Color, car.Model, car.Number)
+	} else if car.Model != "" && car.Number != "" {
+		result = fmt.Sprintf("%v %v", car.Model, car.Number)
+	} else if car.Model != "" || car.Number != "" {
+		result = fmt.Sprintf("%v %v", car.Model, car.Number)
+	} else {
+		result = "не определена"
 	}
-	return fmt.Sprintf("%v %v с номером %v ", car.Color, car.Model, car.Number)
+	return result
 }
 
 type Feedback struct {

@@ -5,11 +5,19 @@ import (
 	"log"
 	"fmt"
 	"encoding/json"
-	"msngr/utils"
 	"math"
+	"errors"
+	"regexp"
+	"strings"
 
+	u "msngr/utils"
 	t "msngr/taxi"
+	s "msngr/taxi/set"
+
+
 )
+
+var CC_REGEXP = regexp.MustCompilePOSIX("(ул(ица|\\.| )|пр(\\.|оспект|\\-кт)?|пер(\\.|еулок| )|г(ород|\\.|ор\\.| )|обл(асть|\\.| )|р(айон|\\-н )|^с )?")
 
 func StreetsSearchController(w http.ResponseWriter, r *http.Request, i t.AddressSupplier) {
 	w.Header().Set("Content-type", "application/json")
@@ -54,7 +62,7 @@ func StreetsSearchController(w http.ResponseWriter, r *http.Request, i t.Address
 				}else {
 					item.Title = nitem.Name
 				}
-				item.SubTitle = fmt.Sprintf("%v", utils.FirstOf(nitem.Place, nitem.District, nitem.City, nitem.Region))
+				item.SubTitle = fmt.Sprintf("%v", u.FirstOf(nitem.Place, nitem.District, nitem.City, nitem.Region))
 				results = append(results, item)
 			}
 		}
@@ -65,6 +73,21 @@ func StreetsSearchController(w http.ResponseWriter, r *http.Request, i t.Address
 		fmt.Fprintf(w, "%s", string(ans))
 	}
 }
+
+func GetSetOfAddressF(a t.AddressF) s.Set {
+	external_set := s.NewSet()
+	nitem := a
+	if nitem.ShortName == "пл" {
+		nitem.Name = fmt.Sprintf("площадь %s", nitem.Name)
+	}
+	AddStringToSet(external_set, nitem.Name)
+	AddStringToSet(external_set, nitem.Region)
+	AddStringToSet(external_set, nitem.City)
+	AddStringToSet(external_set, nitem.District)
+	AddStringToSet(external_set, nitem.Place)
+	return external_set
+}
+
 
 type DictItem struct {
 	Key      string `json:"key"`
@@ -78,6 +101,23 @@ type InPlace struct {
 	DistrictId *int64 `json:"IDDistrict"`
 	CityId     *int64 `json:"IDCity"`
 	PlaceId    *int64 `json:"IDPlace"`
+}
+
+func AddStringToSet(set s.Set, element string) (string, error) {
+	result := ClearAddressString(element)
+	if result != "" {
+		set.Add(result)
+		return result, nil
+	}
+	return element, errors.New(fmt.Sprintf("can not imply %+v ==> %+v", element, result))
+}
+
+func ClearAddressString(element string) (string) {
+	result := strings.ToLower(element)
+	result_raw := CC_REGEXP.ReplaceAllString(result, "")
+	result = string(result_raw)
+	result = strings.TrimSpace(result)
+	return result
 }
 
 
@@ -107,4 +147,3 @@ func Distance(lat1, lon1, lat2, lon2 float64) float64 {
 	result := 2 * r * math.Asin(math.Sqrt(h))
 	return result
 }
-

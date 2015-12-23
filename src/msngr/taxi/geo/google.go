@@ -6,19 +6,15 @@ import (
 	"fmt"
 	"encoding/json"
 	"errors"
-	"regexp"
-
 
 	t "msngr/taxi"
 	u "msngr/utils"
 	c "msngr/configuration"
 	m "msngr"
+	s "msngr/taxi/set"
 	"msngr/utils"
 
 )
-
-
-var CC_REGEXP = regexp.MustCompilePOSIX("(ул(ица|\\.| )|пр(\\.|оспект|\\-кт)?|пер(\\.|еулок| )|г(ород|\\.|ор\\.| )|обл(асть|\\.| )|р(айон|\\-н )|^с )?")
 
 var NOT_IMPLY_TYPES = []string{"country"}
 const GOOGLE_API_URL = "https://maps.googleapis.com/maps/api"
@@ -175,7 +171,6 @@ func (ah *GoogleAddressHandler) GetExternalInfo(key, name string) (*t.AddressF, 
 
 	if query == "" {
 		query = addr_details.Result.Name
-		//		_add_to_set(google_set, addr_details.Result.Name)
 	}
 	log.Printf("<<< [%v]\n%+v", query, google_set)
 	if !ah.ExternalAddressSupplier.IsConnected() {
@@ -194,7 +189,7 @@ func (ah *GoogleAddressHandler) GetExternalInfo(key, name string) (*t.AddressF, 
 
 	for i := len(ext_rows) - 1; i >= 0; i-- {
 		nitem := ext_rows[i]
-		external_set := nitem.GetSet()
+		external_set := GetSetOfAddressF(nitem)
 
 		log.Printf("GetStreetId [%v]:\n e: %+v < ? > g: %+v", query, external_set, google_set)
 		if google_set.IsSuperset(external_set) || external_set.IsSuperset(google_set) {
@@ -239,3 +234,24 @@ func (ah *GoogleAddressHandler) IsConnected() bool {
 }
 
 
+
+func _process_address_components(components []GoogleAddressComponent) (string, s.Set) {
+	var route string
+	google_set := s.NewSet()
+	for _, component := range components {
+		if u.IntersectionS(NOT_IMPLY_TYPES, component.Types) {
+			log.Printf("component type %+v \ncontains not imply types: %v", component, component.Types)
+			continue
+		} else {
+			long_name, err := AddStringToSet(google_set, component.LongName)
+			if err != nil {
+				log.Printf("WARN AT PROCESSING ADRESS COMPONENTS: %v", err)
+				continue
+			}
+			if u.InS("route", component.Types) {
+				route = long_name
+			}
+		}
+	}
+	return route, google_set
+}

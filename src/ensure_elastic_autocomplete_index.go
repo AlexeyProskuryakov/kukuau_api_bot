@@ -40,11 +40,11 @@ func main() {
 	}
 	termQuery := elastic.NewTermQuery("osm_key", "highway")
 	searchPhotonResult, err := client.Search().
-	Index("photon").// search in index "twitter"
-	Query(&termQuery).// specify the query
+	Index("photon").
+	Query(&termQuery).
 	Size(math.MaxInt64).
-	Pretty(true).// pretty print request and response JSON
-	Do()                // execute
+	Pretty(true).
+	Do()
 	if err != nil {
 		// Handle error
 		panic(err)

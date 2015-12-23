@@ -6,8 +6,8 @@
           "fields": [
             {
               "data": {
-                "value": "{\"Coordinates\":{\"lat\":59.921011,\"lon\":30.354747},\"osm_id\":0,\"GID\":\"\",\"ID\":1965544,\"Name\":\"Лиговский Проспект\",\"City\":\"Санкт-Петербург\",\"FullName\":\"\",\"IDRegion\":0,\"IDDistrict\":0,\"IDCity\":0,\"IDPlace\":0,\"PostalCode\":\"\",\"HouseNumber\":\"\"}",
-                "text": "Лиговский проспект"
+                "value": "{\"Coordinates\":{\"lat\":59.901702,\"lon\":30.339904},\"osm_id\":0,\"GID\":\"\",\"ID\":1983055,\"Name\":\"Лиговский + Витебский\",\"City\":\"Санкт-Петербург\",\"FullName\":\"\",\"IDRegion\":0,\"IDDistrict\":0,\"IDCity\":0,\"IDPlace\":0,\"PostalCode\":\"\",\"HouseNumber\":\"\"}",
+                "text": "Лиговский + Витебский"
               },
               "type": "dict",
               "name": "street_from"
@@ -18,22 +18,22 @@
             },
             {
               "data": {
-                "value": "{\"Coordinates\":{\"lat\":59.921011,\"lon\":30.354747},\"osm_id\":0,\"GID\":\"\",\"ID\":1965544,\"Name\":\"Лиговский Проспект\",\"City\":\"Санкт-Петербург\",\"FullName\":\"\",\"IDRegion\":0,\"IDDistrict\":0,\"IDCity\":0,\"IDPlace\":0,\"PostalCode\":\"\",\"HouseNumber\":\"\"}",
-                "text": "Лиговский проспект"
+                "value": "{\"Coordinates\":{\"lat\":59.92891,\"lon\":30.35917},\"osm_id\":0,\"GID\":\"\",\"ID\":279520,\"Name\":\"Лиготель гостиница\",\"City\":\"Санкт-Петербург\",\"FullName\":\"\",\"IDRegion\":0,\"IDDistrict\":0,\"IDCity\":0,\"IDPlace\":0,\"PostalCode\":\"\",\"HouseNumber\":\"\"}",
+                "text": "Гостиница Лиготель"
               },
               "type": "dict",
               "name": "street_to"
             },
             {
               "data": {
-                "value": "202"
+                "value": "3"
               },
               "type": "text",
               "name": "house_from"
             },
             {
               "data": {
-                "value": "80"
+                "value": "10"
               },
               "type": "text",
               "name": "house_to"
