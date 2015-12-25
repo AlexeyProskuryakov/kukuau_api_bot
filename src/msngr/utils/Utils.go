@@ -25,11 +25,11 @@ func GenId() string {
 	return fmt.Sprintf("%d", r.Int63())
 }
 
-func PHash(pwd *string) (*string) {
-	input := []byte(*pwd)
+func PHash(pwd string) (string) {
+	input := []byte(pwd)
 	output := md5.Sum(input)
 	result := string(output[:])
-	return &result
+	return result
 }
 
 func get_parent_path(path string)string{

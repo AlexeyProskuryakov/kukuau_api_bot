@@ -85,8 +85,8 @@ func Run(config c.Configuration, db *d.DbHandlerMixin) {
 		if err == nil {
 			for _, user_info := range *logged_users_info {
 				user_name := user_info.UserName
-				if user_name != nil {
-					logged_users = append(logged_users, *user_name)
+				if user_name != "" {
+					logged_users = append(logged_users, user_name)
 				}
 			}
 		}

@@ -389,7 +389,7 @@ type TaxiCommandsProcessor struct {
 func (cp *TaxiCommandsProcessor) ProcessRequest(in *s.InPkg) *s.RequestResult {
 	phone, _ := _get_phone(in)
 	if phone != nil {
-		cp.Users.AddUser(&(in.From), phone)
+		cp.Users.AddUser(in.From, *phone)
 	}
 
 	result, err := FormCommands(in.From, cp.DbHandlerMixin, cp.context)
@@ -535,7 +535,7 @@ func (nop *TaxiNewOrderProcessor) ProcessMessage(in *s.InPkg) *s.MessageResult {
 			if err != nil {
 				return s.ErrorMessageResult(errors.New("Не предоставлен номер телефона"), nop.context.Commands[CMDS_NOT_CREATED_ORDER])
 			} else {
-				phone = uwrpr.Phone
+				phone = &(uwrpr.Phone)
 			}
 		}
 
@@ -684,7 +684,7 @@ func (fp *TaxiFeedbackProcessor) ProcessMessage(in *s.InPkg) *s.MessageResult {
 			log.Printf("Error at implying user by id %v", in.From)
 			return s.ErrorMessageResult(err, fp.context.Commands[CMDS_FEEDBACK])
 		}else {
-			phone = user.Phone
+			phone = &(user.Phone)
 		}
 	}
 

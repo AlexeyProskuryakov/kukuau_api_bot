@@ -1,0 +1,29 @@
+{
+  "message": {
+    "commands": [
+      {
+        "form": {
+          "name":"key_form",
+          "fields": [
+            {
+              "data": {
+                "value": "12345678901234"
+              },
+              "type": "text",
+              "name": "key"
+            }
+          ]
+        },
+        "action": "key_input"
+      }
+    ],
+    "thread": "2c474723-ff4d-4fad-a31f-18e8063bdff2",
+    "body": ".",
+    "type": "chat",
+    "id": "T6rqU-93"
+  },
+  "from": "TEST",
+  "userdata": {
+    "phone": "TESTPHONE"
+  }
+}

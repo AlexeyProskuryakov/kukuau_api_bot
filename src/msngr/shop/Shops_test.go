@@ -23,12 +23,12 @@ func TestLogInOut(t *testing.T) {
 	user, pwd := "test", "test"
 
 	db := d.NewDbHandler(conf.Main.Database.ConnString, conf.Main.Database.Name)
-	err := db.Users.SetUserPassword(&user, &pwd)
+	err := db.Users.SetUserPassword(user, pwd)
 	if err != nil {
 		go func() {
 			for err == nil {
 				time.Sleep(1 * time.Second)
-				err = db.Users.SetUserPassword(&user, &pwd)
+				err = db.Users.SetUserPassword(user, pwd)
 				log.Printf("trying add user for test shops... now we have err:%+v", err)
 			}
 		}()
@@ -54,9 +54,9 @@ func TestLogInOut(t *testing.T) {
 
 		request_result := request_commands["commands"].ProcessRequest(&in)
 		rr_commands := *request_result.Commands
-		log.Printf("request commands result: %#v", reflect.DeepEqual(rr_commands, NOT_AUTH_COMANDS))
+		log.Printf("request commands result: %#v", reflect.DeepEqual(rr_commands, NOT_AUTH_COMMANDS))
 
-		if !reflect.DeepEqual(rr_commands, NOT_AUTH_COMANDS){
+		if !reflect.DeepEqual(rr_commands, NOT_AUTH_COMMANDS){
 			t.Errorf("before auth commands is auth")
 		}
 

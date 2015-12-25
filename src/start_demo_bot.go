@@ -13,8 +13,9 @@ import (
 	sh "msngr/shop"
 	s "msngr/structs"
 	t "msngr/taxi"
-	"msngr/taxi/geo"
 	i "msngr/taxi/infinity"
+	q "msngr/quests"
+	"msngr/taxi/geo"
 	"msngr/taxi/sedi"
 
 	"errors"
@@ -38,7 +39,7 @@ func GetTaxiAPIInstruments(params c.TaxiApiParams) (t.TaxiInterface, t.AddressSu
 	return nil, nil, errors.New("Not imply name of api")
 }
 
-func InsertTestUser(db *d.DbHandlerMixin, user, pwd *string) {
+func InsertTestUser(db *d.DbHandlerMixin, user, pwd string) {
 	err := db.Users.SetUserPassword(user, pwd)
 	if err != nil {
 		go func() {
@@ -128,14 +129,22 @@ func main() {
 
 	}
 
-	user, pwd := "test", "test"
-	InsertTestUser(db, &user, &pwd)
+	InsertTestUser(db, "test", "test")
+	InsertTestUser(db, "test1", "test1")
+	InsertTestUser(db, "test2", "test2")
 
 	if conf.RuPost.WorkUrl != "" {
 		log.Printf("will start ru post controller at: %v and will send requests to: %v", conf.RuPost.WorkUrl, conf.RuPost.ExternalUrl)
 		rp_bot_context := rp.FormRPBotContext(conf)
 		rp_controller := m.FormBotController(rp_bot_context)
 		http.HandleFunc(conf.RuPost.WorkUrl, rp_controller)
+	}
+
+	for q_name, q_conf := range conf.Quests {
+		log.Printf("Will handling quests controller for quest: %v", q_name)
+		qb_controller := q.FormQuestBotContext(q_conf, db)
+		q_controller := m.FormBotController(qb_controller)
+		http.HandleFunc(fmt.Sprintf("/quest/%v", q_name), q_controller)
 	}
 
 	server_address := fmt.Sprintf(":%v", conf.Main.Port)

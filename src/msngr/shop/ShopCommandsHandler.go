@@ -81,7 +81,7 @@ var AUTH_COMMANDS = []s.OutCommand{
 		Position: 3,
 	},
 }
-var NOT_AUTH_COMANDS = []s.OutCommand{
+var NOT_AUTH_COMMANDS = []s.OutCommand{
 	s.OutCommand{
 		Title:    "Авторизоваться",
 		Action:   "authorise",
@@ -112,13 +112,13 @@ var NOT_AUTH_COMANDS = []s.OutCommand{
 	},
 }
 
-func _get_user_and_password(fields []s.InField) (*string, *string) {
-	var user, password *string
+func _get_user_and_password(fields []s.InField) (string, string) {
+	var user, password string
 	for _, field := range fields {
 		if field.Name == "username" {
-			user = &(field.Data.Value)
+			user = field.Data.Value
 		} else if field.Name == "password" {
-			password = &(field.Data.Value)
+			password = field.Data.Value
 		}
 	}
 	return user, password
@@ -134,14 +134,14 @@ func (cp ShopCommandsProcessor) ProcessRequest(in *s.InPkg) *s.RequestResult {
 		user_data := in.UserData
 		if user_data != nil && in.UserData.Phone != "" {
 			phone := in.UserData.Phone
-			cp.Users.AddUser(&(in.From), &phone)
+			cp.Users.AddUser(in.From, phone)
 		}
 	}
 	commands := []s.OutCommand{}
-	if user_state!= nil && *user_state == d.LOGIN {
+	if user_state != nil && *user_state == d.LOGIN {
 		commands = AUTH_COMMANDS
 	} else {
-		commands = NOT_AUTH_COMANDS
+		commands = NOT_AUTH_COMMANDS
 	}
 	return &s.RequestResult{Commands:&commands}
 }
@@ -165,7 +165,7 @@ var order_products = [4]string{"Ноутбук Apple MacBook Air", "Электр
 func (osp ShopOrderStateProcessor) ProcessMessage(in *s.InPkg) *s.MessageResult {
 	user_state, err := osp.Users.GetUserState(in.From)
 	if err != nil && err != mgo.ErrNotFound {
-		return s.ErrorMessageResult(err, &NOT_AUTH_COMANDS)
+		return s.ErrorMessageResult(err, &NOT_AUTH_COMMANDS)
 	}
 
 	var result string
@@ -175,7 +175,7 @@ func (osp ShopOrderStateProcessor) ProcessMessage(in *s.InPkg) *s.MessageResult 
 		commands = AUTH_COMMANDS
 	} else {
 		result = "Авторизуйтесь пожалуйста!"
-		commands = NOT_AUTH_COMANDS
+		commands = NOT_AUTH_COMMANDS
 	}
 	return &s.MessageResult{Body:result, Commands:&commands, Type:"chat"}
 }
@@ -232,36 +232,36 @@ type ShopLogInMessageProcessor struct {
 func (sap ShopLogInMessageProcessor) ProcessMessage(in *s.InPkg) *s.MessageResult {
 	command := *in.Message.Commands
 	user, password := _get_user_and_password(command[0].Form.Fields)
-	if user == nil || password == nil {
-		return s.ErrorMessageResult(errors.New("Не могу извлечь логин и (или) пароль."), &NOT_AUTH_COMANDS)
+	if user == "" || password == "" {
+		return s.ErrorMessageResult(errors.New("Не могу извлечь логин и (или) пароль"), &NOT_AUTH_COMMANDS)
 	}
 
 	check, err := sap.Users.CheckUserPassword(user, password)
 	if err != nil && err != mgo.ErrNotFound {
-		return s.ErrorMessageResult(err, &NOT_AUTH_COMANDS)
+		return s.ErrorMessageResult(err, &NOT_AUTH_COMMANDS)
 	}
 
 	var body string
 	var commands []s.OutCommand
 
-	if *check {
-		sap.Users.SetUserState(&(in.From), d.LOGIN)
+	if check {
+		sap.Users.SetUserState(in.From, d.LOGIN)
 		body = "Добро пожаловать в интернет магазин Desprice Markt!"
 		commands = AUTH_COMMANDS
 	}else {
 		body = "Не правильные логин или пароль :("
-		commands = NOT_AUTH_COMANDS
+		commands = NOT_AUTH_COMMANDS
 	}
 	return &s.MessageResult{Body:body, Commands:&commands, Type:"chat"}
 
 }
 
 func (lop ShopLogOutMessageProcessor) ProcessMessage(in *s.InPkg) *s.MessageResult {
-	err := lop.Users.SetUserState(&(in.From), d.LOGOUT)
+	err := lop.Users.SetUserState(in.From, d.LOGOUT)
 	if err != nil && err != mgo.ErrNotFound {
-		return s.ErrorMessageResult(err, &NOT_AUTH_COMANDS)
+		return s.ErrorMessageResult(err, &NOT_AUTH_COMMANDS)
 	}
-	return &s.MessageResult{Body:"До свидания! ", Commands:&NOT_AUTH_COMANDS, Type:"chat"}
+	return &s.MessageResult{Body:"До свидания! ", Commands:&NOT_AUTH_COMMANDS, Type:"chat"}
 }
 
 type ShopBalanceProcessor struct {

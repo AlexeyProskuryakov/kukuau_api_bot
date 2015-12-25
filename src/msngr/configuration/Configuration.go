@@ -1,12 +1,15 @@
 package configuration
+
 import (
+	"encoding/json"
+	"fmt"
+	"io/ioutil"
 	"log"
 	"os"
-	"io/ioutil"
-	"encoding/json"
+
 	u "msngr/utils"
-	"fmt"
 )
+
 type ApiData struct {
 	Host               string `json:"host"`
 	Login              string `json:"login"`
@@ -56,7 +59,6 @@ func (api TaxiApiParams) GetPassword() string {
 func (api TaxiApiParams) GetIdService() string {
 	return api.Data.IdService
 }
-
 func (api TaxiApiParams) GetAPIData() ApiData {
 	return api.Data
 }
@@ -80,13 +82,18 @@ type TaxiConfig struct {
 	AvailableCommands map[string][]string `json:"available_commands"`
 }
 
-
 type ShopConfig struct {
 	Key  string `json:"key"`
 	Name string `json:"name"`
 	Info string `json:"information"`
 }
 
+type QuestConfig struct {
+	AcceptPhrase string `json:"accept_phrase"`
+	RejectPhrase string `json:"reject_phrase"`
+	ErrorPhrase  string `json:"error_phrase"`
+	Info         string `json:"information"`
+}
 
 type Configuration struct {
 	Main   struct {
@@ -104,6 +111,7 @@ type Configuration struct {
 		   } `json:"main"`
 	Taxis  map[string]TaxiConfig `json:"taxis"`
 	Shops  map[string]ShopConfig `json:"shops"`
+	Quests map[string]QuestConfig `json:"quests"`
 	RuPost struct {
 			   ExternalUrl string `json:"external_url"`
 			   WorkUrl     string `json:"work_url"`

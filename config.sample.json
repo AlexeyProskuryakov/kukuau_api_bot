@@ -193,5 +193,13 @@
   "ru_post": {
     "external_url": "http://rupost.info/json",
     "work_url": "russian_post/tracking"
+  },
+  "quests": {
+    "quest_time": {
+      "accept_phrase": "Ура! Теперь вы учавствуете в квесте! Ищите ближайший мусорный бак и в нем будет нужный вам код!",
+      "reject_phrase": "Вы и так уже учавствуете...",
+      "error_phrase": "Что-то пошло не так.",
+      "information": "Квесты - хуесты. Ищешь в помойках коды получаешь деньги!"
+    }
   }
 }

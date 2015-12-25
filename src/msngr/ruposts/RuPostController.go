@@ -38,7 +38,6 @@ var out_g_commands = &[]s.OutCommand{
 	},
 }
 
-
 /*
 info	Объект	Содержит поля:
 code - номер идентификатора
@@ -72,6 +71,7 @@ func (rpcp RuPostCommandsProcessor) ProcessRequest(in *s.InPkg) *s.RequestResult
 type RuPostTrackingProcessor struct {
 	Url string
 }
+
 func (rptp RuPostTrackingProcessor) ProcessMessage(in *s.InPkg) *s.MessageResult {
 	commands_ptr := in.Message.Commands
 	if commands_ptr != nil {

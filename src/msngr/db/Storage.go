@@ -49,12 +49,19 @@ type OrderWrapper struct {
 
 type UserWrapper struct {
 	State      string `bson:"user_state"`
-	UserId     *string `bson:"user_id"`
-	UserName   *string `bson:"user_name"`
-	Password   *string
-	Phone      *string
+	States     map[string]string `bson:"states"`
+	UserId     string `bson:"user_id"`
+	UserName   string `bson:"user_name"`
+	Password   string
+	Phone      string
 
 	LastUpdate time.Time `bson:"last_update"`
+}
+
+
+func (uw *UserWrapper) GetStateValue(state_key string) (string, bool){
+	res, ok := uw.States[state_key]
+	return res, ok
 }
 
 type ErrorWrapper struct {
@@ -102,7 +109,7 @@ var DELETE_DB = false
 func (odbh *DbHandlerMixin) Check() bool {
 	if odbh.Session != nil && odbh.Session.Ping() == nil {
 		return true
-	} else if !odbh.try_to_connect{
+	} else if !odbh.try_to_connect {
 		go odbh.reConnect()
 		return false
 	}
@@ -229,7 +236,7 @@ func (oh *orderHandler) GetById(order_id int64, source string) (*OrderWrapper, e
 	err := oh.Collection.Find(bson.M{"order_id": order_id, "source": source}).One(&result)
 	if err != nil && err != mgo.ErrNotFound {
 		return nil, err
-	} else if err == mgo.ErrNotFound{
+	} else if err == mgo.ErrNotFound {
 		return nil, nil
 	} else {
 		return &result, nil
@@ -388,7 +395,7 @@ func (uh *userHandler) CheckUser(req bson.M) (*UserWrapper, error) {
 	return &tmp, nil
 }
 
-func (uh *userHandler) AddUser(user_id, phone *string) error {
+func (uh *userHandler) AddUser(user_id, phone string) error {
 	if !uh.parent.Check() {
 		return errors.New("БД не доступна")
 	}
@@ -400,7 +407,7 @@ func (uh *userHandler) AddUser(user_id, phone *string) error {
 	return nil
 }
 
-func (uh *userHandler) SetUserState(user_id *string, state string) error {
+func (uh *userHandler) SetUserState(user_id string, state string) error {
 	if !uh.parent.Check() {
 		return errors.New("БД не доступна")
 	}
@@ -417,7 +424,39 @@ func (uh *userHandler) SetUserState(user_id *string, state string) error {
 	}
 }
 
-func (uh *userHandler) SetUserPassword(username, password *string) error {
+func (uh *userHandler) SetUserMultiplyState(user_id, state_key, state_value string) error {
+	if !uh.parent.Check() {
+		return errors.New("БД не доступна")
+	}
+	tmp, _ := uh.CheckUser(bson.M{"user_id": user_id})
+	if tmp == nil {
+		err := uh.Collection.Insert(&UserWrapper{UserId: user_id, States: map[string]string{state_key:state_value}, LastUpdate: time.Now()})
+		return err
+	} else {
+		err := uh.Collection.Update(
+			bson.M{"user_id": user_id},
+			bson.M{"$set": bson.M{fmt.Sprintf("states.%v", state_key): state_value, "last_update": time.Now()}},
+		)
+		return err
+	}
+}
+
+func (uh *userHandler) GetUserMultiplyState(user_id, state_key string) (string, error) {
+	if !uh.parent.Check() {
+		return "", errors.New("БД не доступна")
+	}
+	tmp, _ := uh.CheckUser(bson.M{"user_id": user_id})
+	if tmp == nil {
+		return "", errors.New("Пользователь не найден")
+	} else {
+		if state, ok := tmp.States[state_key]; ok {
+			return state, nil
+		}
+		return "", errors.New("This user have not this key of state")
+	}
+}
+
+func (uh *userHandler) SetUserPassword(username, password string) error {
 	if !uh.parent.Check() {
 		return errors.New("БД не доступна")
 	}
@@ -445,14 +484,13 @@ func (uh *userHandler) GetUserState(user_id string) (*string, error) {
 	return &(result.State), err
 }
 
-func (uh *userHandler) CheckUserPassword(username, password *string) (*bool, error) {
+func (uh *userHandler) CheckUserPassword(username, password string) (bool, error) {
 	if !uh.parent.Check() {
-		return nil, errors.New("БД не доступна")
+		return false, errors.New("БД не доступна")
 	}
 	tmp := UserWrapper{}
 	err := uh.Collection.Find(bson.M{"user_name": username, "password": utils.PHash(password)}).One(&tmp)
-	result := (err != nil)
-	return &result, err
+	return err != nil, err
 }
 
 func (uh *userHandler) GetUserById(user_id string) (*UserWrapper, error) {
