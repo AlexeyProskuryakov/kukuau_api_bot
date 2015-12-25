@@ -157,6 +157,7 @@ func FormBotController(context *s.BotContext) controllerHandler {
 			if in.Message != nil {
 				if in.Message.Commands == nil {
 					log.Printf("warn will sended message without commands: %v\n from %v (userdata: %v)", in.Message, in.From, in.UserData)
+					//todo here fga will set here.
 					return
 				}
 				out, isDeferred, message_error = process_message_pkg(out, in, context)
