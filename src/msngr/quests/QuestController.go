@@ -9,11 +9,13 @@ import (
 	c "msngr/configuration"
 	"msngr/db"
 
+	"fmt"
 )
 
 const (
 	QUEST_STATE_KEY = "quest"
 	SUBSCRIBED = "subscribed"
+	UNSUBSCRIBED = "unsubscribed"
 )
 
 var subscribe_commands = []s.OutCommand{
@@ -51,6 +53,12 @@ var key_input_commands = []s.OutCommand{
 		Repeated: false,
 		Form:     key_input_form,
 	},
+	s.OutCommand{
+		Title:    "Перестать участвовать",
+		Action:"unsubscribe",
+		Position:1,
+		Repeated:false,
+	},
 }
 
 type QuestCommandRequestProcessor struct {
@@ -59,8 +67,12 @@ type QuestCommandRequestProcessor struct {
 
 func (qcp *QuestCommandRequestProcessor) ProcessRequest(in *s.InPkg) *s.RequestResult {
 	var result_commands []s.OutCommand
-	if state, err := qcp.Users.GetUserMultiplyState(in.From, QUEST_STATE_KEY); err == nil && state == SUBSCRIBED {
-		result_commands = key_input_commands
+	if state, err := qcp.Users.GetUserMultiplyState(in.From, QUEST_STATE_KEY); err == nil {
+		if state == SUBSCRIBED {
+			result_commands = key_input_commands
+		} else if state == UNSUBSCRIBED {
+			result_commands = subscribe_commands
+		}
 	} else {
 		result_commands = subscribe_commands
 	}
@@ -68,13 +80,24 @@ func (qcp *QuestCommandRequestProcessor) ProcessRequest(in *s.InPkg) *s.RequestR
 	return &result
 }
 
+type QuestUnsubscribeMessageProcessor struct {
+	db.DbHandlerMixin
+}
+
+
+func (qump *QuestUnsubscribeMessageProcessor) ProcessMessage(in *s.InPkg) *s.MessageResult {
+	err := qump.Users.SetUserMultiplyState(in.From, QUEST_STATE_KEY, UNSUBSCRIBED)
+	if err != nil {
+		return &s.MessageResult{Commands:&key_input_commands, Body:fmt.Sprintf("Что-то пошло не так. Попробуйте снова. Вот с такая ошибешка: %s", err), Type:"chat"}
+	}
+	return &s.MessageResult{Commands:&subscribe_commands, Body:"Теперь вы не учавствуете в квесте. \nПечаль :( ", Type:"chat"}
+}
 
 type QuestSubscribeMessageProcessor struct {
 	db.DbHandlerMixin
 	AcceptPhrase   string
 	RejectedPhrase string
 	ErrorPhrase    string
-
 }
 
 func (qsmp *QuestSubscribeMessageProcessor) ProcessMessage(in *s.InPkg) *s.MessageResult {
@@ -142,6 +165,7 @@ func FormQuestBotContext(conf c.QuestConfig, db_handler *db.DbHandlerMixin) *s.B
 	}
 	result.Message_commands = map[string]s.MessageCommandProcessor{
 		"subscribe":&QuestSubscribeMessageProcessor{DbHandlerMixin:*db_handler, AcceptPhrase:conf.AcceptPhrase, RejectedPhrase:conf.RejectPhrase, ErrorPhrase:conf.ErrorPhrase },
+		"unsubscribe":&QuestUnsubscribeMessageProcessor{DbHandlerMixin:*db_handler},
 		"key_input":&QuestKeyInputMessageProcessor{DbHandlerMixin:*db_handler},
 	}
 	return &result

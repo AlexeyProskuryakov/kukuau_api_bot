@@ -48,18 +48,18 @@ type OrderWrapper struct {
 }
 
 type UserWrapper struct {
-	State      string `bson:"user_state"`
-	States     map[string]string `bson:"states"`
-	UserId     string `bson:"user_id"`
-	UserName   string `bson:"user_name"`
-	Password   string
-	Phone      string
+	GlobalState string `bson:"global_state"`
+	States      map[string]string `bson:"states"`
+	UserId      string `bson:"user_id"`
+	UserName    string `bson:"user_name"`
+	Password    string
+	Phone       string
 
-	LastUpdate time.Time `bson:"last_update"`
+	LastUpdate  time.Time `bson:"last_update"`
 }
 
 
-func (uw *UserWrapper) GetStateValue(state_key string) (string, bool){
+func (uw *UserWrapper) GetStateValue(state_key string) (string, bool) {
 	res, ok := uw.States[state_key]
 	return res, ok
 }
@@ -401,19 +401,19 @@ func (uh *userHandler) AddUser(user_id, phone string) error {
 	}
 	tmp, err := uh.CheckUser(bson.M{"user_id": user_id, "phone": phone})
 	if tmp == nil {
-		err = uh.Collection.Insert(&UserWrapper{UserId: user_id, State: REGISTERED, Phone: phone, LastUpdate: time.Now()})
+		err = uh.Collection.Insert(&UserWrapper{UserId: user_id, GlobalState: REGISTERED, Phone: phone, LastUpdate: time.Now()})
 		return err
 	}
 	return nil
 }
 
-func (uh *userHandler) SetUserState(user_id string, state string) error {
+func (uh *userHandler) SetUserGlobalState(user_id string, state string) error {
 	if !uh.parent.Check() {
 		return errors.New("БД не доступна")
 	}
 	tmp, _ := uh.CheckUser(bson.M{"user_id": user_id})
 	if tmp == nil {
-		err := uh.Collection.Insert(&UserWrapper{UserId: user_id, State: state, LastUpdate: time.Now()})
+		err := uh.Collection.Insert(&UserWrapper{UserId: user_id, GlobalState: state, LastUpdate: time.Now()})
 		return err
 	} else {
 		err := uh.Collection.Update(
@@ -425,6 +425,10 @@ func (uh *userHandler) SetUserState(user_id string, state string) error {
 }
 
 func (uh *userHandler) SetUserMultiplyState(user_id, state_key, state_value string) error {
+	/**
+	Выставление сосотяние по определенному аспекту. к примеру для квестов. Или для еще какой хуйни, посему требуется ключ да значение.
+	Отличается от просто SetUserState тем что там выставляется состояние глобальное
+	 */
 	if !uh.parent.Check() {
 		return errors.New("БД не доступна")
 	}
@@ -462,7 +466,7 @@ func (uh *userHandler) SetUserPassword(username, password string) error {
 	}
 	tmp, _ := uh.CheckUser(bson.M{"user_name": username})
 	if tmp == nil {
-		err := uh.Collection.Insert(&UserWrapper{UserId: username, UserName: username, Password: password, State: REGISTERED, LastUpdate: time.Now()})
+		err := uh.Collection.Insert(&UserWrapper{UserId: username, UserName: username, Password: password, GlobalState: REGISTERED, LastUpdate: time.Now()})
 		return err
 	} else if utils.PHash(password) != tmp.Password {
 		log.Println("changing password! for user ", username)
@@ -475,13 +479,13 @@ func (uh *userHandler) SetUserPassword(username, password string) error {
 	return nil
 }
 
-func (uh *userHandler) GetUserState(user_id string) (*string, error) {
+func (uh *userHandler) GetUserGlobalState(user_id string) (*string, error) {
 	if !uh.parent.Check() {
 		return nil, errors.New("БД не доступна")
 	}
 	result := UserWrapper{}
 	err := uh.Collection.Find(bson.M{"user_id": user_id}).One(&result)
-	return &(result.State), err
+	return &(result.GlobalState), err
 }
 
 func (uh *userHandler) CheckUserPassword(username, password string) (bool, error) {

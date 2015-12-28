@@ -14,7 +14,10 @@ import (
 	"gopkg.in/mgo.v2"
 )
 
+const (
+	SHOP_STATE_KEY = "shop"
 
+)
 
 func FormShopCommands(db *d.DbHandlerMixin, config *c.ShopConfig) *s.BotContext {
 	var ShopRequestCommands = map[string]s.RequestCommandProcessor{
@@ -129,7 +132,7 @@ type ShopCommandsProcessor struct {
 }
 
 func (cp ShopCommandsProcessor) ProcessRequest(in *s.InPkg) *s.RequestResult {
-	user_state, err := cp.Users.GetUserState(in.From)
+	user_state, err := cp.Users.GetUserMultiplyState(in.From, SHOP_STATE_KEY)
 	if err == mgo.ErrNotFound {
 		user_data := in.UserData
 		if user_data != nil && in.UserData.Phone != "" {
@@ -138,7 +141,7 @@ func (cp ShopCommandsProcessor) ProcessRequest(in *s.InPkg) *s.RequestResult {
 		}
 	}
 	commands := []s.OutCommand{}
-	if user_state != nil && *user_state == d.LOGIN {
+	if user_state == d.LOGIN {
 		commands = AUTH_COMMANDS
 	} else {
 		commands = NOT_AUTH_COMMANDS
@@ -163,14 +166,14 @@ var order_states = [5]string{"обработан", "доставляется", "
 var order_products = [4]string{"Ноутбук Apple MacBook Air", "Электрочайник BORK K 515", "Аудиосистема Westlake Tower SM-1", "Микроволновая печь Bosch HMT85ML23"}
 
 func (osp ShopOrderStateProcessor) ProcessMessage(in *s.InPkg) *s.MessageResult {
-	user_state, err := osp.Users.GetUserState(in.From)
+	user_state, err := osp.Users.GetUserMultiplyState(in.From, SHOP_STATE_KEY)
 	if err != nil && err != mgo.ErrNotFound {
 		return s.ErrorMessageResult(err, &NOT_AUTH_COMMANDS)
 	}
 
 	var result string
 	var commands []s.OutCommand
-	if *user_state == d.LOGIN {
+	if user_state == d.LOGIN {
 		result = fmt.Sprintf("Ваш заказ #%v (%v) %v.", rand.Int31n(10000), __choiceString(order_products[:]), __choiceString(order_states[:]))
 		commands = AUTH_COMMANDS
 	} else {
@@ -245,7 +248,7 @@ func (sap ShopLogInMessageProcessor) ProcessMessage(in *s.InPkg) *s.MessageResul
 	var commands []s.OutCommand
 
 	if check {
-		sap.Users.SetUserState(in.From, d.LOGIN)
+		sap.Users.SetUserMultiplyState(in.From, SHOP_STATE_KEY, d.LOGIN)
 		body = "Добро пожаловать в интернет магазин Desprice Markt!"
 		commands = AUTH_COMMANDS
 	}else {
@@ -257,7 +260,7 @@ func (sap ShopLogInMessageProcessor) ProcessMessage(in *s.InPkg) *s.MessageResul
 }
 
 func (lop ShopLogOutMessageProcessor) ProcessMessage(in *s.InPkg) *s.MessageResult {
-	err := lop.Users.SetUserState(in.From, d.LOGOUT)
+	err := lop.Users.SetUserMultiplyState(in.From, SHOP_STATE_KEY, d.LOGOUT)
 	if err != nil && err != mgo.ErrNotFound {
 		return s.ErrorMessageResult(err, &NOT_AUTH_COMMANDS)
 	}
