@@ -106,7 +106,7 @@ func (qsmp *QuestSubscribeMessageProcessor) ProcessMessage(in *s.InPkg) *s.Messa
 	user, err := qsmp.Users.GetUserById(in.From)
 	var text string
 	if err != nil {
-		text = qsmp.ErrorPhrase
+		text = fmt.Sprintf("%s, %v", qsmp.ErrorPhrase, err)
 		return &s.MessageResult{Commands:&subscribe_commands, Body:text, Type:"chat"}
 	}
 	if user != nil {
