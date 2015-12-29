@@ -142,7 +142,7 @@ func (qkimp QuestKeyInputMessageProcessor) ProcessMessage(in *s.InPkg) *s.Messag
 		for _, command := range commands {
 			if command.Action == "key_input" && command.Form.Name == "key_form" {
 				for _, field := range command.Form.Fields {
-					if field.Name == "key" {
+					if field.Name == "code" {
 						key := field.Data.Value
 						log.Printf("QUESTS We have key from %v is: [%v]", in.From, key)
 						r := rand.New(rand.NewSource(time.Now().UnixNano()))
