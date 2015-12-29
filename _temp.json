@@ -1,155 +1,30 @@
 {
-  "Orders": [
-    {
-      "Owner": {
-        "Desc": "",
-        "Phones": [
-          "+79612183729"
-        ],
-        "Type": {
-          "Name": "TaxiDrivers",
-          "ID": "taxidrivers"
+  "message": {
+    "commands": [
+      {
+        "form": {
+          "fields": [
+            {
+              "data": {
+                "value": "123"
+              },
+              "type": "text",
+              "name": "code"
+            }
+          ]
         },
-        "CashlessOrder": false,
-        "Currency": "₱",
-        "GroupRating": 10.05875,
-        "GroupRatingWithoutCredit": 10.05875,
-        "UseRatingForDirectRegistration": true,
-        "DefaultCommission": 0.03,
-        "AllowDriversQueryForWeb": true,
-        "ID": 817,
-        "Name": "КуКу-Ау"
-      },
-      "Status": {
-        "Name": "Отмена заказа …",
-        "ID": "trycancel"
-      },
-      "Date": 1451431653000.0,
-      "Type": {
-        "Name": "Предварительный",
-        "ID": "preliminary"
-      },
-      "Route": {
-        "Points": [
-          {
-            "CountryName": "Russia",
-            "PostalCode": "630117",
-            "CityName": "Новосибирск",
-            "StreetName": "Российская улица",
-            "HouseNumber": "3",
-            "ObjectName": "",
-            "EntranceNumber": -1,
-            "GeoPoint": {
-              "Lon": 83.093401,
-              "Lat": 54.867191
-            },
-            "WaitTime": 0,
-            "ID": 1988633
-          },
-          {
-            "CountryName": "Russia",
-            "PostalCode": "630055",
-            "CityName": "Новосибирск",
-            "StreetName": "Российская улица",
-            "HouseNumber": "28",
-            "ObjectName": "",
-            "EntranceNumber": -1,
-            "GeoPoint": {
-              "Lon": 83.080743,
-              "Lat": 54.870294
-            },
-            "WaitTime": 0,
-            "ID": 1988635
-          }
-        ],
-        "Length": 0.88
-      },
-      "Cost": 124.00,
-      "Currency": "₱",
-      "Tariff": {
-        "ID": 20812,
-        "Name": "test"
-      },
-      "RentHours": 0.0,
-      "Cashless": false,
-      "CarType": {
-        "ID": -1
-      },
-      "Customer": {
-        "AccountID": 0,
-        "Phone": "+79811064022",
-        "ID": -1,
-        "Name": "KUKUAPIBOT"
-      },
-      "Description": " test",
-      "Distance": -1.0,
-      "Registrator": {
-        "ID": 1370,
-        "Name": "Шупиков Евгений"
-      },
-      "Driver": {
-        "Car": {
-          "ID": -1,
-          "Name": "х343хх66;  Hyundai Solaris;  Оранжевый"
-        },
-        "Photo": false,
-        "Group": {
-          "Desc": "",
-          "Phones": [
-            "+79612183729"
-          ],
-          "Type": {
-            "Name": "TaxiDrivers",
-            "ID": "taxidrivers"
-          },
-          "CashlessOrder": false,
-          "AccountID": 12817,
-          "Currency": "₱",
-          "GroupRating": 10.05875,
-          "GroupRatingWithoutCredit": 10.05875,
-          "UseRatingForDirectRegistration": true,
-          "DefaultCommission": 0.03,
-          "AllowDriversQueryForWeb": true,
-          "ID": 817,
-          "Name": "КуКу-Ау"
-        },
-        "Rating": 0.0,
-        "AccountID": 0,
-        "ID": 18821,
-        "Name": "Сидорович(Иванов Петр)"
-      },
-      "ChangeFare": false,
-      "ID": 993536,
-      "Props": {
-        "Category": {
-          "Name": "Taxi",
-          "ID": "taxi"
-        },
-        "Type": {
-          "ID": 2,
-          "Name": "Легковое такси"
-        },
-        "Properties": [
-          {
-            "Key": "places",
-            "Type": "int",
-            "Required": true,
-            "Value": {
-              "ID": 12,
-              "Name": 4
-            },
-            "ID": 2,
-            "Name": "Количество мест"
-          }
-        ]
-      },
-      "CanCancel": false,
-      "CanEdit": false,
-      "CanMark": false,
-      "CanRefuse": false,
-      "CanDelegate": false,
-      "CanEditMode": true
-    }
-  ],
-  "Success": true
+        "repeated": "false",
+        "fixed": "false",
+        "action": "key_input"
+      }
+    ],
+    "thread": "aac46ba3-559f-4182-a50b-cd0e5fb80daf",
+    "body": "\u041a\u043e\u0434: 123",
+    "type": "chat",
+    "id": "g28oF-48"
+  },
+  "from": "a61ee5169a625bceb92d79eed9b20327",
+  "userdata": {
+    "phone": "79537631628"
+  }
 }

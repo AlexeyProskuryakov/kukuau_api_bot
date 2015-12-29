@@ -86,7 +86,7 @@ type QuestUnsubscribeMessageProcessor struct {
 
 
 func (qump *QuestUnsubscribeMessageProcessor) ProcessMessage(in *s.InPkg) *s.MessageResult {
-	defer log.Printf("Unsubscribe: %s", in.From)
+	log.Printf("QUESTS Want unsubscribe: %s", in.From)
 	err := qump.Users.SetUserMultiplyState(in.From, QUEST_STATE_KEY, UNSUBSCRIBED)
 	if err != nil {
 		return &s.MessageResult{Commands:&key_input_commands, Body:fmt.Sprintf("Что-то пошло не так. Попробуйте снова. Вот с такая ошибешка: %s", err), Type:"chat"}
@@ -102,7 +102,7 @@ type QuestSubscribeMessageProcessor struct {
 }
 
 func (qsmp *QuestSubscribeMessageProcessor) ProcessMessage(in *s.InPkg) *s.MessageResult {
-	defer log.Printf("Subscribe: %s", in.From)
+	log.Printf("QUESTS Want subscribe %s", in.From)
 	user, err := qsmp.Users.GetUserById(in.From)
 	var text string
 	if err != nil {
@@ -130,7 +130,6 @@ type QuestKeyInputMessageProcessor struct {
 }
 
 func (qkimp QuestKeyInputMessageProcessor) ProcessMessage(in *s.InPkg) *s.MessageResult {
-	defer log.Printf("Key input for %s", in.From)
 	var text string
 	if state, err := qkimp.Users.GetUserMultiplyState(in.From, QUEST_STATE_KEY); err != nil || state != SUBSCRIBED {
 		return &s.MessageResult{Commands:&subscribe_commands, Body:"Вы здесь быть не должны и делать это не можете.", Type:"chat"}
