@@ -130,6 +130,7 @@ type QuestKeyInputMessageProcessor struct {
 }
 
 func (qkimp QuestKeyInputMessageProcessor) ProcessMessage(in *s.InPkg) *s.MessageResult {
+	defer log.Printf("Key input for %s", in.From)
 	var text string
 	if state, err := qkimp.Users.GetUserMultiplyState(in.From, QUEST_STATE_KEY); err != nil || state != SUBSCRIBED {
 		return &s.MessageResult{Commands:&subscribe_commands, Body:"Вы здесь быть не должны и делать это не можете.", Type:"chat"}
