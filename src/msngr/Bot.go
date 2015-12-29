@@ -16,7 +16,6 @@ import (
 var DEBUG bool
 var textProvider = tm.NewTextMessageSupplier()
 
-
 func getInPackage(r *http.Request) (*s.InPkg, error) {
 	var in s.InPkg
 	if !strings.Contains(r.Header.Get("Content-Type"), "application/json") {
@@ -45,7 +44,6 @@ func setOutPackage(w http.ResponseWriter, out *s.OutPkg, isError bool, isDeferre
 	if DEBUG {
 		log.Printf("BOT RESPONSED: \n%s\n", string(jsoned_out))
 	}
-
 	if isError {
 		w.WriteHeader(http.StatusBadRequest)
 	} else if isDeferred {
@@ -54,11 +52,8 @@ func setOutPackage(w http.ResponseWriter, out *s.OutPkg, isError bool, isDeferre
 	}else {
 		w.WriteHeader(http.StatusOK)
 	}
-
 	fmt.Fprintf(w, "%s", string(jsoned_out))
 }
-
-type controllerHandler func(w http.ResponseWriter, r *http.Request)
 
 func process_request_pkg(buff *s.OutPkg, in *s.InPkg, context *s.BotContext) (*s.OutPkg, error) {
 	if in.Request.Type == "error" {
@@ -128,6 +123,8 @@ func process_message_pkg(buff *s.OutPkg, in *s.InPkg, context *s.BotContext) (*s
 	}
 	return buff, isDeferred, err
 }
+
+type controllerHandler func(w http.ResponseWriter, r *http.Request)
 
 func FormBotController(context *s.BotContext) controllerHandler {
 
