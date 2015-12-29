@@ -35,7 +35,7 @@ var key_input_form = &s.OutForm{
 	Text:  "Код: ?(code)",
 	Fields: []s.OutField{
 		s.OutField{
-			Name: "key",
+			Name: "code",
 			Type: "text",
 			Attributes: s.FieldAttribute{
 				Label:    "Ваш найденый код",

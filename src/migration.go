@@ -11,13 +11,13 @@ import (
 func main() {
 	conf := c.ReadConfig()
 	handler := db.NewDbHandler(conf.Main.Database.ConnString, conf.Main.Database.Name)
-	s.StartAfter(func() (string bool) {
+	s.StartAfter(func() (string, bool) {
 		return "", handler.Check()
 	}, func() {
 		log.Printf("connection established....")
 	})
 
-	log.Println("Starting migration...")
+	log.Println("Starting migration 0...")
 	orders_collection := handler.Session.DB(conf.Main.Database.Name).C("orders")
 	err := orders_collection.DropIndex("order_id")
 	if err != nil {
@@ -30,6 +30,4 @@ func main() {
 		DropDups:   true,
 	})
 	log.Printf("Index for order_id field is recreated...%v", err)
-
-
 }
