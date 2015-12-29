@@ -10,6 +10,7 @@ import (
 	"msngr/db"
 
 	"fmt"
+	"gopkg.in/mgo.v2"
 )
 
 const (
@@ -105,8 +106,8 @@ func (qsmp *QuestSubscribeMessageProcessor) ProcessMessage(in *s.InPkg) *s.Messa
 	log.Printf("QUESTS Want subscribe %s", in.From)
 	user, err := qsmp.Users.GetUserById(in.From)
 	var text string
-	if err != nil {
-		text = fmt.Sprintf("%s, %v", qsmp.ErrorPhrase, err)
+	if err != nil && err != mgo.ErrNotFound{
+		text = fmt.Sprintf("%s: [%v]", qsmp.ErrorPhrase, err)
 		return &s.MessageResult{Commands:&subscribe_commands, Body:text, Type:"chat"}
 	}
 	if user != nil {
