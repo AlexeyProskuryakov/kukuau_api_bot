@@ -158,6 +158,15 @@ func (qkimp QuestKeyInputMessageProcessor) ProcessMessage(in *s.InPkg) *s.Messag
 	return &mr
 }
 
+type QuestInfoMessageProcessor struct {
+	Information string
+}
+
+func (qimp QuestInfoMessageProcessor) ProcessMessage(in *s.InPkg) *s.MessageResult {
+	return &s.MessageResult{Body:qimp.Information, Type:"chat"}
+}
+
+
 func FormQuestBotContext(conf c.QuestConfig, db_handler *db.DbHandlerMixin) *s.BotContext {
 	result := s.BotContext{}
 	result.Request_commands = map[string]s.RequestCommandProcessor{
@@ -167,6 +176,7 @@ func FormQuestBotContext(conf c.QuestConfig, db_handler *db.DbHandlerMixin) *s.B
 		"subscribe":&QuestSubscribeMessageProcessor{DbHandlerMixin:*db_handler, AcceptPhrase:conf.AcceptPhrase, RejectedPhrase:conf.RejectPhrase, ErrorPhrase:conf.ErrorPhrase },
 		"unsubscribe":&QuestUnsubscribeMessageProcessor{DbHandlerMixin:*db_handler},
 		"key_input":&QuestKeyInputMessageProcessor{DbHandlerMixin:*db_handler},
+		"information":&QuestInfoMessageProcessor{Information:conf.Info},
 	}
 	return &result
 
