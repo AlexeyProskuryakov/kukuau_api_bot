@@ -86,6 +86,7 @@ type QuestUnsubscribeMessageProcessor struct {
 
 
 func (qump *QuestUnsubscribeMessageProcessor) ProcessMessage(in *s.InPkg) *s.MessageResult {
+	defer log.Printf("Unsubscribe: %s", in.From)
 	err := qump.Users.SetUserMultiplyState(in.From, QUEST_STATE_KEY, UNSUBSCRIBED)
 	if err != nil {
 		return &s.MessageResult{Commands:&key_input_commands, Body:fmt.Sprintf("Что-то пошло не так. Попробуйте снова. Вот с такая ошибешка: %s", err), Type:"chat"}
@@ -101,6 +102,7 @@ type QuestSubscribeMessageProcessor struct {
 }
 
 func (qsmp *QuestSubscribeMessageProcessor) ProcessMessage(in *s.InPkg) *s.MessageResult {
+	defer log.Printf("Subscribe: %s", in.From)
 	user, err := qsmp.Users.GetUserById(in.From)
 	var text string
 	if err != nil {
@@ -144,7 +146,7 @@ func (qkimp QuestKeyInputMessageProcessor) ProcessMessage(in *s.InPkg) *s.Messag
 						log.Printf("QUESTS We have key from %v is: [%v]", in.From, key)
 						r := rand.New(rand.NewSource(time.Now().UnixNano()))
 						if r.Int31n(6) >= 3 {
-							text = "Правильно! Ищите код там-то и сям-то. Вы почти что в шаге от 100500 тысяч миллионов денег."
+							text = "Правильно! Ваше следующее задание..."
 						} else {
 							text = "Не правильно, поищите код лучше."
 						}
