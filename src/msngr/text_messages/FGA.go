@@ -12,6 +12,7 @@ import (
 	"regexp"
 	"io/ioutil"
 
+	"unicode"
 )
 
 const (
@@ -24,9 +25,15 @@ type SubstitutionsStruct struct {
 	Rules map[string][]string `json:"rules"`
 }
 
+
+func getRand() *rand.Rand {
+	r := rand.New(rand.NewSource(time.Now().UnixNano() + rand.Int63()))
+	return r
+}
+
 func (ss SubstitutionsStruct) GetRandomResult(key string) string {
 	if subst, ok := ss.Rules[key]; ok {
-		r1 := rand.New(rand.NewSource(time.Now().UnixNano()))
+		r1 := getRand()
 		index := r1.Intn(len(subst))
 		return subst[index]
 	}
@@ -61,7 +68,7 @@ func readLines(path string) ([]string, error) {
 	return lines, scanner.Err()
 }
 
-func NewFGA() TextMessageSupplier {
+func NewTextMessageSupplier() TextMessageSupplier {
 	fga_path := utils.FoundFile(PATH)
 	if fga_path == nil {
 		log.Printf("Can not found path of FGA resources")
@@ -95,19 +102,28 @@ type FGA struct {
 	Substitutes SubstitutionsStruct
 }
 
+func Capitalize(input string) string {
+	runes := []rune(input)
+	runes[0] = unicode.ToUpper(runes[0])
+	return  string(runes)
+}
+
 func (fga *FGA) GenerateMessage() string {
-	r1 := rand.New(rand.NewSource(time.Now().UnixNano()))
+	r1 := getRand()
 	c_index := r1.Intn(len(fga.Content))
 	advise := fga.Content[c_index]
 
-	adv_low := strings.ToLower(advise)
-	adv_low_words := RegSplit(adv_low, "[,! ]+")
-	for _, word := range adv_low_words {
-		if _, ok := fga.Substitutes.Rules[word]; ok {
+	adv_words := RegSplit(advise, "[,! ]+")
+	for _, word := range adv_words {
+		is_with_upper := (strings.IndexFunc(word, unicode.IsUpper) != -1)
+		if _, ok := fga.Substitutes.Rules[strings.ToLower(word)]; ok {
 			replace := fga.Substitutes.GetRandomResult(word)
+			if is_with_upper {
+				replace = Capitalize(replace)
+			}
 			advise = strings.Replace(advise, word, replace, -1)
 		}
 	}
-	return advise
+	return Capitalize(advise)
 }
 

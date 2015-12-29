@@ -6,8 +6,8 @@ import (
 )
 
 func main() {
-	fga := tm.NewFGA()
-	for i:=0; i<1000;i++{
+	fga := tm.NewTextMessageSupplier()
+	for i:=0; i<200;i++{
 		result := fga.GenerateMessage()
 		log.Printf(">>>> %s", result)
 	}
