@@ -77,10 +77,10 @@ type TaxiMasterAPI struct {
 	ConnString  string
 	BearerToken string
 	Source      string
-	Storage     *d.DbHandlerMixin
+	Storage     *d.MainDb
 }
 
-func NewTaxiMasterAPI(connString, bearerToken, source string, storage *d.DbHandlerMixin) (*TaxiMasterAPI) {
+func NewTaxiMasterAPI(connString, bearerToken, source string, storage *d.MainDb) (*TaxiMasterAPI) {
 	result := TaxiMasterAPI{ConnString:connString, BearerToken:bearerToken, Source:source, Storage:storage}
 	return &result
 }

@@ -22,7 +22,7 @@ func TestLogInOut(t *testing.T) {
 
 	user, pwd := "test", "test"
 
-	db := d.NewDbHandler(conf.Main.Database.ConnString, conf.Main.Database.Name)
+	db := d.NewMainDb(conf.Main.Database.ConnString, conf.Main.Database.Name)
 	err := db.Users.SetUserPassword(user, pwd)
 	if err != nil {
 		go func() {
@@ -40,7 +40,7 @@ func TestLogInOut(t *testing.T) {
 			continue
 		}
 
-		db := d.NewDbHandler(conf.Main.Database.ConnString, conf.Main.Database.Name)
+		db := d.NewMainDb(conf.Main.Database.ConnString, conf.Main.Database.Name)
 		for !db.IsConnected() {
 			log.Printf("wait wile db is connected...")
 			time.Sleep(1 * time.Second)

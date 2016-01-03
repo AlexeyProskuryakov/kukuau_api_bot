@@ -27,7 +27,6 @@ type ApiData struct {
 	SaleKeyword        string `json:"sale_kw"`
 }
 
-
 type TaxiApiParams struct {
 	Name         string `json:"name"`
 	Data         ApiData `json:"data"`

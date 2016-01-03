@@ -39,7 +39,7 @@ func GetTaxiAPIInstruments(params c.TaxiApiParams) (t.TaxiInterface, t.AddressSu
 	return nil, nil, errors.New("Not imply name of api")
 }
 
-func InsertTestUser(db *d.DbHandlerMixin, user, pwd string) {
+func InsertTestUser(db *d.MainDb, user, pwd string) {
 	err := db.Users.SetUserPassword(user, pwd)
 	if err != nil {
 		go func() {
@@ -79,7 +79,7 @@ func main() {
 	m.DEBUG = *test
 
 	log.Printf("configuration for db:\nconnection string: %+v\ndatabase name: %+v", conf.Main.Database.ConnString, conf.Main.Database.Name)
-	db := d.NewDbHandler(conf.Main.Database.ConnString, conf.Main.Database.Name)
+	db := d.NewMainDb(conf.Main.Database.ConnString, conf.Main.Database.Name)
 
 	log.Printf("Is delete DB? [%+v] Is debug? [%v]", d.DELETE_DB, m.DEBUG)
 	if d.DELETE_DB {

@@ -19,16 +19,16 @@ const (
 
 )
 
-func FormShopCommands(db *d.DbHandlerMixin, config *c.ShopConfig) *s.BotContext {
+func FormShopCommands(db *d.MainDb, config *c.ShopConfig) *s.BotContext {
 	var ShopRequestCommands = map[string]s.RequestCommandProcessor{
-		"commands": ShopCommandsProcessor{DbHandlerMixin: *db},
+		"commands": ShopCommandsProcessor{MainDb: *db},
 	}
 
 	var ShopMessageCommands = map[string]s.MessageCommandProcessor{
 		"information":     ShopInformationProcessor{Info:config.Info},
-		"authorise":       ShopLogInMessageProcessor{DbHandlerMixin: *db},
-		"log_out":         ShopLogOutMessageProcessor{DbHandlerMixin: *db},
-		"orders_state":    ShopOrderStateProcessor{DbHandlerMixin: *db},
+		"authorise":       ShopLogInMessageProcessor{MainDb: *db},
+		"log_out":         ShopLogOutMessageProcessor{MainDb: *db},
+		"orders_state":    ShopOrderStateProcessor{MainDb: *db},
 		"support_message": ShopSupportMessageProcessor{},
 		"balance":         ShopBalanceProcessor{},
 	}
@@ -128,7 +128,7 @@ func _get_user_and_password(fields []s.InField) (string, string) {
 }
 
 type ShopCommandsProcessor struct {
-	d.DbHandlerMixin
+	d.MainDb
 }
 
 func (cp ShopCommandsProcessor) ProcessRequest(in *s.InPkg) *s.RequestResult {
@@ -150,7 +150,7 @@ func (cp ShopCommandsProcessor) ProcessRequest(in *s.InPkg) *s.RequestResult {
 }
 
 type ShopOrderStateProcessor struct {
-	d.DbHandlerMixin
+	d.MainDb
 }
 
 func __choiceString(choices []string) string {
@@ -225,11 +225,11 @@ func (ih ShopInformationProcessor) ProcessMessage(in *s.InPkg) *s.MessageResult 
 }
 
 type ShopLogOutMessageProcessor struct {
-	d.DbHandlerMixin
+	d.MainDb
 }
 
 type ShopLogInMessageProcessor struct {
-	d.DbHandlerMixin
+	d.MainDb
 }
 
 func (sap ShopLogInMessageProcessor) ProcessMessage(in *s.InPkg) *s.MessageResult {

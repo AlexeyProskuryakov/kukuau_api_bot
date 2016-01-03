@@ -38,7 +38,7 @@ func (cip *CarInfoProvider) GetCarInfo(car_id int64) *CarInfo {
 }
 
 
-func FormTaxiBotContext(im *ExternalApiMixin, db_handler *d.DbHandlerMixin, tc c.TaxiConfig, ah AddressHandler, cc *CarsCache) *s.BotContext {
+func FormTaxiBotContext(im *ExternalApiMixin, db_handler *d.MainDb, tc c.TaxiConfig, ah AddressHandler, cc *CarsCache) *s.BotContext {
 	context := s.BotContext{}
 	context.Check = func() (detail string, ok bool) {
 		ok = im.API.IsConnected()
@@ -54,18 +54,18 @@ func FormTaxiBotContext(im *ExternalApiMixin, db_handler *d.DbHandlerMixin, tc c
 
 	context.Name = tc.Name
 	context.Request_commands = map[string]s.RequestCommandProcessor{
-		"commands": &TaxiCommandsProcessor{DbHandlerMixin: *db_handler, context: &context},
+		"commands": &TaxiCommandsProcessor{MainDb: *db_handler, context: &context},
 	}
 	context.Message_commands = map[string]s.MessageCommandProcessor{
 		"information":      &TaxiInformationProcessor{information:&(tc.Information.Text)},
-		"new_order":        &TaxiNewOrderProcessor{ExternalApiMixin: *im, DbHandlerMixin: *db_handler, context:&context, AddressHandler:ah},
-		"cancel_order":     &TaxiCancelOrderProcessor{ExternalApiMixin: *im, DbHandlerMixin: *db_handler, context:&context, alert_phone:tc.Information.Phone},
+		"new_order":        &TaxiNewOrderProcessor{ExternalApiMixin: *im, MainDb: *db_handler, context:&context, AddressHandler:ah},
+		"cancel_order":     &TaxiCancelOrderProcessor{ExternalApiMixin: *im, MainDb: *db_handler, context:&context, alert_phone:tc.Information.Phone},
 		"calculate_price":  &TaxiCalculatePriceProcessor{ExternalApiMixin: *im, context:&context, AddressHandler:ah},
-		"feedback":         &TaxiFeedbackProcessor{ExternalApiMixin: *im, DbHandlerMixin: *db_handler, context:&context},
+		"feedback":         &TaxiFeedbackProcessor{ExternalApiMixin: *im, MainDb: *db_handler, context:&context},
 		"write_dispatcher": &TaxiWriteDispatcherMessageProcessor{ExternalApiMixin: *im},
 		"callback_request": &TaxiCallbackRequestMessageProcessor{ExternalApiMixin:*im},
-		"where_it":         &TaxiWhereItMessageProcessor{ExternalApiMixin:*im, DbHandlerMixin:*db_handler, context:&context},
-		"car_position":     &TaxiCarPositionMessageProcessor{ExternalApiMixin: *im, DbHandlerMixin:*db_handler, context:&context, Cars:NewCarInfoProvider(cc)},
+		"where_it":         &TaxiWhereItMessageProcessor{ExternalApiMixin:*im, MainDb:*db_handler, context:&context},
+		"car_position":     &TaxiCarPositionMessageProcessor{ExternalApiMixin: *im, MainDb:*db_handler, context:&context, Cars:NewCarInfoProvider(cc)},
 	}
 	context.Settings = make(map[string]interface{})
 	context.Settings["not_send_price"] = tc.Api.NotSendPrice
@@ -245,7 +245,7 @@ func GetCommands(dictUrl string) map[string]*[]s.OutCommand {
 
 type TaxiCarPositionMessageProcessor struct {
 	ExternalApiMixin
-	d.DbHandlerMixin
+	d.MainDb
 	Cars    *CarInfoProvider
 	context *s.BotContext
 
@@ -270,7 +270,7 @@ func (cp *TaxiCarPositionMessageProcessor) ProcessMessage(in *s.InPkg) *s.Messag
 		return &s.MessageResult{Body:fmt.Sprintf("Lat:%v;Lon:%v", car_info.Lat, car_info.Lon)}
 
 	}
-	commands, err := FormCommands(in.From, cp.DbHandlerMixin, cp.context)
+	commands, err := FormCommands(in.From, cp.MainDb, cp.context)
 	if err != nil {
 		return s.ErrorMessageResult(err, cp.context.Commands[CMDS_NOT_CREATED_ORDER])
 	}
@@ -333,7 +333,7 @@ func (crmp *TaxiCallbackRequestMessageProcessor) ProcessMessage(in *s.InPkg) *s.
 
 type TaxiWhereItMessageProcessor struct {
 	ExternalApiMixin
-	d.DbHandlerMixin
+	d.MainDb
 	context *s.BotContext
 }
 
@@ -371,7 +371,7 @@ func form_commands_for_current_order(order_wrapper *d.OrderWrapper, commands map
 	return commands[CMDS_NOT_CREATED_ORDER]
 }
 
-func FormCommands(username string, db d.DbHandlerMixin, context *s.BotContext) (*[]s.OutCommand, error) {
+func FormCommands(username string, db d.MainDb, context *s.BotContext) (*[]s.OutCommand, error) {
 	order_wrapper, err := db.Orders.GetByOwnerLast(username, context.Name)
 	if err != nil && err != mgo.ErrNotFound {
 		return nil, err
@@ -382,7 +382,7 @@ func FormCommands(username string, db d.DbHandlerMixin, context *s.BotContext) (
 }
 
 type TaxiCommandsProcessor struct {
-	d.DbHandlerMixin
+	d.MainDb
 	context *s.BotContext
 }
 
@@ -392,7 +392,7 @@ func (cp *TaxiCommandsProcessor) ProcessRequest(in *s.InPkg) *s.RequestResult {
 		cp.Users.AddUser(in.From, *phone)
 	}
 
-	result, err := FormCommands(in.From, cp.DbHandlerMixin, cp.context)
+	result, err := FormCommands(in.From, cp.MainDb, cp.context)
 	if err != nil {
 		return s.ExceptionRequestResult(err, cp.context.Commands[CMDS_NOT_CREATED_ORDER])
 	}
@@ -507,7 +507,7 @@ func _form_order(fields []s.InField, ah AddressHandler) (*NewOrderInfo, error) {
 
 type TaxiNewOrderProcessor struct {
 	ExternalApiMixin
-	d.DbHandlerMixin
+	d.MainDb
 	AddressHandler AddressHandler
 	context        *s.BotContext
 }
@@ -607,7 +607,7 @@ func (nop *TaxiNewOrderProcessor) ProcessMessage(in *s.InPkg) *s.MessageResult {
 
 type TaxiCancelOrderProcessor struct {
 	ExternalApiMixin
-	d.DbHandlerMixin
+	d.MainDb
 	context     *s.BotContext
 	alert_phone string
 }
@@ -634,7 +634,7 @@ func (cop *TaxiCancelOrderProcessor) ProcessMessage(in *s.InPkg) *s.MessageResul
 		return &s.MessageResult{Body:fmt.Sprintf("Проблемы с отменой заказа %v\nЗвони скорее: %+v ", message, cop.alert_phone), Commands: cop.context.Commands[CMDS_NOT_CREATED_ORDER], Type:"chat"}
 	}
 
-	commands, err := FormCommands(in.From, cop.DbHandlerMixin, cop.context)
+	commands, err := FormCommands(in.From, cop.MainDb, cop.context)
 	if err != nil {
 		return s.ErrorMessageResult(err, cop.context.Commands[CMDS_NOT_CREATED_ORDER])
 	}
@@ -660,7 +660,7 @@ func (cpp *TaxiCalculatePriceProcessor) ProcessMessage(in *s.InPkg) *s.MessageRe
 
 type TaxiFeedbackProcessor struct {
 	ExternalApiMixin
-	d.DbHandlerMixin
+	d.MainDb
 	context *s.BotContext
 }
 
@@ -695,7 +695,7 @@ func (fp *TaxiFeedbackProcessor) ProcessMessage(in *s.InPkg) *s.MessageResult {
 	if order_id != nil {
 		f := Feedback{IdOrder: *order_id, Rating: rate, FeedBackText: fdbk, Phone:*phone}
 		fp.API.Feedback(f)
-		result_commands, err := FormCommands(in.From, fp.DbHandlerMixin, fp.context)
+		result_commands, err := FormCommands(in.From, fp.MainDb, fp.context)
 		if err != nil {
 			return s.ErrorMessageResult(err, fp.context.Commands[CMDS_NOT_CREATED_ORDER])
 		}

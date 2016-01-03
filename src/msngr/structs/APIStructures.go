@@ -4,6 +4,7 @@ import (
 	"time"
 	"log"
 	"strings"
+	"encoding/json"
 )
 
 type FieldAttribute struct {
@@ -24,6 +25,16 @@ type InForm struct {
 	Fields []InField `json:"fields,omitempty"`
 }
 
+func (i_f InForm) GetValue(fieldName string) (string, bool) {
+	for i, f:=range i_f.Fields{
+		if f.Name == fieldName{
+			return i_f.Fields[i], true
+		}
+	}
+	return "", false
+}
+
+
 type InField struct {
 	Name string `json:"name"`
 	Type string `json:"type,omitempty"`
@@ -43,6 +54,7 @@ type InCommand struct {
 	Action string `json:"action"`
 	Form   InForm `json:"form"`
 }
+
 type InMessage struct {
 	ID       string       `json:"id"`
 	Type     string       `json:"type"`
@@ -101,6 +113,12 @@ type OutCommand struct {
 
 func (oc OutCommand) String() string {
 	return fmt.Sprintf("Command to send:\n\t%v[%v], position:%v, fixed? %v, repeated? %v, \n\t\tform: %+v;", oc.Title, oc.Action, oc.Position, oc.Fixed, oc.Repeated, oc.Form)
+}
+
+func NewOutCommandFromJson(data []byte) *OutCommand {
+	res := &OutCommand{}
+	json.Unmarshal(data, res)
+	return res
 }
 
 type OutMessage struct {

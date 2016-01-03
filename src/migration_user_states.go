@@ -11,7 +11,7 @@ import (
 
 func main() {
 	conf := c.ReadConfig()
-	handler := db.NewDbHandler(conf.Main.Database.ConnString, conf.Main.Database.Name)
+	handler := db.NewMainDb(conf.Main.Database.ConnString, conf.Main.Database.Name)
 	s.StartAfter(func() (string, bool) {
 		return "", handler.Check()
 	}, func() {

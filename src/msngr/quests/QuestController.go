@@ -19,7 +19,7 @@ const (
 	UNSUBSCRIBED = "unsubscribed"
 )
 
-var subscribe_commands = []s.OutCommand{
+var QUEST_NOT_SUBSCRIBED_COMMANDS = []s.OutCommand{
 	s.OutCommand{
 		Title:    "Учавствовать",
 		Action:   "subscribe",
@@ -46,7 +46,7 @@ var key_input_form = &s.OutForm{
 	},
 }
 
-var key_input_commands = []s.OutCommand{
+var QUEST_SUBSCRIBED_COMMANDS = []s.OutCommand{
 	s.OutCommand{
 		Title:    "Ввод найденного кода",
 		Action:   "key_input",
@@ -63,26 +63,26 @@ var key_input_commands = []s.OutCommand{
 }
 
 type QuestCommandRequestProcessor struct {
-	db.DbHandlerMixin
+	db.MainDb
 }
 
 func (qcp *QuestCommandRequestProcessor) ProcessRequest(in *s.InPkg) *s.RequestResult {
 	var result_commands []s.OutCommand
 	if state, err := qcp.Users.GetUserMultiplyState(in.From, QUEST_STATE_KEY); err == nil {
 		if state == SUBSCRIBED {
-			result_commands = key_input_commands
+			result_commands = QUEST_SUBSCRIBED_COMMANDS
 		} else if state == UNSUBSCRIBED {
-			result_commands = subscribe_commands
+			result_commands = QUEST_NOT_SUBSCRIBED_COMMANDS
 		}
 	} else {
-		result_commands = subscribe_commands
+		result_commands = QUEST_NOT_SUBSCRIBED_COMMANDS
 	}
 	result := s.RequestResult{Commands:&result_commands}
 	return &result
 }
 
 type QuestUnsubscribeMessageProcessor struct {
-	db.DbHandlerMixin
+	db.MainDb
 }
 
 
@@ -90,13 +90,13 @@ func (qump *QuestUnsubscribeMessageProcessor) ProcessMessage(in *s.InPkg) *s.Mes
 	log.Printf("QUESTS Want unsubscribe: %s", in.From)
 	err := qump.Users.SetUserMultiplyState(in.From, QUEST_STATE_KEY, UNSUBSCRIBED)
 	if err != nil {
-		return &s.MessageResult{Commands:&key_input_commands, Body:fmt.Sprintf("Что-то пошло не так. Попробуйте снова. Вот с такая ошибешка: %s", err), Type:"chat"}
+		return &s.MessageResult{Commands:&QUEST_SUBSCRIBED_COMMANDS, Body:fmt.Sprintf("Что-то пошло не так. Попробуйте снова. Вот с такая ошибешка: %s", err), Type:"chat"}
 	}
-	return &s.MessageResult{Commands:&subscribe_commands, Body:"Теперь вы не учавствуете в квесте. \nПечаль :( ", Type:"chat"}
+	return &s.MessageResult{Commands:&QUEST_NOT_SUBSCRIBED_COMMANDS, Body:"Теперь вы не учавствуете в квесте. \nПечаль :( ", Type:"chat"}
 }
 
 type QuestSubscribeMessageProcessor struct {
-	db.DbHandlerMixin
+	db.MainDb
 	AcceptPhrase   string
 	RejectedPhrase string
 	ErrorPhrase    string
@@ -108,32 +108,32 @@ func (qsmp *QuestSubscribeMessageProcessor) ProcessMessage(in *s.InPkg) *s.Messa
 	var text string
 	if err != nil && err != mgo.ErrNotFound{
 		text = fmt.Sprintf("%s: [%v]", qsmp.ErrorPhrase, err)
-		return &s.MessageResult{Commands:&subscribe_commands, Body:text, Type:"chat"}
+		return &s.MessageResult{Commands:&QUEST_NOT_SUBSCRIBED_COMMANDS, Body:text, Type:"chat"}
 	}
 	if user != nil {
 		if state, ok := user.GetStateValue(QUEST_STATE_KEY); ok && state == SUBSCRIBED {
 			text = qsmp.RejectedPhrase
-			return &s.MessageResult{Commands:&subscribe_commands, Body:text, Type:"chat"}
+			return &s.MessageResult{Commands:&QUEST_NOT_SUBSCRIBED_COMMANDS, Body:text, Type:"chat"}
 		} else {
 			qsmp.Users.SetUserMultiplyState(in.From, QUEST_STATE_KEY, SUBSCRIBED)
 			text = qsmp.AcceptPhrase
-			return &s.MessageResult{Commands:&key_input_commands, Body:text, Type:"chat"}
+			return &s.MessageResult{Commands:&QUEST_SUBSCRIBED_COMMANDS, Body:text, Type:"chat"}
 		}
 	} else {
 		qsmp.Users.SetUserMultiplyState(in.From, QUEST_STATE_KEY, SUBSCRIBED)
 		text = qsmp.AcceptPhrase
-		return &s.MessageResult{Commands:&key_input_commands, Body:text, Type:"chat"}
+		return &s.MessageResult{Commands:&QUEST_SUBSCRIBED_COMMANDS, Body:text, Type:"chat"}
 	}
 }
 
 type QuestKeyInputMessageProcessor struct {
-	db.DbHandlerMixin
+	db.MainDb
 }
 
 func (qkimp QuestKeyInputMessageProcessor) ProcessMessage(in *s.InPkg) *s.MessageResult {
 	var text string
 	if state, err := qkimp.Users.GetUserMultiplyState(in.From, QUEST_STATE_KEY); err != nil || state != SUBSCRIBED {
-		return &s.MessageResult{Commands:&subscribe_commands, Body:"Вы здесь быть не должны и делать это не можете.", Type:"chat"}
+		return &s.MessageResult{Commands:&QUEST_NOT_SUBSCRIBED_COMMANDS, Body:"Вы здесь быть не должны и делать это не можете.", Type:"chat"}
 	}
 
 	commands_ptr := in.Message.Commands
@@ -157,7 +157,7 @@ func (qkimp QuestKeyInputMessageProcessor) ProcessMessage(in *s.InPkg) *s.Messag
 		}
 	}
 
-	mr := s.MessageResult{Commands:&key_input_commands, Body:text, Type:"chat"}
+	mr := s.MessageResult{Commands:&QUEST_SUBSCRIBED_COMMANDS, Body:text, Type:"chat"}
 	return &mr
 }
 
@@ -170,15 +170,15 @@ func (qimp QuestInfoMessageProcessor) ProcessMessage(in *s.InPkg) *s.MessageResu
 }
 
 
-func FormQuestBotContext(conf c.QuestConfig, db_handler *db.DbHandlerMixin) *s.BotContext {
+func FormQuestBotContext(conf c.QuestConfig, db_handler *db.MainDb) *s.BotContext {
 	result := s.BotContext{}
 	result.Request_commands = map[string]s.RequestCommandProcessor{
-		"commands":&QuestCommandRequestProcessor{DbHandlerMixin:*db_handler},
+		"commands":&QuestCommandRequestProcessor{MainDb:*db_handler},
 	}
 	result.Message_commands = map[string]s.MessageCommandProcessor{
-		"subscribe":&QuestSubscribeMessageProcessor{DbHandlerMixin:*db_handler, AcceptPhrase:conf.AcceptPhrase, RejectedPhrase:conf.RejectPhrase, ErrorPhrase:conf.ErrorPhrase },
-		"unsubscribe":&QuestUnsubscribeMessageProcessor{DbHandlerMixin:*db_handler},
-		"key_input":&QuestKeyInputMessageProcessor{DbHandlerMixin:*db_handler},
+		"subscribe":&QuestSubscribeMessageProcessor{MainDb:*db_handler, AcceptPhrase:conf.AcceptPhrase, RejectedPhrase:conf.RejectPhrase, ErrorPhrase:conf.ErrorPhrase },
+		"unsubscribe":&QuestUnsubscribeMessageProcessor{MainDb:*db_handler},
+		"key_input":&QuestKeyInputMessageProcessor{MainDb:*db_handler},
 		"information":&QuestInfoMessageProcessor{Information:conf.Info},
 	}
 	return &result

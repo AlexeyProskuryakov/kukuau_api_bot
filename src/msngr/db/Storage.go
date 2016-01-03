@@ -72,33 +72,42 @@ type ErrorWrapper struct {
 
 type orderHandler struct {
 	Collection *mgo.Collection
-	parent     *DbHandlerMixin
+	parent     *MainDb
 }
 
 type userHandler struct {
 	Collection *mgo.Collection
-	parent     *DbHandlerMixin
+	parent     *MainDb
 }
 
 type errorHandler struct {
 	Collection *mgo.Collection
-	parent     *DbHandlerMixin
+	parent     *MainDb
 }
 
 type CheckedMixin interface {
 	Check() bool
 }
-
-type DbHandlerMixin struct {
+type DbHelper struct {
 	sync.Mutex
 	CheckedMixin
 
-	conn           string
-	dbname         string
+	Conn           string
+	DbName         string
 	try_to_connect bool
 
 	Session        *mgo.Session
 
+}
+
+func NewDbHelper(conn, dbname string) *DbHelper{
+	res := &DbHelper{Conn:conn, DbName:dbname}
+	res.reConnect()
+	return res
+}
+
+type MainDb struct {
+	DbHelper
 	Orders         *orderHandler
 	Users          *userHandler
 	Errors         *errorHandler
@@ -106,7 +115,7 @@ type DbHandlerMixin struct {
 
 var DELETE_DB = false
 
-func (odbh *DbHandlerMixin) Check() bool {
+func (odbh *DbHelper) Check() bool {
 	if odbh.Session != nil && odbh.Session.Ping() == nil {
 		return true
 	} else if !odbh.try_to_connect {
@@ -116,8 +125,43 @@ func (odbh *DbHandlerMixin) Check() bool {
 	return false
 }
 
-func (odbh *DbHandlerMixin) ensureIndexes() {
-	orders_collection := odbh.Session.DB(odbh.dbname).C("orders")
+
+func (odbh *DbHelper) reConnect() {
+	odbh.Lock()
+	odbh.try_to_connect = true
+	defer func() {
+		odbh.try_to_connect = false
+		odbh.Unlock()
+	}()
+
+	count := 2500 * time.Millisecond
+	var err error
+	var session *mgo.Session
+
+	for {
+		session, err = mgo.Dial(odbh.Conn)
+		if err == nil {
+			log.Printf("Connection to mongodb established!")
+			session.SetMode(mgo.Strong, true)
+			err = session.Ping()
+			if err != nil {
+				log.Printf("Connection to mongodb is not verified")
+				continue
+			}
+			odbh.Session = session
+			log.Printf("Db session is establised")
+			break
+		} else {
+			count += count
+			log.Printf("can not connect to db, will sleep %+v and try", count)
+			time.Sleep(count)
+		}
+	}
+}
+
+
+func (odbh *MainDb) ensureIndexes() {
+	orders_collection := odbh.Session.DB(odbh.DbName).C("orders")
 	orders_collection.EnsureIndex(mgo.Index{
 		Key:        []string{"order_id"},
 		Background: true,
@@ -146,7 +190,7 @@ func (odbh *DbHandlerMixin) ensureIndexes() {
 		Unique:false,
 	})
 
-	users_collection := odbh.Session.DB(odbh.dbname).C("users")
+	users_collection := odbh.Session.DB(odbh.DbName).C("users")
 	users_collection.EnsureIndex(mgo.Index{
 		Key:        []string{"user_id"},
 		Background: true,
@@ -166,7 +210,7 @@ func (odbh *DbHandlerMixin) ensureIndexes() {
 		Background: true,
 	})
 
-	error_collection := odbh.Session.DB(odbh.dbname).C("errors")
+	error_collection := odbh.Session.DB(odbh.DbName).C("errors")
 
 	error_collection.EnsureIndex(mgo.Index{
 		Key: []string{"username"},
@@ -182,42 +226,9 @@ func (odbh *DbHandlerMixin) ensureIndexes() {
 	odbh.Errors.Collection = error_collection
 }
 
-func (odbh *DbHandlerMixin) reConnect() {
-	odbh.Lock()
-	odbh.try_to_connect = true
-	defer func() {
-		odbh.try_to_connect = false
-		odbh.Unlock()
-	}()
-
-	count := 2500 * time.Millisecond
-	var err error
-	var session *mgo.Session
-
-	for {
-		session, err = mgo.Dial(odbh.conn)
-		if err == nil {
-			log.Printf("Connection to mongodb established!")
-			session.SetMode(mgo.Strong, true)
-			err = session.Ping()
-			if err != nil {
-				log.Printf("Connection to mongodb is not verified")
-				continue
-			}
-			odbh.Session = session
-			log.Printf("Db session is establised")
-			break
-		} else {
-			count += count
-			log.Printf("can not connect to db, will sleep %+v and try", count)
-			time.Sleep(count)
-		}
-	}
-	odbh.ensureIndexes()
-}
-
-func NewDbHandler(conn, dbname string) *DbHandlerMixin {
-	odbh := DbHandlerMixin{conn:conn, dbname:dbname}
+func NewMainDb(conn, dbname string) *MainDb {
+	helper := DbHelper{Conn:conn, DbName:dbname}
+	odbh := MainDb{DbHelper:helper}
 
 	odbh.Users = &userHandler{parent:&odbh}
 	odbh.Orders = &orderHandler{parent:&odbh}
@@ -225,6 +236,7 @@ func NewDbHandler(conn, dbname string) *DbHandlerMixin {
 
 	log.Printf("start reconnecting")
 	odbh.reConnect()
+	odbh.ensureIndexes()
 	return &odbh
 }
 

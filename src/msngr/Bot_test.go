@@ -72,7 +72,7 @@ func TestBot(t *testing.T) {
 		log.Println("!start at test mode!")
 		conf.Main.Database.Name = conf.Main.Database.Name + "_test"
 	}
-	db := d.NewDbHandler(conf.Main.Database.ConnString, conf.Main.Database.Name)
+	db := d.NewMainDb(conf.Main.Database.ConnString, conf.Main.Database.Name)
 
 	for _, shop_conf := range conf.Shops {
 		bot_context := sh.FormShopCommands(db, &shop_conf)

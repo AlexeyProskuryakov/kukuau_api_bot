@@ -114,7 +114,7 @@ func (ch *CarsCache) GetCarInfo(car_id int64) *CarInfo {
 
 type TaxiContext struct {
 	API      TaxiInterface
-	DataBase *d.DbHandlerMixin
+	DataBase *d.MainDb
 	Cars     *CarsCache
 	Notifier *n.Notifier
 }

@@ -35,7 +35,7 @@ func TestOrderPrice(t *testing.T) {
 	external_api := GetFakeAPI(taxi_conf.Api)
 	external_address_supplier := NewFakeAddressSupplier()
 
-	db := d.NewDbHandler(config.Main.Database.ConnString, config.Main.Database.Name + "_test")
+	db := d.NewMainDb(config.Main.Database.ConnString, config.Main.Database.Name + "_test")
 	gah := NewGoogleAddressHandler(config.Main.GoogleKey, taxi_conf.GeoOrbit, external_address_supplier)
 
 	apiMixin := ExternalApiMixin{API: external_api}
