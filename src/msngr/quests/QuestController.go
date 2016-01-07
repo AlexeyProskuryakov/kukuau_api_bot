@@ -8,6 +8,7 @@ import (
 	s "msngr/structs"
 	c "msngr/configuration"
 	"msngr/db"
+	m "msngr"
 
 	"fmt"
 	"gopkg.in/mgo.v2"
@@ -17,72 +18,38 @@ const (
 	QUEST_STATE_KEY = "quest"
 	SUBSCRIBED = "subscribed"
 	UNSUBSCRIBED = "unsubscribed"
+
+	PROVIDER = "quests"
 )
-
-var QUEST_NOT_SUBSCRIBED_COMMANDS = []s.OutCommand{
-	s.OutCommand{
-		Title:    "Учавствовать",
-		Action:   "subscribe",
-		Position: 0,
-		Repeated: false,
-	},
-}
-
-
-var key_input_form = &s.OutForm{
-	Title: "Форма ввода ключа для следующего задания",
-	Type:  "form",
-	Name:  "key_form",
-	Text:  "Код: ?(code)",
-	Fields: []s.OutField{
-		s.OutField{
-			Name: "code",
-			Type: "text",
-			Attributes: s.FieldAttribute{
-				Label:    "Ваш найденый код",
-				Required: true,
-			},
-		},
-	},
-}
-
-var QUEST_SUBSCRIBED_COMMANDS = []s.OutCommand{
-	s.OutCommand{
-		Title:    "Ввод найденного кода",
-		Action:   "key_input",
-		Position: 0,
-		Repeated: false,
-		Form:     key_input_form,
-	},
-	s.OutCommand{
-		Title:    "Перестать участвовать",
-		Action:"unsubscribe",
-		Position:1,
-		Repeated:false,
-	},
-}
 
 type QuestCommandRequestProcessor struct {
 	db.MainDb
+	c.ConfigStorage
+}
+
+func getCommands(in *s.InPkg, db db.MainDb, cs c.ConfigStorage) []s.OutCommand {
+	var result_commands []s.OutCommand
+	if state, err := db.Users.GetUserMultiplyState(in.From, QUEST_STATE_KEY); err == nil {
+		if state == SUBSCRIBED {
+			result_commands, _ = cs.LoadCommands(PROVIDER, SUBSCRIBED)
+		} else if state == UNSUBSCRIBED {
+			result_commands, _ = cs.LoadCommands(PROVIDER, UNSUBSCRIBED)
+		}
+	} else {
+		result_commands, _ = cs.LoadCommands(PROVIDER, UNSUBSCRIBED)
+	}
+	return result_commands
 }
 
 func (qcp *QuestCommandRequestProcessor) ProcessRequest(in *s.InPkg) *s.RequestResult {
-	var result_commands []s.OutCommand
-	if state, err := qcp.Users.GetUserMultiplyState(in.From, QUEST_STATE_KEY); err == nil {
-		if state == SUBSCRIBED {
-			result_commands = QUEST_SUBSCRIBED_COMMANDS
-		} else if state == UNSUBSCRIBED {
-			result_commands = QUEST_NOT_SUBSCRIBED_COMMANDS
-		}
-	} else {
-		result_commands = QUEST_NOT_SUBSCRIBED_COMMANDS
-	}
+	result_commands := getCommands(in, qcp.MainDb, qcp.ConfigStorage)
 	result := s.RequestResult{Commands:&result_commands}
 	return &result
 }
 
 type QuestUnsubscribeMessageProcessor struct {
 	db.MainDb
+	c.ConfigStorage
 }
 
 
@@ -90,13 +57,16 @@ func (qump *QuestUnsubscribeMessageProcessor) ProcessMessage(in *s.InPkg) *s.Mes
 	log.Printf("QUESTS Want unsubscribe: %s", in.From)
 	err := qump.Users.SetUserMultiplyState(in.From, QUEST_STATE_KEY, UNSUBSCRIBED)
 	if err != nil {
-		return &s.MessageResult{Commands:&QUEST_SUBSCRIBED_COMMANDS, Body:fmt.Sprintf("Что-то пошло не так. Попробуйте снова. Вот с такая ошибешка: %s", err), Type:"chat"}
+		commands, _ := qump.LoadCommands(PROVIDER, SUBSCRIBED)
+		return &s.MessageResult{Commands:&commands, Body:fmt.Sprintf("Что-то пошло не так. Попробуйте снова. Вот с такая ошибешка: %s", err), Type:"chat"}
 	}
-	return &s.MessageResult{Commands:&QUEST_NOT_SUBSCRIBED_COMMANDS, Body:"Теперь вы не учавствуете в квесте. \nПечаль :( ", Type:"chat"}
+	commands, _ := qump.LoadCommands(PROVIDER, UNSUBSCRIBED)
+	return &s.MessageResult{Commands:&commands, Body:"Теперь вы не учавствуете в квесте. \nПечаль :( ", Type:"chat"}
 }
 
 type QuestSubscribeMessageProcessor struct {
 	db.MainDb
+	c.ConfigStorage
 	AcceptPhrase   string
 	RejectedPhrase string
 	ErrorPhrase    string
@@ -106,34 +76,40 @@ func (qsmp *QuestSubscribeMessageProcessor) ProcessMessage(in *s.InPkg) *s.Messa
 	log.Printf("QUESTS Want subscribe %s", in.From)
 	user, err := qsmp.Users.GetUserById(in.From)
 	var text string
-	if err != nil && err != mgo.ErrNotFound{
+	if err != nil && err != mgo.ErrNotFound {
 		text = fmt.Sprintf("%s: [%v]", qsmp.ErrorPhrase, err)
-		return &s.MessageResult{Commands:&QUEST_NOT_SUBSCRIBED_COMMANDS, Body:text, Type:"chat"}
+		commands, _ := qsmp.LoadCommands(PROVIDER, UNSUBSCRIBED)
+		return &s.MessageResult{Commands:&commands, Body:text, Type:"chat"}
 	}
 	if user != nil {
 		if state, ok := user.GetStateValue(QUEST_STATE_KEY); ok && state == SUBSCRIBED {
 			text = qsmp.RejectedPhrase
-			return &s.MessageResult{Commands:&QUEST_NOT_SUBSCRIBED_COMMANDS, Body:text, Type:"chat"}
+			commands, _ := qsmp.LoadCommands(PROVIDER, UNSUBSCRIBED)
+			return &s.MessageResult{Commands:&commands, Body:text, Type:"chat"}
 		} else {
 			qsmp.Users.SetUserMultiplyState(in.From, QUEST_STATE_KEY, SUBSCRIBED)
 			text = qsmp.AcceptPhrase
-			return &s.MessageResult{Commands:&QUEST_SUBSCRIBED_COMMANDS, Body:text, Type:"chat"}
+			commands, _ := qsmp.LoadCommands(PROVIDER, SUBSCRIBED)
+			return &s.MessageResult{Commands:&commands, Body:text, Type:"chat"}
 		}
 	} else {
 		qsmp.Users.SetUserMultiplyState(in.From, QUEST_STATE_KEY, SUBSCRIBED)
 		text = qsmp.AcceptPhrase
-		return &s.MessageResult{Commands:&QUEST_SUBSCRIBED_COMMANDS, Body:text, Type:"chat"}
+		commands, _ := qsmp.LoadCommands(PROVIDER, SUBSCRIBED)
+		return &s.MessageResult{Commands:&commands, Body:text, Type:"chat"}
 	}
 }
 
 type QuestKeyInputMessageProcessor struct {
 	db.MainDb
+	c.ConfigStorage
 }
 
 func (qkimp QuestKeyInputMessageProcessor) ProcessMessage(in *s.InPkg) *s.MessageResult {
 	var text string
 	if state, err := qkimp.Users.GetUserMultiplyState(in.From, QUEST_STATE_KEY); err != nil || state != SUBSCRIBED {
-		return &s.MessageResult{Commands:&QUEST_NOT_SUBSCRIBED_COMMANDS, Body:"Вы здесь быть не должны и делать это не можете.", Type:"chat"}
+		commands, _ := qkimp.LoadCommands(PROVIDER, UNSUBSCRIBED)
+		return &s.MessageResult{Commands:&commands, Body:"Вы здесь быть не должны и делать это не можете.", Type:"chat"}
 	}
 
 	commands_ptr := in.Message.Commands
@@ -156,8 +132,8 @@ func (qkimp QuestKeyInputMessageProcessor) ProcessMessage(in *s.InPkg) *s.Messag
 			}
 		}
 	}
-
-	mr := s.MessageResult{Commands:&QUEST_SUBSCRIBED_COMMANDS, Body:text, Type:"chat"}
+	commands, _ := qkimp.LoadCommands(PROVIDER, SUBSCRIBED)
+	mr := s.MessageResult{Commands:&commands, Body:text, Type:"chat"}
 	return &mr
 }
 
@@ -170,17 +146,37 @@ func (qimp QuestInfoMessageProcessor) ProcessMessage(in *s.InPkg) *s.MessageResu
 }
 
 
-func FormQuestBotContext(conf c.QuestConfig, db_handler *db.MainDb) *s.BotContext {
-	result := s.BotContext{}
+type QuestMessagePersistProcessor struct {
+	db.MainDb
+	c.ConfigStorage
+}
+
+func (qmpp QuestMessagePersistProcessor) ProcessMessage(in *s.InPkg) *s.MessageResult {
+	commands := getCommands(in, qmpp.MainDb, qmpp.ConfigStorage)
+	if in.Message.Body != nil {
+		err := qmpp.Messages.StoreMessage(in.From, *in.Message.Body, time.Now())
+		if err != nil {
+			return &s.MessageResult{Type:"chat", Body:err.Error(), Commands:&commands}
+		}
+	} else {
+		return &s.MessageResult{Type:"chat", Body:"Сообщения нет :( ", Commands:&commands}
+	}
+	return &s.MessageResult{Type:"chat", Body:"Ваше сообщение доставленно. Скоро вам ответят.", Commands:&commands}
+}
+
+func FormQuestBotContext(conf c.QuestConfig, db_handler *db.MainDb, cs c.ConfigStorage) *m.BotContext {
+	result := m.BotContext{}
 	result.Request_commands = map[string]s.RequestCommandProcessor{
-		"commands":&QuestCommandRequestProcessor{MainDb:*db_handler},
+		"commands":&QuestCommandRequestProcessor{MainDb:*db_handler, ConfigStorage:cs},
 	}
 	result.Message_commands = map[string]s.MessageCommandProcessor{
-		"subscribe":&QuestSubscribeMessageProcessor{MainDb:*db_handler, AcceptPhrase:conf.AcceptPhrase, RejectedPhrase:conf.RejectPhrase, ErrorPhrase:conf.ErrorPhrase },
-		"unsubscribe":&QuestUnsubscribeMessageProcessor{MainDb:*db_handler},
-		"key_input":&QuestKeyInputMessageProcessor{MainDb:*db_handler},
+		"subscribe":&QuestSubscribeMessageProcessor{MainDb:*db_handler, AcceptPhrase:conf.AcceptPhrase, RejectedPhrase:conf.RejectPhrase, ErrorPhrase:conf.ErrorPhrase, ConfigStorage:cs},
+		"unsubscribe":&QuestUnsubscribeMessageProcessor{MainDb:*db_handler, ConfigStorage:cs},
+		"key_input":&QuestKeyInputMessageProcessor{MainDb:*db_handler, ConfigStorage:cs},
 		"information":&QuestInfoMessageProcessor{Information:conf.Info},
+		"":QuestMessagePersistProcessor{MainDb:*db_handler, ConfigStorage:cs},
 	}
+	result.CommandsStorage = cs
 	return &result
 
 }

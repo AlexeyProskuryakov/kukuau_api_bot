@@ -10,6 +10,7 @@ import (
 	s "msngr/structs"
 	u "msngr/utils"
 	c "msngr/configuration"
+	m "msngr"
 	"errors"
 	"gopkg.in/mgo.v2"
 )
@@ -19,7 +20,7 @@ const (
 
 )
 
-func FormShopCommands(db *d.MainDb, config *c.ShopConfig) *s.BotContext {
+func FormShopCommands(db *d.MainDb, config *c.ShopConfig) *m.BotContext {
 	var ShopRequestCommands = map[string]s.RequestCommandProcessor{
 		"commands": ShopCommandsProcessor{MainDb: *db},
 	}
@@ -33,7 +34,7 @@ func FormShopCommands(db *d.MainDb, config *c.ShopConfig) *s.BotContext {
 		"balance":         ShopBalanceProcessor{},
 	}
 
-	context := s.BotContext{}
+	context := m.BotContext{}
 	context.Message_commands = ShopMessageCommands
 	context.Request_commands = ShopRequestCommands
 	context.Check = func() (string, bool) {

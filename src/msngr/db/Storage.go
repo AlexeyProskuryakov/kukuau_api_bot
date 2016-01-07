@@ -70,6 +70,18 @@ type ErrorWrapper struct {
 	Time     time.Time
 }
 
+type MessageWrapper struct {
+	From     string `bson:"from"`
+	Body     string `bson:"body"`
+	Time     time.Time `bson:"time"`
+	Answered bool `bson:"answered"`
+}
+
+type messageHandler struct {
+	Collection *mgo.Collection
+	parent     *MainDb
+}
+
 type orderHandler struct {
 	Collection *mgo.Collection
 	parent     *MainDb
@@ -100,7 +112,7 @@ type DbHelper struct {
 
 }
 
-func NewDbHelper(conn, dbname string) *DbHelper{
+func NewDbHelper(conn, dbname string) *DbHelper {
 	res := &DbHelper{Conn:conn, DbName:dbname}
 	res.reConnect()
 	return res
@@ -108,9 +120,10 @@ func NewDbHelper(conn, dbname string) *DbHelper{
 
 type MainDb struct {
 	DbHelper
-	Orders         *orderHandler
-	Users          *userHandler
-	Errors         *errorHandler
+	Orders   *orderHandler
+	Users    *userHandler
+	Errors   *errorHandler
+	Messages *messageHandler
 }
 
 var DELETE_DB = false
@@ -221,9 +234,25 @@ func (odbh *MainDb) ensureIndexes() {
 		Unique:false,
 	})
 
+	message_collection := odbh.Session.DB(odbh.DbName).C("user_messages")
+	message_collection.EnsureIndex(mgo.Index{
+		Key:[]string{"from"},
+		Unique:false,
+	})
+	message_collection.EnsureIndex(mgo.Index{
+		Key:[]string{"answered"},
+		Unique:false,
+	})
+	message_collection.EnsureIndex(mgo.Index{
+		Key:[]string{"time"},
+		Unique:false,
+	})
+
+
 	odbh.Users.Collection = users_collection
 	odbh.Orders.Collection = orders_collection
 	odbh.Errors.Collection = error_collection
+	odbh.Messages.Collection = message_collection
 }
 
 func NewMainDb(conn, dbname string) *MainDb {
@@ -233,6 +262,7 @@ func NewMainDb(conn, dbname string) *MainDb {
 	odbh.Users = &userHandler{parent:&odbh}
 	odbh.Orders = &orderHandler{parent:&odbh}
 	odbh.Errors = &errorHandler{parent:&odbh}
+	odbh.Messages = &messageHandler{parent:&odbh}
 
 	log.Printf("start reconnecting")
 	odbh.reConnect()
@@ -554,4 +584,20 @@ func (eh *errorHandler) GetBy(req bson.M) (*[]ErrorWrapper, error) {
 	result := []ErrorWrapper{}
 	err := eh.Collection.Find(req).Sort("time").All(&result)
 	return &result, err
+}
+
+func (mh *messageHandler) StoreMessage(from, body string, time time.Time) error{
+	if !mh.parent.Check(){
+		return errors.New("БД не доступна")
+	}
+
+	result := MessageWrapper{From:from, Body:body, Time:time, Answered:false}
+	err := mh.Collection.Insert(&result)
+	return err
+}
+
+func (mh *messageHandler) GetMessages(query bson.M) ([]MessageWrapper, error){
+	result := []MessageWrapper{}
+	err := mh.Collection.Find(query).Sort("time").All(&result)
+	return result, err
 }

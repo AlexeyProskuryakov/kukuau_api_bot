@@ -3,16 +3,14 @@ import (
 	"fmt"
 	"time"
 	"log"
-	"strings"
-	"encoding/json"
 )
 
 type FieldAttribute struct {
-	Label     string  `json:"label"`
-	Required  bool    `json:"required"`
-	Regex     *string `json:"regex,omitempty"`
-	URL       *string `json:"url,omitempty"`
-	EmptyText *string `json:"empty_text,omitempty"`
+	Label     string  `json:"label",bson:"label"`
+	Required  bool    `json:"required",bson:"required"`
+	Regex     *string `json:"regex,omitempty",bson:"regex,omitempty"`
+	URL       *string `json:"url,omitempty",bson:"url,omitempty"`
+	EmptyText *string `json:"empty_text,omitempty",bson:"empty_text,omitempty"`
 }
 
 type InForm struct {
@@ -26,9 +24,18 @@ type InForm struct {
 }
 
 func (i_f InForm) GetValue(fieldName string) (string, bool) {
-	for i, f:=range i_f.Fields{
-		if f.Name == fieldName{
-			return i_f.Fields[i], true
+	for _, f := range i_f.Fields {
+		if f.Name == fieldName {
+			return f.Data.Value, true
+		}
+	}
+	return "", false
+}
+
+func (i_f InForm) GetText(fieldName string) (string, bool) {
+	for _, f := range i_f.Fields {
+		if f.Name == fieldName {
+			return f.Data.Text, true
 		}
 	}
 	return "", false
@@ -85,41 +92,36 @@ type InPkg struct {
 }
 
 type OutField struct {
-	Name       string `json:"name"`
-	Type       string `json:"type,omitempty"`
+	Name       string `json:"name",bson:"name"`
+	Type       string `json:"type,omitempty",bson:"type,omitempty"`
 	Data       *struct {
-	} `json:"data,omitempty"`
-	Attributes FieldAttribute `json:"attrs"`
+	} `json:"data,omitempty",bson:"data,omitempty"`
+	Attributes FieldAttribute `json:"attrs",bson:"attrs"`
 }
 
 type OutForm struct {
-	Title  string     `json:"title,omitempty"`
-	Text   string     `json:"text,omitempty"`
-	Type   string     `json:"type,omitempty"`
-	Name   string     `json:"name,omitempty"`
-	Label  string     `json:"label,omitempty"`
-	URL    string     `json:"url,omitempty"`
-	Fields []OutField `json:"fields,omitempty"`
+	Title  string     `json:"title",bson:"title"`
+	Text   string     `json:"text",bson:"text"`
+	Type   string     `json:"type,omitempty",bson:"type,omitempty"`
+	Name   string     `json:"name",bson:"name"`
+	Label  string     `json:"label,omitempty",bson:"label,omitempty"`
+	URL    string     `json:"url,omitempty",bson:"url,omitempty"`
+	Fields []OutField `json:"fields,omitempty",bson:"fields,omitempty"`
 }
 
 type OutCommand struct {
-	Title    string   `json:"title"`
-	Action   string   `json:"action"`
-	Position int      `json:"position"`
-	Fixed    bool     `json:"fixed"`
-	Repeated bool     `json:"repeated"`
-	Form     *OutForm `json:"form,omitempty"`
+	Title    string   `json:"title",bson:"title"`
+	Action   string   `json:"action",bson:"action"`
+	Position int      `json:"position",bson:"position"`
+	Fixed    bool     `json:"fixed",bson:"fixed"`
+	Repeated bool     `json:"repeated",bson:"repeated"`
+	Form     *OutForm `json:"form,omitempty",bson:"form,omitempty"`
 }
 
 func (oc OutCommand) String() string {
 	return fmt.Sprintf("Command to send:\n\t%v[%v], position:%v, fixed? %v, repeated? %v, \n\t\tform: %+v;", oc.Title, oc.Action, oc.Position, oc.Fixed, oc.Repeated, oc.Form)
 }
 
-func NewOutCommandFromJson(data []byte) *OutCommand {
-	res := &OutCommand{}
-	json.Unmarshal(data, res)
-	return res
-}
 
 type OutMessage struct {
 	ID       string        `json:"id"`
@@ -149,27 +151,7 @@ type OutPkg struct {
 
 type CheckFunc func() (string, bool)
 
-type BotContext struct {
-	Name             string
-	Check            CheckFunc
-	Request_commands map[string]RequestCommandProcessor
-	Message_commands map[string]MessageCommandProcessor
-	Commands         map[string]*[]OutCommand
-	Settings         map[string]interface{}
-}
 
-func (bc BotContext) String() string {
-	check, ok := bc.Check()
-	var available_cmds string
-	for name, cmds := range bc.Commands {
-		cmds_represent := []string{}
-		for _, cmd := range *cmds {
-			cmds_represent = append(cmds_represent, cmd.String())
-		}
-		available_cmds += fmt.Sprintf("\n\tFor state: [%v] next commands: \n\t%v", name, strings.Join(cmds_represent, "\n\t"))
-	}
-	return fmt.Sprintf("\nBot context for %v\nChecked?: %v (%v)\nRequestCommands: %+v\nMessageCommands: %+v\nAvailable commands: %+v\nSettings: %+v\n", bc.Name, ok, check, bc.Request_commands, bc.Message_commands, available_cmds, bc.Settings)
-}
 
 type MessageResult struct {
 	Commands   *[]OutCommand

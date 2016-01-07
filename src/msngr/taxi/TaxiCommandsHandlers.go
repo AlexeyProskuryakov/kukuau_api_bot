@@ -6,12 +6,15 @@ import (
 	"log"
 	"strconv"
 	"time"
+	"encoding/json"
+
+	"gopkg.in/mgo.v2"
+
 	s "msngr/structs"
 	d "msngr/db"
 	u "msngr/utils"
 	c "msngr/configuration"
-	"gopkg.in/mgo.v2"
-	"encoding/json"
+	m "msngr"
 )
 
 const (
@@ -38,8 +41,8 @@ func (cip *CarInfoProvider) GetCarInfo(car_id int64) *CarInfo {
 }
 
 
-func FormTaxiBotContext(im *ExternalApiMixin, db_handler *d.MainDb, tc c.TaxiConfig, ah AddressHandler, cc *CarsCache) *s.BotContext {
-	context := s.BotContext{}
+func FormTaxiBotContext(im *ExternalApiMixin, db_handler *d.MainDb, tc c.TaxiConfig, ah AddressHandler, cc *CarsCache) *m.BotContext {
+	context := m.BotContext{}
 	context.Check = func() (detail string, ok bool) {
 		ok = im.API.IsConnected()
 		if !ok {
@@ -247,7 +250,7 @@ type TaxiCarPositionMessageProcessor struct {
 	ExternalApiMixin
 	d.MainDb
 	Cars    *CarInfoProvider
-	context *s.BotContext
+	context *m.BotContext
 
 }
 
@@ -334,7 +337,7 @@ func (crmp *TaxiCallbackRequestMessageProcessor) ProcessMessage(in *s.InPkg) *s.
 type TaxiWhereItMessageProcessor struct {
 	ExternalApiMixin
 	d.MainDb
-	context *s.BotContext
+	context *m.BotContext
 }
 
 func (twmp *TaxiWhereItMessageProcessor) ProcessMessage(in *s.InPkg) *s.MessageResult {
@@ -371,7 +374,7 @@ func form_commands_for_current_order(order_wrapper *d.OrderWrapper, commands map
 	return commands[CMDS_NOT_CREATED_ORDER]
 }
 
-func FormCommands(username string, db d.MainDb, context *s.BotContext) (*[]s.OutCommand, error) {
+func FormCommands(username string, db d.MainDb, context *m.BotContext) (*[]s.OutCommand, error) {
 	order_wrapper, err := db.Orders.GetByOwnerLast(username, context.Name)
 	if err != nil && err != mgo.ErrNotFound {
 		return nil, err
@@ -383,7 +386,7 @@ func FormCommands(username string, db d.MainDb, context *s.BotContext) (*[]s.Out
 
 type TaxiCommandsProcessor struct {
 	d.MainDb
-	context *s.BotContext
+	context *m.BotContext
 }
 
 func (cp *TaxiCommandsProcessor) ProcessRequest(in *s.InPkg) *s.RequestResult {
@@ -509,7 +512,7 @@ type TaxiNewOrderProcessor struct {
 	ExternalApiMixin
 	d.MainDb
 	AddressHandler AddressHandler
-	context        *s.BotContext
+	context        *m.BotContext
 }
 
 func _get_phone(in *s.InPkg) (phone *string, err error) {
@@ -608,7 +611,7 @@ func (nop *TaxiNewOrderProcessor) ProcessMessage(in *s.InPkg) *s.MessageResult {
 type TaxiCancelOrderProcessor struct {
 	ExternalApiMixin
 	d.MainDb
-	context     *s.BotContext
+	context     *m.BotContext
 	alert_phone string
 }
 
@@ -643,7 +646,7 @@ func (cop *TaxiCancelOrderProcessor) ProcessMessage(in *s.InPkg) *s.MessageResul
 
 type TaxiCalculatePriceProcessor struct {
 	ExternalApiMixin
-	context        *s.BotContext
+	context        *m.BotContext
 	AddressHandler AddressHandler
 }
 
@@ -661,7 +664,7 @@ func (cpp *TaxiCalculatePriceProcessor) ProcessMessage(in *s.InPkg) *s.MessageRe
 type TaxiFeedbackProcessor struct {
 	ExternalApiMixin
 	d.MainDb
-	context *s.BotContext
+	context *m.BotContext
 }
 
 func _get_feedback(fields []s.InField) (fdb string, rate int) {

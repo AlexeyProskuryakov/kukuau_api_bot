@@ -4,6 +4,7 @@ package ruposts
 import (
 	s "msngr/structs"
 	c "msngr/configuration"
+	m "msngr"
 	"log"
 	"text/template"
 	"bytes"
@@ -111,8 +112,8 @@ func (rptp RuPostTrackingProcessor) ProcessMessage(in *s.InPkg) *s.MessageResult
 	return nil
 }
 
-func FormRPBotContext(conf c.Configuration) *s.BotContext {
-	result := s.BotContext{}
+func FormRPBotContext(conf c.Configuration) *m.BotContext {
+	result := m.BotContext{}
 	result.Request_commands = map[string]s.RequestCommandProcessor{
 		"commands":RuPostCommandsProcessor{},
 	}

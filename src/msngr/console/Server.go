@@ -6,6 +6,8 @@ import (
 	"encoding/json"
 	"log"
 	"time"
+	"io/ioutil"
+	"fmt"
 
 	"github.com/go-martini/martini"
 	"github.com/martini-contrib/auth"
@@ -16,7 +18,8 @@ import (
 	c "msngr/configuration"
 	d "msngr/db"
 	t "msngr/taxi"
-	"bufio"
+	"msngr/structs"
+
 )
 
 // The regex to check for the requested format (allows an optional trailing
@@ -68,7 +71,7 @@ func (_ jsonEncoder) Encode(v ...interface{}) (string, error) {
 }
 
 
-func Run(config c.Configuration, db *d.MainDb) {
+func Run(config c.Configuration, db *d.MainDb, cs c.ConfigStorage) {
 	m := martini.Classic()
 
 	martini.Env = martini.Dev
@@ -96,18 +99,6 @@ func Run(config c.Configuration, db *d.MainDb) {
 			UpTime:uptime,
 		}}
 		r.HTML(200, "index", result_map)
-	})
-	cs := c.NewConfigurationStorage(db.Conn, "cfg_store")
-
-	m.Post("/configuration", func(r *http.Request, user auth.User, cs c.ConfigStorage) {
-		defer r.Body.Close()
-		bufio.NewReader(r.Body).Read()
-		/*
-		todo
-		1 read config json body
-		2 marshal to object
-		3 save to db
-		*/
 	})
 
 	m.Get("/console", func(r render.Render) {
@@ -171,8 +162,32 @@ func Run(config c.Configuration, db *d.MainDb) {
 		r.HTML(200, "statistic", result)
 	})
 
-	m.MapTo(db, (*d.MainDb)(nil))
-	m.MapTo(cs, (*c.ConfigStorage)(nil))
+
+	m.Post("/configuration", func(request *http.Request, render render.Render) {
+		input, err := ioutil.ReadAll(request.Body)
+		defer request.Body.Close()
+		if err != nil {
+			render.JSON(500, map[string]interface{}{"Error":fmt.Sprintf("Can not read request body. Because: %v",err)})
+			return
+		}
+		type CommandInfo struct{
+			Provider string `json:"provider"`
+			Name string `json:"name"`
+			Command structs.OutCommand `json:"command"`
+		}
+		commandInfo := CommandInfo{}
+		err = json.Unmarshal(input, &commandInfo)
+		if err != nil {
+			render.JSON(500, map[string]interface{}{"Error":fmt.Sprintf("Can not unmarshall input to command info. Because: %v", err)})
+			return
+		}
+		cs.SaveCommand(commandInfo.Provider, commandInfo.Name, commandInfo.Command)
+		render.JSON(200, map[string]interface{}{"OK":true})
+	})
+
+	m.Get("/configuration", func (request *http.Request){
+
+	})
 
 	log.Printf("Console will work at addr: %v", config.Main.ConsoleAddr)
 	m.RunOnAddr(config.Main.ConsoleAddr)

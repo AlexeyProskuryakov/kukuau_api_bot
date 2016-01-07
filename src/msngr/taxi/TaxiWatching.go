@@ -3,11 +3,13 @@ package taxi
 import (
 	"log"
 	"fmt"
+	"time"
+
 	s "msngr/structs"
 	d "msngr/db"
 	u "msngr/utils"
 	n "msngr/notify"
-	"time"
+	m "msngr"
 )
 
 const (
@@ -118,7 +120,7 @@ type TaxiContext struct {
 	Cars     *CarsCache
 	Notifier *n.Notifier
 }
-func process_state_change(taxiContext *TaxiContext, botContext *s.BotContext, api_order Order, db_order *d.OrderWrapper, previous_states map[int64]int) {
+func process_state_change(taxiContext *TaxiContext, botContext *m.BotContext, api_order Order, db_order *d.OrderWrapper, previous_states map[int64]int) {
 	log.Printf("WATCH [%v] state of: %+v is updated (api: %v != db: %v)", botContext.Name, api_order.ID, api_order.State, db_order.OrderState)
 	order_data := api_order.ToOrderData()
 	err := taxiContext.DataBase.Orders.SetState(api_order.ID, botContext.Name, api_order.State, &order_data)
@@ -171,7 +173,7 @@ func process_state_change(taxiContext *TaxiContext, botContext *s.BotContext, ap
 	}
 }
 
-func process_car_state(taxiContext *TaxiContext, botContext *s.BotContext, api_order Order, db_order *d.OrderWrapper) {
+func process_car_state(taxiContext *TaxiContext, botContext *m.BotContext, api_order Order, db_order *d.OrderWrapper) {
 	var result s.OutPkg
 
 	result.To = db_order.Whom
@@ -204,7 +206,7 @@ func get_changes(api_order Order, db_order *d.OrderWrapper) []string {
 
 var PreviousStates = make(map[int64]int)
 
-func TaxiOrderWatch(taxiContext *TaxiContext, botContext *s.BotContext) {
+func TaxiOrderWatch(taxiContext *TaxiContext, botContext *m.BotContext) {
 	for {
 		api_orders := taxiContext.API.Orders()
 		//		log.Printf("result of orders request: %v", len(api_orders))

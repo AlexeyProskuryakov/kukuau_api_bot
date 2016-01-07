@@ -11,10 +11,34 @@ import (
 	u "msngr/utils"
 	tm "msngr/text_messages"
 	"strings"
+	"msngr/configuration"
 )
 
 var DEBUG bool
 var textProvider = tm.NewTextMessageSupplier()
+
+type BotContext struct {
+	Name             string
+	Check            s.CheckFunc
+	Request_commands map[string]s.RequestCommandProcessor
+	Message_commands map[string]s.MessageCommandProcessor
+	Commands         map[string]*[]s.OutCommand
+	CommandsStorage  configuration.ConfigStorage
+	Settings         map[string]interface{}
+}
+
+func (bc BotContext) String() string {
+	check, ok := bc.Check()
+	var available_cmds string
+	for name, cmds := range bc.Commands {
+		cmds_represent := []string{}
+		for _, cmd := range *cmds {
+			cmds_represent = append(cmds_represent, cmd.String())
+		}
+		available_cmds += fmt.Sprintf("\n\tFor state: [%v] next commands: \n\t%v", name, strings.Join(cmds_represent, "\n\t"))
+	}
+	return fmt.Sprintf("\nBot context for %v\nChecked?: %v (%v)\nRequestCommands: %+v\nMessageCommands: %+v\nAvailable commands: %+v\nSettings: %+v\n", bc.Name, ok, check, bc.Request_commands, bc.Message_commands, available_cmds, bc.Settings)
+}
 
 func getInPackage(r *http.Request) (*s.InPkg, error) {
 	var in s.InPkg
@@ -55,7 +79,7 @@ func setOutPackage(w http.ResponseWriter, out *s.OutPkg, isError bool, isDeferre
 	fmt.Fprintf(w, "%s", string(jsoned_out))
 }
 
-func process_request_pkg(buff *s.OutPkg, in *s.InPkg, context *s.BotContext) (*s.OutPkg, error) {
+func process_request_pkg(buff *s.OutPkg, in *s.InPkg, context *BotContext) (*s.OutPkg, error) {
 	if in.Request.Type == "error" {
 		log.Printf("error because type of request is error:\n %+v", in.Request)
 		return buff, errors.New("error because request type is error")
@@ -84,13 +108,26 @@ func process_request_pkg(buff *s.OutPkg, in *s.InPkg, context *s.BotContext) (*s
 	return buff, nil
 }
 
-func process_message_pkg(buff *s.OutPkg, in *s.InPkg, context *s.BotContext) (*s.OutPkg, bool, error) {
+func process_message(commandProcessor s.MessageCommandProcessor, buff *s.OutPkg, in *s.InPkg) (*s.OutPkg, bool, error) {
+	messageResult := commandProcessor.ProcessMessage(in)
 	buff.Message = &s.OutMessage{
 		Thread: in.Message.Thread,
 		ID: u.GenId(),
 		Type:"chat",
 	}
+	//normal buff message forming
+	if messageResult.Type != "" {
+		buff.Message.Type = messageResult.Type
+	}
+	buff.Message.Body = messageResult.Body
+	buff.Message.Commands = messageResult.Commands
 
+	log.Printf("message result\ntype: %+v \nbody:%+v\ncommands:%+v\ndeffered?: %+v", messageResult.Type, buff.Message.Body, buff.Message.Commands, messageResult.IsDeferred)
+
+	return buff, messageResult.IsDeferred, messageResult.Error
+}
+
+func process_message_pkg(buff *s.OutPkg, in *s.InPkg, context *BotContext) (*s.OutPkg, bool, error) {
 	var err error
 	var isDeferred bool
 
@@ -103,22 +140,15 @@ func process_message_pkg(buff *s.OutPkg, in *s.InPkg, context *s.BotContext) (*s
 	for _, command := range *in_commands {
 		action := command.Action
 		if commandProcessor, ok := context.Message_commands[action]; ok {
-			messageResult := commandProcessor.ProcessMessage(in)
-			if messageResult.Error != nil {
-				err = messageResult.Error
-			}else {
-				//normal buff message forming
-				if messageResult.Type != "" {
-					buff.Message.Type = messageResult.Type
-				}
-				buff.Message.Body = messageResult.Body
-				buff.Message.Commands = messageResult.Commands
-				isDeferred = messageResult.IsDeferred
-				log.Printf("message result\ntype: %+v \nbody:%+v\ncommands:%+v\ndeffered?: %+v", messageResult.Type, buff.Message.Body, buff.Message.Commands, isDeferred)
-			}
+			buff, isDeferred, err = process_message(commandProcessor, buff, in)
 		} else {
 			err = errors.New("Команда не поддерживается.")
-			buff.Message.Body = err.Error()
+			buff.Message = &s.OutMessage{
+				Thread:in.Message.Thread,
+				ID :u.GenId(),
+				Type:"chat",
+				Body: err.Error(),
+			}
 		}
 	}
 	return buff, isDeferred, err
@@ -126,7 +156,7 @@ func process_message_pkg(buff *s.OutPkg, in *s.InPkg, context *s.BotContext) (*s
 
 type controllerHandler func(w http.ResponseWriter, r *http.Request)
 
-func FormBotController(context *s.BotContext) controllerHandler {
+func FormBotController(context *BotContext) controllerHandler {
 
 	return func(w http.ResponseWriter, r *http.Request) {
 		if r.Method != "POST" {
@@ -156,12 +186,17 @@ func FormBotController(context *s.BotContext) controllerHandler {
 			}
 			if in.Message != nil {
 				if in.Message.Commands == nil {
-					log.Printf("warn will sended message without commands: %v\n from %v (userdata: %v)", in.Message, in.From, in.UserData)
-					out.Message = &s.OutMessage{Type: "chat", Thread: in.Message.Thread, ID: u.GenId(), Body: textProvider.GenerateMessage()}
-					setOutPackage(w, out, false, false)
-					return
+					if non_commands_processor, ok := context.Message_commands[""]; ok {
+						out, isDeferred, message_error = process_message(non_commands_processor, out, in)
+					} else {
+						log.Printf("warn will sended message without commands: %v\n from %v (userdata: %v)", in.Message, in.From, in.UserData)
+						out.Message = &s.OutMessage{Type: "chat", Thread: in.Message.Thread, ID: u.GenId(), Body: textProvider.GenerateMessage()}
+						setOutPackage(w, out, false, false)
+						return
+					}
+				} else{
+					out, isDeferred, message_error = process_message_pkg(out, in, context)
 				}
-				out, isDeferred, message_error = process_message_pkg(out, in, context)
 			}
 			if in.Message == nil && in.Request == nil {
 				global_error = errors.New("Ничего не понятно!")
