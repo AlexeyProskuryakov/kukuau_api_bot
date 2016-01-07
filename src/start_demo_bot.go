@@ -80,7 +80,6 @@ func main() {
 
 	log.Printf("configuration for db:\nconnection string: %+v\ndatabase name: %+v", conf.Main.Database.ConnString, conf.Main.Database.Name)
 	db := d.NewMainDb(conf.Main.Database.ConnString, conf.Main.Database.Name)
-	cs := c.NewConfigurationStorage(conf.Main.Database.ConnString, conf.Main.Database.Name)
 
 	log.Printf("Is delete DB? [%+v] Is debug? [%v]", d.DELETE_DB, m.DEBUG)
 	if d.DELETE_DB {
@@ -141,9 +140,12 @@ func main() {
 		http.HandleFunc(conf.RuPost.WorkUrl, rp_controller)
 	}
 
+	cs := c.NewConfigurationStorage(conf.Main.Database.ConnString, conf.Main.Database.Name)
+	qs := q.NewQuestKeyStorage(conf.Main.Database.ConnString, conf.Main.Database.Name)
+
 	for q_name, q_conf := range conf.Quests {
 		log.Printf("Will handling quests controller for quest: %v", q_name)
-		qb_controller := q.FormQuestBotContext(q_conf, db, cs)
+		qb_controller := q.FormQuestBotContext(q_conf, db, cs, qs)
 		q_controller := m.FormBotController(qb_controller)
 		http.HandleFunc(fmt.Sprintf("/quest/%v", q_name), q_controller)
 	}

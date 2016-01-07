@@ -2,13 +2,12 @@ package quests
 
 import (
 	"log"
-	"math/rand"
 	"time"
 
 	s "msngr/structs"
 	c "msngr/configuration"
-	"msngr/db"
 	m "msngr"
+	"msngr/db"
 
 	"fmt"
 	"gopkg.in/mgo.v2"
@@ -103,6 +102,7 @@ func (qsmp *QuestSubscribeMessageProcessor) ProcessMessage(in *s.InPkg) *s.Messa
 type QuestKeyInputMessageProcessor struct {
 	db.MainDb
 	c.ConfigStorage
+	DataStorage *QuestStorage
 }
 
 func (qkimp QuestKeyInputMessageProcessor) ProcessMessage(in *s.InPkg) *s.MessageResult {
@@ -121,11 +121,13 @@ func (qkimp QuestKeyInputMessageProcessor) ProcessMessage(in *s.InPkg) *s.Messag
 					if field.Name == "code" {
 						key := field.Data.Value
 						log.Printf("QUESTS We have key from %v is: [%v]", in.From, key)
-						r := rand.New(rand.NewSource(time.Now().UnixNano()))
-						if r.Int31n(6) >= 3 {
-							text = "Правильно! Ваше следующее задание..."
-						} else {
-							text = "Не правильно, поищите код лучше."
+						descr, err := qkimp.DataStorage.GetDescription(key)
+						if err != nil && err != mgo.ErrNotFound{
+							text = fmt.Sprintf("Внутренняя ошибка: %s.", err)
+						}else if err == mgo.ErrNotFound{
+							text = "Код не верный, попробуйте другой."
+						} else{
+							text = descr
 						}
 					}
 				}
@@ -164,19 +166,25 @@ func (qmpp QuestMessagePersistProcessor) ProcessMessage(in *s.InPkg) *s.MessageR
 	return &s.MessageResult{Type:"chat", Body:"Ваше сообщение доставленно. Скоро вам ответят.", Commands:&commands}
 }
 
-func FormQuestBotContext(conf c.QuestConfig, db_handler *db.MainDb, cs c.ConfigStorage) *m.BotContext {
+func FormQuestBotContext(qconf c.QuestConfig, db_handler *db.MainDb, cs c.ConfigStorage, qs *QuestStorage) *m.BotContext {
 	result := m.BotContext{}
+
 	result.Request_commands = map[string]s.RequestCommandProcessor{
 		"commands":&QuestCommandRequestProcessor{MainDb:*db_handler, ConfigStorage:cs},
 	}
+
 	result.Message_commands = map[string]s.MessageCommandProcessor{
-		"subscribe":&QuestSubscribeMessageProcessor{MainDb:*db_handler, AcceptPhrase:conf.AcceptPhrase, RejectedPhrase:conf.RejectPhrase, ErrorPhrase:conf.ErrorPhrase, ConfigStorage:cs},
+		"subscribe":&QuestSubscribeMessageProcessor{MainDb:*db_handler, AcceptPhrase:qconf.AcceptPhrase, RejectedPhrase:qconf.RejectPhrase, ErrorPhrase:qconf.ErrorPhrase, ConfigStorage:cs},
 		"unsubscribe":&QuestUnsubscribeMessageProcessor{MainDb:*db_handler, ConfigStorage:cs},
-		"key_input":&QuestKeyInputMessageProcessor{MainDb:*db_handler, ConfigStorage:cs},
-		"information":&QuestInfoMessageProcessor{Information:conf.Info},
+		"key_input":&QuestKeyInputMessageProcessor{MainDb:*db_handler, ConfigStorage:cs, DataStorage:qs},
+		"information":&QuestInfoMessageProcessor{Information:qconf.Info},
 		"":QuestMessagePersistProcessor{MainDb:*db_handler, ConfigStorage:cs},
 	}
+
 	result.CommandsStorage = cs
+
+	Run(qconf, qs)
+
 	return &result
 
 }

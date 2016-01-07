@@ -92,6 +92,7 @@ type QuestConfig struct {
 	RejectPhrase string `json:"reject_phrase"`
 	ErrorPhrase  string `json:"error_phrase"`
 	Info         string `json:"information"`
+	WebPort      string `json:"web_port"`
 }
 
 type Configuration struct {

@@ -13,7 +13,7 @@ curl -i -L -X POST \
 }' \
  'http://localhost:9595/configuration'
 
-curl -i -L -X POST \
+ curl -i -L -X POST \
    -H "Content-Type:application/json" \
    -d \
 '{
@@ -32,13 +32,28 @@ curl -i -L -X POST \
       "fields":[
         {"name":"code",
          "type":"text",
-         "attributes":{
+         "attrs":{
            "label":"Ваш найденный код",
            "required":true
          	}
         }
       ]
     }
+  }
+}' \
+ 'http://localhost:9595/configuration'
+
+ curl -i -L -X POST \
+   -H "Content-Type:application/json" \
+   -d \
+'{
+  "provider":"quests",
+  "name":"subscribed",
+  "command":{
+    "title":"Перестать учавствовать",
+    "action":"unsubscribe",
+    "position":1,
+    "repeated":false
   }
 }' \
  'http://localhost:9595/configuration'
