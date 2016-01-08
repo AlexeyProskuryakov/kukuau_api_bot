@@ -1,4 +1,4 @@
-curl -i -L -X POST \
+curl --user alesha:sederfes100500 -i -L -X POST \
    -H "Content-Type:application/json" \
    -d \
 '{
@@ -13,7 +13,7 @@ curl -i -L -X POST \
 }' \
  'http://localhost:9595/configuration'
 
- curl -i -L -X POST \
+ curl --user alesha:sederfes100500 -i -L -X POST \
    -H "Content-Type:application/json" \
    -d \
 '{
@@ -43,7 +43,7 @@ curl -i -L -X POST \
 }' \
  'http://localhost:9595/configuration'
 
- curl -i -L -X POST \
+ curl --user alesha:sederfes100500 -i -L -X POST \
    -H "Content-Type:application/json" \
    -d \
 '{
