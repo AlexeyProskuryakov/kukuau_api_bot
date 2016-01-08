@@ -12,6 +12,7 @@ import (
 	"fmt"
 	"gopkg.in/mgo.v2"
 	"msngr/notify"
+	"regexp"
 )
 
 const (
@@ -154,19 +155,28 @@ type QuestMessagePersistProcessor struct {
 	DataStorage *QuestStorage
 }
 
+var key_reg = regexp.MustCompile("^\\#[\\w\\dа-яА-Я]+")
+
 func (qmpp QuestMessagePersistProcessor) ProcessMessage(in *s.InPkg) *s.MessageResult {
 	commands := getCommands(in, qmpp.MainDb, qmpp.ConfigStorage)
 	log.Printf("QUESTS want to send simple message")
 	if in.Message.Body != nil {
 		//try recognise code at simple message
 		pkey := in.Message.Body
-		descr, err := qmpp.DataStorage.GetDescription(*pkey)
-		log.Printf("QUESTS key processing, maybe it [%s] \nis not message but key...\n%+v", in.Message.Body, descr)
-		if err == nil{
-			return &s.MessageResult{Type:"chat", Body:descr, Commands:&commands}
+		key := *pkey
+		if key_reg.MatchString(key){
+			descr, err := qmpp.DataStorage.GetDescription(key)
+			log.Printf("QUESTS want to send key %v i have this answer for key: %v", key, descr)
+			if err == nil{
+				return &s.MessageResult{Type:"chat", Body:descr, Commands:&commands}
+			} else if err == mgo.ErrNotFound {
+				return &s.MessageResult{Type:"chat", Body:"Не верный ключ.", Commands:&commands}
+			} else {
+				return &s.MessageResult{Type:"chat", Body:fmt.Sprintf("Упс ошибочка. %v.", err.Error()), Commands:&commands}
+			}
 		}
 		//else storing this message
-		err = qmpp.DataStorage.StoreMessage(in.From, *in.Message.Body, time.Now())
+		err := qmpp.DataStorage.StoreMessage(in.From, *in.Message.Body, time.Now())
 		if err != nil {
 			return &s.MessageResult{Type:"chat", Body:err.Error(), Commands:&commands}
 		}
