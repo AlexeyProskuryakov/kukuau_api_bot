@@ -93,6 +93,7 @@ type QuestConfig struct {
 	ErrorPhrase  string `json:"error_phrase"`
 	Info         string `json:"information"`
 	WebPort      string `json:"web_port"`
+	Key			 string `json:"key"`
 }
 
 type Configuration struct {

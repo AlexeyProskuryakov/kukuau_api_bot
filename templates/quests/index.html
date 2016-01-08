@@ -1,7 +1,7 @@
 {{$u := .user}}
 <h1> Привет {{$u.UserName}} !</h1>
 <br>
-<div class="container-fluid">
+<div class="container-fluid table table-striped">
     <div class="row">
         <div class="col-md-6 col-md-offset-3">
             <h2> Добавьте новый квестовый ключ: </h2>
@@ -40,12 +40,37 @@
         </div>
     </div>
     {{end}}
+
     <hr>
+
     <div class="row">
         <div class="col-md-6 col-md-offset-3">
             <h2>Последние сообщения от пользователей</h2>
         </div>
     </div>
+    <table class="table table-striped">
+    {{range $message := .messages}}
+    <tr>
+         <td class="col-md-2">
+            {{$message.From}}
+        </td>
+        <td class="col-md-4">
+            {{$message.Body}}
+        </td>
+        <td class="col-md-4">
+            <form action="/message_answer/{{$message.From}}" method="post">
+                <div class="form-group">
+                   <textarea name="message_answer" class="form-control" rows="2" cols="2" id="message_answer"></textarea>
+                </div>
+                <div class="form-group">
+                    <button type="submit" class="btn btn-default">Ответить</button>
+                </div>
+            </form>
+        </td>
+    </tr>
+    {{end}}
+        </table>
+
 </div>
 
 

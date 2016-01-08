@@ -11,6 +11,7 @@ import (
 
 	"fmt"
 	"gopkg.in/mgo.v2"
+	"msngr/notify"
 )
 
 const (
@@ -44,6 +45,14 @@ func (qcp *QuestCommandRequestProcessor) ProcessRequest(in *s.InPkg) *s.RequestR
 	result_commands := getCommands(in, qcp.MainDb, qcp.ConfigStorage)
 	result := s.RequestResult{Commands:&result_commands}
 	return &result
+}
+
+type QuestInfoMessageProcessor struct {
+	Information string
+}
+
+func (qimp QuestInfoMessageProcessor) ProcessMessage(in *s.InPkg) *s.MessageResult {
+	return &s.MessageResult{Body:qimp.Information, Type:"chat"}
 }
 
 type QuestUnsubscribeMessageProcessor struct {
@@ -83,7 +92,7 @@ func (qsmp *QuestSubscribeMessageProcessor) ProcessMessage(in *s.InPkg) *s.Messa
 	if user != nil {
 		if state, ok := user.GetStateValue(QUEST_STATE_KEY); ok && state == SUBSCRIBED {
 			text = qsmp.RejectedPhrase
-			commands, _ := qsmp.LoadCommands(PROVIDER, UNSUBSCRIBED)
+			commands, _ := qsmp.LoadCommands(PROVIDER, SUBSCRIBED)
 			return &s.MessageResult{Commands:&commands, Body:text, Type:"chat"}
 		} else {
 			qsmp.Users.SetUserMultiplyState(in.From, QUEST_STATE_KEY, SUBSCRIBED)
@@ -122,11 +131,11 @@ func (qkimp QuestKeyInputMessageProcessor) ProcessMessage(in *s.InPkg) *s.Messag
 						key := field.Data.Value
 						log.Printf("QUESTS We have key from %v is: [%v]", in.From, key)
 						descr, err := qkimp.DataStorage.GetDescription(key)
-						if err != nil && err != mgo.ErrNotFound{
+						if err != nil && err != mgo.ErrNotFound {
 							text = fmt.Sprintf("Внутренняя ошибка: %s.", err)
-						}else if err == mgo.ErrNotFound{
+						}else if err == mgo.ErrNotFound {
 							text = "Код не верный, попробуйте другой."
-						} else{
+						} else {
 							text = descr
 						}
 					}
@@ -139,24 +148,25 @@ func (qkimp QuestKeyInputMessageProcessor) ProcessMessage(in *s.InPkg) *s.Messag
 	return &mr
 }
 
-type QuestInfoMessageProcessor struct {
-	Information string
-}
-
-func (qimp QuestInfoMessageProcessor) ProcessMessage(in *s.InPkg) *s.MessageResult {
-	return &s.MessageResult{Body:qimp.Information, Type:"chat"}
-}
-
-
 type QuestMessagePersistProcessor struct {
 	db.MainDb
 	c.ConfigStorage
+	DataStorage *QuestStorage
 }
 
 func (qmpp QuestMessagePersistProcessor) ProcessMessage(in *s.InPkg) *s.MessageResult {
 	commands := getCommands(in, qmpp.MainDb, qmpp.ConfigStorage)
+	log.Printf("QUESTS want to send simple message")
 	if in.Message.Body != nil {
-		err := qmpp.Messages.StoreMessage(in.From, *in.Message.Body, time.Now())
+		//try recognise code at simple message
+		pkey := in.Message.Body
+		descr, err := qmpp.DataStorage.GetDescription(*pkey)
+		log.Printf("QUESTS key processing, maybe it [%s] \nis not message but key...\n%+v", in.Message.Body, descr)
+		if err == nil{
+			return &s.MessageResult{Type:"chat", Body:descr, Commands:&commands}
+		}
+		//else storing this message
+		err = qmpp.DataStorage.StoreMessage(in.From, *in.Message.Body, time.Now())
 		if err != nil {
 			return &s.MessageResult{Type:"chat", Body:err.Error(), Commands:&commands}
 		}
@@ -166,8 +176,12 @@ func (qmpp QuestMessagePersistProcessor) ProcessMessage(in *s.InPkg) *s.MessageR
 	return &s.MessageResult{Type:"chat", Body:"Ваше сообщение доставленно. Скоро вам ответят.", Commands:&commands}
 }
 
-func FormQuestBotContext(qconf c.QuestConfig, db_handler *db.MainDb, cs c.ConfigStorage, qs *QuestStorage) *m.BotContext {
+func FormQuestBotContext(conf c.Configuration, qname string, db_handler *db.MainDb, cs c.ConfigStorage, qs *QuestStorage) *m.BotContext {
 	result := m.BotContext{}
+	qconf, ok := conf.Quests[qname]
+	if !ok {
+		panic(fmt.Sprintf("Quest configuration with name %v is not exist :(", qname))
+	}
 
 	result.Request_commands = map[string]s.RequestCommandProcessor{
 		"commands":&QuestCommandRequestProcessor{MainDb:*db_handler, ConfigStorage:cs},
@@ -178,12 +192,12 @@ func FormQuestBotContext(qconf c.QuestConfig, db_handler *db.MainDb, cs c.Config
 		"unsubscribe":&QuestUnsubscribeMessageProcessor{MainDb:*db_handler, ConfigStorage:cs},
 		"key_input":&QuestKeyInputMessageProcessor{MainDb:*db_handler, ConfigStorage:cs, DataStorage:qs},
 		"information":&QuestInfoMessageProcessor{Information:qconf.Info},
-		"":QuestMessagePersistProcessor{MainDb:*db_handler, ConfigStorage:cs},
+		"":QuestMessagePersistProcessor{MainDb:*db_handler, ConfigStorage:cs, DataStorage:qs},
 	}
 
 	result.CommandsStorage = cs
-
-	Run(qconf, qs)
+	notifier := msngr.NewNotifier(conf.Main.CallbackAddr, qconf.Key)
+	go Run(qconf, qs, notifier)
 
 	return &result
 

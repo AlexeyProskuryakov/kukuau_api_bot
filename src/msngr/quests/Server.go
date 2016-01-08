@@ -7,10 +7,14 @@ import (
 
 	c "msngr/configuration"
 	"msngr/console"
+	"msngr/notify"
+	"msngr/structs"
+
 
 	"log"
 	"gopkg.in/mgo.v2/bson"
 	"net/http"
+	"msngr/utils"
 )
 
 var users = map[string]string{
@@ -18,7 +22,7 @@ var users = map[string]string{
 	"leha":"qwerty100500",
 }
 
-func Run(config c.QuestConfig, qs *QuestStorage) {
+func Run(config c.QuestConfig, qs *QuestStorage, ntf *msngr.Notifier) {
 	m := martini.Classic()
 	m.Use(render.Renderer(render.Options{
 		Layout: "quests/layout",
@@ -33,7 +37,7 @@ func Run(config c.QuestConfig, qs *QuestStorage) {
 		return ok && pwd == password
 	}))
 
-	get_result_map := func(user auth.User) map[string]interface{}{
+	get_result_map := func(user auth.User) map[string]interface{} {
 		keys, _ := qs.GetAllKeys()
 		messages, _ := qs.GetMessages(bson.M{"answered":false})
 		result_map := map[string]interface{}{
@@ -46,7 +50,7 @@ func Run(config c.QuestConfig, qs *QuestStorage) {
 		return result_map
 	}
 
-	get_result_error_map := func(user auth.User, error_info string) map[string]interface{}{
+	get_result_error_map := func(user auth.User, error_info string) map[string]interface{} {
 		keys, _ := qs.GetAllKeys()
 		messages, _ := qs.GetMessages(bson.M{"answered":false})
 		result_map := map[string]interface{}{
@@ -58,19 +62,35 @@ func Run(config c.QuestConfig, qs *QuestStorage) {
 		}
 		return result_map
 	}
-	m.Get("/",func(user auth.User, render render.Render){
+	m.Get("/", func(user auth.User, render render.Render) {
 		render.HTML(200, "quests/index", get_result_map(user))
 	})
 
-	m.Post("/", func(user auth.User, render render.Render, request *http.Request){
+	m.Post("/", func(user auth.User, render render.Render, request *http.Request) {
 		key := request.FormValue("key")
 		answer := request.FormValue("answer")
 		log.Printf("Key: %s\nAnswer: %s", key, answer)
-		if key != "" && answer != ""{
+		if key != "" && answer != "" {
 			qs.AddKey(key, answer)
 			render.HTML(200, "quests/index", get_result_map(user))
 		} else {
 			render.HTML(200, "quests/index", get_result_error_map(user, "Не валидные значения ключа и ответа."))
+		}
+	})
+
+	m.Post("/message_answer/:to", func(params martini.Params, user auth.User, render render.Render, request *http.Request) {
+		answer := request.FormValue("message_answer")
+		log.Printf("Operator was answer: %s", answer)
+		if answer != "" {
+			ntf.Notify(structs.OutPkg{To:params["to"],
+				Message: &structs.OutMessage{
+					ID: utils.GenId(),
+					Type: "chat",
+					Body: answer,
+				}})
+			render.HTML(200, "quests/index", get_result_map(user))
+		} else {
+			render.HTML(200, "quests/index", get_result_error_map(user, "Не валидное значение ответа на сообщение."))
 		}
 	})
 
