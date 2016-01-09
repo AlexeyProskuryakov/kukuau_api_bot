@@ -71,6 +71,8 @@ type ErrorWrapper struct {
 }
 
 type MessageWrapper struct {
+	ID       bson.ObjectId `bson:"_id,omitempty"`
+	SID      string `bson:"_"`
 	From     string `bson:"from"`
 	Body     string `bson:"body"`
 	Time     time.Time `bson:"time"`
@@ -586,8 +588,8 @@ func (eh *errorHandler) GetBy(req bson.M) (*[]ErrorWrapper, error) {
 	return &result, err
 }
 
-func (mh *messageHandler) StoreMessage(from, body string, time time.Time) error{
-	if !mh.parent.Check(){
+func (mh *messageHandler) StoreMessage(from, body string, time time.Time) error {
+	if !mh.parent.Check() {
 		return errors.New("БД не доступна")
 	}
 
@@ -596,7 +598,7 @@ func (mh *messageHandler) StoreMessage(from, body string, time time.Time) error{
 	return err
 }
 
-func (mh *messageHandler) GetMessages(query bson.M) ([]MessageWrapper, error){
+func (mh *messageHandler) GetMessages(query bson.M) ([]MessageWrapper, error) {
 	result := []MessageWrapper{}
 	err := mh.Collection.Find(query).Sort("time").All(&result)
 	return result, err

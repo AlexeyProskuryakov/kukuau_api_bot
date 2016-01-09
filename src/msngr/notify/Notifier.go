@@ -20,18 +20,18 @@ func NewNotifier(addr, key string) *Notifier {
 	return &Notifier{address: addr, key: key}
 }
 
-func (n Notifier) Notify(outPkg s.OutPkg) {
+func (n Notifier) Notify(outPkg s.OutPkg) error{
 	jsoned_out, err := json.Marshal(&outPkg)
 	if err != nil {
 		log.Printf("NTF error at unmarshal %v", err)
-		return
+		return err
 	}
 
 	body := bytes.NewBuffer(jsoned_out)
 	req, err := http.NewRequest("POST", n.address, body)
 	if err != nil {
 		log.Printf("NTF error at for request %v", err)
-		return
+		return err
 	}
 
 	req.Header.Add("Content-Type", "application/json")
@@ -44,16 +44,17 @@ func (n Notifier) Notify(outPkg s.OutPkg) {
 	resp, err := client.Do(req)
 	if err != nil {
 		log.Printf("NTF error at do request %v", err)
-		return
+		return err
 	}
 	if resp != nil {
 		body, err := ioutil.ReadAll(resp.Body)
 		if err != nil{
 			log.Printf("N << ERROR:%+v", err)
+			return err
 		} else{
 			log.Printf("N << %v", string(body))
 		}
 		defer resp.Body.Close()
 	}
-
+	return nil
 }

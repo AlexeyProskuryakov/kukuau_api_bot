@@ -141,11 +141,11 @@ func main() {
 	}
 
 	cs := c.NewConfigurationStorage(conf.Main.Database.ConnString, conf.Main.Database.Name)
-	qs := q.NewQuestKeyStorage(conf.Main.Database.ConnString, conf.Main.Database.Name)
+	qs := q.NewQuestStorage(conf.Main.Database.ConnString, conf.Main.Database.Name)
 
 	for q_name, _ := range conf.Quests {
 		log.Printf("Will handling quests controller for quest: %v", q_name)
-		qb_controller := q.FormQuestBotContext(conf, q_name, db, cs, qs)
+		qb_controller := q.FormQuestBotContext(conf, q_name, cs, qs)
 		q_controller := m.FormBotController(qb_controller)
 		http.HandleFunc(fmt.Sprintf("/quest/%v", q_name), q_controller)
 	}

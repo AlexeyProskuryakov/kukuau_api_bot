@@ -1,0 +1,58 @@
+<div class="container-fluid">
+    <div class="row">
+        <div class="col-md-6 col-md-offset-3">
+            <h2> Добавьте новый квестовый ключ: </h2>
+
+            <form action="/add_key" method="post">
+                <div class="form-group form-inline">
+                    <label for="key">Ключ:</label>
+                    <input type="text" class="form-control" id="key" name="key">
+                    <label for="key-position">Номер ключа:</label>
+                    <input type="number" class="form-control" id="key-position" name="position">
+                </div>
+                <div class="form-group">
+                    <label for="answer">Ответ:</label>
+                    <textarea name="answer" class="form-control" rows="5" id="answer"></textarea>
+                </div>
+                <div class="form-group">
+                    <button type="submit" class="btn btn-info">Добавить</button>
+                </div>
+
+            </form>
+            {{ if .is_error }}
+            <div class="text-danger">{{.error_text}}</div>
+            {{ end }}
+        </div>
+    </div>
+    <hr>
+    <div class="row">
+        <div class="col-md-6 col-md-offset-3">
+            <h3> Добавленные ключи:</h3>
+        </div>
+    </div>
+    <div class="row">
+        <table class="table table-striped">
+            {{range $key_info := .keys}}
+            <tr>
+                <td class="col-md-2 col-md-offset-2">
+                    {{$key_info.Key}}
+                </td>
+                <td class="col-md-5">
+                    {{$key_info.Description}}
+                </td>
+                <td class="col-md-1">
+                    {{$key_info.Position}}
+                </td>
+                <td>
+                    <form action="/delete_key/{{$key_info.Key}}" method="post">
+                        <div class="form-group">
+                            <button type="submit" class="btn btn-danger">Удалить</button>
+                        </div>
+                    </form>
+                </td>
+            </tr>
+            {{end}}
+        </table>
+    </div>
+
+</div>
