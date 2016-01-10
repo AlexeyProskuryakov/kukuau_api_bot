@@ -58,10 +58,10 @@ func NewQuestStorage(conn, dbname string) *QuestStorage {
 
 type KeyWrapper struct {
 	ID          bson.ObjectId `bson:"_id,omitempty"`
+	SID         string
 	Key         string `bson:"key"`
 	Description string `bson:"description"`
 	Position    int64  `bson:"position"`
-	SID         string
 }
 
 func (qks *QuestStorage) AddKey(key, description string, position int64) error {

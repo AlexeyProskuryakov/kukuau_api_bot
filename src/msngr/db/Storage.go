@@ -72,7 +72,7 @@ type ErrorWrapper struct {
 
 type MessageWrapper struct {
 	ID       bson.ObjectId `bson:"_id,omitempty"`
-	SID      string `bson:"_"`
+	SID      string
 	From     string `bson:"from"`
 	Body     string `bson:"body"`
 	Time     time.Time `bson:"time"`
