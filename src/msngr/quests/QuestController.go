@@ -37,8 +37,8 @@ type QuestCommandRequestProcessor struct {
 //}
 
 func (qcp *QuestCommandRequestProcessor) ProcessRequest(in *s.InPkg) *s.RequestResult {
-//	result_commands := getCommands(in, qcp.Storage, qcp.ConfigStorage)
-//	result := s.RequestResult{Commands:&result_commands}
+	//	result_commands := getCommands(in, qcp.Storage, qcp.ConfigStorage)
+	//	result := s.RequestResult{Commands:&result_commands}
 	result := s.RequestResult{Commands:&[]s.OutCommand}
 	return &result
 }
@@ -103,36 +103,6 @@ func (qimp QuestInfoMessageProcessor) ProcessMessage(in *s.InPkg) *s.MessageResu
 //	}
 //}
 
-func ProcessKeyUserResult(user_id, key string, qs *QuestStorage) (string, error, bool) {
-	//return description or some text for user or "" if error
-	key_info, err := qs.GetKeyInfo(key)
-	if err != nil {
-		return "", err, false
-	}
-	log.Printf("QUEST key [%v] is found: %+v", key, key_info)
-
-	user_info, err := qs.GetUserInfo(user_id, PROVIDER)
-	if err != nil {
-		log.Printf("QUEST user [%v] is not found because: %+v", user_id, err)
-		return "", err, false
-	}
-	log.Printf("QUEST user [%v] is found: %+v", user_id, user_info)
-
-	if user_info.LastKeyPosition == nil && key_info.Position == 0{
-		return key_info.Description, nil, true
-	} else if user_info.LastKeyPosition != nil{
-		user_last_key_position := user_info.LastKeyPosition
-		if (*user_last_key_position + 1) == key_info.Position{
-			return key_info.Description, nil, true
-		} else if utils.InS(key_info.Key, user_info.FoundKeys) {
-			return "Вы уже вводили этот ключ", nil, false
-		} else {
-			return "Вы не можете использовать этот ключ сейчас.", nil, false
-		}
-	}
-	return "", nil, false
-}
-
 //type QuestKeyInputMessageProcessor struct {
 //	Storage *QuestStorage
 //	c.ConfigStorage
@@ -179,6 +149,44 @@ func ProcessKeyUserResult(user_id, key string, qs *QuestStorage) (string, error,
 //	return &mr
 //}
 
+func IsSubscribedKey(key string, qs *QuestStorage) (bool, error) {
+	key_info, err := qs.GetKeyInfo(key)
+	if err != nil {
+		return false, err
+	}
+	return key_info.Position == 0, nil
+}
+
+func ProcessKeyUserResult(user_id, key string, qs *QuestStorage) (string, error, bool) {
+	//return description or some text for user or "" if error
+	key_info, err := qs.GetKeyInfo(key)
+	if err != nil {
+		return "", err, false
+	}
+	log.Printf("QUEST key [%v] is found: %+v", key, key_info)
+
+	user_info, err := qs.GetUserInfo(user_id, PROVIDER)
+	if err != nil {
+		log.Printf("QUEST user [%v] is not found because: %+v", user_id, err)
+		return "", err, false
+	}
+	log.Printf("QUEST user [%v] is found: %+v", user_id, user_info)
+
+	if user_info.LastKeyPosition == nil && key_info.Position == 0 {
+		return key_info.Description, nil, true
+	} else if user_info.LastKeyPosition != nil {
+		user_last_key_position := user_info.LastKeyPosition
+		if (*user_last_key_position + 1) == key_info.Position {
+			return key_info.Description, nil, true
+		} else if utils.InS(key_info.Key, user_info.FoundKeys) {
+			return "Вы уже вводили этот ключ", nil, false
+		} else {
+			return "Вы не можете использовать этот ключ сейчас.", nil, false
+		}
+	}
+	return "", nil, false
+}
+
 type QuestMessagePersistProcessor struct {
 	c.ConfigStorage
 	Storage *QuestStorage
@@ -194,6 +202,10 @@ func (qmpp QuestMessagePersistProcessor) ProcessMessage(in *s.InPkg) *s.MessageR
 		pkey := in.Message.Body
 		key := *pkey
 		if key_reg.MatchString(key) {
+			if is_first, err := IsSubscribedKey(key, qmpp.Storage); is_first && err != nil {
+				qmpp.Storage.SetUserState(in.From, SUBSCRIBED, PROVIDER)
+			}
+
 			descr, err, ok := ProcessKeyUserResult(in.From, key, qmpp.Storage)
 			log.Printf("QUESTS want to send key %v i have this answer for key: %v", key, descr)
 			if err == nil {
@@ -230,9 +242,9 @@ func FormQuestBotContext(conf c.Configuration, qname string, cs c.ConfigStorage,
 	}
 
 	result.Message_commands = map[string]s.MessageCommandProcessor{
-//		"subscribe":&QuestSubscribeMessageProcessor{Storage:qs, AcceptPhrase:qconf.AcceptPhrase, RejectedPhrase:qconf.RejectPhrase, ErrorPhrase:qconf.ErrorPhrase, ConfigStorage:cs},
-//		"unsubscribe":&QuestUnsubscribeMessageProcessor{Storage:qs, ConfigStorage:cs},
-//		"key_input":&QuestKeyInputMessageProcessor{Storage:qs, ConfigStorage:cs},
+		//		"subscribe":&QuestSubscribeMessageProcessor{Storage:qs, AcceptPhrase:qconf.AcceptPhrase, RejectedPhrase:qconf.RejectPhrase, ErrorPhrase:qconf.ErrorPhrase, ConfigStorage:cs},
+		//		"unsubscribe":&QuestUnsubscribeMessageProcessor{Storage:qs, ConfigStorage:cs},
+		//		"key_input":&QuestKeyInputMessageProcessor{Storage:qs, ConfigStorage:cs},
 		"information":&QuestInfoMessageProcessor{Information:qconf.Info},
 		"":QuestMessagePersistProcessor{Storage:qs, ConfigStorage:cs},
 	}
