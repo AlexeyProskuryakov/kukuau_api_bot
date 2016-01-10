@@ -39,7 +39,7 @@ type QuestCommandRequestProcessor struct {
 func (qcp *QuestCommandRequestProcessor) ProcessRequest(in *s.InPkg) *s.RequestResult {
 	//	result_commands := getCommands(in, qcp.Storage, qcp.ConfigStorage)
 	//	result := s.RequestResult{Commands:&result_commands}
-	result := s.RequestResult{Commands:&[]s.OutCommand}
+	result := s.RequestResult{Commands:&[]s.OutCommand{}}
 	return &result
 }
 
@@ -154,6 +154,7 @@ func IsSubscribedKey(key string, qs *QuestStorage) (bool, error) {
 	if err != nil {
 		return false, err
 	}
+	log.Printf("QUESTS checking is key was subscribed... key: %+v, checked? ", key_info, key_info.Position == 0)
 	return key_info.Position == 0, nil
 }
 
@@ -167,10 +168,10 @@ func ProcessKeyUserResult(user_id, key string, qs *QuestStorage) (string, error,
 
 	user_info, err := qs.GetUserInfo(user_id, PROVIDER)
 	if err != nil {
-		log.Printf("QUEST user [%v] is not found because: %+v", user_id, err)
+		log.Printf("QUESTS user [%v] is not found because: %+v", user_id, err)
 		return "", err, false
 	}
-	log.Printf("QUEST user [%v] is found: %+v", user_id, user_info)
+	log.Printf("QUESTS user [%v] is found: %+v", user_id, user_info)
 
 	if user_info.LastKeyPosition == nil && key_info.Position == 0 {
 		return key_info.Description, nil, true
@@ -195,14 +196,14 @@ type QuestMessagePersistProcessor struct {
 var key_reg = regexp.MustCompile("^\\#[\\w\\dа-яА-Я]+")
 
 func (qmpp QuestMessagePersistProcessor) ProcessMessage(in *s.InPkg) *s.MessageResult {
-	commands := []s.OutCommand//getCommands(in, qmpp.Storage, qmpp.ConfigStorage)
+	commands := []s.OutCommand{}//getCommands(in, qmpp.Storage, qmpp.ConfigStorage)
 	log.Printf("QUESTS want to send simple message")
 	if in.Message.Body != nil {
 		//try recognise code at simple message
 		pkey := in.Message.Body
 		key := *pkey
 		if key_reg.MatchString(key) {
-			if is_first, err := IsSubscribedKey(key, qmpp.Storage); is_first && err != nil {
+			if is_first, err := IsSubscribedKey(key, qmpp.Storage); is_first && err == nil {
 				qmpp.Storage.SetUserState(in.From, SUBSCRIBED, PROVIDER)
 			}
 
