@@ -57,9 +57,11 @@ func NewQuestStorage(conn, dbname string) *QuestStorage {
 }
 
 type KeyWrapper struct {
+	ID          bson.ObjectId `bson:"_id,omitempty"`
 	Key         string `bson:"key"`
 	Description string `bson:"description"`
 	Position    int64  `bson:"position"`
+	SID         string
 }
 
 func (qks *QuestStorage) AddKey(key, description string, position int64) error {
@@ -77,6 +79,9 @@ func (qks *QuestStorage) AddKey(key, description string, position int64) error {
 func (qks *QuestStorage) GetAllKeys() ([]KeyWrapper, error) {
 	result := []KeyWrapper{}
 	err := qks.Keys.Find(bson.M{}).All(&result)
+	for i, key := range result{
+		result[i].SID = key.ID.Hex()
+	}
 	return result, err
 }
 
@@ -89,8 +94,8 @@ func (qks *QuestStorage) GetKeyInfo(key string) (*KeyWrapper, error) {
 	return &kw, nil
 }
 
-func (qks *QuestStorage) DeleteKey(key string) error {
-	err := qks.Keys.Remove(bson.M{"key":key})
+func (qks *QuestStorage) DeleteKey(key_id string) error {
+	err := qks.Keys.RemoveId(bson.ObjectIdHex(key_id))
 	return err
 }
 
@@ -120,7 +125,7 @@ func (qs *QuestStorage) GetMessage(message_id string) (*db.MessageWrapper, error
 func (qks *QuestStorage) GetMessages(query bson.M) ([]db.MessageWrapper, error) {
 	result := []db.MessageWrapper{}
 	err := qks.Messages.Find(query).Sort("time").All(&result)
-	for i, message := range result{
+	for i, message := range result {
 		result[i].SID = message.ID.Hex()
 	}
 	return result, err
@@ -223,8 +228,8 @@ func (qks *QuestStorage) GetUserKeys(user_id, key, provider string) ([]string, e
 }
 
 
-func (qks *QuestStorage) GetSubscribedUsers() ([]QuestUserWrapper, error){
+func (qks *QuestStorage) GetSubscribedUsers() ([]QuestUserWrapper, error) {
 	users := []QuestUserWrapper{}
-	err := qks.Users.Find(bson.M{fmt.Sprintf("state.%s",PROVIDER):SUBSCRIBED}).All(&users)
+	err := qks.Users.Find(bson.M{fmt.Sprintf("state.%s", PROVIDER):SUBSCRIBED}).All(&users)
 	return users, err
 }

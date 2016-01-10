@@ -85,7 +85,8 @@ func Run(config c.QuestConfig, qs *QuestStorage, ntf *msngr.Notifier) {
 
 	m.Post("/delete_key/:key", func(params martini.Params, render render.Render) {
 		key := params["key"]
-		qs.DeleteKey(key)
+		err := qs.DeleteKey(key)
+		log.Printf("QUESTS WEB will delete %v (%v)", key, err)
 		render.Redirect("/keys")
 	})
 
