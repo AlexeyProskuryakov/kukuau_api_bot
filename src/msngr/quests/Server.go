@@ -142,14 +142,16 @@ func Run(config c.QuestConfig, qs *QuestStorage, ntf *msngr.Notifier) {
 		}
 		answer := request.FormValue("message_all")
 		if answer != "" {
-			for _, user := range users {
-				ntf.Notify(structs.OutPkg{To:user.UserId,
-					Message: &structs.OutMessage{
-						ID: utils.GenId(),
-						Type: "chat",
-						Body: answer,
-					}})
-			}
+			go func() {
+				for _, user := range users {
+					ntf.Notify(structs.OutPkg{To:user.UserId,
+						Message: &structs.OutMessage{
+							ID: utils.GenId(),
+							Type: "chat",
+							Body: answer,
+						}})
+				}
+			}()
 		}else {
 			render.HTML(200, "quests/messages", ensure_messages_error(errors.New("Сообщение не может быть пустым.")))
 		}
