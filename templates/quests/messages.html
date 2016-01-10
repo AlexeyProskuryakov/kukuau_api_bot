@@ -3,7 +3,7 @@
         <div class="col-md-6 col-md-offset-3">
             <h2>
                 Написать сообщение <b>всем</b> участникам:
-                 <form action="/message_all" method="post">
+                <form action="/message_all" method="post">
                     <div class="form-group">
                         <textarea name="message_all" class="form-control" rows="2" cols="2"
                                   id="message_all"></textarea>
@@ -51,3 +51,9 @@
         {{end}}
     </table>
 </div>
+<script>
+    setTimeout(function(){
+   window.location.reload(1);
+}, 5000);
+
+</script>
