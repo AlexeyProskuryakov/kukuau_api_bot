@@ -124,7 +124,7 @@ func (qs *QuestStorage) GetMessage(message_id string) (*db.MessageWrapper, error
 
 func (qks *QuestStorage) GetMessages(query bson.M) ([]db.MessageWrapper, error) {
 	result := []db.MessageWrapper{}
-	err := qks.Messages.Find(query).Sort("time").All(&result)
+	err := qks.Messages.Find(query).Sort("-time").All(&result)
 	for i, message := range result {
 		result[i].SID = message.ID.Hex()
 	}

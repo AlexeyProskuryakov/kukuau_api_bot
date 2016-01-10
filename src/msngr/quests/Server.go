@@ -119,17 +119,15 @@ func Run(config c.QuestConfig, qs *QuestStorage, ntf *msngr.Notifier) {
 			if err != nil {
 				render.HTML(200, "quests/messages", ensure_messages_error(err))
 			}
-			err = ntf.Notify(structs.OutPkg{To:message.From,
+			go func() {
+				ntf.Notify(structs.OutPkg{To:message.From,
 				Message: &structs.OutMessage{
 					ID: utils.GenId(),
 					Type: "chat",
 					Body: answer,
 				}})
-			if err != nil {
-				qs.SetMessageAnswer(message.ID)
-			} else {
-				render.HTML(200, "quests/messages", ensure_messages_error(err))
-			}
+			}()
+			qs.SetMessageAnswer(message.ID)
 			render.Redirect("/messages")
 		} else {
 			render.HTML(200, "quests/messages", ensure_messages_error(errors.New("Сообщение не может быть пустым.")))
