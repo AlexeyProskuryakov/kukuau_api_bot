@@ -61,16 +61,23 @@ type KeyWrapper struct {
 	SID         string
 	Key         string `bson:"key"`
 	Description string `bson:"description"`
-	Position    int64  `bson:"position"`
+
+	IsFirst     bool   `bson:"is_first"`
+	NextKey     *string `bson:"next_key"`
 }
 
-func (qks *QuestStorage) AddKey(key, description string, position int64) error {
+type QuestMessageWrapper struct {
+	db.MessageWrapper `bson:"data"`
+	IsKey bool `bson:"is_key"`
+}
+
+func (qks *QuestStorage) AddKey(key, description string, next_key *string, is_first bool) error {
 	kw := KeyWrapper{}
 	err := qks.Keys.Find(bson.M{"key":key}).One(&kw)
 	if err != nil && err != mgo.ErrNotFound {
 		return err
 	} else if err == mgo.ErrNotFound {
-		err = qks.Keys.Insert(KeyWrapper{Key:key, Description:description, Position:position})
+		err = qks.Keys.Insert(KeyWrapper{Key:key, Description:description, IsFirst:is_first, NextKey:next_key})
 		return err
 	}
 	return errors.New("This key already exists")
@@ -79,7 +86,7 @@ func (qks *QuestStorage) AddKey(key, description string, position int64) error {
 func (qks *QuestStorage) GetAllKeys() ([]KeyWrapper, error) {
 	result := []KeyWrapper{}
 	err := qks.Keys.Find(bson.M{}).All(&result)
-	for i, key := range result{
+	for i, key := range result {
 		result[i].SID = key.ID.Hex()
 	}
 	return result, err
@@ -105,25 +112,33 @@ func (qks *QuestStorage) GetDescription(key string) (string, error) {
 	return result.Description, err
 }
 
-func (qks *QuestStorage) StoreMessage(from, body string, time time.Time) error {
-	result := db.MessageWrapper{From:from, Body:body, Time:time, Answered:false}
+func (qks *QuestStorage) StoreMessage(from, body string, time time.Time, is_key bool) error {
+	result := QuestMessageWrapper{
+		MessageWrapper:db.MessageWrapper{
+			From: from,
+			Body:body,
+			Time:time,
+			Answered:false,
+		},
+		IsKey:is_key}
 	err := qks.Messages.Insert(&result)
 	return err
 }
 
 func (qks *QuestStorage) SetMessageAnswer(message_id bson.ObjectId) error {
-	err := qks.Messages.UpdateId(message_id, bson.M{"$set":bson.M{"answered":true}})
+	err := qks.Messages.UpdateId(message_id, bson.M{"$set":bson.M{"data.answered":true}})
 	return err
 }
 
-func (qs *QuestStorage) GetMessage(message_id string) (*db.MessageWrapper, error) {
-	result := db.MessageWrapper{}
+func (qs *QuestStorage) GetMessage(message_id string) (*QuestMessageWrapper, error) {
+	result := QuestMessageWrapper{}
 	err := qs.Messages.FindId(bson.ObjectIdHex(message_id)).One(&result)
+	result.SID = result.ID.Hex()
 	return &result, err
 }
 
-func (qks *QuestStorage) GetMessages(query bson.M) ([]db.MessageWrapper, error) {
-	result := []db.MessageWrapper{}
+func (qks *QuestStorage) GetMessages(query bson.M) ([]QuestMessageWrapper, error) {
+	result := []QuestMessageWrapper{}
 	err := qks.Messages.Find(query).Sort("-time").All(&result)
 	for i, message := range result {
 		result[i].SID = message.ID.Hex()
@@ -132,10 +147,10 @@ func (qks *QuestStorage) GetMessages(query bson.M) ([]db.MessageWrapper, error) 
 }
 
 type QuestUserWrapper struct {
-	UserId           string `bson:"user_id"`
-	State            map[string]string `bson:"state"`
-	Keys             map[string][]string `bson:"found_keys"`
-	LastKeyPositions map[string]*int64 `bson:"last_key_positions"`
+	UserId  string `bson:"user_id"`
+	State   map[string]string `bson:"state"`
+	Keys    map[string][]string `bson:"found_keys"`
+	LastKey map[string]*string `bson:"last_key"`
 }
 
 func (qks *QuestStorage) SetUserState(user_id, state, provider string) error {
@@ -168,27 +183,18 @@ func (qks *QuestStorage) GetUserState(user_id, provider string) (string, error) 
 
 func (qks *QuestStorage) SetUserLastKey(user_id, key, provider string) error {
 	find := bson.M{"user_id":user_id}
-	user := QuestUserWrapper{}
-	err := qks.Users.Find(find).One(&user)
-	if err != nil {
-		return err
-	}
-	key_info, err := qks.GetKeyInfo(key)
-	if err != nil {
-		return errors.New(fmt.Sprintf("Key added is errored: %v", err.Error()))
-	}
-	err = qks.Users.Update(find, bson.M{
+	err := qks.Users.Update(find, bson.M{
 		"$addToSet":bson.M{fmt.Sprintf("found_keys.%s", provider):key},
-		"$set":bson.M{fmt.Sprintf("last_key_positions.%s", provider):key_info.Position},
+		"$set":bson.M{fmt.Sprintf("last_key.%s", provider):key},
 	})
 	return err
 }
 
 type CurrentProviderUserInfo struct {
-	UserId          string
-	State           string
-	FoundKeys       []string
-	LastKeyPosition *int64
+	UserId    string
+	State     string
+	FoundKeys []string
+	LastKey   *string
 }
 
 func (qks *QuestStorage) GetUserInfo(user_id, provider string) (*CurrentProviderUserInfo, error) {
@@ -200,14 +206,14 @@ func (qks *QuestStorage) GetUserInfo(user_id, provider string) (*CurrentProvider
 	}
 	state, _ := user.State[provider]
 	keys, _ := user.Keys[provider]
-	position, _ := user.LastKeyPositions[provider]
+	last_key, _ := user.LastKey[provider]
 
 
 	return &CurrentProviderUserInfo{
 		UserId:user.UserId,
 		State:state,
 		FoundKeys:keys,
-		LastKeyPosition:position,
+		LastKey:last_key,
 	}, nil
 
 }
@@ -226,7 +232,6 @@ func (qks *QuestStorage) GetUserKeys(user_id, key, provider string) ([]string, e
 		}
 	}
 }
-
 
 func (qks *QuestStorage) GetSubscribedUsers() ([]QuestUserWrapper, error) {
 	users := []QuestUserWrapper{}

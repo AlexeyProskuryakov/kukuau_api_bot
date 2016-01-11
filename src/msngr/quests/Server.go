@@ -15,7 +15,6 @@ import (
 	"gopkg.in/mgo.v2/bson"
 	"net/http"
 	"msngr/utils"
-	"strconv"
 	"errors"
 )
 
@@ -64,22 +63,33 @@ func Run(config c.QuestConfig, qs *QuestStorage, ntf *msngr.Notifier) {
 		return result_map
 	}
 
-	m.Get("/keys", func(user auth.User, render render.Render) {
-		render.HTML(200, "quests/keys", get_result_map(user))
+	m.Get("/new_keys", func(user auth.User, render render.Render) {
+		render.HTML(200, "quests/new_keys", get_result_map(user))
 	})
 
 
 	m.Post("/add_key", func(user auth.User, render render.Render, request *http.Request) {
 		key := request.FormValue("key")
-		answer := request.FormValue("answer")
-		position_raw := request.FormValue("position")
-		position, err := strconv.ParseInt(position_raw, 10, 64)
-		log.Printf("Key: %s\nAnswer: %s", key, answer, position)
-		if key != "" && answer != "" && err == nil {
-			qs.AddKey(key, answer, position)
-			render.Redirect("/keys")
+		next_key_raw := request.FormValue("next-key")
+		description := request.FormValue("description")
+		is_first_raw := request.FormValue("is-first")
+		log.Printf("QUEST: adding key: is first raw: %+v", is_first_raw)
+		var is_first bool
+		if is_first_raw == "on"{
+			is_first = true
+		}
+		log.Printf("QUEST: key: %s\nAnswer: %s ", key, description)
+		if key != "" && description != ""{
+			var next_key *string
+			if next_key_raw == ""{
+				next_key = nil
+			} else {
+				next_key = &next_key_raw
+			}
+			qs.AddKey(key, description, next_key, is_first)
+			render.Redirect("/new_keys")
 		} else {
-			render.HTML(200, "quests/keys", get_result_error_map(user, "Не валидные значения ключа, ответа или позиции."))
+			render.HTML(200, "quests/keys_new", get_result_error_map(user, "Не валидные значения ключа, ответа или позиции."))
 		}
 	})
 
@@ -87,12 +97,19 @@ func Run(config c.QuestConfig, qs *QuestStorage, ntf *msngr.Notifier) {
 		key := params["key"]
 		err := qs.DeleteKey(key)
 		log.Printf("QUESTS WEB will delete %v (%v)", key, err)
-		render.Redirect("/keys")
+		render.Redirect("/new_keys")
 	})
 
+	m.Get("/users_keys", func(render render.Render){
+		users_keys, _ := qs.GetMessages(bson.M{"data.answered":false, "is_key":true})
+		result_map := map[string]interface{}{
+			"keys":users_keys,
+		}
+		render.HTML(200, "quests/users_keys", result_map)
+	})
 
 	m.Get("/messages", func(user auth.User, render render.Render) {
-		messages, _ := qs.GetMessages(bson.M{"answered":false})
+		messages, _ := qs.GetMessages(bson.M{"data.answered":false, "is_key":false})
 		result_map := map[string]interface{}{
 			"messages":messages,
 			"error_text":"",
@@ -103,7 +120,7 @@ func Run(config c.QuestConfig, qs *QuestStorage, ntf *msngr.Notifier) {
 
 
 	ensure_messages_error := func(err error) map[string]interface{} {
-		messages, _ := qs.GetMessages(bson.M{"answered":false})
+		messages, _ := qs.GetMessages(bson.M{"data.answered":false})
 		return map[string]interface{}{
 			"error_text":err.Error(),
 			"is_error":true,

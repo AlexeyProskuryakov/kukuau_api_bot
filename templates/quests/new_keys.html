@@ -4,15 +4,23 @@
             <h2> Добавьте новый квестовый ключ: </h2>
 
             <form action="/add_key" method="post">
-                <div class="form-group form-inline">
-                    <label for="key">Ключ:</label>
+                <div class="form-group">
+                    <label for="key">Ключ: </label>
                     <input type="text" class="form-control" id="key" name="key">
-                    <label for="key-position">Номер ключа:</label>
-                    <input type="number" class="form-control" id="key-position" name="position">
+
+                    <label for="next-key">Ожидаемый ключ после получения описания: </label>
+                    <input type="text" class="form-control" id="next-key" name="next-key">
                 </div>
                 <div class="form-group">
-                    <label for="answer">Ответ:</label>
-                    <textarea name="answer" class="form-control" rows="5" id="answer"></textarea>
+                    <div class="checkbox">
+                        <label for="is-first">
+                            <input type="checkbox" id="is-first" name="is-first"> Начальный ключ?
+                        </label>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label for="description">Описание:</label>
+                    <textarea name="description" class="form-control" rows="5" id="description"></textarea>
                 </div>
                 <div class="form-group">
                     <button type="submit" class="btn btn-info">Добавить</button>
@@ -32,17 +40,30 @@
     </div>
     <div class="row">
         <table class="table table-striped">
+            <thead>
+            <tr>
+                <td>Ключ для получения описания</td>
+                <td>Описание</td>
+                <td>Ключ ожидаемый по этому описанию</td>
+                <td>Начальный?</td>
+            </tr>
+
+            </thead>
             {{range $key_info := .keys}}
             <tr>
-                <td class="col-md-2 col-md-offset-2">
+                <td class="col-md-2">
                     {{$key_info.Key}}
                 </td>
                 <td class="col-md-5">
                     {{$key_info.Description}}
                 </td>
-                <td class="col-md-1">
-                    {{$key_info.Position}}
+                <td class="col-md-2">
+                    {{$key_info.NextKey}}
                 </td>
+                <td class="col-md-1">
+                    {{$key_info.IsFirst}}
+                </td>
+
                 <td class="col-md-1">
                     <form action="/delete_key/{{$key_info.SID}}" method="post">
                         <div class="form-group">

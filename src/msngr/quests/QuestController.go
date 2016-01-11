@@ -13,6 +13,7 @@ import (
 	"msngr/notify"
 	"regexp"
 	"msngr/utils"
+	"strings"
 )
 
 const (
@@ -154,8 +155,8 @@ func IsSubscribedKey(key string, qs *QuestStorage) (bool, error) {
 	if err != nil {
 		return false, err
 	}
-	log.Printf("QUESTS checking is key was subscribed... key: %+v, checked? ", key_info, key_info.Position == 0)
-	return key_info.Position == 0, nil
+	log.Printf("QUESTS checking is key was subscribed... key: %+v, is first? %+v", key_info, key_info.IsFirst)
+	return key_info.IsFirst, nil
 }
 
 func ProcessKeyUserResult(user_id, key string, qs *QuestStorage) (string, error, bool) {
@@ -173,11 +174,13 @@ func ProcessKeyUserResult(user_id, key string, qs *QuestStorage) (string, error,
 	}
 	log.Printf("QUESTS user [%v] is found: %+v", user_id, user_info)
 
-	if user_info.LastKeyPosition == nil && key_info.Position == 0 {
+	if user_info.LastKey == nil && key_info.IsFirst {
 		return key_info.Description, nil, true
-	} else if user_info.LastKeyPosition != nil {
-		user_last_key_position := user_info.LastKeyPosition
-		if (*user_last_key_position + 1) == key_info.Position {
+	} else if user_info.LastKey != nil {
+		user_last_key_p := user_info.LastKey
+		user_last_key := *user_last_key_p
+		previous_key, _ := qs.GetKeyInfo(user_last_key)
+		if previous_key.NextKey == nil || *previous_key.NextKey == key{
 			return key_info.Description, nil, true
 		} else if utils.InS(key_info.Key, user_info.FoundKeys) {
 			return "Вы уже вводили этот ключ", nil, false
@@ -202,16 +205,17 @@ func (qmpp QuestMessagePersistProcessor) ProcessMessage(in *s.InPkg) *s.MessageR
 		//try recognise code at simple message
 		pkey := in.Message.Body
 		key := *pkey
+		key = strings.TrimSpace(key)
 		if key_reg.MatchString(key) {
 			if is_first, err := IsSubscribedKey(key, qmpp.Storage); is_first && err == nil {
 				qmpp.Storage.SetUserState(in.From, SUBSCRIBED, PROVIDER)
 			}
-
 			descr, err, ok := ProcessKeyUserResult(in.From, key, qmpp.Storage)
 			log.Printf("QUESTS want to send key %v i have this answer for key: %v", key, descr)
 			if err == nil {
 				if ok {
 					qmpp.Storage.SetUserLastKey(in.From, key, PROVIDER)
+					qmpp.Storage.StoreMessage(in.From, key, time.Now(), true)
 				}
 				return &s.MessageResult{Type:"chat", Body:descr, Commands:&commands}
 			} else if err == mgo.ErrNotFound {
@@ -221,7 +225,7 @@ func (qmpp QuestMessagePersistProcessor) ProcessMessage(in *s.InPkg) *s.MessageR
 			}
 		}
 		//else storing this message
-		err := qmpp.Storage.StoreMessage(in.From, *in.Message.Body, time.Now())
+		err := qmpp.Storage.StoreMessage(in.From, *in.Message.Body, time.Now(), false)
 		if err != nil {
 			return &s.MessageResult{Type:"chat", Body:err.Error(), Commands:&commands}
 		}
