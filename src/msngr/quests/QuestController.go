@@ -27,19 +27,8 @@ type QuestCommandRequestProcessor struct {
 	Storage *QuestStorage
 }
 
-//func getCommands(in *s.InPkg, qs *QuestStorage, cs c.ConfigStorage) []s.OutCommand {
-//	var result_commands []s.OutCommand
-//	if state, err := qs.GetUserState(in.From, PROVIDER); err == nil && state == SUBSCRIBED {
-//		result_commands, _ = cs.LoadCommands(PROVIDER, SUBSCRIBED)
-//	} else {
-//		result_commands, _ = cs.LoadCommands(PROVIDER, UNSUBSCRIBED)
-//	}
-//	return result_commands
-//}
 
 func (qcp *QuestCommandRequestProcessor) ProcessRequest(in *s.InPkg) *s.RequestResult {
-	//	result_commands := getCommands(in, qcp.Storage, qcp.ConfigStorage)
-	//	result := s.RequestResult{Commands:&result_commands}
 	result := s.RequestResult{Commands:&[]s.OutCommand{}}
 	return &result
 }
@@ -51,104 +40,6 @@ type QuestInfoMessageProcessor struct {
 func (qimp QuestInfoMessageProcessor) ProcessMessage(in *s.InPkg) *s.MessageResult {
 	return &s.MessageResult{Body:qimp.Information, Type:"chat"}
 }
-
-//type QuestUnsubscribeMessageProcessor struct {
-//	Storage *QuestStorage
-//	c.ConfigStorage
-//}
-//
-//
-//func (qump *QuestUnsubscribeMessageProcessor) ProcessMessage(in *s.InPkg) *s.MessageResult {
-//	log.Printf("QUESTS Want unsubscribe: %s", in.From)
-//	err := qump.Storage.SetUserState(in.From, UNSUBSCRIBED, PROVIDER)
-//	if err != nil {
-//		commands, _ := qump.LoadCommands(PROVIDER, SUBSCRIBED)
-//		return &s.MessageResult{Commands:&commands, Body:fmt.Sprintf("Что-то пошло не так. Попробуйте снова. Вот с такая ошибешка: %s", err), Type:"chat"}
-//	}
-//	commands, _ := qump.LoadCommands(PROVIDER, UNSUBSCRIBED)
-//	return &s.MessageResult{Commands:&commands, Body:"Теперь вы не учавствуете в квесте. \nПечаль :( ", Type:"chat"}
-//}
-//
-//type QuestSubscribeMessageProcessor struct {
-//	Storage        *QuestStorage
-//	c.ConfigStorage
-//	AcceptPhrase   string
-//	RejectedPhrase string
-//	ErrorPhrase    string
-//}
-//
-//func (qsmp *QuestSubscribeMessageProcessor) ProcessMessage(in *s.InPkg) *s.MessageResult {
-//	log.Printf("QUESTS Want subscribe %s", in.From)
-//	user_state, err := qsmp.Storage.GetUserState(in.From, PROVIDER)
-//	var text string
-//
-//	if err != nil && err != mgo.ErrNotFound {
-//		text = fmt.Sprintf("%s: [%v]", qsmp.ErrorPhrase, err)
-//		commands, _ := qsmp.LoadCommands(PROVIDER, UNSUBSCRIBED)
-//		return &s.MessageResult{Commands:&commands, Body:text, Type:"chat"}
-//	} else if err == mgo.ErrNotFound {
-//		qsmp.Storage.SetUserState(in.From, SUBSCRIBED, PROVIDER)
-//		commands, _ := qsmp.LoadCommands(PROVIDER, SUBSCRIBED)
-//		text = qsmp.AcceptPhrase
-//		return &s.MessageResult{Commands:&commands, Body:text, Type:"chat"}
-//	}
-//
-//	commands, _ := qsmp.LoadCommands(PROVIDER, SUBSCRIBED)
-//	if user_state == SUBSCRIBED {
-//		text = qsmp.RejectedPhrase
-//		return &s.MessageResult{Commands:&commands, Body:text, Type:"chat"}
-//	} else {
-//		qsmp.Storage.SetUserState(in.From, SUBSCRIBED, PROVIDER)
-//		text = qsmp.AcceptPhrase
-//		return &s.MessageResult{Commands:&commands, Body:text, Type:"chat"}
-//	}
-//}
-
-//type QuestKeyInputMessageProcessor struct {
-//	Storage *QuestStorage
-//	c.ConfigStorage
-//
-//}
-//
-//func (qkimp QuestKeyInputMessageProcessor) ProcessMessage(in *s.InPkg) *s.MessageResult {
-//	var text string
-//	if state, err := qkimp.Storage.GetUserState(in.From, PROVIDER); err != nil {
-//		commands, _ := qkimp.LoadCommands(PROVIDER, SUBSCRIBED)
-//		return &s.MessageResult{Commands:&commands, Body:fmt.Sprintf("Упс. Ошибка: %v", err.Error()), Type:"chat"}
-//	} else if state != SUBSCRIBED {
-//		commands, _ := qkimp.LoadCommands(PROVIDER, UNSUBSCRIBED)
-//		return &s.MessageResult{Commands:&commands, Body:"Вы здесь быть не должны и делать это не можете.", Type:"chat"}
-//	}
-//
-//	commands_ptr := in.Message.Commands
-//	if commands_ptr != nil {
-//		commands := *commands_ptr
-//		for _, command := range commands {
-//			if command.Action == "key_input" && command.Form.Name == "key_form" {
-//				for _, field := range command.Form.Fields {
-//					if field.Name == "code" {
-//						key := field.Data.Value
-//						log.Printf("QUESTS We have key from %v is: [%v]", in.From, key)
-//						descr, err, ok := ProcessKeyUserResult(in.From, key, qkimp.Storage)
-//						if err != nil && err != mgo.ErrNotFound {
-//							text = fmt.Sprintf("Внутренняя ошибка: %s.", err)
-//						}else if err == mgo.ErrNotFound {
-//							text = "Код не верный, попробуйте другой."
-//						} else {
-//							text = descr
-//							if ok {
-//								qkimp.Storage.SetUserLastKey(in.From, key, PROVIDER)
-//							}
-//						}
-//					}
-//				}
-//			}
-//		}
-//	}
-//	commands, _ := qkimp.LoadCommands(PROVIDER, SUBSCRIBED)
-//	mr := s.MessageResult{Commands:&commands, Body:text, Type:"chat"}
-//	return &mr
-//}
 
 func IsSubscribedKey(key string, qs *QuestStorage) (bool, error) {
 	key_info, err := qs.GetKeyInfo(key)
@@ -212,6 +103,7 @@ func (qmpp QuestMessagePersistProcessor) ProcessMessage(in *s.InPkg) *s.MessageR
 		key := *pkey
 		key = strings.TrimSpace(key)
 		if key_reg.MatchString(key) {
+			key = strings.ToLower(key)
 			if is_first, err := IsSubscribedKey(key, qmpp.Storage); is_first && err == nil {
 				qmpp.Storage.SetUserState(in.From, SUBSCRIBED, PROVIDER)
 			}
@@ -224,7 +116,7 @@ func (qmpp QuestMessagePersistProcessor) ProcessMessage(in *s.InPkg) *s.MessageR
 				}
 				return &s.MessageResult{Type:"chat", Body:descr, Commands:&commands}
 			} else if err == mgo.ErrNotFound {
-				return &s.MessageResult{Type:"chat", Body:"Не верный ключ.", Commands:&commands}
+				return &s.MessageResult{Type:"chat", Body:"Неверный ключ.", Commands:&commands}
 			} else {
 				return &s.MessageResult{Type:"chat", Body:fmt.Sprintf("Упс ошибочка. %v.", err.Error()), Commands:&commands}
 			}
@@ -237,7 +129,7 @@ func (qmpp QuestMessagePersistProcessor) ProcessMessage(in *s.InPkg) *s.MessageR
 	} else {
 		return &s.MessageResult{Type:"chat", Body:"Сообщения нет :( ", Commands:&commands}
 	}
-	return &s.MessageResult{Type:"chat", Body:"Ваше сообщение доставленно. Скоро вам ответят.", Commands:&commands}
+	return &s.MessageResult{Type:"chat", Body:"Ваше сообщение доставлено. Скоро вам ответят.", Commands:&commands}
 }
 
 func FormQuestBotContext(conf c.Configuration, qname string, cs c.ConfigStorage, qs *QuestStorage) *m.BotContext {

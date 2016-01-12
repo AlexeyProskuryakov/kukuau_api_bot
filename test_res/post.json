@@ -2,19 +2,7 @@
   "message": {
     "commands": [
       {
-        "form": {
-          "name":"tracking_form",
-          "fields": [
-            {
-              "data": {
-                "value": "12345678901234"
-              },
-              "type": "number",
-              "name": "code"
-            }
-          ]
-        },
-        "action": "tracking"
+        "action": "information"
       }
     ],
     "thread": "2c474723-ff4d-4fad-a31f-18e8063bdff2",
