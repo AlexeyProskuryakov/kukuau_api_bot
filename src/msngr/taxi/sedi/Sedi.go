@@ -569,7 +569,7 @@ func (s *SediAPI)NewOrder(order t.NewOrderInfo) t.Answer {
 				se_cost, _ = s.CalcOrderCost(order_with_string_dest)
 			}
 		}
-		//Если стоймость рассчиталась то заказ валиден и должен быть и последний заказец с самыми валидными данными.
+		//Если стоимость рассчиталась то заказ валиден и должен быть и последний заказец с самыми валидными данными.
 		if __order, ok := s.getLastSuccessOrder(order.Phone); ok && se_cost != -1 {
 			//вот его-то и берем
 			_order = *__order

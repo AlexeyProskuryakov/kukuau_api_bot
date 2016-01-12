@@ -16,11 +16,30 @@ import (
 	"net/http"
 	"msngr/utils"
 	"errors"
+	"fmt"
+	"strings"
+	"io/ioutil"
 )
 
 var users = map[string]string{
 	"alesha":"sederfes100500",
 	"leha":"qwerty100500",
+}
+
+func ParseExportFile(raw_data string, qs *QuestStorage) error {
+	keys := strings.Fields(string(raw_data))
+	for i, key := range keys {
+		key_params := strings.Split(key, ";")
+		next_key := key_params[2]
+		var is_first bool
+		if len(key_params) == 4 {
+			is_first = key_params[3] == "true" || i == 0
+		} else {
+			is_first = i == 0
+		}
+		qs.AddKey(key_params[0], key_params[1], &next_key, is_first)
+	}
+	return nil
 }
 
 func Run(config c.QuestConfig, qs *QuestStorage, ntf *msngr.Notifier) {
@@ -43,7 +62,7 @@ func Run(config c.QuestConfig, qs *QuestStorage, ntf *msngr.Notifier) {
 		render.HTML(200, "quests/index", map[string]interface{}{})
 	})
 
-	get_result_error_map := func(user auth.User, error_info string) map[string]interface{} {
+	get_result_error_map := func(error_info string) map[string]interface{} {
 		keys, _ := qs.GetAllKeys()
 		result_map := map[string]interface{}{
 			"keys": keys,
@@ -75,13 +94,13 @@ func Run(config c.QuestConfig, qs *QuestStorage, ntf *msngr.Notifier) {
 		is_first_raw := request.FormValue("is-first")
 		log.Printf("QUEST: adding key: is first raw: %+v", is_first_raw)
 		var is_first bool
-		if is_first_raw == "on"{
+		if is_first_raw == "on" {
 			is_first = true
 		}
 		log.Printf("QUEST: key: %s\nAnswer: %s ", key, description)
-		if key != "" && description != ""{
+		if key != "" && description != "" {
 			var next_key *string
-			if next_key_raw == ""{
+			if next_key_raw == "" {
 				next_key = nil
 			} else {
 				next_key = &next_key_raw
@@ -89,7 +108,7 @@ func Run(config c.QuestConfig, qs *QuestStorage, ntf *msngr.Notifier) {
 			qs.AddKey(key, description, next_key, is_first)
 			render.Redirect("/new_keys")
 		} else {
-			render.HTML(200, "quests/keys_new", get_result_error_map(user, "Не валидные значения ключа, ответа или позиции."))
+			render.HTML(200, "quests/keys_new", get_result_error_map("Невалидные значения ключа, ответа или позиции."))
 		}
 	})
 
@@ -100,7 +119,7 @@ func Run(config c.QuestConfig, qs *QuestStorage, ntf *msngr.Notifier) {
 		render.Redirect("/new_keys")
 	})
 
-	m.Get("/users_keys", func(render render.Render){
+	m.Get("/users_keys", func(render render.Render) {
 		users_keys, _ := qs.GetMessages(bson.M{"data.answered":false, "is_key":true})
 		result_map := map[string]interface{}{
 			"keys":users_keys,
@@ -138,11 +157,11 @@ func Run(config c.QuestConfig, qs *QuestStorage, ntf *msngr.Notifier) {
 			}
 			go func() {
 				ntf.Notify(structs.OutPkg{To:message.From,
-				Message: &structs.OutMessage{
-					ID: utils.GenId(),
-					Type: "chat",
-					Body: answer,
-				}})
+					Message: &structs.OutMessage{
+						ID: utils.GenId(),
+						Type: "chat",
+						Body: answer,
+					}})
 			}()
 			qs.SetMessageAnswer(message.ID)
 			render.Redirect("/messages")
@@ -172,6 +191,43 @@ func Run(config c.QuestConfig, qs *QuestStorage, ntf *msngr.Notifier) {
 			render.HTML(200, "quests/messages", ensure_messages_error(errors.New("Сообщение не может быть пустым.")))
 		}
 		render.Redirect("/messages")
+	})
+
+	m.Get("/load/klichat_quest_keys.txt", func(render render.Render) {
+		var str_buff string
+		keys, err := qs.GetAllKeys()
+		if err != nil {
+			err_message := []byte(fmt.Sprintf("Error at getting all keys: %v", err.Error()))
+			render.Data(500, err_message)
+		}
+		for _, key := range keys {
+			var next_key string
+			if key.NextKey != nil {
+				next_key_p := key.NextKey
+				next_key = *next_key_p
+			}
+
+			str_buff += fmt.Sprintf("%s;%s;%s;%v\r\n", key.Key, strings.TrimSpace(key.Description), next_key, key.IsFirst)
+		}
+		render.Data(200, []byte(str_buff))
+	})
+
+
+
+	m.Post("/load/up", func(render render.Render, request *http.Request) {
+		file, _, err := request.FormFile("file")
+		if err != nil {
+			render.HTML(200, "quests/keys_new", get_result_error_map(fmt.Sprintf("Ошибка загрузки файлика: %v", err)))
+		}
+		defer file.Close()
+		data, err := ioutil.ReadAll(file)
+		if err != nil {
+			render.HTML(200, "quests/keys_new", get_result_error_map(fmt.Sprintf("Ошибка загрузки файлика: %v", err)))
+		}
+		raw_data := string(data)
+		log.Printf("Result: %s", raw_data)
+		ParseExportFile(raw_data, qs)
+		render.Redirect("/new_keys")
 	})
 
 	log.Printf("Will start web server for quest at: %v", config.WebPort)

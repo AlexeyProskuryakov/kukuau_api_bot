@@ -51,7 +51,7 @@ func TestOrderPrice(t *testing.T) {
 	s.StartAfter(botContext.Check, func() {
 		result := nop.ProcessMessage(new_order_package)
 
-		price_in_message := strings.Contains(result.Body, "Стоймость")
+		price_in_message := strings.Contains(result.Body, "Стоимость")
 		if taxi_conf.Api.NotSendPrice && price_in_message {
 			t.Errorf("in config not_send_price is true but in result message price is sended: \n%+v", result.Body)
 		}

@@ -599,7 +599,7 @@ func (nop *TaxiNewOrderProcessor) ProcessMessage(in *s.InPkg) *s.MessageResult {
 		if not_send_price {
 			text = "Ваш заказ создан!"
 		} else {
-			text = fmt.Sprintf("Ваш заказ создан! Стоймость поездки составит %+v рублей.", cost)
+			text = fmt.Sprintf("Ваш заказ создан! Стоимость поездки составит %+v рублей.", cost)
 		}
 
 		return &s.MessageResult{Body:text, Commands:nop.context.Commands[CMDS_CREATED_ORDER], Type:"chat"}
@@ -658,7 +658,7 @@ func (cpp *TaxiCalculatePriceProcessor) ProcessMessage(in *s.InPkg) *s.MessageRe
 	}
 	cost_s, _ := cpp.API.CalcOrderCost(*order)
 	cost := strconv.Itoa(cost_s)
-	return &s.MessageResult{Body: fmt.Sprintf("Стоймость будет всего лишь %v рублей!", cost), Type:"chat"}
+	return &s.MessageResult{Body: fmt.Sprintf("Стоимость будет всего лишь %v рублей!", cost), Type:"chat"}
 }
 
 type TaxiFeedbackProcessor struct {

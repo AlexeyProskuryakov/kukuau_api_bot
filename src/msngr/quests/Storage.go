@@ -66,6 +66,10 @@ type KeyWrapper struct {
 	NextKey     *string `bson:"next_key"`
 }
 
+func (kw KeyWrapper) String() string {
+	return fmt.Sprintf("KW [%s] [%s] %v -> \n%s\n -> %s", kw.ID, kw.IsFirst, kw.Key, kw.Description, kw.NextKey)
+}
+
 type QuestMessageWrapper struct {
 	db.MessageWrapper `bson:"data"`
 	IsKey bool `bson:"is_key"`
