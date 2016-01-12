@@ -179,14 +179,19 @@ func ProcessKeyUserResult(user_id, key string, qs *QuestStorage) (string, error,
 	} else if user_info.LastKey != nil {
 		user_last_key_p := user_info.LastKey
 		user_last_key := *user_last_key_p
-		previous_key, _ := qs.GetKeyInfo(user_last_key)
-		if previous_key.NextKey == nil || *previous_key.NextKey == key{
-			return key_info.Description, nil, true
-		} else if utils.InS(key_info.Key, user_info.FoundKeys) {
-			return "Вы уже вводили этот ключ", nil, false
-		} else {
-			return "Вы не можете использовать этот ключ сейчас.", nil, false
+		previous_key, err := qs.GetKeyInfo(user_last_key)
+		if err != nil {
+			return "", err, false
 		}
+		if utils.InS(key_info.Key, user_info.FoundKeys) {
+			return "Вы уже вводили этот ключ", nil, false
+		}
+		if previous_key.NextKey == nil || *previous_key.NextKey == key {
+			return key_info.Description, nil, true
+		}
+
+		return "Вы не можете использовать этот ключ сейчас.", nil, false
+
 	}
 	return "", nil, false
 }
@@ -211,7 +216,7 @@ func (qmpp QuestMessagePersistProcessor) ProcessMessage(in *s.InPkg) *s.MessageR
 				qmpp.Storage.SetUserState(in.From, SUBSCRIBED, PROVIDER)
 			}
 			descr, err, ok := ProcessKeyUserResult(in.From, key, qmpp.Storage)
-			log.Printf("QUESTS want to send key %v i have this answer for key: %v", key, descr)
+			log.Printf("QUESTS want to send key %v i have this answer for key: %v, err: %v, ok? %v", key, descr, err, ok)
 			if err == nil {
 				if ok {
 					qmpp.Storage.SetUserLastKey(in.From, key, PROVIDER)

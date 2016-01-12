@@ -129,6 +129,7 @@ func Run(config c.QuestConfig, qs *QuestStorage, ntf *msngr.Notifier) {
 
 	m.Get("/messages", func(user auth.User, render render.Render) {
 		messages, _ := qs.GetMessages(bson.M{"data.answered":false, "is_key":false})
+		log.Printf("/messages: %+v", messages)
 		result_map := map[string]interface{}{
 			"messages":messages,
 			"error_text":"",

@@ -7,6 +7,7 @@ import (
 	"errors"
 	"time"
 	"fmt"
+	"log"
 )
 
 type QuestStorage struct {
@@ -72,6 +73,7 @@ func (kw KeyWrapper) String() string {
 
 type QuestMessageWrapper struct {
 	db.MessageWrapper `bson:"data"`
+	ID       bson.ObjectId `bson:"_id,omitempty"`
 	IsKey bool `bson:"is_key"`
 }
 
@@ -144,6 +146,7 @@ func (qs *QuestStorage) GetMessage(message_id string) (*QuestMessageWrapper, err
 func (qks *QuestStorage) GetMessages(query bson.M) ([]QuestMessageWrapper, error) {
 	result := []QuestMessageWrapper{}
 	err := qks.Messages.Find(query).Sort("-time").All(&result)
+	log.Printf("storage messages: %+v", result)
 	for i, message := range result {
 		result[i].SID = message.ID.Hex()
 	}
