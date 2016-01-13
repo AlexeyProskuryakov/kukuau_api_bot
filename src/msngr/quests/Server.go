@@ -194,6 +194,24 @@ func Run(config c.QuestConfig, qs *QuestStorage, ntf *msngr.Notifier) {
 		render.Redirect("/messages")
 	})
 
+	m.Get("/messages/update", func(render render.Render) {
+		messages, err := qs.GetMessages(bson.M{"data.answered":false, "is_key":false})
+		if err != nil {
+			render.JSON(200, map[string]interface{}{"error":err.Error()})
+		}else {
+			type Message struct {
+				From string `json:"from"`
+				Body string `json:"body"`
+				Id   string `json:"id"`
+			}
+			mes_result := []Message{}
+			for _, mes := range messages {
+				mes_result = append(mes_result, Message{From:mes.From, Body:mes.Body, Id:mes.SID})
+			}
+			render.JSON(200, map[string]interface{}{"error":false, "data":mes_result})
+		}
+	})
+
 	m.Get("/load/klichat_quest_keys.txt", func(render render.Render) {
 		var str_buff string
 		keys, err := qs.GetAllKeys()

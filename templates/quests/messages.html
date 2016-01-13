@@ -19,9 +19,6 @@
         <div class="col-md-6 col-md-offset-3">
             <h2>Последние сообщения от участников:</h2>
         </div>
-        <div class="col-md-1">
-            <button class="btn btn-success" onclick="reload()">Загрузить новые</button>
-        </div>
     </div>
     <div class="row">
         {{ if .is_error }}
@@ -30,24 +27,19 @@
         </div>
         {{ end }}
     </div>
-    <table class="table table-striped">
+    <table class="table table-striped" id="message-table">
         {{range $message := .messages}}
-        <tr>
-            <td class="col-md-2">
+        <tr class="message-table-row" id="{{$message.SID}}">
+            <td class="col-md-2 from-td">
                 {{$message.From}}
             </td>
-            <td class="col-md-4">
+            <td class="col-md-4 body-td">
                 {{$message.Body}}
             </td>
-            <td class="col-md-4">
-                <form action="/message_answer/{{$message.SID}}" method="post">
-                    <div class="form-group">
-                        <textarea name="message_answer" class="form-control" rows="2" cols="2"
-                                  id="message_answer"></textarea>
-                    </div>
-                    <div class="form-group">
-                        <button type="submit" class="btn btn-warning">Ответить</button>
-                    </div>
+            <td class="col-md-4 answer-td">
+                <form action="/message_answer/{{$message.SID}}" method="post" class="answer-form">
+                        <textarea name="message_answer" class="form-control" rows="2"></textarea>
+                        <button type="submit" class="btn btn-warning form-control">Ответить</button>
                 </form>
             </td>
         </tr>
@@ -56,8 +48,41 @@
 </div>
 <script>
 
-var reload = function(){
-       window.location.reload(1);
-}
+var update_messages = function(){
+    $.get("/messages/update").done(function(result){
+        var table = $("#message-table");
+        if (result.data != undefined && result.error == false ){
+            result.data.forEach(function(message){
+                var message_tr = $("#"+message.id);
+                if (!(message_tr.length)){
+                    tr = $('<tr/>', {class:"message-table-row", id:message.id});
+                    ftd = $('<td/>', {class:"col-md-2 from-td", text:message.from});
+                    btd = $('<td/>', {class:"col-md-4 body-td", text:message.body});
 
+                    atd = $('<td/>', {class:"col-md-4 answer-td"});
+
+
+                    form = $('<form/>', {action:"/message_answer/"+message.id, method:"post", class:"answer-form"});
+                    ta = $('<textarea/>', {name:"message_answer", class:"form-control", rows:"2"});
+                    ta.appendTo(form);
+                    btn = $('<button/>', {type:"submit", class:"btn btn-warning form-control", text:"Ответить"});
+                    btn.appendTo(form);
+
+                    form.appendTo(atd);
+
+                    ftd.appendTo(tr);
+                    btd.appendTo(tr);
+                    atd.appendTo(tr);
+
+                    tr.prependTo(table);
+                }
+            });
+        }
+    });
+};
+
+window.setInterval(function(){
+    update_messages();
+},
+5000);
 </script>
