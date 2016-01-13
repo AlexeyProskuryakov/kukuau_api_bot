@@ -24,16 +24,25 @@
         "geo_orbit": {
           "lat": 54.642655,
           "lon": 83.296285,
-          "radius": 1000000
+          "radius": 50000
         },
         "name": "infinity",
         "data": {
           "login": "test1",
           "password": "test1",
-          "connection_string": "http://109.202.25.248:8080/WebAPITaxi/",
+          "connection_strings": [
+            "http://109.202.25.248:8080/WebAPITaxi/"
+          ],
           "host": "109.202.25.248:8080",
           "id_service": "5001753333"
         }
+      },
+      "available_commands": {
+        "created_order": [
+          "where_it",
+          "callback_request",
+          "car_position"
+        ]
       }
     },
     "master": {
