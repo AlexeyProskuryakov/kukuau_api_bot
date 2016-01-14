@@ -19,7 +19,6 @@ import (
 	"fmt"
 	"strings"
 	"io/ioutil"
-	"time"
 	"strconv"
 )
 
@@ -131,6 +130,29 @@ func Run(config c.QuestConfig, qs *QuestStorage, ntf *msngr.Notifier) {
 
 	m.Get("/messages", func(user auth.User, render render.Render) {
 		messages, _ := qs.GetMessages(bson.M{"answered":false, "is_key":false})
+		s_users, _ := qs.GetSubscribedUsers()
+		s_user_map := map[string]QuestUserWrapper{}
+		for _, s_user := range s_users {
+			s_user_map[s_user.UserId] = s_user
+		}
+		log.Printf("users map: %+v", s_user_map)
+		for i, message := range messages {
+			if u_info, ok := s_user_map[message.From]; ok {
+				if u_info.Name != "" && u_info.Phone != ""{
+					message.From = fmt.Sprintf("%v (%v)", u_info.Name, u_info.Phone)
+				} else if u_info.Name != "" && u_info.EMail != ""{
+					message.From = fmt.Sprintf("%v (%v)",u_info.Name, u_info.EMail)
+				} else if u_info.Name != ""{
+					message.From = u_info.Name
+				} else if u_info.Phone != ""{
+					message.From = u_info.Phone
+				} else if u_info.EMail != ""{
+					message.From = u_info.EMail
+				}
+			}
+			messages[i] = message
+			log.Printf("new message: %v", message)
+		}
 		log.Printf("/messages: %+v", messages)
 		result_map := map[string]interface{}{
 			"messages":messages,
@@ -207,7 +229,6 @@ func Run(config c.QuestConfig, qs *QuestStorage, ntf *msngr.Notifier) {
 			"time":bson.M{"$gte":after_input},
 		})
 
-		log.Printf("Q after in: %v, have: %+v (err: %v)", after_input, messages, err)
 		if err != nil {
 			render.JSON(200, map[string]interface{}{"error":err.Error()})
 		}else {

@@ -105,7 +105,11 @@ func (qmpp QuestMessagePersistProcessor) ProcessMessage(in *s.InPkg) *s.MessageR
 		if key_reg.MatchString(key) {
 			key = strings.ToLower(key)
 			if is_first, err := IsSubscribedKey(key, qmpp.Storage); is_first && err == nil {
-				qmpp.Storage.SetUserState(in.From, SUBSCRIBED, PROVIDER)
+				var name, email, phone string
+				if in.UserData != nil {
+					name, email, phone = in.UserData.Name, in.UserData.Email, in.UserData.Phone
+				}
+				qmpp.Storage.AddUser(in.From, name, email, phone, SUBSCRIBED, PROVIDER)
 			}
 			descr, err, ok := ProcessKeyUserResult(in.From, key, qmpp.Storage)
 			log.Printf("QUESTS want to send key %v i have this answer for key: %v, err: %v, ok? %v", key, descr, err, ok)

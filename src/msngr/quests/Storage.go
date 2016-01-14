@@ -156,18 +156,21 @@ func (qks *QuestStorage) GetMessages(query bson.M) ([]QuestMessageWrapper, error
 }
 
 type QuestUserWrapper struct {
-	UserId  string `bson:"user_id"`
+	UserId  string    `bson:"user_id"`
+	Name    string    `bson:"name"`
+	Phone   string    `bson:"phone"`
+	EMail   string    `bson:"email"`
 	State   map[string]string `bson:"state"`
 	Keys    map[string][]string `bson:"found_keys"`
 	LastKey map[string]*string `bson:"last_key"`
 }
 
-func (qks *QuestStorage) SetUserState(user_id, state, provider string) error {
+func (qks *QuestStorage)AddUser(user_id, name, email, phone, state, provider string) error {
 	find := bson.M{"user_id":user_id}
 	user := QuestUserWrapper{}
 	err := qks.Users.Find(find).One(&user)
 	if err == mgo.ErrNotFound {
-		qks.Users.Insert(QuestUserWrapper{UserId:user_id, State:map[string]string{provider:state}})
+		qks.Users.Insert(QuestUserWrapper{UserId:user_id, Name:name, Phone:phone, EMail:email, State:map[string]string{provider:state}})
 	} else if err != nil {
 		return err
 	} else {
