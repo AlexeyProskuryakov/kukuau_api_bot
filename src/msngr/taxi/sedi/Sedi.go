@@ -226,10 +226,6 @@ func (s *SediAPI) doReq(req *http.Request) ([]byte, error) {
 			continue
 		}
 		defer res.Body.Close()
-		if msngr.DEBUG {
-			log.Printf("SEDI COOKIE >>> %v", s.cookies)
-			log.Printf("SEDI COOKIE <<< %+v", res.Cookies())
-		}
 		s.updateCookies(res.Cookies())
 
 		body, err := ioutil.ReadAll(res.Body)
