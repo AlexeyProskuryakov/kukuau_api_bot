@@ -10,7 +10,6 @@ import (
 	t "msngr/taxi"
 	u "msngr/utils"
 	c "msngr/configuration"
-	m "msngr"
 	s "msngr/taxi/set"
 	"msngr/utils"
 
@@ -175,10 +174,6 @@ func (ah *GoogleAddressHandler) GetExternalInfo(key, name string) (*t.AddressF, 
 	log.Printf("<<< [%v]\n%+v", query, google_set)
 	if !ah.ExternalAddressSupplier.IsConnected() {
 		return nil, errors.New("GetStreetId: External service is not avaliable")
-	}
-
-	if m.DEBUG {
-		log.Printf("query is equal name? %v", query == name)
 	}
 
 	rows := ah.ExternalAddressSupplier.AddressesAutocomplete(query).Rows

@@ -7,6 +7,6 @@ type TaxiAPIConfig interface {
 	GetConnectionStrings() []string
 	GetLogin() string
 	GetPassword() string
-	GetIdService() string
+	GetIdService() int64
 	GetAPIData() configuration.ApiData
 }

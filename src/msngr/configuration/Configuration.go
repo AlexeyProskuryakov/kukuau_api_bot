@@ -15,7 +15,7 @@ type ApiData struct {
 	Login              string `json:"login"`
 	Password           string `json:"password"`
 	ConnectionsStrings []string `json:"connection_strings"`
-	IdService          string `json:"id_service"`
+	IdService          int64 `json:"id_service"`
 
 	BearerToken        string `json:"bearer_token"`
 
@@ -55,7 +55,7 @@ func (api TaxiApiParams) GetLogin() string {
 func (api TaxiApiParams) GetPassword() string {
 	return api.Data.Password
 }
-func (api TaxiApiParams) GetIdService() string {
+func (api TaxiApiParams) GetIdService() int64 {
 	return api.Data.IdService
 }
 func (api TaxiApiParams) GetAPIData() ApiData {

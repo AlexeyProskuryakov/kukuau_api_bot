@@ -34,7 +34,7 @@
             "http://109.202.25.248:8080/WebAPITaxi/"
           ],
           "host": "109.202.25.248:8080",
-          "id_service": "5001753333"
+          "id_service": 5001753333
         }
       },
       "available_commands": {
@@ -65,7 +65,7 @@
       "api": {
         "name": "infinity",
         "data": {
-          "id_service": "5000181745",
+          "id_service": 5000181745,
           "login": "kukuautest",
           "password": "789kukuau987",
           "connection_strings": [
@@ -108,7 +108,7 @@
           "connection_strings": [
             "http://212.164.216.216:8080/WebAPITaxi/"
           ],
-          "id_service": "5000360106"
+          "id_service": 5000360106
         },
         "not_send_price": false
       }
@@ -135,7 +135,7 @@
             "http://37.192.247.206:18080/WebAPITaxi/",
             "http://89.189.190.35:18080/WebAPITaxi/"
           ],
-          "id_service": "5002204175"
+          "id_service": 5002204175
         },
         "not_send_price": false
       }

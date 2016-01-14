@@ -1,0 +1,57 @@
+{
+  "message": {
+    "commands": [
+      {
+        "form": {
+          "fields": [
+            {
+              "data": {
+                "value": "EnDQoNC-0YHRgdC40LnRgdC60LDRjyDRg9C70LjRhtCwLCDQndC-0LLQvtGB0LjQsdC40YDRgdC6LCDQndC-0LLQvtGB0LjQsdC40YDRgdC60LDRjyDQvtCx0LvQsNGB0YLRjCwg0KDQvtGB0YHQuNGP",
+                "text": "Российская ул."
+              },
+              "type": "dict",
+              "name": "street_from"
+            },
+            {
+              "type": "number",
+              "name": "entrance"
+            },
+            {
+              "data": {
+                "value": "Em7Rg9C70LjRhtCwINCd0LjQutC-0LvQsNC10LLQsCwg0J3QvtCy0L7RgdC40LHQuNGA0YHQuiwg0J3QvtCy0L7RgdC40LHQuNGA0YHQutCw0Y8g0L7QsdC70LDRgdGC0YwsINCg0L7RgdGB0LjRjw",
+                "text": "Николаева"
+              },
+              "type": "dict",
+              "name": "street_to"
+            },
+            {
+              "data": {
+                "value": "11"
+              },
+              "type": "text",
+              "name": "house_to"
+            },
+            {
+              "data": {
+                "value": "10"
+              },
+              "type": "text",
+              "name": "house_from"
+            }
+          ]
+        },
+        "repeated": "true",
+        "fixed": "false",
+        "action": "new_order"
+      }
+    ],
+    "thread": "2c474723-ff4d-4fad-a31f-18e8063bdff2",
+    "body": "Увези меня большая черепаха...",
+    "type": "chat",
+    "id": "T6rqU-93"
+  },
+  "from": "TEST",
+  "userdata": {
+    "phone": "TESTPHONE"
+  }
+}

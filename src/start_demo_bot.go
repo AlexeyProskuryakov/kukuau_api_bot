@@ -120,6 +120,10 @@ func main() {
 		http.HandleFunc(fmt.Sprintf("/taxi/%v/streets", taxi_conf.Name), func(w http.ResponseWriter, r *http.Request) {
 			geo.StreetsSearchController(w, r, address_supplier)
 		})
+
+		http.HandleFunc(fmt.Sprintf("/taxi/%v/streets/ext", taxi_conf.Name), func(w http.ResponseWriter, r *http.Request) {
+			geo.StreetsSearchController(w, r, external_address_supplier)
+		})
 	}
 
 	for _, shop_conf := range conf.Shops {
