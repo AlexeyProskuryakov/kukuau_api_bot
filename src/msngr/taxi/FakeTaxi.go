@@ -109,7 +109,7 @@ func (p *FakeTaxiAPI) GetCarsInfo() []CarInfo {
 	return []CarInfo{
 		CarInfo{
 			ID:5033615557,
-			Number:"В777ОР",
+			Number:"X777XX",
 			Color:"ультрамариновый",
 			Model:"Боливар",
 		},

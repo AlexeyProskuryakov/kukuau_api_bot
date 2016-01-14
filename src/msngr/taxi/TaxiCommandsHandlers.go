@@ -576,7 +576,6 @@ func (nop *TaxiNewOrderProcessor) ProcessMessage(in *s.InPkg) *s.MessageResult {
 			return s.ErrorMessageResult(errors.New(ans.Message), nop.context.Commands[CMDS_NOT_CREATED_ORDER])
 		}
 		log.Printf("Order was created! %+v \n with content: %+v", ans, ans.Content)
-
 		//not send price settings
 		not_send_price := false
 		nsp_, ok := nop.context.Settings["not_send_price"]
