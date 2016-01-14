@@ -72,9 +72,13 @@ func (kw KeyWrapper) String() string {
 }
 
 type QuestMessageWrapper struct {
-	db.MessageWrapper `bson:"data"`
-	ID       bson.ObjectId `bson:"_id,omitempty"`
-	IsKey bool `bson:"is_key"`
+	ID        bson.ObjectId `bson:"_id,omitempty"`
+	SID       string
+	From      string `bson:"from"`
+	Body      string `bson:"body"`
+	TimeStamp int64 `bson:"time"`
+	Answered  bool `bson:"answered"`
+	IsKey     bool `bson:"is_key"`
 }
 
 func (qks *QuestStorage) AddKey(key, description string, next_key *string, is_first bool) error {
@@ -120,13 +124,12 @@ func (qks *QuestStorage) GetDescription(key string) (string, error) {
 
 func (qks *QuestStorage) StoreMessage(from, body string, time time.Time, is_key bool) error {
 	result := QuestMessageWrapper{
-		MessageWrapper:db.MessageWrapper{
-			From: from,
-			Body:body,
-			Time:time,
-			Answered:false,
-		},
-		IsKey:is_key}
+		From: from,
+		Body: body,
+		TimeStamp: time.Unix(),
+		Answered: false,
+		IsKey: is_key,
+	}
 	err := qks.Messages.Insert(&result)
 	return err
 }
@@ -145,7 +148,7 @@ func (qs *QuestStorage) GetMessage(message_id string) (*QuestMessageWrapper, err
 
 func (qks *QuestStorage) GetMessages(query bson.M) ([]QuestMessageWrapper, error) {
 	result := []QuestMessageWrapper{}
-	err := qks.Messages.Find(query).Sort("-time").All(&result)
+	err := qks.Messages.Find(query).Sort("-data.time").All(&result)
 	log.Printf("storage messages: %+v", result)
 	for i, message := range result {
 		result[i].SID = message.ID.Hex()

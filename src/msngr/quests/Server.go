@@ -120,7 +120,7 @@ func Run(config c.QuestConfig, qs *QuestStorage, ntf *msngr.Notifier) {
 	})
 
 	m.Get("/users_keys", func(render render.Render) {
-		users_keys, _ := qs.GetMessages(bson.M{"data.answered":false, "is_key":true})
+		users_keys, _ := qs.GetMessages(bson.M{"answered":false, "is_key":true})
 		result_map := map[string]interface{}{
 			"keys":users_keys,
 		}
@@ -128,7 +128,7 @@ func Run(config c.QuestConfig, qs *QuestStorage, ntf *msngr.Notifier) {
 	})
 
 	m.Get("/messages", func(user auth.User, render render.Render) {
-		messages, _ := qs.GetMessages(bson.M{"data.answered":false, "is_key":false})
+		messages, _ := qs.GetMessages(bson.M{"answered":false, "is_key":false})
 		log.Printf("/messages: %+v", messages)
 		result_map := map[string]interface{}{
 			"messages":messages,
@@ -140,7 +140,7 @@ func Run(config c.QuestConfig, qs *QuestStorage, ntf *msngr.Notifier) {
 
 
 	ensure_messages_error := func(err error) map[string]interface{} {
-		messages, _ := qs.GetMessages(bson.M{"data.answered":false})
+		messages, _ := qs.GetMessages(bson.M{"answered":false})
 		return map[string]interface{}{
 			"error_text":err.Error(),
 			"is_error":true,
@@ -194,21 +194,18 @@ func Run(config c.QuestConfig, qs *QuestStorage, ntf *msngr.Notifier) {
 		render.Redirect("/messages")
 	})
 
-	m.Get("/messages/update", func(render render.Render) {
-		messages, err := qs.GetMessages(bson.M{"data.answered":false, "is_key":false})
+	m.Get("/messages/new_count/:after", func(render render.Render, params martini.Params) {
+		after := params["after"]
+		messages, err := qs.GetMessages(bson.M{
+			"answered":false,
+			"is_key":false,
+			"time":bson.M{"$gte":after},
+		})
+		log.Printf("Q after: %v, have: %+v (err: %v)", after, messages, err)
 		if err != nil {
 			render.JSON(200, map[string]interface{}{"error":err.Error()})
 		}else {
-			type Message struct {
-				From string `json:"from"`
-				Body string `json:"body"`
-				Id   string `json:"id"`
-			}
-			mes_result := []Message{}
-			for _, mes := range messages {
-				mes_result = append(mes_result, Message{From:mes.From, Body:mes.Body, Id:mes.SID})
-			}
-			render.JSON(200, map[string]interface{}{"error":false, "data":mes_result})
+			render.JSON(200, map[string]interface{}{"error":false, "count":len(messages)})
 		}
 	})
 

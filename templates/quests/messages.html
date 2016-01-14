@@ -19,6 +19,12 @@
         <div class="col-md-6 col-md-offset-3">
             <h2>Последние сообщения от участников:</h2>
         </div>
+        <div class="col-md-2">
+            <button class="btn btn-success" onclick="refresh()">Загрузить новые</button>
+        </div>
+        <div class="col-md-1">
+            <div id="new-wrapper"></div>
+        </div>
     </div>
     <div class="row">
         {{ if .is_error }}
@@ -47,42 +53,59 @@
     </table>
 </div>
 <script>
+//var update_messages = function(){
+    //$.get("/messages/update").done(function(result){
+   //     var table = $("#message-table");
+    //    if (result.data != undefined && result.error == false ){
+   //         result.data.forEach(function(message){
+    //            var message_tr = $("#"+message.id);
+    //            if (!(message_tr.length)){
+   //                 tr = $('<tr/>', {class:"message-table-row", id:message.id});
+   //                 ftd = $('<td/>', {class:"col-md-2 from-td", text:message.from});
+   //                 btd = $('<td/>', {class:"col-md-4 body-td", text:message.body});
+   //
+   //                 atd = $('<td/>', {class:"col-md-4 answer-td"});
+   //
+  //
+   //                 form = $('<form/>', {action:"/message_answer/"+message.id, method:"post", class:"answer-form"});
+   //                 ta = $('<textarea/>', {name:"message_answer", class:"form-control", rows:"2"});
+   //                 ta.appendTo(form);
+   //                 btn = $('<button/>', {type:"submit", class:"btn btn-warning form-control", text:"Ответить"});
+   //                 btn.appendTo(form);
+   //
+   //                 form.appendTo(atd);
+//
+  //                  ftd.appendTo(tr);
+  //                  btd.appendTo(tr);
+  //                  atd.appendTo(tr);
+//
+  //                  tr.prependTo(table);
+  //              }
+  //          });
+  //      }
+  //  });
+//};
 
-var update_messages = function(){
-    $.get("/messages/update").done(function(result){
-        var table = $("#message-table");
-        if (result.data != undefined && result.error == false ){
-            result.data.forEach(function(message){
-                var message_tr = $("#"+message.id);
-                if (!(message_tr.length)){
-                    tr = $('<tr/>', {class:"message-table-row", id:message.id});
-                    ftd = $('<td/>', {class:"col-md-2 from-td", text:message.from});
-                    btd = $('<td/>', {class:"col-md-4 body-td", text:message.body});
-
-                    atd = $('<td/>', {class:"col-md-4 answer-td"});
-
-
-                    form = $('<form/>', {action:"/message_answer/"+message.id, method:"post", class:"answer-form"});
-                    ta = $('<textarea/>', {name:"message_answer", class:"form-control", rows:"2"});
-                    ta.appendTo(form);
-                    btn = $('<button/>', {type:"submit", class:"btn btn-warning form-control", text:"Ответить"});
-                    btn.appendTo(form);
-
-                    form.appendTo(atd);
-
-                    ftd.appendTo(tr);
-                    btd.appendTo(tr);
-                    atd.appendTo(tr);
-
-                    tr.prependTo(table);
-                }
-            });
-        }
-    });
+var refresh = function(){
+    window.location.reload();
 };
 
+var after = Math.floor(Date.now() / 1000);
+
+var new_count_wrpr = $('<div/>', {});
+
+var get_new_messages_count = function(){
+    console.log("new messages count...");
+    $.get("/messages/new_count/"+after).done(function(result){
+        if (result.data != undefined && result.error == false ){
+            $("#new-wrapper").text("("+result.count+")");
+            after = Math.floor(Date.now() / 1000);
+        }
+    });
+}
+
 window.setInterval(function(){
-    update_messages();
+    get_new_messages_count();
 },
-5000);
+1000);
 </script>
