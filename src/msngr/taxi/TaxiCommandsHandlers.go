@@ -430,7 +430,6 @@ func (a *AddressNotHere) Error() string {
 
 func _form_order(fields []s.InField, ah AddressHandler) (*NewOrderInfo, error) {
 	var from_key, from_name, to_key, to_name, hf, ht, entrance string
-	log.Printf("NEW ORDER fields: %+v", fields)
 	for _, field := range fields {
 		switch fn := field.Name; fn {
 		case "street_from":
@@ -445,15 +444,6 @@ func _form_order(fields []s.InField, ah AddressHandler) (*NewOrderInfo, error) {
 			hf = u.FirstOf(field.Data.Value, field.Data.Text).(string)
 		case "entrance":
 			entrance = u.FirstOf(field.Data.Value, field.Data.Text).(string)
-
-		// case "time": //todo see time! with exceptions
-		// 	when = field.Data.Value
-		// 	log.Println("!time of order: ", when)
-		// 	if when == "0" || when == "" {
-		// 		new_order.DeliveryMinutes = 0
-		// 	} else {
-		// 		new_order.DeliveryTime = _get_time_from_timestamp(when).Format(timeFormat)
-		// 	}
 		}
 	}
 
@@ -471,7 +461,6 @@ func _form_order(fields []s.InField, ah AddressHandler) (*NewOrderInfo, error) {
 		if err != nil {
 			return nil, err
 		}
-
 		deliv = *del_id_street_
 		dest = *dest_id_street_
 	} else {
@@ -491,6 +480,7 @@ func _form_order(fields []s.InField, ah AddressHandler) (*NewOrderInfo, error) {
 
 	delivery := Delivery{
 		Street:u.FirstOf(from_name, deliv.Name).(string),
+		IdStreet:deliv.ID,
 		House:hf,
 		City:deliv.City,
 		Entrance:entrance,
@@ -498,6 +488,7 @@ func _form_order(fields []s.InField, ah AddressHandler) (*NewOrderInfo, error) {
 		IdAddress:deliv_id}
 	destination := Destination{
 		Street:u.FirstOf(to_name, dest.Name).(string),
+		IdStreet:dest.ID,
 		House:ht,
 		IdRegion:dest.IDRegion,
 		IdAddress:dest_id,
@@ -543,6 +534,7 @@ func (nop *TaxiNewOrderProcessor) ProcessMessage(in *s.InPkg) *s.MessageResult {
 		}
 
 		new_order, err := _form_order(commands[0].Form.Fields, nop.AddressHandler)
+		log.Printf("TAXI ORDER FORMED: %v\n err? %v", new_order, err)
 		if err != nil {
 			log.Printf("Error at forming order: %+v", err)
 			if err_val, ok := err.(*AddressNotHere); ok {
@@ -556,7 +548,6 @@ func (nop *TaxiNewOrderProcessor) ProcessMessage(in *s.InPkg) *s.MessageResult {
 				return s.ErrorMessageResult(errors.New("Не могу определить адрес"), nop.context.Commands[CMDS_NOT_CREATED_ORDER])
 			}
 		}
-
 		new_order.Phone = *phone
 		if mrkps, ok := nop.context.Settings["markups"]; ok {
 			markups, ok := mrkps.([]string)
@@ -566,17 +557,14 @@ func (nop *TaxiNewOrderProcessor) ProcessMessage(in *s.InPkg) *s.MessageResult {
 				log.Printf("markups setting present but it is not []string %+v, %T", mrkps, mrkps)
 			}
 		}
-		//get info about cost
 		cost, _ := nop.API.CalcOrderCost(*new_order)
-		//send command to create order to external api
 		ans := nop.API.NewOrder(*new_order)
-		//check is answer of new order in external api has error
 		if !ans.IsSuccess {
 			nop.Errors.StoreError(in.From, ans.Message)
 			return s.ErrorMessageResult(errors.New(ans.Message), nop.context.Commands[CMDS_NOT_CREATED_ORDER])
 		}
 		log.Printf("Order was created! %+v \n with content: %+v", ans, ans.Content)
-		//not send price settings
+
 		not_send_price := false
 		nsp_, ok := nop.context.Settings["not_send_price"]
 		if ok {
@@ -584,23 +572,19 @@ func (nop *TaxiNewOrderProcessor) ProcessMessage(in *s.InPkg) *s.MessageResult {
 				not_send_price = _nsp
 			}
 		}
-		//persisting order
 		err = nop.Orders.AddOrderObject(&d.OrderWrapper{OrderState:ORDER_CREATED, Whom:in.From, OrderId:ans.Content.Id, Source:nop.context.Name})
 		err = nop.Orders.SetActive(ans.Content.Id, nop.context.Name, true)
 		if err != nil {
-			//if error we must cancel order at external api
 			ok, message := nop.API.CancelOrder(ans.Content.Id)
 			log.Printf("Error at persist order. Cancelling order at external api with result: %v, %v", ok, message)
 			return s.ErrorMessageResult(err, nop.context.Commands[CMDS_NOT_CREATED_ORDER])
 		}
-		//forming text
 		text := ""
 		if not_send_price {
 			text = "Ваш заказ создан!"
 		} else {
 			text = fmt.Sprintf("Ваш заказ создан! Стоимость поездки составит %+v рублей.", cost)
 		}
-
 		return &s.MessageResult{Body:text, Commands:nop.context.Commands[CMDS_CREATED_ORDER], Type:"chat"}
 	}
 	order_state, _ := InfinityStatusesName[order_wrapper.OrderState]

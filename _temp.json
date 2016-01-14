@@ -1,30 +1,60 @@
 {
-  "message": {
-    "commands": [
-      {
-        "form": {
-          "fields": [
-            {
-              "data": {
-                "value": "123"
-              },
-              "type": "text",
-              "name": "code"
-            }
-          ]
-        },
-        "repeated": "false",
-        "fixed": "false",
-        "action": "key_input"
-      }
-    ],
-    "thread": "aac46ba3-559f-4182-a50b-cd0e5fb80daf",
-    "body": "\u041a\u043e\u0434: 123",
-    "type": "chat",
-    "id": "g28oF-48"
+  "phone": "89231243359",
+  "deliveryMinutes": 0,
+  "idService": 5000181745,
+  "attributes": [
+    5008806844
+  ],
+  "delivery": {
+    "idRegion": 5000160101,
+    "idStreet": 5000163548,
+    "idDistrict": null,
+    "idCity": null,
+    "idPlace": null,
+    "house": "8",
+    "entrance": "3"
   },
-  "from": "a61ee5169a625bceb92d79eed9b20327",
-  "userdata": {
-    "phone": "79537631628"
-  }
+  "destinations": [
+    {
+      "idRegion": 5000160101,
+      "idDistrict": null,
+      "idCity": null,
+      "idPlace": null,
+      "idStreet": 5000162783,
+      "house": "11"
+    }
+  ]
+}
+
+{
+  "phone": "TESTPHONE",
+  "deliveryMinutes": 0,
+  "idService": 5000181745,
+  "notes": "Тестирование.",
+  "markups": [
+    "5030781832",
+    "5008745388"
+  ],
+  "delivery": {
+    "idRegion": 5000160101,
+    "idStreet": 5000163548,
+    "house": "1",
+    "Street": "Лесосечная 1",
+    "City": "г Новосибирск",
+    "idDistrict": null,
+    "idCity": null,
+    "idPlace": null
+  },
+  "destinations": [
+    {
+      "idRegion": 5000160101,
+      "idStreet": 5000162817,
+      "house": "11",
+      "Street": "Николаева 11",
+      "City": "г Новосибирск",
+      "idDistrict": null,
+      "idCity": null,
+      "idPlace": null
+    }
+  ]
 }

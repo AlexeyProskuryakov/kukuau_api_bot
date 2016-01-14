@@ -269,6 +269,10 @@ func (p *infinity) GetCarsInfo() []t.CarInfo {
 }
 
 func (p *infinity) NewOrder(order t.NewOrderInfo) t.Answer {
+	//because sedi use Id address and id from street autocomplete was equal idadress not idstreet
+	order.Delivery.IdAddress = ""
+	order.Destinations[0].IdAddress = ""
+
 	order.IdService = p.Config.GetIdService()
 	param, err := json.Marshal(order)
 	if err != nil {
@@ -290,6 +294,9 @@ func (p *infinity) NewOrder(order t.NewOrderInfo) t.Answer {
 }
 
 func (p *infinity) CalcOrderCost(order t.NewOrderInfo) (int, string) {
+//	order.Delivery.IdStreet = strconv.ParseInt(order.Delivery.IdAddress, 10, 64)
+//	order.Destinations[0].IdStreet = strconv.ParseInt(order.Destinations[0].IdAddress, 10, 64)
+
 	order.IdService = p.Config.GetIdService()
 	param, err := json.Marshal(order)
 	if err != nil {
@@ -697,6 +704,7 @@ func (p *infinity) AddressesAutocomplete(text string) t.AddressPackage {
 		return t.AddressPackage{}
 	}
 	var temp []t.AddressPackage
+	log.Printf("INF ADDRESS AUTOCOMPLETE FOR %s \nRETRIEVE THIS:%s", text, string(body))
 	err = json.Unmarshal(body, &temp)
 	if err != nil {
 		log.Printf("error at unmarshal json from infinity %s", string(body))

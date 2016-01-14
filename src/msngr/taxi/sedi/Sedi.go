@@ -477,7 +477,7 @@ func (s *SediAPI) prepareOrderParams(order t.NewOrderInfo) map[string]string {
 		params["date"] = "new Date(" + fmt.Sprintf("%v", t) + ")"
 		params["ordertype"] = "preliminary"
 	} else {
-		params["date"] = "new Date(" + fmt.Sprintf("%v", time.Now().Unix() + 60 * (1 + order.DeliveryMinutes)) + ")"
+		params["date"] = "new Date(" + fmt.Sprintf("%v", time.Now().Unix() + 60 * (1 + int64(order.DeliveryMinutes))) + ")"
 		params["ordertype"] = "rush"
 	}
 

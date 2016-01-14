@@ -14,7 +14,6 @@ type Coordinates struct {
 }
 
 type AddressF struct {
-
 	Coordinates Coordinates
 
 	OSM_ID      int64  `json:"osm_id"`
@@ -91,9 +90,9 @@ type Destination struct {
 	Lat           float64 `json:"lat,omitempty"`           // : <Широта координаты адреса (при указании места на карте). Если указано, информация о доставке по указанию и адресе игнорируется>,
 	Lon           float64 `json:"lon,omitempty"`           // : <Долгота координаты адреса (при указании места на карте). Если указано, информация о доставке по указанию и адресе игнорируется>,"isByDirection" : <Заказ машины с указанием пункта назначения при подаче (если задано в true,информация о адресе игнонрируются)>,
 
-	IdDistrict    int64   `json:"idDistrict"`              // : <Идентификатор района (Int64)>,
-	IdCity        int64   `json:"idCity"`                  // : <Идентификатор города (Int64)>,
-	IdPlace       int64   `json:"idPlace"`                 // : <Идентификатор поселения (Int64)>,
+	IdDistrict    *int64   `json:"idDistrict"`              // : <Идентификатор района (Int64)>,
+	IdCity        *int64   `json:"idCity"`                  // : <Идентификатор города (Int64)>,
+	IdPlace       *int64   `json:"idPlace"`                 // : <Идентификатор поселения (Int64)>,
 
 	Building      string  `json:"building,omitempty"`      // : <Строение (строка)>,
 	Fraction      string  `json:"fraction,omitempty"`      // : <Корпус (строка)>,
@@ -130,11 +129,11 @@ func (d Delivery) String() string {
 type NewOrderInfo struct {                                             //request
 	Phone           string `json:"phone"`
 	DeliveryTime    string `json:"deliveryTime,omitempty"`             //<Время подачи в формате yyyy-MM-dd HH:mm:ss>
-	DeliveryMinutes int64  `json:"deliveryMinutes"`                    // <Количество минут до подачи (0-сейчас, но не менее минимального времени на подачу, указанного в настройках системы), не анализируется если задано поле deliveryTime >
-	IdService       string  `json:"idService"`                         //<Идентификатор услуги заказа (не может быть пустым)>
+	DeliveryMinutes int  `json:"deliveryMinutes"`                    // <Количество минут до подачи (0-сейчас, но не менее минимального времени на подачу, указанного в настройках системы), не анализируется если задано поле deliveryTime >
+	IdService       int64  `json:"idService"`                         //<Идентификатор услуги заказа (не может быть пустым)>
 	Notes           string `json:"notes,omitempty"`                    // <Комментарий к заказу>
 	Markups         []string    `json:"markups,omitempty"`             //Markups           [2]int64 `json:"markups"`           // <Массив идентификаторов наценок заказа>
-	Attributes      [2]int64      `json:"attributes,omitempty"`        // <Массив идентификаторов дополнительных атрибутов заказа>
+	Attributes      []int64      `json:"attributes,omitempty"`        // <Массив идентификаторов дополнительных атрибутов заказа>
 	Delivery        *Delivery      `json:"delivery"`                   // Инфомация о месте подачи машины
 	Destinations    []*Destination `json:"destinations"`               // Пункты назначения заказа (массив, не может быть пустым)
 	IsNotCash       bool          `json:"isNotCash,omitempty"`         //: // Флаг безналичного заказа <true или false (bool)>

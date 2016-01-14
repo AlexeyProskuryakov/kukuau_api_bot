@@ -41,7 +41,7 @@ func TestOrderPrice(t *testing.T) {
 	apiMixin := ExternalApiMixin{API: external_api}
 	botContext := FormTaxiBotContext(&apiMixin, db, taxi_conf, gah, NewCarsCache(&apiMixin))
 
-	new_order_package := tst.ReadTestFile("new_order_ok.json")
+	new_order_package := tst.ReadTestFile("new_order_ok_google_streets.json")
 
 	nop, ok := botContext.Message_commands["new_order"]
 	if !ok {
