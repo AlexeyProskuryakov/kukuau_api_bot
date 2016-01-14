@@ -12,12 +12,19 @@
     }
   },
 
-  //  "taxis": {
+
+
+//  "taxis": {
 //    "academ": {
 //      "api": {
+//        "geo_orbit": {
+//          "lat": 54.760457,
+//          "lon": 83.103499,
+//          "radius": 50000
+//        },
 //        "name": "infinity",
 //        "data": {
-//          "id_service": "5000181745",
+//          "id_service": 5000181745,
 //          "login": "kukuautest",
 //          "password": "789kukuau987",
 //          "connection_strings": [
@@ -40,8 +47,6 @@
 //      "name": "academ"
 //    }
 //  },
-
-
   "taxis": {
     "fake": {
       "name": "fake",

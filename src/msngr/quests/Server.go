@@ -20,6 +20,7 @@ import (
 	"strings"
 	"io/ioutil"
 	"time"
+	"strconv"
 )
 
 var users = map[string]string{
@@ -196,17 +197,21 @@ func Run(config c.QuestConfig, qs *QuestStorage, ntf *msngr.Notifier) {
 	})
 
 	m.Get("/messages/new_count/:after", func(render render.Render, params martini.Params) {
-		after := params["after"]
+		after_input, err := strconv.ParseInt(params["after"], 10, 64)
+		if err != nil {
+			render.JSON(200, map[string]interface{}{"error":err.Error()})
+		}
 		messages, err := qs.GetMessages(bson.M{
 			"answered":false,
 			"is_key":false,
-			"time":bson.M{"$gte":after},
+			"time":bson.M{"$gte":after_input},
 		})
-		log.Printf("Q after: %v, have: %+v (err: %v)", after, messages, err)
+
+		log.Printf("Q after in: %v, have: %+v (err: %v)", after_input, messages, err)
 		if err != nil {
 			render.JSON(200, map[string]interface{}{"error":err.Error()})
 		}else {
-			render.JSON(200, map[string]interface{}{"error":false, "count":len(messages), "after":time.Now().Unix()})
+			render.JSON(200, map[string]interface{}{"error":false, "count":len(messages) })
 		}
 	})
 

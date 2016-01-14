@@ -20,11 +20,9 @@
             <h2>Последние сообщения от участников:</h2>
         </div>
         <div class="col-md-2">
-            <button class="btn btn-success" onclick="refresh()">Загрузить новые</button>
+            <button class="btn btn-success" onclick="refresh()" id="get-new-messages">Загрузить новые</button>
         </div>
-        <div class="col-md-1">
-            <div id="new-wrapper"></div>
-        </div>
+
     </div>
     <div class="row">
         {{ if .is_error }}
@@ -92,14 +90,10 @@ var refresh = function(){
 
 var after = Math.floor(Date.now() / 1000);
 
-var new_count_wrpr = $('<div/>', {});
-
 var get_new_messages_count = function(){
-    console.log("new messages count...");
     $.get("/messages/new_count/"+after).done(function(result){
-        if (result.count != undefined && result.error == false ){
-            $("#new-wrapper").text("Новые: "+result.count);
-            after = Math.floor(Date.now() / 1000);
+        if (result.count != undefined && result.error == false && result.count != 0){
+            $("#get-new-messages").text("Загрузить новые ("+result.count+")");
         }
     });
 }
@@ -107,5 +101,5 @@ var get_new_messages_count = function(){
 window.setInterval(function(){
     get_new_messages_count();
 },
-1000);
+5000);
 </script>
