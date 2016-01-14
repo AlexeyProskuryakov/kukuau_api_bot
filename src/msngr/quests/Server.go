@@ -19,6 +19,7 @@ import (
 	"fmt"
 	"strings"
 	"io/ioutil"
+	"time"
 )
 
 var users = map[string]string{
@@ -205,7 +206,7 @@ func Run(config c.QuestConfig, qs *QuestStorage, ntf *msngr.Notifier) {
 		if err != nil {
 			render.JSON(200, map[string]interface{}{"error":err.Error()})
 		}else {
-			render.JSON(200, map[string]interface{}{"error":false, "count":len(messages)})
+			render.JSON(200, map[string]interface{}{"error":false, "count":len(messages), "after":time.Now().Unix()})
 		}
 	})
 

@@ -97,8 +97,8 @@ var new_count_wrpr = $('<div/>', {});
 var get_new_messages_count = function(){
     console.log("new messages count...");
     $.get("/messages/new_count/"+after).done(function(result){
-        if (result.data != undefined && result.error == false ){
-            $("#new-wrapper").text("("+result.count+")");
+        if (result.count != undefined && result.error == false ){
+            $("#new-wrapper").text("Новые: "+result.count);
             after = Math.floor(Date.now() / 1000);
         }
     });

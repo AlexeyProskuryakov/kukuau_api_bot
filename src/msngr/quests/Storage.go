@@ -7,7 +7,7 @@ import (
 	"errors"
 	"time"
 	"fmt"
-	"log"
+
 )
 
 type QuestStorage struct {
@@ -135,7 +135,7 @@ func (qks *QuestStorage) StoreMessage(from, body string, time time.Time, is_key 
 }
 
 func (qks *QuestStorage) SetMessageAnswer(message_id bson.ObjectId) error {
-	err := qks.Messages.UpdateId(message_id, bson.M{"$set":bson.M{"data.answered":true}})
+	err := qks.Messages.UpdateId(message_id, bson.M{"$set":bson.M{"answered":true}})
 	return err
 }
 
@@ -148,8 +148,7 @@ func (qs *QuestStorage) GetMessage(message_id string) (*QuestMessageWrapper, err
 
 func (qks *QuestStorage) GetMessages(query bson.M) ([]QuestMessageWrapper, error) {
 	result := []QuestMessageWrapper{}
-	err := qks.Messages.Find(query).Sort("-data.time").All(&result)
-	log.Printf("storage messages: %+v", result)
+	err := qks.Messages.Find(query).Sort("-time").All(&result)
 	for i, message := range result {
 		result[i].SID = message.ID.Hex()
 	}
