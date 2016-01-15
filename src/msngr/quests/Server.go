@@ -4,22 +4,25 @@ import (
 	"github.com/go-martini/martini"
 	"github.com/martini-contrib/auth"
 	"github.com/martini-contrib/render"
+	"github.com/tealeg/xlsx"
 
 	c "msngr/configuration"
 
 	"msngr/notify"
 	"msngr/structs"
+	"msngr/utils"
 
 
 	"log"
 	"gopkg.in/mgo.v2/bson"
 	"net/http"
-	"msngr/utils"
 	"errors"
 	"fmt"
 	"strings"
 	"io/ioutil"
 	"strconv"
+
+	"time"
 )
 
 var users = map[string]string{
@@ -27,7 +30,7 @@ var users = map[string]string{
 	"leha":"qwerty100500",
 }
 
-func ParseExportFile(raw_data string, qs *QuestStorage) error {
+func ParseExportTxt(raw_data string, qs *QuestStorage) error {
 	keys := strings.Fields(string(raw_data))
 	for i, key := range keys {
 		key_params := strings.Split(key, ";")
@@ -39,6 +42,22 @@ func ParseExportFile(raw_data string, qs *QuestStorage) error {
 			is_first = i == 0
 		}
 		qs.AddKey(key_params[0], key_params[1], &next_key, is_first)
+	}
+	return nil
+}
+
+func ParseExportXlsx(xlf *xlsx.File, qs *QuestStorage) error {
+	for _, sheet := range xlf.Sheets {
+		if sheet != nil {
+			sh_name := strings.TrimSpace(strings.ToLower(sheet.Name))
+			if strings.HasSuffix(sh_name, "ключ") || strings.HasPrefix(sh_name, "ключ") {
+				for _, row := range sheet.Rows {
+					if row != nil {
+						log.Printf("ROW: %+v", row)
+					}
+				}
+			}
+		}
 	}
 	return nil
 }
@@ -73,18 +92,19 @@ func Run(config c.QuestConfig, qs *QuestStorage, ntf *msngr.Notifier) {
 		return result_map
 	}
 
-	get_result_map := func(user auth.User) map[string]interface{} {
-		keys, _ := qs.GetAllKeys()
+	get_keys_map := func(user auth.User) map[string]interface{} {
+		keys, err := qs.GetAllKeys()
+		if err != nil {
+			log.Printf("Error for load keys: %v", err)
+		}
 		result_map := map[string]interface{}{
 			"keys": keys,
-			"error_text":"",
-			"is_error":false,
 		}
 		return result_map
 	}
 
 	m.Get("/new_keys", func(user auth.User, render render.Render) {
-		render.HTML(200, "quests/new_keys", get_result_map(user))
+		render.HTML(200, "quests/new_keys", get_keys_map(user))
 	})
 
 
@@ -121,7 +141,15 @@ func Run(config c.QuestConfig, qs *QuestStorage, ntf *msngr.Notifier) {
 	})
 
 	m.Get("/users_keys", func(render render.Render) {
-		users_keys, _ := qs.GetMessages(bson.M{"answered":false, "is_key":true})
+		users_keys, err := qs.GetMessages(bson.M{"answered":false, "is_key":true})
+		if err != nil {
+			log.Printf("Error at getting users keys %v", err)
+		}
+		for i, mk := range users_keys {
+			mk.Time = time.Unix(mk.TimeStamp, 0)
+			users_keys[i] = mk
+		}
+
 		result_map := map[string]interface{}{
 			"keys":users_keys,
 		}
@@ -130,30 +158,27 @@ func Run(config c.QuestConfig, qs *QuestStorage, ntf *msngr.Notifier) {
 
 	m.Get("/messages", func(user auth.User, render render.Render) {
 		messages, _ := qs.GetMessages(bson.M{"answered":false, "is_key":false})
-		s_users, _ := qs.GetSubscribedUsers()
+		s_users, _ := qs.GetAllUsers()
 		s_user_map := map[string]QuestUserWrapper{}
 		for _, s_user := range s_users {
 			s_user_map[s_user.UserId] = s_user
 		}
-		log.Printf("users map: %+v", s_user_map)
 		for i, message := range messages {
 			if u_info, ok := s_user_map[message.From]; ok {
-				if u_info.Name != "" && u_info.Phone != ""{
+				if u_info.Name != "" && u_info.Phone != "" {
 					message.From = fmt.Sprintf("%v (%v)", u_info.Name, u_info.Phone)
-				} else if u_info.Name != "" && u_info.EMail != ""{
-					message.From = fmt.Sprintf("%v (%v)",u_info.Name, u_info.EMail)
-				} else if u_info.Name != ""{
+				} else if u_info.Name != "" && u_info.EMail != "" {
+					message.From = fmt.Sprintf("%v (%v)", u_info.Name, u_info.EMail)
+				} else if u_info.Name != "" {
 					message.From = u_info.Name
-				} else if u_info.Phone != ""{
+				} else if u_info.Phone != "" {
 					message.From = u_info.Phone
-				} else if u_info.EMail != ""{
+				} else if u_info.EMail != "" {
 					message.From = u_info.EMail
 				}
 			}
 			messages[i] = message
-			log.Printf("new message: %v", message)
 		}
-		log.Printf("/messages: %+v", messages)
 		result_map := map[string]interface{}{
 			"messages":messages,
 			"error_text":"",
@@ -258,18 +283,30 @@ func Run(config c.QuestConfig, qs *QuestStorage, ntf *msngr.Notifier) {
 
 
 	m.Post("/load/up", func(render render.Render, request *http.Request) {
-		file, _, err := request.FormFile("file")
+		file, header, err := request.FormFile("file")
 		if err != nil {
 			render.HTML(200, "quests/keys_new", get_result_error_map(fmt.Sprintf("Ошибка загрузки файлика: %v", err)))
 		}
 		defer file.Close()
+
 		data, err := ioutil.ReadAll(file)
 		if err != nil {
 			render.HTML(200, "quests/keys_new", get_result_error_map(fmt.Sprintf("Ошибка загрузки файлика: %v", err)))
 		}
-		raw_data := string(data)
-		log.Printf("Result: %s", raw_data)
-		ParseExportFile(raw_data, qs)
+
+		if strings.HasSuffix(header.Filename, "xslx") {
+			xlFile, err := xlsx.OpenBinary(data)
+			if err != nil {
+				render.HTML(200, "quests/keys_new", get_result_error_map(fmt.Sprintf("Ошибка обработки файлика: %v", err)))
+			}
+			ParseExportXlsx(xlFile, qs)
+
+		} else {
+			raw_data := string(data)
+			log.Printf("Result: %s", raw_data)
+			ParseExportTxt(raw_data, qs)
+		}
+
 		render.Redirect("/new_keys")
 	})
 

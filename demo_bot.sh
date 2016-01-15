@@ -26,6 +26,7 @@ start()
     ${EXEC} get github.com/martini-contrib/auth
     ${EXEC} get github.com/martini-contrib/render
     ${EXEC} get gopkg.in/olivere/elastic.v2
+    ${EXEC} get github.com/tealeg/xlsx
 
     mkdir -p ${HOME}/build
     mkdir -p ${HOME}/logs

@@ -77,6 +77,7 @@ type QuestMessageWrapper struct {
 	From      string `bson:"from"`
 	Body      string `bson:"body"`
 	TimeStamp int64 `bson:"time"`
+	Time      time.Time `bson:"time_obj"`
 	Answered  bool `bson:"answered"`
 	IsKey     bool `bson:"is_key"`
 }
@@ -178,6 +179,11 @@ func (qks *QuestStorage)AddUser(user_id, name, email, phone, state, provider str
 	}
 	return nil
 }
+func (qs *QuestStorage) SetUserState(user_id, state, provider string) error{
+	find := bson.M{"user_id":user_id}
+	err := qs.Users.Update(find, bson.M{"$set":bson.M{fmt.Sprintf("state.%s", provider):state}})
+	return err
+}
 
 func (qks *QuestStorage) GetUserState(user_id, provider string) (string, error) {
 	find := bson.M{"user_id":user_id}
@@ -248,5 +254,11 @@ func (qks *QuestStorage) GetUserKeys(user_id, key, provider string) ([]string, e
 func (qks *QuestStorage) GetSubscribedUsers() ([]QuestUserWrapper, error) {
 	users := []QuestUserWrapper{}
 	err := qks.Users.Find(bson.M{fmt.Sprintf("state.%s", PROVIDER):SUBSCRIBED}).All(&users)
+	return users, err
+}
+
+func (qs *QuestStorage) GetAllUsers() ([]QuestUserWrapper, error) {
+	users := []QuestUserWrapper{}
+	err := qs.Users.Find(bson.M{}).All(&users)
 	return users, err
 }
