@@ -49,10 +49,8 @@ func ParseExportTxt(raw_data string, qs *QuestStorage) error {
 }
 
 func ParseExportXlsx(xlf *xlsx.File, qs *QuestStorage, skip_row, skip_cell int) error {
-//	log.Printf("input file: %+v", xlf)
 	for _, sheet := range xlf.Sheets {
 		if sheet != nil {
-//			log.Printf("sheet: %v", sheet.Name)
 			sh_name := strings.TrimSpace(strings.ToLower(sheet.Name))
 			if strings.HasSuffix(sh_name, "ключ") || strings.HasPrefix(sh_name, "ключ") {
 				is_first := true
@@ -65,7 +63,6 @@ func ParseExportXlsx(xlf *xlsx.File, qs *QuestStorage, skip_row, skip_cell int) 
 						if next_key_raw != ""{
 							next_key = &next_key_raw
 						}
-//						log.Printf("%v %v %v %v", key, description, next_key, is_first)
 						qs.AddKey(key, description, next_key, is_first)
 						is_first = false
 					}
