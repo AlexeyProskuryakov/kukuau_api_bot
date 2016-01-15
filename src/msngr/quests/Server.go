@@ -29,6 +29,7 @@ import (
 var users = map[string]string{
 	"alesha":"sederfes100500",
 	"leha":"qwerty100500",
+	"dima":"123",
 }
 
 func ParseExportTxt(raw_data string, qs *QuestStorage) error {
@@ -48,10 +49,10 @@ func ParseExportTxt(raw_data string, qs *QuestStorage) error {
 }
 
 func ParseExportXlsx(xlf *xlsx.File, qs *QuestStorage, skip_row, skip_cell int) error {
-	log.Printf("input file: %+v", xlf)
+//	log.Printf("input file: %+v", xlf)
 	for _, sheet := range xlf.Sheets {
 		if sheet != nil {
-			log.Printf("sheet: %v", sheet.Name)
+//			log.Printf("sheet: %v", sheet.Name)
 			sh_name := strings.TrimSpace(strings.ToLower(sheet.Name))
 			if strings.HasSuffix(sh_name, "ключ") || strings.HasPrefix(sh_name, "ключ") {
 				is_first := true
