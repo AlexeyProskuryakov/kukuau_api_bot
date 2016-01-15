@@ -57,10 +57,10 @@ func ParseExportXlsx(xlf *xlsx.File, qs *QuestStorage, skip_row, skip_cell int) 
 				for ir, row := range sheet.Rows {
 					if row != nil && ir >= skip_row {
 						key := row.Cells[skip_cell].Value
-						description := row.Cells[skip_cell+1].Value
-						next_key_raw := row.Cells[skip_cell+2].Value
+						description := row.Cells[skip_cell + 1].Value
+						next_key_raw := row.Cells[skip_cell + 2].Value
 						var next_key *string
-						if next_key_raw != ""{
+						if next_key_raw != "" {
 							next_key = &next_key_raw
 						}
 						qs.AddKey(key, description, next_key, is_first)
@@ -71,6 +71,22 @@ func ParseExportXlsx(xlf *xlsx.File, qs *QuestStorage, skip_row, skip_cell int) 
 		}
 	}
 	return nil
+}
+
+func GetUserName(u_info QuestUserWrapper, default_res string) string {
+	if u_info.Name != "" && u_info.Phone != "" {
+		return fmt.Sprintf("%v (%v)", u_info.Name, u_info.Phone)
+	} else if u_info.Name != "" && u_info.EMail != "" {
+		return fmt.Sprintf("%v (%v)", u_info.Name, u_info.EMail)
+	} else if u_info.Name != "" {
+		return u_info.Name
+	} else if u_info.Phone != "" {
+		return u_info.Phone
+	} else if u_info.EMail != "" {
+		return u_info.EMail
+	} else {
+		return default_res
+	}
 }
 
 func Run(config c.QuestConfig, qs *QuestStorage, ntf *msngr.Notifier) {
@@ -168,30 +184,55 @@ func Run(config c.QuestConfig, qs *QuestStorage, ntf *msngr.Notifier) {
 	})
 
 	m.Get("/messages", func(user auth.User, render render.Render) {
+		type MessageUserInfo struct {
+			Name    string
+			LastKey string
+			NextKey string
+		}
+		type ShowMessage struct {
+			SID  string
+			From MessageUserInfo
+			Body string
+		}
+
 		messages, _ := qs.GetMessages(bson.M{"answered":false, "is_key":false})
 		s_users, _ := qs.GetAllUsers()
 		s_user_map := map[string]QuestUserWrapper{}
 		for _, s_user := range s_users {
 			s_user_map[s_user.UserId] = s_user
 		}
-		for i, message := range messages {
+		out_messages := []ShowMessage{}
+		for _, message := range messages {
 			if u_info, ok := s_user_map[message.From]; ok {
-				if u_info.Name != "" && u_info.Phone != "" {
-					message.From = fmt.Sprintf("%v (%v)", u_info.Name, u_info.Phone)
-				} else if u_info.Name != "" && u_info.EMail != "" {
-					message.From = fmt.Sprintf("%v (%v)", u_info.Name, u_info.EMail)
-				} else if u_info.Name != "" {
-					message.From = u_info.Name
-				} else if u_info.Phone != "" {
-					message.From = u_info.Phone
-				} else if u_info.EMail != "" {
-					message.From = u_info.EMail
+				message.From = GetUserName(u_info, message.From)
+				var last_key string
+				var next_key string
+				if _last_key, ok := u_info.LastKey[PROVIDER]; ok && _last_key != nil {
+					last_key = *_last_key
+					k_info, _ := qs.GetKeyInfo(*_last_key)
+					if k_info.NextKey != nil {
+						nkp := k_info.NextKey
+						next_key = *nkp
+					}
 				}
+
+				out_message := ShowMessage{
+					From:MessageUserInfo{
+						Name:message.From,
+						LastKey:last_key,
+						NextKey:next_key,
+					},
+					Body:message.Body,
+					SID:message.SID,
+				}
+
+				out_messages = append(out_messages, out_message)
 			}
-			messages[i] = message
 		}
+
+
 		result_map := map[string]interface{}{
-			"messages":messages,
+			"messages":out_messages,
 			"error_text":"",
 			"is_error":false,
 		}
@@ -207,6 +248,17 @@ func Run(config c.QuestConfig, qs *QuestStorage, ntf *msngr.Notifier) {
 			"messages":messages,
 		}
 	}
+
+	m.Get("/user_messages/:id", func(params martini.Params, render render.Render) {
+		message, _ := qs.GetMessage(params["id"])
+		user_messages, _ := qs.GetMessages(bson.M{"from":message.From, "is_key":false})
+		user, _ := qs.GetUserInfo(message.From, PROVIDER)
+
+		render.HTML(200, "quests/user_messages", map[string]interface{}{
+			"messages":user_messages,
+			"user":GetUserName(user.User, message.From),
+		})
+	})
 
 	m.Post("/message_answer/:id", func(params martini.Params, user auth.User, render render.Render, request *http.Request) {
 		answer := request.FormValue("message_answer")

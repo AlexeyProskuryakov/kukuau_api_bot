@@ -152,11 +152,13 @@ func (qks *QuestStorage) GetMessages(query bson.M) ([]QuestMessageWrapper, error
 	err := qks.Messages.Find(query).Sort("-time").All(&result)
 	for i, message := range result {
 		result[i].SID = message.ID.Hex()
+		result[i].Time = time.Unix(message.TimeStamp,0)
 	}
 	return result, err
 }
 
 type QuestUserWrapper struct {
+	ID      bson.ObjectId `bson:"_id,omitempty"`
 	UserId  string    `bson:"user_id"`
 	Name    string    `bson:"name"`
 	Phone   string    `bson:"phone"`
@@ -179,7 +181,7 @@ func (qks *QuestStorage)AddUser(user_id, name, email, phone, state, provider str
 	}
 	return nil
 }
-func (qs *QuestStorage) SetUserState(user_id, state, provider string) error{
+func (qs *QuestStorage) SetUserState(user_id, state, provider string) error {
 	find := bson.M{"user_id":user_id}
 	err := qs.Users.Update(find, bson.M{"$set":bson.M{fmt.Sprintf("state.%s", provider):state}})
 	return err
@@ -213,6 +215,7 @@ type CurrentProviderUserInfo struct {
 	State     string
 	FoundKeys []string
 	LastKey   *string
+	User	QuestUserWrapper
 }
 
 func (qks *QuestStorage) GetUserInfo(user_id, provider string) (*CurrentProviderUserInfo, error) {
@@ -232,6 +235,7 @@ func (qks *QuestStorage) GetUserInfo(user_id, provider string) (*CurrentProvider
 		State:state,
 		FoundKeys:keys,
 		LastKey:last_key,
+		User:user,
 	}, nil
 
 }

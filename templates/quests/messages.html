@@ -35,15 +35,21 @@
         {{range $message := .messages}}
         <tr class="message-table-row" id="{{$message.SID}}">
             <td class="col-md-2 from-td">
-                {{$message.From}}
+                <a href="/user_messages/{{$message.SID}}">
+                    {{$message.From.Name}}
+                </a>
+                <br>
+                Следующий: <p class="text-primary">{{$message.From.NextKey}}</p>
+                <br>
+                Предыдущий: <p class="text-muted">{{$message.From.LastKey}}</p>
             </td>
             <td class="col-md-4 body-td">
                 {{$message.Body}}
             </td>
             <td class="col-md-4 answer-td">
                 <form action="/message_answer/{{$message.SID}}" method="post" class="answer-form">
-                        <textarea name="message_answer" class="form-control" rows="2"></textarea>
-                        <button type="submit" class="btn btn-warning form-control">Ответить</button>
+                    <textarea name="message_answer" class="form-control" rows="2"></textarea>
+                    <button type="submit" class="btn btn-warning form-control">Ответить</button>
                 </form>
             </td>
         </tr>
@@ -102,4 +108,6 @@ window.setInterval(function(){
     get_new_messages_count();
 },
 5000);
+
+
 </script>
