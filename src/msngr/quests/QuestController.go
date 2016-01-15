@@ -41,15 +41,6 @@ func (qimp QuestInfoMessageProcessor) ProcessMessage(in *s.InPkg) *s.MessageResu
 	return &s.MessageResult{Body:qimp.Information, Type:"chat"}
 }
 
-func IsSubscribedKey(key string, qs *QuestStorage) (bool, error) {
-	key_info, err := qs.GetKeyInfo(key)
-	if err != nil {
-		return false, err
-	}
-	log.Printf("QUESTS checking is key was subscribed... key: %+v, is first? %+v", key_info, key_info.IsFirst)
-	return key_info.IsFirst, nil
-}
-
 func ProcessKeyUserResult(user_id, key string, qs *QuestStorage) (string, error, bool) {
 	//return description or some text for user or "" if error
 	key_info, err := qs.GetKeyInfo(key)
@@ -63,10 +54,6 @@ func ProcessKeyUserResult(user_id, key string, qs *QuestStorage) (string, error,
 		return "", err, false
 	}
 	log.Printf("QUESTS proces key resule: \nuser [%v] is found: \nkey [%v] is found: %+v%+v", user_id, user_info, key, key_info)
-
-	if utils.InS(key_info.Key, user_info.FoundKeys) {
-		return "Вы уже вводили этот ключ", nil, false
-	}
 
 	return key_info.Description, nil, true
 }
@@ -98,13 +85,11 @@ func (qmpp QuestMessagePersistProcessor) ProcessMessage(in *s.InPkg) *s.MessageR
 
 		if key_reg.MatchString(key) {
 			key = strings.ToLower(key)
-			if is_first, err := IsSubscribedKey(key, qmpp.Storage); is_first && err == nil {
-				qmpp.Storage.SetUserState(in.From, SUBSCRIBED, PROVIDER)
-			}
 			descr, err, ok := ProcessKeyUserResult(in.From, key, qmpp.Storage)
 			log.Printf("QUESTS want to send key %v i have this answer for key: %v, err: %v, ok? %v", key, descr, err, ok)
 			if err == nil {
 				if ok {
+					qmpp.Storage.SetUserState(in.From, SUBSCRIBED, PROVIDER)
 					qmpp.Storage.SetUserLastKey(in.From, key, PROVIDER)
 					qmpp.Storage.StoreMessage(in.From, key, time.Now(), true)
 				}
