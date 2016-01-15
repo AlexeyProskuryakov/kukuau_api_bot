@@ -23,6 +23,7 @@ import (
 	"strconv"
 
 	"time"
+	"regexp"
 )
 
 var users = map[string]string{
@@ -46,14 +47,26 @@ func ParseExportTxt(raw_data string, qs *QuestStorage) error {
 	return nil
 }
 
-func ParseExportXlsx(xlf *xlsx.File, qs *QuestStorage) error {
+func ParseExportXlsx(xlf *xlsx.File, qs *QuestStorage, skip_row, skip_cell int) error {
+	log.Printf("input file: %+v", xlf)
 	for _, sheet := range xlf.Sheets {
 		if sheet != nil {
+			log.Printf("sheet: %v", sheet.Name)
 			sh_name := strings.TrimSpace(strings.ToLower(sheet.Name))
 			if strings.HasSuffix(sh_name, "ключ") || strings.HasPrefix(sh_name, "ключ") {
-				for _, row := range sheet.Rows {
-					if row != nil {
-						log.Printf("ROW: %+v", row)
+				is_first := true
+				for ir, row := range sheet.Rows {
+					if row != nil && ir >= skip_row {
+						key := row.Cells[skip_cell].Value
+						description := row.Cells[skip_cell+1].Value
+						next_key_raw := row.Cells[skip_cell+2].Value
+						var next_key *string
+						if next_key_raw != ""{
+							next_key = &next_key_raw
+						}
+//						log.Printf("%v %v %v %v", key, description, next_key, is_first)
+						qs.AddKey(key, description, next_key, is_first)
+						is_first = false
 					}
 				}
 			}
@@ -92,7 +105,7 @@ func Run(config c.QuestConfig, qs *QuestStorage, ntf *msngr.Notifier) {
 		return result_map
 	}
 
-	get_keys_map := func(user auth.User) map[string]interface{} {
+	get_keys_map := func() map[string]interface{} {
 		keys, err := qs.GetAllKeys()
 		if err != nil {
 			log.Printf("Error for load keys: %v", err)
@@ -103,8 +116,8 @@ func Run(config c.QuestConfig, qs *QuestStorage, ntf *msngr.Notifier) {
 		return result_map
 	}
 
-	m.Get("/new_keys", func(user auth.User, render render.Render) {
-		render.HTML(200, "quests/new_keys", get_keys_map(user))
+	m.Get("/new_keys", func(render render.Render) {
+		render.HTML(200, "quests/new_keys", get_keys_map())
 	})
 
 
@@ -281,26 +294,36 @@ func Run(config c.QuestConfig, qs *QuestStorage, ntf *msngr.Notifier) {
 	})
 
 
+	xlsFileReg := regexp.MustCompile(".+\\.xlsx?")
 
 	m.Post("/load/up", func(render render.Render, request *http.Request) {
 		file, header, err := request.FormFile("file")
+
+		log.Printf("Form file information: file: %+v \nheader:%v, %v\nerr:%v", file, header.Filename, header.Header, err)
+
 		if err != nil {
 			render.HTML(200, "quests/keys_new", get_result_error_map(fmt.Sprintf("Ошибка загрузки файлика: %v", err)))
+			return
 		}
 		defer file.Close()
 
 		data, err := ioutil.ReadAll(file)
 		if err != nil {
 			render.HTML(200, "quests/keys_new", get_result_error_map(fmt.Sprintf("Ошибка загрузки файлика: %v", err)))
+			return
 		}
 
-		if strings.HasSuffix(header.Filename, "xslx") {
+		if xlsFileReg.MatchString(header.Filename) {
 			xlFile, err := xlsx.OpenBinary(data)
-			if err != nil {
-				render.HTML(200, "quests/keys_new", get_result_error_map(fmt.Sprintf("Ошибка обработки файлика: %v", err)))
+			log.Printf("file: %+v, err: %v", xlFile, err)
+			if err != nil || xlFile == nil {
+				render.HTML(200, "quests/new_keys", get_result_error_map(fmt.Sprintf("Ошибка обработки файлика: %v", err)))
+				return
 			}
-			ParseExportXlsx(xlFile, qs)
+			skip_rows, _ := strconv.Atoi(request.FormValue("skip-rows"))
+			skip_cols, _ := strconv.Atoi(request.FormValue("skip-cols"))
 
+			ParseExportXlsx(xlFile, qs, skip_rows, skip_cols)
 		} else {
 			raw_data := string(data)
 			log.Printf("Result: %s", raw_data)
