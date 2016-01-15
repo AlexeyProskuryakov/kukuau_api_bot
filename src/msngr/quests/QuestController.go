@@ -54,37 +54,21 @@ func ProcessKeyUserResult(user_id, key string, qs *QuestStorage) (string, error,
 	//return description or some text for user or "" if error
 	key_info, err := qs.GetKeyInfo(key)
 	if err != nil {
+		log.Printf("QUEST key [%v] is ERR! %v", err)
 		return "", err, false
 	}
-	log.Printf("QUEST key [%v] is found: %+v", key, key_info)
-
 	user_info, err := qs.GetUserInfo(user_id, PROVIDER)
 	if err != nil {
-		log.Printf("QUESTS user [%v] is not found because: %+v", user_id, err)
+		log.Printf("QUESTS key [%v] user [%v] is NOT found because: %+v", user_id, err)
 		return "", err, false
 	}
-	log.Printf("QUESTS user [%v] is found: %+v", user_id, user_info)
+	log.Printf("QUESTS proces key resule: \nuser [%v] is found: \nkey [%v] is found: %+v%+v", user_id, user_info, key, key_info)
 
-	if user_info.LastKey == nil && key_info.IsFirst {
-		return key_info.Description, nil, true
-	} else if user_info.LastKey != nil {
-		user_last_key_p := user_info.LastKey
-		user_last_key := *user_last_key_p
-		previous_key, err := qs.GetKeyInfo(user_last_key)
-		if err != nil {
-			return "", err, false
-		}
-		if utils.InS(key_info.Key, user_info.FoundKeys) {
-			return "Вы уже вводили этот ключ", nil, false
-		}
-		if previous_key.NextKey == nil || *previous_key.NextKey == key {
-			return key_info.Description, nil, true
-		}
-
-		return "Вы не можете использовать этот ключ сейчас.", nil, false
-
+	if utils.InS(key_info.Key, user_info.FoundKeys) {
+		return "Вы уже вводили этот ключ", nil, false
 	}
-	return "", nil, false
+
+	return key_info.Description, nil, true
 }
 
 type QuestMessagePersistProcessor struct {
