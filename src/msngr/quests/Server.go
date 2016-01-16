@@ -229,6 +229,11 @@ func Run(config c.QuestConfig, qs *QuestStorage, ntf *msngr.Notifier) {
 		render.Redirect("/new_keys")
 	})
 
+	m.Get("/delete_key_all", func(render render.Render){
+		qs.Keys.RemoveAll(bson.M{})
+		render.Redirect("/new_keys")
+	})
+
 	m.Get("/users_keys", func(render render.Render) {
 		users_keys := GetMessagesToShow(bson.M{"answered":false, "is_key":true}, qs)
 
@@ -389,6 +394,8 @@ func Run(config c.QuestConfig, qs *QuestStorage, ntf *msngr.Notifier) {
 
 		render.Redirect("/new_keys")
 	})
+
+
 
 	log.Printf("Will start web server for quest at: %v", config.WebPort)
 	m.RunOnAddr(config.WebPort)
