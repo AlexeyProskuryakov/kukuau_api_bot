@@ -32,6 +32,56 @@ var users = map[string]string{
 	"dima":"123",
 }
 
+type MessageUserInfo struct {
+	Name    string
+	LastKey string
+	NextKey string
+}
+type ShowMessage struct {
+	SID  string
+	From MessageUserInfo
+	Body string
+}
+
+
+func GetMessages(qs *QuestStorage) []ShowMessage {
+	messages, _ := qs.GetMessages(bson.M{"answered":false, "is_key":false})
+	s_users, _ := qs.GetAllUsers()
+	s_user_map := map[string]QuestUserWrapper{}
+	for _, s_user := range s_users {
+		s_user_map[s_user.UserId] = s_user
+	}
+	out_messages := []ShowMessage{}
+	for _, message := range messages {
+		if u_info, ok := s_user_map[message.From]; ok {
+			message.From = GetUserName(u_info, message.From)
+			var last_key string
+			var next_key string
+			if _last_key, ok := u_info.LastKey[PROVIDER]; ok && _last_key != nil {
+				last_key = *_last_key
+				k_info, _ := qs.GetKeyInfo(*_last_key)
+				if k_info != nil && k_info.NextKey != nil {
+					nkp := k_info.NextKey
+					next_key = *nkp
+				}
+			}
+
+			out_message := ShowMessage{
+				From:MessageUserInfo{
+					Name:message.From,
+					LastKey:last_key,
+					NextKey:next_key,
+				},
+				Body:message.Body,
+				SID:message.SID,
+			}
+
+			out_messages = append(out_messages, out_message)
+		}
+	}
+	return out_messages
+}
+
 func ParseExportTxt(raw_data string, qs *QuestStorage) error {
 	keys := strings.Fields(string(raw_data))
 	for i, key := range keys {
@@ -63,7 +113,9 @@ func ParseExportXlsx(xlf *xlsx.File, qs *QuestStorage, skip_row, skip_cell int) 
 						if next_key_raw != "" {
 							next_key = &next_key_raw
 						}
-						qs.AddKey(key, description, next_key, is_first)
+						if key != "" && description != ""{
+							qs.AddKey(key, description, next_key, is_first)
+						}
 						is_first = false
 					}
 				}
@@ -88,6 +140,8 @@ func GetUserName(u_info QuestUserWrapper, default_res string) string {
 		return default_res
 	}
 }
+
+
 
 func Run(config c.QuestConfig, qs *QuestStorage, ntf *msngr.Notifier) {
 	m := martini.Classic()
@@ -183,54 +237,8 @@ func Run(config c.QuestConfig, qs *QuestStorage, ntf *msngr.Notifier) {
 		render.HTML(200, "quests/users_keys", result_map)
 	})
 
-	m.Get("/messages", func(user auth.User, render render.Render) {
-		type MessageUserInfo struct {
-			Name    string
-			LastKey string
-			NextKey string
-		}
-		type ShowMessage struct {
-			SID  string
-			From MessageUserInfo
-			Body string
-		}
-
-		messages, _ := qs.GetMessages(bson.M{"answered":false, "is_key":false})
-		s_users, _ := qs.GetAllUsers()
-		s_user_map := map[string]QuestUserWrapper{}
-		for _, s_user := range s_users {
-			s_user_map[s_user.UserId] = s_user
-		}
-		out_messages := []ShowMessage{}
-		for _, message := range messages {
-			if u_info, ok := s_user_map[message.From]; ok {
-				message.From = GetUserName(u_info, message.From)
-				var last_key string
-				var next_key string
-				if _last_key, ok := u_info.LastKey[PROVIDER]; ok && _last_key != nil {
-					last_key = *_last_key
-					k_info, _ := qs.GetKeyInfo(*_last_key)
-					if k_info!= nil && k_info.NextKey != nil {
-						nkp := k_info.NextKey
-						next_key = *nkp
-					}
-				}
-
-				out_message := ShowMessage{
-					From:MessageUserInfo{
-						Name:message.From,
-						LastKey:last_key,
-						NextKey:next_key,
-					},
-					Body:message.Body,
-					SID:message.SID,
-				}
-
-				out_messages = append(out_messages, out_message)
-			}
-		}
-
-
+	m.Get("/messages", func(render render.Render) {
+		out_messages := GetMessages(qs)
 		result_map := map[string]interface{}{
 			"messages":out_messages,
 			"error_text":"",
@@ -241,7 +249,7 @@ func Run(config c.QuestConfig, qs *QuestStorage, ntf *msngr.Notifier) {
 
 
 	ensure_messages_error := func(err error) map[string]interface{} {
-		messages, _ := qs.GetMessages(bson.M{"answered":false})
+		messages := GetMessages(qs)
 		return map[string]interface{}{
 			"error_text":err.Error(),
 			"is_error":true,
@@ -283,7 +291,7 @@ func Run(config c.QuestConfig, qs *QuestStorage, ntf *msngr.Notifier) {
 		}
 	})
 
-	m.Post("/message_all", func(render render.Render, request *http.Request) {
+	m.Post("/message_answer_all", func(render render.Render, request *http.Request) {
 		users, err := qs.GetSubscribedUsers()
 		if err != nil {
 			render.HTML(200, "quests/messages", ensure_messages_error(err))
