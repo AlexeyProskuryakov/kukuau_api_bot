@@ -41,11 +41,13 @@ type ShowMessage struct {
 	SID  string
 	From MessageUserInfo
 	Body string
+	Time time.Time
+	Answered bool
 }
 
 
-func GetMessages(qs *QuestStorage) []ShowMessage {
-	messages, _ := qs.GetMessages(bson.M{"answered":false, "is_key":false})
+func GetMessagesToShow(req bson.M, qs *QuestStorage) []ShowMessage {
+	messages, _ := qs.GetMessages(req)
 	s_users, _ := qs.GetAllUsers()
 	s_user_map := map[string]QuestUserWrapper{}
 	for _, s_user := range s_users {
@@ -74,6 +76,8 @@ func GetMessages(qs *QuestStorage) []ShowMessage {
 				},
 				Body:message.Body,
 				SID:message.SID,
+				Time:message.Time,
+				Answered:message.Answered,
 			}
 
 			out_messages = append(out_messages, out_message)
@@ -226,14 +230,7 @@ func Run(config c.QuestConfig, qs *QuestStorage, ntf *msngr.Notifier) {
 	})
 
 	m.Get("/users_keys", func(render render.Render) {
-		users_keys, err := qs.GetMessages(bson.M{"answered":false, "is_key":true})
-		if err != nil {
-			log.Printf("Error at getting users keys %v", err)
-		}
-		for i, mk := range users_keys {
-			mk.Time = time.Unix(mk.TimeStamp, 0)
-			users_keys[i] = mk
-		}
+		users_keys := GetMessagesToShow(bson.M{"answered":false, "is_key":true}, qs)
 
 		result_map := map[string]interface{}{
 			"keys":users_keys,
@@ -242,18 +239,16 @@ func Run(config c.QuestConfig, qs *QuestStorage, ntf *msngr.Notifier) {
 	})
 
 	m.Get("/messages", func(render render.Render) {
-		out_messages := GetMessages(qs)
+		out_messages := GetMessagesToShow(bson.M{"answered":false, "is_key":false}, qs)
 		result_map := map[string]interface{}{
 			"messages":out_messages,
-			"error_text":"",
-			"is_error":false,
 		}
 		render.HTML(200, "quests/messages", result_map)
 	})
 
 
 	ensure_messages_error := func(err error) map[string]interface{} {
-		messages := GetMessages(qs)
+		messages := GetMessagesToShow(bson.M{"answered":false, "is_key":false}, qs)
 		return map[string]interface{}{
 			"error_text":err.Error(),
 			"is_error":true,
@@ -263,7 +258,7 @@ func Run(config c.QuestConfig, qs *QuestStorage, ntf *msngr.Notifier) {
 
 	m.Get("/user_messages/:id", func(params martini.Params, render render.Render) {
 		message, _ := qs.GetMessage(params["id"])
-		user_messages, _ := qs.GetMessages(bson.M{"from":message.From, "is_key":false})
+		user_messages := GetMessagesToShow(bson.M{"from":message.From, "is_key":false}, qs)
 		user, _ := qs.GetUserInfo(message.From, PROVIDER)
 
 		render.HTML(200, "quests/user_messages", map[string]interface{}{
