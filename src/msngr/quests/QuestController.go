@@ -12,7 +12,6 @@ import (
 	"gopkg.in/mgo.v2"
 	"msngr/notify"
 	"regexp"
-	"msngr/utils"
 	"strings"
 )
 
@@ -53,8 +52,7 @@ func ProcessKeyUserResult(user_id, key string, qs *QuestStorage) (string, error,
 		log.Printf("QUESTS key [%v] user [%v] is NOT found because: %+v", user_id, err)
 		return "", err, false
 	}
-	log.Printf("QUESTS proces key resule: \nuser [%v] is found: \nkey [%v] is found: %+v%+v", user_id, user_info, key, key_info)
-
+	log.Printf("QUESTS proces key result: \nuser [%v] is founded: %+v \nand key [%v] is founded: %+v", user_id, user_info, key, key_info)
 	return key_info.Description, nil, true
 }
 
@@ -69,7 +67,6 @@ func (qmpp QuestMessagePersistProcessor) ProcessMessage(in *s.InPkg) *s.MessageR
 	commands := []s.OutCommand{}//getCommands(in, qmpp.Storage, qmpp.ConfigStorage)
 	log.Printf("QUESTS want to send simple message")
 	if in.Message.Body != nil {
-		//try recognise code at simple message
 		pkey := in.Message.Body
 		key := *pkey
 		key = strings.TrimSpace(key)
@@ -82,9 +79,8 @@ func (qmpp QuestMessagePersistProcessor) ProcessMessage(in *s.InPkg) *s.MessageR
 			qmpp.Storage.AddUser(in.From, name, email, phone, UNSUBSCRIBED, PROVIDER)
 		}
 
-
 		if key_reg.MatchString(key) {
-			key = strings.ToLower(key)
+			key = strings.TrimSpace(strings.ToLower(key))
 			descr, err, ok := ProcessKeyUserResult(in.From, key, qmpp.Storage)
 			log.Printf("QUESTS want to send key %v i have this answer for key: %v, err: %v, ok? %v", key, descr, err, ok)
 			if err == nil {
@@ -123,9 +119,6 @@ func FormQuestBotContext(conf c.Configuration, qname string, cs c.ConfigStorage,
 	}
 
 	result.Message_commands = map[string]s.MessageCommandProcessor{
-		//		"subscribe":&QuestSubscribeMessageProcessor{Storage:qs, AcceptPhrase:qconf.AcceptPhrase, RejectedPhrase:qconf.RejectPhrase, ErrorPhrase:qconf.ErrorPhrase, ConfigStorage:cs},
-		//		"unsubscribe":&QuestUnsubscribeMessageProcessor{Storage:qs, ConfigStorage:cs},
-		//		"key_input":&QuestKeyInputMessageProcessor{Storage:qs, ConfigStorage:cs},
 		"information":&QuestInfoMessageProcessor{Information:qconf.Info},
 		"":QuestMessagePersistProcessor{Storage:qs, ConfigStorage:cs},
 	}

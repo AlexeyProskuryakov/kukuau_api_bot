@@ -210,7 +210,7 @@ func Run(config c.QuestConfig, qs *QuestStorage, ntf *msngr.Notifier) {
 				if _last_key, ok := u_info.LastKey[PROVIDER]; ok && _last_key != nil {
 					last_key = *_last_key
 					k_info, _ := qs.GetKeyInfo(*_last_key)
-					if k_info.NextKey != nil {
+					if k_info!= nil && k_info.NextKey != nil {
 						nkp := k_info.NextKey
 						next_key = *nkp
 					}
