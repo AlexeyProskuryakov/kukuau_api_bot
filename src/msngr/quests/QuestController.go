@@ -76,6 +76,7 @@ func (qmpp QuestMessagePersistProcessor) ProcessMessage(in *s.InPkg) *s.MessageR
 			if in.UserData != nil {
 				name, email, phone = in.UserData.Name, in.UserData.Email, in.UserData.Phone
 			}
+			log.Printf("Adding user [%v] [%v] [%v]", name, email, phone)
 			qmpp.Storage.AddUser(in.From, name, email, phone, UNSUBSCRIBED, PROVIDER)
 		}
 

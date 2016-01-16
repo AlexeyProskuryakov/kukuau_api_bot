@@ -113,7 +113,7 @@ func ParseExportXlsx(xlf *xlsx.File, qs *QuestStorage, skip_row, skip_cell int) 
 						if next_key_raw != "" {
 							next_key = &next_key_raw
 						}
-						if key != "" && description != ""{
+						if key != "" && description != "" {
 							qs.AddKey(key, description, next_key, is_first)
 						}
 						is_first = false
@@ -128,17 +128,21 @@ func ParseExportXlsx(xlf *xlsx.File, qs *QuestStorage, skip_row, skip_cell int) 
 func GetUserName(u_info QuestUserWrapper, default_res string) string {
 	if u_info.Name != "" && u_info.Phone != "" {
 		return fmt.Sprintf("%v (%v)", u_info.Name, u_info.Phone)
-	} else if u_info.Name != "" && u_info.EMail != "" {
-		return fmt.Sprintf("%v (%v)", u_info.Name, u_info.EMail)
-	} else if u_info.Name != "" {
-		return u_info.Name
-	} else if u_info.Phone != "" {
-		return u_info.Phone
-	} else if u_info.EMail != "" {
-		return u_info.EMail
-	} else {
-		return default_res
 	}
+	if u_info.Name != "" && u_info.EMail != "" {
+		return fmt.Sprintf("%v (%v)", u_info.Name, u_info.EMail)
+	}
+	if u_info.Name != "" {
+		return u_info.Name
+	}
+	if u_info.Phone != "" {
+		return u_info.Phone
+	}
+	if u_info.EMail != "" {
+		return u_info.EMail
+	}
+	return default_res
+
 }
 
 
@@ -292,7 +296,7 @@ func Run(config c.QuestConfig, qs *QuestStorage, ntf *msngr.Notifier) {
 	})
 
 	m.Post("/message_answer_all", func(render render.Render, request *http.Request) {
-		users, err := qs.GetSubscribedUsers()
+		users, err := qs.GetAllUsers()
 		if err != nil {
 			render.HTML(200, "quests/messages", ensure_messages_error(err))
 		}
