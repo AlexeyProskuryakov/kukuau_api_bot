@@ -22,8 +22,8 @@
       "name": "marka",
       "api": {
         "geo_orbit": {
-          "lat": 54.642655,
-          "lon": 83.296285,
+          "lat": 54.863631,
+          "lon": 83.104081,
           "radius": 50000
         },
         "name": "infinity",
@@ -63,6 +63,11 @@
     },
     "academ": {
       "api": {
+        "geo_orbit": {
+          "lat": 54.760457,
+          "lon": 83.103499,
+          "radius": 50000
+        },
         "name": "infinity",
         "data": {
           "id_service": 5000181745,
@@ -148,6 +153,13 @@
         "phone": "123-45-67",
         "text": "Такси ! Самое лучшее такси в академгородке!"
       },
+      "available_commands": {
+        "created_order": [
+          "where_it",
+          "callback_request",
+          "car_position"
+        ]
+      },
       "api": {
         "geo_orbit": {
           "lat": 54.8580438,
@@ -168,13 +180,6 @@
           "sale_kw": ""
         },
         "not_send_price": true,
-        "available_commands": {
-          "created_order": [
-            "where_it",
-            "callback_request",
-            "car_position"
-          ]
-        },
         "markups": [
           "5059339030"
         ],

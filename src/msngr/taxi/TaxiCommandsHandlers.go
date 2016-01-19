@@ -105,6 +105,7 @@ var CommandsData = map[string]s.OutCommand{
 
 func EnsureAvailableCommands(default_cmds map[string]*[]s.OutCommand, available_cmds_info map[string][]string) map[string]*[]s.OutCommand {
 	//ensuring commands
+	log.Printf("Avaliable commands: %+v\nResult commands before%+v", available_cmds_info, default_cmds)
 	for cmd_type, cmd_names := range available_cmds_info {
 		if cmds_p, ok := default_cmds[cmd_type]; ok {
 			cmds := *cmds_p
@@ -118,6 +119,7 @@ func EnsureAvailableCommands(default_cmds map[string]*[]s.OutCommand, available_
 			default_cmds[cmd_type] = &cmds
 		}
 	}
+	log.Printf("Result commands after: \n%+v", default_cmds)
 	return default_cmds
 }
 
@@ -263,7 +265,7 @@ func (cp *TaxiCarPositionMessageProcessor) ProcessMessage(in *s.InPkg) *s.Messag
 	if order_wrapper != nil && !IsOrderNotActual(order_wrapper.OrderState) {
 		car_id_ := order_wrapper.OrderData.Get("IDCar")
 		if car_id_ == nil {
-			return &s.MessageResult{Body: "Не найден идентификатор автомобиля у вашего заказа :("}
+			return &s.MessageResult{Body: "Не найден идентификатор автомобиля у вашего заказа (видимо, автомобиль вам еще не назначили) :("}
 		}
 		car_id, ok := car_id_.(int64)
 		if !ok {
@@ -446,11 +448,7 @@ func _form_order(fields []s.InField, ah AddressHandler) (*NewOrderInfo, error) {
 			entrance = u.FirstOf(field.Data.Value, field.Data.Text).(string)
 		}
 	}
-
-	new_order := NewOrderInfo{}
-	note_info := "Тестирование."
-	new_order.Notes = note_info
-
+	new_order := NewOrderInfo{Notes:"Заказ создан через мессенджер Klichat"}
 	var dest, deliv AddressF
 	if ah != nil {
 		if !ah.IsHere(from_key) && !ah.IsHere(to_key) {
