@@ -434,24 +434,24 @@ func (p *infinity) ClearHistory() (bool, string) {
 //Taxi.WebAPI.Client.CancelOrder (Отказ от заказа) Устанавливает для указанного заказа состояние «Отменен»
 //Параметры:
 //Идентификатор заказа (Int64)
-func (p *infinity) CancelOrder(order int64) (bool, string) {
+func (p *infinity) CancelOrder(order int64) (bool, string, error) {
 	tmp, err := json.Marshal(order)
 	if err != nil {
 		log.Printf("error at marshal json to infinity %v", string(order))
-		return false, fmt.Sprint(err)
+		return false, fmt.Sprint(err), err
 	}
 
 	body, err := p._request("RemoteCall", map[string]string{"params": string(tmp), "method": "Taxi.WebAPI.Client.CancelOrder"})
 	if err != nil {
-		return false, fmt.Sprint(err)
+		return false, fmt.Sprint(err), err
 	}
 	var temp t.Answer
 	err = json.Unmarshal(body, &temp)
 	if err != nil {
 		log.Printf("error at unmarshal json from infinity %v", string(body))
-		return false, fmt.Sprint(err)
+		return false, fmt.Sprint(err), err
 	}
-	return temp.IsSuccess, temp.Message
+	return temp.IsSuccess, temp.Message, nil
 }
 
 //Taxi.WebAPI.Client.Feedback (Отправка отзыва о заказе)

@@ -81,15 +81,15 @@ func (inf *FakeTaxiAPI) Orders() []Order {
 	return inf.orders
 }
 
-func (inf *FakeTaxiAPI) CancelOrder(order_id int64) (bool, string) {
+func (inf *FakeTaxiAPI) CancelOrder(order_id int64) (bool, string, error) {
 	log.Println("FA order was canceled", order_id)
 	for i, order := range inf.orders {
 		if order.ID == order_id {
 			inf.orders[i].State = ORDER_CANCELED
-			return true, "test order was cancelled"
+			return true, "test order was cancelled", nil
 		}
 	}
-	return true, "Test order not found :( "
+	return true, "Test order not found :( ", nil
 }
 
 func (p *FakeTaxiAPI) CalcOrderCost(order NewOrderInfo) (int, string) {

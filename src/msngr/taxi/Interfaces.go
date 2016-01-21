@@ -11,7 +11,7 @@ type TaxiInterface interface {
 	ConnectInterface
 	NewOrder(order NewOrderInfo) Answer //создани нового заказа
 	CalcOrderCost(order NewOrderInfo) (int, string) //рассчет стоимости заказа
-	CancelOrder(order_id int64) (bool, string) //отмена заказа
+	CancelOrder(order_id int64) (bool, string, error) //отмена заказа
 	//For watching by current orders;
 	Orders() []Order //запрос списка текущих заказов
 	//For feedback by order info:

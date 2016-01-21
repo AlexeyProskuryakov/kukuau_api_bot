@@ -779,18 +779,18 @@ func (s *SediAPI)CalcOrderCost(order t.NewOrderInfo) (int, string) {
 	return -1, CAN_NOT_IMPLY_TARIFF
 }
 
-func (s *SediAPI)CancelOrder(order_id int64) (bool, string) {
+func (s *SediAPI)CancelOrder(order_id int64) (bool, string, error) {
 	res, err := s.getRequest("cancel_order", map[string]string{"orderid":strconv.FormatInt(order_id, 10)})
 	if err != nil {
 		log.Printf("SEDI CANCEL ORDER ERROR %v", err)
-		return false, fmt.Sprintf("Ошибка! %v", err)
+		return false, fmt.Sprintf("Ошибка! %v", err), err
 	}
 	response := SediResponse{}
 	err = json.Unmarshal(res, &response)
 	if err != nil {
 		log.Printf("SEDI UNMARSHAL CACNEL ERRROR %v \nresult: %s", err, res)
 	}
-	return response.Success, response.Message
+	return response.Success, response.Message, nil
 }
 
 var STATES_MAPPING = map[string]int{

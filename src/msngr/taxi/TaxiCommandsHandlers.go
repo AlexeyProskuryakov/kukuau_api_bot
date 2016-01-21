@@ -573,7 +573,7 @@ func (nop *TaxiNewOrderProcessor) ProcessMessage(in *s.InPkg) *s.MessageResult {
 		err = nop.Orders.AddOrderObject(&d.OrderWrapper{OrderState:ORDER_CREATED, Whom:in.From, OrderId:ans.Content.Id, Source:nop.context.Name})
 		err = nop.Orders.SetActive(ans.Content.Id, nop.context.Name, true)
 		if err != nil {
-			ok, message := nop.API.CancelOrder(ans.Content.Id)
+			ok, message, _ := nop.API.CancelOrder(ans.Content.Id)
 			log.Printf("Error at persist order. Cancelling order at external api with result: %v, %v", ok, message)
 			return s.ErrorMessageResult(err, nop.context.Commands[CMDS_NOT_CREATED_ORDER])
 		}
@@ -609,10 +609,14 @@ func (cop *TaxiCancelOrderProcessor) ProcessMessage(in *s.InPkg) *s.MessageResul
 		}
 		return s.ErrorMessageResult(errors.New("Order for it operation is unsuitable :("), cop.context.Commands[CMDS_NOT_CREATED_ORDER])
 	}
-	is_success, message := cop.API.CancelOrder(order_wrapper.OrderId)
-	if is_success {
+
+	is_success, message, err := cop.API.CancelOrder(order_wrapper.OrderId)
+	if err == nil {
 		cop.Orders.SetState(order_wrapper.OrderId, cop.context.Name, ORDER_CANCELED, nil)
 		cop.Orders.SetActive(order_wrapper.OrderId, order_wrapper.Source, false)
+	}
+
+	if is_success {
 		return &s.MessageResult{Body:"Ваш заказ отменен!", Commands: cop.context.Commands[CMDS_NOT_CREATED_ORDER], Type:"chat"}
 	} else {
 		return &s.MessageResult{Body:fmt.Sprintf("Проблемы с отменой заказа %v\nЗвони скорее: %+v ", message, cop.alert_phone), Commands: cop.context.Commands[CMDS_NOT_CREATED_ORDER], Type:"chat"}
