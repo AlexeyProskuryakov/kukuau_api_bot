@@ -40,7 +40,7 @@ func StreetsSearchController(w http.ResponseWriter, r *http.Request, i t.Address
 			if rows == nil {
 				return
 			}
-			log.Printf("was returned: %v rows", len(*rows))
+//			log.Printf("was returned: %v rows", len(*rows))
 			for _, nitem := range *rows {
 				var item DictItem
 
@@ -70,7 +70,7 @@ func StreetsSearchController(w http.ResponseWriter, r *http.Request, i t.Address
 		if err != nil {
 			log.Printf("SSC: ERROR At unmarshal:%+v", err)
 		}
-		fmt.Fprintf(w, "%s", string(ans))
+//		fmt.Fprintf(w, "%s", string(ans))
 	}
 }
 

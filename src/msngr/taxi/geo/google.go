@@ -165,13 +165,13 @@ func (ah *GoogleAddressHandler) GetExternalInfo(key, name string) (*t.AddressF, 
 		ah.cache_dests[key] = addr_details
 	}
 	address_components := addr_details.Result.AddressComponents
-	log.Printf(">>> [%v]\n%+v", key, address_components)
+//	log.Printf(">>> [%v]\n%+v", key, address_components)
 	query, google_set := _process_address_components(address_components)
 
 	if query == "" {
 		query = addr_details.Result.Name
 	}
-	log.Printf("<<< [%v]\n%+v", query, google_set)
+//	log.Printf("<<< [%v]\n%+v", query, google_set)
 	if !ah.ExternalAddressSupplier.IsConnected() {
 		return nil, errors.New("GetStreetId: External service is not avaliable")
 	}
@@ -186,9 +186,9 @@ func (ah *GoogleAddressHandler) GetExternalInfo(key, name string) (*t.AddressF, 
 		nitem := ext_rows[i]
 		external_set := GetSetOfAddressF(nitem)
 
-		log.Printf("GetStreetId [%v]:\n e: %+v < ? > g: %+v", query, external_set, google_set)
+//		log.Printf("GetStreetId [%v]:\n e: %+v < ? > g: %+v", query, external_set, google_set)
 		if google_set.IsSuperset(external_set) || external_set.IsSuperset(google_set) {
-			log.Printf("GetStreetId: [%+v] \nat %v", key, nitem.FullName)
+//			log.Printf("GetStreetId: [%+v] \nat %v", key, nitem.FullName)
 			ah.cache[key] = &nitem
 			return &nitem, nil
 		}
@@ -202,7 +202,7 @@ func (ah *GoogleAddressHandler) AddressesAutocomplete(q string) t.AddressPackage
 	result := t.AddressPackage{Rows:&rows}
 	suff := "/place/autocomplete/json"
 	url := GOOGLE_API_URL + suff
-	log.Printf(fmt.Sprintf("location= %v,%v", ah.orbit.Lat, ah.orbit.Lon))
+//	log.Printf(fmt.Sprintf("location= %v,%v", ah.orbit.Lat, ah.orbit.Lon))
 	address_result := GoogleResultAddress{}
 	params := map[string]string{
 		"components": "country:ru",
@@ -235,7 +235,7 @@ func _process_address_components(components []GoogleAddressComponent) (string, s
 	google_set := s.NewSet()
 	for _, component := range components {
 		if u.IntersectionS(NOT_IMPLY_TYPES, component.Types) {
-			log.Printf("component type %+v \ncontains not imply types: %v", component, component.Types)
+//			log.Printf("component type %+v \ncontains not imply types: %v", component, component.Types)
 			continue
 		} else {
 			long_name, err := AddStringToSet(google_set, component.LongName)

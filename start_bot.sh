@@ -18,7 +18,7 @@ LOG=${HOME}/logs/sdb.logs
 
 start()
 {   
-    export GOPATH=${HOME}
+    GOPATH=${HOME}
 
     ${EXEC} get github.com/looplab/fsm
     ${EXEC} get gopkg.in/mgo.v2

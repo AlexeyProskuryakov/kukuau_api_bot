@@ -105,7 +105,7 @@ var CommandsData = map[string]s.OutCommand{
 
 func EnsureAvailableCommands(default_cmds map[string]*[]s.OutCommand, available_cmds_info map[string][]string) map[string]*[]s.OutCommand {
 	//ensuring commands
-	log.Printf("Avaliable commands: %+v\nResult commands before%+v", available_cmds_info, default_cmds)
+//	log.Printf("Avaliable commands: %+v\nResult commands before%+v", available_cmds_info, default_cmds)
 	for cmd_type, cmd_names := range available_cmds_info {
 		if cmds_p, ok := default_cmds[cmd_type]; ok {
 			cmds := *cmds_p
@@ -119,7 +119,7 @@ func EnsureAvailableCommands(default_cmds map[string]*[]s.OutCommand, available_
 			default_cmds[cmd_type] = &cmds
 		}
 	}
-	log.Printf("Result commands after: \n%+v", default_cmds)
+//	log.Printf("Result commands after: \n%+v", default_cmds)
 	return default_cmds
 }
 
@@ -288,7 +288,7 @@ type TaxiWriteDispatcherMessageProcessor struct {
 
 func get_text(in s.InCommand) (s string, err error) {
 	if len(in.Form.Fields) == 1 {
-		log.Printf("TAXI Getting text from: %+v\n at: %+v", in.Form.Fields[0])
+//		log.Printf("TAXI Getting text from: %+v\n at: %+v", in.Form.Fields[0])
 		if s, ok := u.FirstOf(in.Form.Fields[0].Data.Text, in.Form.Fields[0].Data.Value).(string); ok {
 			return s, nil
 		}
@@ -307,7 +307,7 @@ func (smp *TaxiWriteDispatcherMessageProcessor) ProcessMessage(in *s.InPkg) *s.M
 	commands := *cmds
 	message, err := get_text(commands[0])
 	message, ok := u.FirstOf(*in.Message.Body, message).(string)
-	log.Printf("TAXI Write dispatcher message: %s", message)
+//	log.Printf("TAXI Write dispatcher message: %s", message)
 	if err != nil {
 		return &s.MessageResult{Body:fmt.Sprintf("Ошибка! %v", err)}
 	}
@@ -467,7 +467,7 @@ func _form_order(fields []s.InField, ah AddressHandler) (*NewOrderInfo, error) {
 		deliv = *del_id_street_
 		dest = *dest_id_street_
 	} else {
-		log.Printf("Address handler is nil. Using street id and name values... [%v] %v --> [%v] %v", from_key, from_name, to_key, to_name)
+//		log.Printf("Address handler is nil. Using street id and name values... [%v] %v --> [%v] %v", from_key, from_name, to_key, to_name)
 		err := json.Unmarshal([]byte(from_key), &deliv)
 		if err != nil {
 			log.Printf("FORM ORDER Error at unmarshal address from; %v\n%v", err, from_key)
@@ -476,7 +476,7 @@ func _form_order(fields []s.InField, ah AddressHandler) (*NewOrderInfo, error) {
 		if err != nil {
 			log.Printf("FORM ORDER Error at unmarshal address to; %v\n%v", err, to_key)
 		}
-		log.Printf("\nDelivery: %v\nDestination: %v", deliv, dest)
+//		log.Printf("\nDelivery: %v\nDestination: %v", deliv, dest)
 	}
 	deliv_id := strconv.FormatInt(deliv.ID, 10)
 	dest_id := strconv.FormatInt(dest.ID, 10)
@@ -537,11 +537,11 @@ func (nop *TaxiNewOrderProcessor) ProcessMessage(in *s.InPkg) *s.MessageResult {
 		}
 
 		new_order, err := _form_order(commands[0].Form.Fields, nop.AddressHandler)
-		log.Printf("TAXI ORDER FORMED: %v\n err? %v", new_order, err)
+//		log.Printf("TAXI ORDER FORMED: %v\n err? %v", new_order, err)
 		if err != nil {
-			log.Printf("Error at forming order: %+v", err)
-			if err_val, ok := err.(*AddressNotHere); ok {
-				log.Printf("Addrss not here! %+v", err_val)
+//			log.Printf("Error at forming order: %+v", err)
+			if _, ok := err.(*AddressNotHere); ok {
+//				log.Printf("Addrss not here! %+v", err_val)
 				return &s.MessageResult{
 					Body: "Адрес не поддерживается этим такси.",
 					Commands: nop.context.Commands[CMDS_NOT_CREATED_ORDER],
@@ -556,8 +556,6 @@ func (nop *TaxiNewOrderProcessor) ProcessMessage(in *s.InPkg) *s.MessageResult {
 			markups, ok := mrkps.([]string)
 			if ok {
 				new_order.Markups = markups
-			}else {
-				log.Printf("markups setting present but it is not []string %+v, %T", mrkps, mrkps)
 			}
 		}
 		cost, _ := nop.API.CalcOrderCost(*new_order)
@@ -607,11 +605,6 @@ func (cop *TaxiCancelOrderProcessor) ProcessMessage(in *s.InPkg) *s.MessageResul
 		return s.ErrorMessageResult(err, cop.context.Commands[CMDS_NOT_CREATED_ORDER])
 	}
 	if order_wrapper == nil || order_wrapper.Active == false {
-		if order_wrapper != nil {
-			log.Printf("Order is %v active? (%v)", order_wrapper, order_wrapper.Active)
-		} else {
-			log.Printf("Order not found...")
-		}
 		return s.ErrorMessageResult(errors.New("Order for it operation is unsuitable :("), cop.context.Commands[CMDS_NOT_CREATED_ORDER])
 	}
 
