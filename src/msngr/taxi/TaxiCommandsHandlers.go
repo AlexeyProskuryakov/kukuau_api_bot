@@ -287,11 +287,14 @@ type TaxiWriteDispatcherMessageProcessor struct {
 }
 
 func get_text(in s.InCommand) (s string, err error) {
-	if len(in.Form.Fields) > 0 {
-		s = in.Form.Fields[0].Data.Text
-		return s, nil
+	if len(in.Form.Fields) == 1 {
+		log.Printf("TAXI Getting text from: %+v\n at: %+v", in.Form.Fields[0])
+		if s, ok := u.FirstOf(in.Form.Fields[0].Data.Text, in.Form.Fields[0].Data.Value).(string); ok {
+			return s, nil
+		}
+		return "", errors.New("Can not find text at this form :(")
 	} else {
-		err = errors.New("No fields in input command")
+		err = errors.New("No fields in input command :(")
 		return s, err
 	}
 }
@@ -303,13 +306,15 @@ func (smp *TaxiWriteDispatcherMessageProcessor) ProcessMessage(in *s.InPkg) *s.M
 	}
 	commands := *cmds
 	message, err := get_text(commands[0])
+	message, ok := u.FirstOf(*in.Message.Body, message).(string)
+	log.Printf("TAXI Write dispatcher message: %s", message)
 	if err != nil {
 		return &s.MessageResult{Body:fmt.Sprintf("Ошибка! %v", err)}
 	}
 	ok, result := smp.API.WriteDispatcher(message)
 	var text string
 	if ok {
-		text = fmt.Sprintf("Спасибо за ваш отзыв!\n%s", result)
+		text = result
 	} else {
 		text = fmt.Sprintf("Спасибо за ваш отзыв! Но сообщение доставленно с ошибкой\n%s\nопробуйте снова", result)
 	}
@@ -659,6 +664,7 @@ func _get_feedback(fields []s.InField) (fdb string, rate int) {
 			fdb = u.FirstOf(v.Data.Value, v.Data.Text).(string)
 		}
 	}
+	rate = 5
 	return fdb, rate
 }
 

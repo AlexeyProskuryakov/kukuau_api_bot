@@ -118,15 +118,15 @@ func (p *FakeTaxiAPI) GetCarsInfo() []CarInfo {
 
 func (p *FakeTaxiAPI) WriteDispatcher(message string) (bool, string) {
 	log.Printf("I have new message: %s", message)
-	return true, ""
+	return true, "Мессадж доставлен. Окстись."
 }
 
 func (p *FakeTaxiAPI) CallbackRequest(phone string) (bool, string) {
 	log.Printf("I must call to: %s", phone)
-	return true, ""
+	return true, "Вам перезвонят."
 }
 
 func (p *FakeTaxiAPI) WhereIt(order_id int64) (bool, string) {
 	log.Printf("Whre it for %v", order_id)
-	return true, ""
+	return true, "Водитель вас тоже не видет. Покрутитеся вокруг, авось чего узреите."
 }

@@ -390,7 +390,9 @@ func (p *infinity) WriteDispatcher(message string) (bool, string /*, string*/) {
 		log.Printf("error at marshal json to infinity %v", string(message))
 		return false, fmt.Sprint(err)
 	}
-	body, err := p._request("RemoteCall", map[string]string{"params": string(tmp), "method": "Taxi.WebAPI.Client.SendMessage"})
+	params := map[string]string{"params": string(tmp), "method": "Taxi.WebAPI.Client.SendMessage"}
+	log.Printf("INF: Write dispatcher: %+v", params)
+	body, err := p._request("RemoteCall", params)
 	var temp t.Answer
 	err = json.Unmarshal(body, &temp)
 	if err != nil {
