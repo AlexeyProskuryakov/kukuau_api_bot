@@ -70,7 +70,7 @@ func StreetsSearchController(w http.ResponseWriter, r *http.Request, i t.Address
 		if err != nil {
 			log.Printf("SSC: ERROR At unmarshal:%+v", err)
 		}
-//		fmt.Fprintf(w, "%s", string(ans))
+		fmt.Fprintf(w, "%s", string(ans))
 	}
 }
 
