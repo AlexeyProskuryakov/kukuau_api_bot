@@ -391,7 +391,7 @@ func (p *infinity) WriteDispatcher(message string) (bool, string /*, string*/) {
 		return false, fmt.Sprint(err)
 	}
 	params := map[string]string{"params": string(tmp), "method": "Taxi.WebAPI.Client.SendMessage"}
-	log.Printf("INF: Write dispatcher: %+v", params)
+//	log.Printf("INF: Write dispatcher: %+v", params)
 	body, err := p._request("RemoteCall", params)
 	var temp t.Answer
 	err = json.Unmarshal(body, &temp)
@@ -408,7 +408,7 @@ func (p *infinity) CallbackRequest(phone string) (bool, string) {
 		log.Printf("error at marshal json to infinity %v", string(phone))
 		return false, fmt.Sprint(err)
 	}
-	log.Printf("Callback request (jsoned) %s", tmp)
+//	log.Printf("Callback request (jsoned) %s", tmp)
 	body, err := p._request("RemoteCall", map[string]string{"params": string(tmp), "method": "Taxi.WebAPI.Client.CallbackRequest"})
 	var temp t.Answer
 	err = json.Unmarshal(body, &temp)

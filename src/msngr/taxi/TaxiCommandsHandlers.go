@@ -315,7 +315,7 @@ func (smp *TaxiWriteDispatcherMessageProcessor) ProcessMessage(in *s.InPkg) *s.M
 	} else{
 		return &s.MessageResult{Body:"Ошибка, совсем нет букв. Мне нечего отправить диспетчеру :("}
 	}
-	log.Printf("TAXI Write dispatcher message: %s", message)
+//	log.Printf("TAXI Write dispatcher message: %s", message)
 	ok, result := smp.API.WriteDispatcher(message)
 	var text string
 	if ok {
