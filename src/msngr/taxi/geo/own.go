@@ -14,7 +14,6 @@ import (
 	u "msngr/utils"
 	c "msngr/configuration"
 	m "msngr"
-
 )
 /*
 Open street map and elastic search handler
@@ -82,7 +81,7 @@ func (oh *OwnAddressHandler) AddressesAutocomplete(q string) t.AddressPackage {
 	result := t.AddressPackage{Rows:&rows}
 
 	t_query := elastic.NewTermQuery("name", q)
-	filter := elastic.NewGeoDistanceFilter("location_filter").Distance("50km").Distance("km").Lat(oh.orbit.Lat).Lon(oh.orbit.Lon)
+	filter := elastic.NewGeoDistanceFilter("location_filter").Distance("50km").Lat(oh.orbit.Lat).Lon(oh.orbit.Lon)
 	query := elastic.NewFilteredQuery(t_query).Filter(filter)
 	rows = get_own_result(oh.client, query)
 
