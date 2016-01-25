@@ -30,10 +30,11 @@ type AutocompleteEntity struct {
 	Name string `json:"name"`
 	OSM_ID int64 `json:"osm_id"`
 	City string `json:"city"`
+	Location Coordinates `json:"location"`
 }
 
 func main() {
-	client, err := elastic.NewClient()
+	client, err := elastic.NewClient(elastic.SetURL("http://msg.kuku-au.com:9200"))
 	if err != nil {
 		log.Printf("elastic err: %v", err)
 		return
@@ -47,7 +48,8 @@ func main() {
 	Do()
 	if err != nil {
 		// Handle error
-		panic(err)
+		log.Printf("error %v", err)
+		return
 	}
 	log.Println(searchPhotonResult)
 	var eet ElEntity
@@ -65,6 +67,7 @@ func main() {
 			}
 			index_el.OSM_ID = entity.OSM_ID
 			index_el.City = entity.City.Default
+			index_el.Location = entity.Coordinates
 
 			_, err = client.Index().
 			Index("autocomplete").

@@ -16,8 +16,8 @@ curl -XPOST "http://localhost:9200/autocomplete" -d '{
         "filter": {
           "title_ngram": {
             "type": "nGram",
-            "min_gram": 3,
-            "max_gram": 5
+            "min_gram": 2,
+            "max_gram": 10
           }
         }
       }
@@ -36,6 +36,9 @@ curl -XPOST "http://localhost:9200/autocomplete" -d '{
         "osm_id": {
           "type": "long",
           "index": "not_analyzed"
+        },
+        "location":{
+          "type":"geo_point"
         }
       }
     }
