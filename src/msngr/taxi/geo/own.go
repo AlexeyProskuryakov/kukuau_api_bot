@@ -60,9 +60,12 @@ type OsmAutocompleteEntity struct {
 
 func get_own_result(client *elastic.Client, t_query elastic.TermQuery, filter elastic.Filter) []t.AddressF {
 	rows := []t.AddressF{}
-	s_result, err := client.Search().Index("autocomplete").Query(t_query).PostFilter(filter).Do()
+	fq := elastic.NewFilteredQuery(t_query).Filter(filter)
+	s_result, err := client.Search().Index("autocomplete").Query(fq).Do()
+
 	if err != nil {
 		log.Printf("error in own address handler search at search in elastic %v", err)
+		return rows
 	}
 	var oae OsmAutocompleteEntity
 	for _, osm_hit := range s_result.Each(reflect.TypeOf(oae)) {
