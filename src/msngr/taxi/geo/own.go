@@ -61,13 +61,11 @@ type OsmAutocompleteEntity struct {
 	City   string `json:"city"`
 }
 
-func get_own_result(client *elastic.Client, t_query elastic.TermQuery, filter elastic.Filter) []t.AddressF {
+func get_own_result(client *elastic.Client, query elastic.Query) []t.AddressF {
 	rows := []t.AddressF{}
-	fq := elastic.NewFilteredQuery(t_query).Filter(filter)
-	s_result, err := client.Search().Index("autocomplete").Query(fq).Do()
-
+	s_result, err := client.Search().Index("autocomplete").Query(query).Pretty(true).Do()
 	if err != nil {
-		log.Printf("error in own address handler search at search in elastic %v", err)
+		log.Printf("error in own address handler search at search in elastic: \n%v", err)
 		return rows
 	}
 	var oae OsmAutocompleteEntity
@@ -82,13 +80,12 @@ func get_own_result(client *elastic.Client, t_query elastic.TermQuery, filter el
 func (oh *OwnAddressHandler) AddressesAutocomplete(q string) t.AddressPackage {
 	rows := []t.AddressF{}
 	result := t.AddressPackage{Rows:&rows}
+
 	t_query := elastic.NewTermQuery("name", q)
-	filter := elastic.NewGeoDistanceFilter("location_filter")
-	filter.Distance("50km")
-	filter.Lat(oh.orbit.Lat)
-	filter.Lon(oh.orbit.Lon)
-	log.Printf("OWN AH Geo distance filter: %+v", filter.Source())
-	rows = get_own_result(oh.client, t_query, filter)
+	filter := elastic.NewGeoDistanceFilter("location_filter").Distance("50km").Distance("km").Lat(oh.orbit.Lat).Lon(oh.orbit.Lon)
+	query := elastic.NewFilteredQuery(t_query).Filter(filter)
+	rows = get_own_result(oh.client, query)
+
 	return result
 }
 
