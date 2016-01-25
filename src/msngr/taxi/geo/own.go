@@ -35,9 +35,12 @@ func NewOwnAddressHandler(conn_str string, orbit c.TaxiGeoOrbit, external t.Addr
 		log.Printf("Error at connect to elastic")
 		return nil
 	}
-	result := OwnAddressHandler{client:client, connect_string:conn_str}
-	result.orbit = orbit
-	result.ExternalAddressSupplier = external
+	result := OwnAddressHandler{
+		client:client,
+		connect_string:conn_str,
+		orbit:orbit,
+		ExternalAddressSupplier:external}
+	log.Printf("Create new own address handler: %+v", result)
 	return &result
 }
 
@@ -84,6 +87,7 @@ func (oh *OwnAddressHandler) AddressesAutocomplete(q string) t.AddressPackage {
 	filter.Distance("50km")
 	filter.Lat(oh.orbit.Lat)
 	filter.Lon(oh.orbit.Lon)
+	log.Printf("OWN AH Geo distance filter: %+v", filter.Source())
 	rows = get_own_result(oh.client, t_query, filter)
 	return result
 }
