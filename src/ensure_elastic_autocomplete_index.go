@@ -43,7 +43,7 @@ func main() {
 	searchPhotonResult, err := client.Search().
 	Index("photon").
 	Query(&termQuery).
-	Size(math.MaxInt64).
+	Size(math.MaxInt32).
 	Pretty(true).
 	Do()
 	if err != nil {
