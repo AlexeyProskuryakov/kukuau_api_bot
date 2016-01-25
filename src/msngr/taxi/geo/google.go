@@ -13,6 +13,7 @@ import (
 	s "msngr/taxi/set"
 	"msngr/utils"
 
+"strings"
 )
 
 var NOT_IMPLY_TYPES = []string{"country"}
@@ -250,3 +251,32 @@ func _process_address_components(components []GoogleAddressComponent) (string, s
 	}
 	return route, google_set
 }
+
+func _get_street_name_shortname(input string) (string, string) {
+	addr_split := strings.Split(input, " ")
+	var street_type, street_name string
+	for _, sn_part := range addr_split {
+		if u.InS(sn_part, []string{"улица", "проспект", "площадь", "переулок", "шоссе", "магистраль"}) {
+			street_type = _shorten_street_type(sn_part)
+		} else {
+			if street_name == "" {
+				street_name += sn_part
+			}else {
+				street_name += " "
+				street_name += sn_part
+			}
+		}
+	}
+	return street_name, street_type
+}
+
+func _shorten_street_type(input string) string {
+	runes_array := []rune(input)
+	if u.InS(input, []string{"улица", "проспект", "площадь"}) {
+		return string(runes_array[:2]) + "."
+	}else if u.InS(input, []string{"переулок", "шоссе", "магистраль"}) {
+		return string(runes_array[:3]) + "."
+	}
+	return string(runes_array)
+}
+

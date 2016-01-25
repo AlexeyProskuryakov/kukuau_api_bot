@@ -13,7 +13,7 @@ import (
 	s "msngr/taxi/set"
 	u "msngr/utils"
 	c "msngr/configuration"
-	m "msngr"
+
 )
 /*
 Open street map and elastic search handler
@@ -71,7 +71,7 @@ func get_own_result(client *elastic.Client, query elastic.Query, sort elastic.So
 	for _, osm_hit := range s_result.Each(reflect.TypeOf(oae)) {
 		if entity, ok := osm_hit.(OsmAutocompleteEntity); ok {
 			entity_hash := fmt.Sprintf("%v%v", entity.Name, entity.City)
-			if !name_city_set.Contains(entity_hash){
+			if !name_city_set.Contains(entity_hash) {
 				rows = append(rows, t.AddressF{OSM_ID:entity.OSM_ID, Name:entity.Name, City:entity.City})
 				name_city_set.Add(entity_hash)
 			}
@@ -88,11 +88,11 @@ func (oh *OwnAddressHandler) AddressesAutocomplete(q string) t.AddressPackage {
 	filter := elastic.NewGeoDistanceFilter("location").Distance("50km").Lat(oh.orbit.Lat).Lon(oh.orbit.Lon)
 	query := elastic.NewFilteredQuery(t_query).Filter(filter)
 	sort := elastic.NewGeoDistanceSort("location").
-		Order(true).
-		Point(oh.orbit.Lat, oh.orbit.Lon).
-		Unit("km").
-		SortMode("min").
-		Asc()
+	Order(true).
+	Point(oh.orbit.Lat, oh.orbit.Lon).
+	Unit("km").
+	SortMode("min").
+	Asc()
 
 	rows = get_own_result(oh.client, query, sort)
 	return result
@@ -155,9 +155,9 @@ func (oh *OwnAddressHandler) GetExternalInfo(key, name string) (*t.AddressF, err
 			_name := clear_address_string(u.FirstOf(entity.Name.Ru, entity.Name.Default).(string))
 			add_to_set(local_set, _name)
 			add_to_set(local_set, clear_address_string(u.FirstOf(entity.City.Ru, entity.City.Default).(string)))
-			if m.DEBUG {
-				log.Printf("OWN GEI name == _name ? %v", name == _name)
-			}
+
+			log.Printf("OWN predict name: %v (input name: %v)\nset: %+v", _name, name, local_set)
+
 			rows := oh.ExternalAddressSupplier.AddressesAutocomplete(_name).Rows
 			if rows == nil {
 				return nil, errors.New("GetStreetId: no results at external")
@@ -167,7 +167,9 @@ func (oh *OwnAddressHandler) GetExternalInfo(key, name string) (*t.AddressF, err
 			for i := len(ext_rows) - 1; i >= 0; i-- {
 				nitem := ext_rows[i]
 				ext_set := GetSetOfAddressF(nitem)
+				log.Printf("OWN External set: \n%+v", ext_set)
 				if ext_set.IsSuperset(local_set) || local_set.IsSuperset(ext_set) {
+					log.Printf("OWN result of comparing: %+v", nitem)
 					return &nitem, nil
 				}
 			}
@@ -175,11 +177,6 @@ func (oh *OwnAddressHandler) GetExternalInfo(key, name string) (*t.AddressF, err
 	}
 	return nil, errors.New(fmt.Sprintf("No any results for [%v] address in external source", key))
 }
-
-
-
-
-
 
 func clear_address_string(element string) (string) {
 	result := strings.ToLower(element)
@@ -198,34 +195,6 @@ func add_to_set(set s.Set, element string) (string, error) {
 	return element, errors.New(fmt.Sprintf("can not imply %+v ==> %+v", element, result))
 }
 
-
-func _get_street_name_shortname(input string) (string, string) {
-	addr_split := strings.Split(input, " ")
-	var street_type, street_name string
-	for _, sn_part := range addr_split {
-		if u.InS(sn_part, []string{"улица", "проспект", "площадь", "переулок", "шоссе", "магистраль"}) {
-			street_type = _shorten_street_type(sn_part)
-		} else {
-			if street_name == "" {
-				street_name += sn_part
-			}else {
-				street_name += " "
-				street_name += sn_part
-			}
-		}
-	}
-	return street_name, street_type
-}
-
-func _shorten_street_type(input string) string {
-	runes_array := []rune(input)
-	if u.InS(input, []string{"улица", "проспект", "площадь"}) {
-		return string(runes_array[:2]) + "."
-	}else if u.InS(input, []string{"переулок", "шоссе", "магистраль"}) {
-		return string(runes_array[:3]) + "."
-	}
-	return string(runes_array)
-}
 
 
 
