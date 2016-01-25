@@ -706,7 +706,7 @@ func (p *infinity) AddressesAutocomplete(text string) t.AddressPackage {
 		return t.AddressPackage{}
 	}
 	var temp []t.AddressPackage
-	log.Printf("INF ADDRESS AUTOCOMPLETE FOR %s \nRETRIEVE THIS:%s", text, string(body))
+	//log.Printf("INF ADDRESS AUTOCOMPLETE FOR %s \nRETRIEVE THIS:%s", text, string(body))
 	err = json.Unmarshal(body, &temp)
 	if err != nil {
 		log.Printf("error at unmarshal json from infinity %s", string(body))

@@ -39,7 +39,6 @@ func NewOwnAddressHandler(conn_str string, orbit c.TaxiGeoOrbit, external t.Addr
 		connect_string:conn_str,
 		orbit:orbit,
 		ExternalAddressSupplier:external}
-	log.Printf("Create new own address handler: %+v", result)
 	return &result
 }
 
@@ -68,9 +67,14 @@ func get_own_result(client *elastic.Client, query elastic.Query, sort elastic.So
 		return rows
 	}
 	var oae OsmAutocompleteEntity
+	name_city_set := s.NewSet()
 	for _, osm_hit := range s_result.Each(reflect.TypeOf(oae)) {
 		if entity, ok := osm_hit.(OsmAutocompleteEntity); ok {
-			rows = append(rows, t.AddressF{OSM_ID:entity.OSM_ID, Name:entity.Name, City:entity.City})
+			entity_hash := fmt.Sprintf("%v%v", entity.Name, entity.City)
+			if !name_city_set.Contains(entity_hash){
+				rows = append(rows, t.AddressF{OSM_ID:entity.OSM_ID, Name:entity.Name, City:entity.City})
+				name_city_set.Add(entity_hash)
+			}
 		}
 	}
 	return rows

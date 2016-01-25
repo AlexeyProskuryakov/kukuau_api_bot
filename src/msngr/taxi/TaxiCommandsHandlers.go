@@ -563,7 +563,6 @@ func (nop *TaxiNewOrderProcessor) ProcessMessage(in *s.InPkg) *s.MessageResult {
 				new_order.Markups = markups
 			}
 		}
-		cost, _ := nop.API.CalcOrderCost(*new_order)
 		ans := nop.API.NewOrder(*new_order)
 		if !ans.IsSuccess {
 			nop.Errors.StoreError(in.From, ans.Message)
@@ -571,13 +570,6 @@ func (nop *TaxiNewOrderProcessor) ProcessMessage(in *s.InPkg) *s.MessageResult {
 		}
 		log.Printf("Order was created! %+v \n with content: %+v", ans, ans.Content)
 
-		not_send_price := false
-		nsp_, ok := nop.context.Settings["not_send_price"]
-		if ok {
-			if _nsp, ok := nsp_.(bool); ok {
-				not_send_price = _nsp
-			}
-		}
 		err = nop.Orders.AddOrderObject(&d.OrderWrapper{OrderState:ORDER_CREATED, Whom:in.From, OrderId:ans.Content.Id, Source:nop.context.Name})
 		err = nop.Orders.SetActive(ans.Content.Id, nop.context.Name, true)
 		if err != nil {
@@ -586,9 +578,22 @@ func (nop *TaxiNewOrderProcessor) ProcessMessage(in *s.InPkg) *s.MessageResult {
 			return s.ErrorMessageResult(err, nop.context.Commands[CMDS_NOT_CREATED_ORDER])
 		}
 		text := ""
+
+		not_send_price := false
+
+		if nsp_, ok := nop.context.Settings["not_send_price"]; ok {
+			if _nsp, ok := nsp_.(bool); ok {
+				not_send_price = _nsp
+			}
+		}
+
 		if not_send_price {
 			text = "Ваш заказ создан!"
 		} else {
+			cost, _ := nop.API.CalcOrderCost(*new_order)
+			if cost == 0{
+				log.Printf("Order %v, %v with ZERO cost", nop.context.Name, new_order)
+			}
 			text = fmt.Sprintf("Ваш заказ создан! Стоимость поездки составит %+v рублей.", cost)
 		}
 		return &s.MessageResult{Body:text, Commands:nop.context.Commands[CMDS_CREATED_ORDER], Type:"chat"}
