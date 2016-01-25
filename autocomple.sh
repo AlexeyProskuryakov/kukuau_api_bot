@@ -44,6 +44,6 @@ curl -XPOST "http://localhost:9200/autocomplete" -d '{
     }
   }
 }'
-
+GOPATH="/data/kuku/taxi_academ_bot"
 go get gopkg.in/olivere/elastic.v2
 go run src/ensure_elastic_autocomplete_index.go

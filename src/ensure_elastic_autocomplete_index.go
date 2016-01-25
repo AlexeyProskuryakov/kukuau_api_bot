@@ -34,7 +34,7 @@ type AutocompleteEntity struct {
 }
 
 func main() {
-	client, err := elastic.NewClient(elastic.SetURL("http://msg.kuku-au.com:9200"))
+	client, err := elastic.NewClient()
 	if err != nil {
 		log.Printf("elastic err: %v", err)
 		return
@@ -47,8 +47,7 @@ func main() {
 	Pretty(true).
 	Do()
 	if err != nil {
-		// Handle error
-		log.Printf("error %v", err)
+		log.Printf("ERROR: %v",err)
 		return
 	}
 	log.Println(searchPhotonResult)
@@ -88,5 +87,6 @@ func main() {
 		}
 
 	}
+	log.Printf("Was processed: %v results", count)
 
 }
