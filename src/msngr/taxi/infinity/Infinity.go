@@ -390,7 +390,9 @@ func (p *infinity) WriteDispatcher(message string) (bool, string /*, string*/) {
 		log.Printf("error at marshal json to infinity %v", string(message))
 		return false, fmt.Sprint(err)
 	}
-	body, err := p._request("RemoteCall", map[string]string{"params": string(tmp), "method": "Taxi.WebAPI.Client.SendMessage"})
+	params := map[string]string{"params": string(tmp), "method": "Taxi.WebAPI.Client.SendMessage"}
+//	log.Printf("INF: Write dispatcher: %+v", params)
+	body, err := p._request("RemoteCall", params)
 	var temp t.Answer
 	err = json.Unmarshal(body, &temp)
 	if err != nil {
@@ -406,7 +408,7 @@ func (p *infinity) CallbackRequest(phone string) (bool, string) {
 		log.Printf("error at marshal json to infinity %v", string(phone))
 		return false, fmt.Sprint(err)
 	}
-	log.Printf("Callback request (jsoned) %s", tmp)
+//	log.Printf("Callback request (jsoned) %s", tmp)
 	body, err := p._request("RemoteCall", map[string]string{"params": string(tmp), "method": "Taxi.WebAPI.Client.CallbackRequest"})
 	var temp t.Answer
 	err = json.Unmarshal(body, &temp)
@@ -434,24 +436,24 @@ func (p *infinity) ClearHistory() (bool, string) {
 //Taxi.WebAPI.Client.CancelOrder (Отказ от заказа) Устанавливает для указанного заказа состояние «Отменен»
 //Параметры:
 //Идентификатор заказа (Int64)
-func (p *infinity) CancelOrder(order int64) (bool, string) {
+func (p *infinity) CancelOrder(order int64) (bool, string, error) {
 	tmp, err := json.Marshal(order)
 	if err != nil {
 		log.Printf("error at marshal json to infinity %v", string(order))
-		return false, fmt.Sprint(err)
+		return false, fmt.Sprint(err), err
 	}
 
 	body, err := p._request("RemoteCall", map[string]string{"params": string(tmp), "method": "Taxi.WebAPI.Client.CancelOrder"})
 	if err != nil {
-		return false, fmt.Sprint(err)
+		return false, fmt.Sprint(err), err
 	}
 	var temp t.Answer
 	err = json.Unmarshal(body, &temp)
 	if err != nil {
 		log.Printf("error at unmarshal json from infinity %v", string(body))
-		return false, fmt.Sprint(err)
+		return false, fmt.Sprint(err), err
 	}
-	return temp.IsSuccess, temp.Message
+	return temp.IsSuccess, temp.Message, nil
 }
 
 //Taxi.WebAPI.Client.Feedback (Отправка отзыва о заказе)
@@ -704,7 +706,7 @@ func (p *infinity) AddressesAutocomplete(text string) t.AddressPackage {
 		return t.AddressPackage{}
 	}
 	var temp []t.AddressPackage
-	log.Printf("INF ADDRESS AUTOCOMPLETE FOR %s \nRETRIEVE THIS:%s", text, string(body))
+	//log.Printf("INF ADDRESS AUTOCOMPLETE FOR %s \nRETRIEVE THIS:%s", text, string(body))
 	err = json.Unmarshal(body, &temp)
 	if err != nil {
 		log.Printf("error at unmarshal json from infinity %s", string(body))

@@ -40,7 +40,7 @@ func StreetsSearchController(w http.ResponseWriter, r *http.Request, i t.Address
 			if rows == nil {
 				return
 			}
-			log.Printf("was returned: %v rows", len(*rows))
+//			log.Printf("was returned: %v rows", len(*rows))
 			for _, nitem := range *rows {
 				var item DictItem
 

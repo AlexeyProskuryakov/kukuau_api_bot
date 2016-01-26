@@ -30,6 +30,7 @@ type AutocompleteEntity struct {
 	Name string `json:"name"`
 	OSM_ID int64 `json:"osm_id"`
 	City string `json:"city"`
+	Location Coordinates `json:"location"`
 }
 
 func main() {
@@ -42,12 +43,12 @@ func main() {
 	searchPhotonResult, err := client.Search().
 	Index("photon").
 	Query(&termQuery).
-	Size(math.MaxInt64).
+	Size(math.MaxInt32).
 	Pretty(true).
 	Do()
 	if err != nil {
-		// Handle error
-		panic(err)
+		log.Printf("ERROR: %v",err)
+		return
 	}
 	log.Println(searchPhotonResult)
 	var eet ElEntity
@@ -65,6 +66,7 @@ func main() {
 			}
 			index_el.OSM_ID = entity.OSM_ID
 			index_el.City = entity.City.Default
+			index_el.Location = entity.Coordinates
 
 			_, err = client.Index().
 			Index("autocomplete").
@@ -85,5 +87,6 @@ func main() {
 		}
 
 	}
+	log.Printf("Was processed: %v results", count)
 
 }
