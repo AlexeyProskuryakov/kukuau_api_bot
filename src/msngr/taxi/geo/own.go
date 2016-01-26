@@ -13,7 +13,7 @@ import (
 	s "msngr/taxi/set"
 	u "msngr/utils"
 	c "msngr/configuration"
-
+	m "msngr"
 )
 /*
 Open street map and elastic search handler
@@ -169,7 +169,7 @@ func (oh *OwnAddressHandler) GetExternalInfo(key, name string) (*t.AddressF, err
 				ext_set := GetSetOfAddressF(nitem)
 				log.Printf("OWN External set: \n%+v", ext_set)
 				if ext_set.IsSuperset(local_set) || local_set.IsSuperset(ext_set) {
-					log.Printf("OWN result of comparing: %+v", nitem)
+					log.Printf("OWN result of comparing: %+v", nitem )
 					return &nitem, nil
 				}
 			}
