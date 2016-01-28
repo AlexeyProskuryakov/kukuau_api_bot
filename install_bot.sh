@@ -1,10 +1,12 @@
 #!/bin/bash
-NAME="KlichatBot"
-USERNAME="alesha"
+NAME="TaxiAcademBot"
+USERNAME="lexa"
 
 GOHOME="/usr/local/go"
 HOME=`pwd`
 EXEC=${GOHOME}/bin/go
+
+GOPATH=${HOME}
 
 #ensuring libs
 ${EXEC} get github.com/looplab/fsm
