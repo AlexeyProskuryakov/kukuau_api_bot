@@ -75,6 +75,7 @@ func get_own_result(client *elastic.Client, query elastic.Query, sort elastic.So
 				addr := t.AddressF{}
 				addr.Name, addr.ShortName = name, short_name
 				addr.City = entity.City
+				addr.OSM_ID = entity.OSM_ID
 				rows = append(rows, addr)
 				log.Printf("OWN ADDR adding to result: %+v", addr)
 				name_city_set.Add(entity_hash)
