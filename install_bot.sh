@@ -15,7 +15,9 @@ ${EXEC} get github.com/martini-contrib/render
 ${EXEC} get gopkg.in/olivere/elastic.v2
 
 #building
+mkdir ${HOME}/build
 ${EXEC} build -o ${HOME}/build/start_bot ${HOME}/src/start_bot.go
+cp -r ${HOME}/templates ${HOME}/build
 
 #forming config
 echo "

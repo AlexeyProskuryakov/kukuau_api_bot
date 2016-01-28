@@ -160,7 +160,9 @@ func main() {
 		Addr: server_address,
 	}
 
+	if conf.Main.ConsoleAddr != "" {
+		go cnsl.Run(conf, db, cs)
+	}
 
-	go cnsl.Run(conf, db, cs)
 	log.Fatal(server.ListenAndServe())
 }

@@ -1,0 +1,15 @@
+#left-side-bar {
+	height: 100%;
+	background-color: #bfb;
+}
+
+
+#main-window {
+	height: 100%;
+	background-color: #bbb;
+}
+
+#right-side-bar {
+	height: 100%;
+	background-color: #a9b;
+}

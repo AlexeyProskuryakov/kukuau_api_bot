@@ -13,7 +13,6 @@ import (
 	s "msngr/taxi/set"
 	u "msngr/utils"
 	c "msngr/configuration"
-	m "msngr"
 )
 /*
 Open street map and elastic search handler

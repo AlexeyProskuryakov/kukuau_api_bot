@@ -9,13 +9,13 @@ import (
 	"errors"
 	s "msngr/structs"
 	u "msngr/utils"
-	tm "msngr/text_messages"
+	//tm "msngr/text_messages"
 	"strings"
 	"msngr/configuration"
 )
 
 var DEBUG bool
-var textProvider = tm.NewTextMessageSupplier()
+//var textProvider = tm.NewTextMessageSupplier()
 
 type BotContext struct {
 	Name             string
@@ -190,9 +190,9 @@ func FormBotController(context *BotContext) controllerHandler {
 						out, isDeferred, message_error = process_message(non_commands_processor, out, in)
 					} else {
 						log.Printf("warn will sended message without commands: %v\n from %v (userdata: %v)", in.Message, in.From, in.UserData)
-						out.Message = &s.OutMessage{Type: "chat", Thread: in.Message.Thread, ID: u.GenId(), Body: textProvider.GenerateMessage()}
-						setOutPackage(w, out, false, false)
-						return
+						//out.Message = &s.OutMessage{Type: "chat", Thread: in.Message.Thread, ID: u.GenId(), Body: textProvider.GenerateMessage()}
+						//setOutPackage(w, out, false, false)
+						//return
 					}
 				} else{
 					out, isDeferred, message_error = process_message_pkg(out, in, context)
