@@ -7,17 +7,17 @@ HOME=`pwd`
 EXEC=${GOHOME}/bin/go
 
 #ensuring libs
-su -u ${USERNAME} ${EXEC} get github.com/looplab/fsm
-su -u ${USERNAME} ${EXEC} get gopkg.in/mgo.v2
-su -u ${USERNAME} ${EXEC} get github.com/go-martini/martini
-su -u ${USERNAME} ${EXEC} get github.com/martini-contrib/auth
-su -u ${USERNAME} ${EXEC} get github.com/martini-contrib/render
-su -u ${USERNAME} ${EXEC} get gopkg.in/olivere/elastic.v2
+sudo -H -u ${USERNAME} -c '${EXEC} get github.com/looplab/fsm'
+sudo -H -u ${USERNAME} -c '${EXEC} get gopkg.in/mgo.v2'
+sudo -H -u ${USERNAME} -c '${EXEC} get github.com/go-martini/martini'
+sudo -H -u ${USERNAME} -c '${EXEC} get github.com/martini-contrib/auth'
+sudo -H -u ${USERNAME} -c '${EXEC} get github.com/martini-contrib/render'
+sudo -H -u ${USERNAME} -c '${EXEC} get gopkg.in/olivere/elastic.v2'
 
 #building
-su -u ${USERNAME} ${EXEC} build -o ${HOME}/build/start_bot ${HOME}/src/start_bot.go
-su -u ${USERNAME} cp ${HOME}/config.json ${HOME}/build
-su -u ${USERNAME} cp -r ${HOME}/templates ${HOME}/build
+sudo -H -u ${USERNAME} -c '${EXEC} build -o ${HOME}/build/start_bot ${HOME}/src/start_bot.go'
+sudo -H -u ${USERNAME} -c 'cp ${HOME}/config.json ${HOME}/build'
+sudo -H -u ${USERNAME} -c 'cp -r ${HOME}/templates ${HOME}/build'
 
 #forming config
 echo "
