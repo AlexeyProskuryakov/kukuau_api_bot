@@ -13,7 +13,6 @@ import (
 	s "msngr/taxi/set"
 	u "msngr/utils"
 	c "msngr/configuration"
-	m "msngr"
 )
 /*
 Open street map and elastic search handler
@@ -70,9 +69,14 @@ func get_own_result(client *elastic.Client, query elastic.Query, sort elastic.So
 	name_city_set := s.NewSet()
 	for _, osm_hit := range s_result.Each(reflect.TypeOf(oae)) {
 		if entity, ok := osm_hit.(OsmAutocompleteEntity); ok {
-			entity_hash := fmt.Sprintf("%v%v", entity.Name, entity.City)
+			name, short_name := GetStreetNameAndShortName(entity.Name)
+			entity_hash := fmt.Sprintf("%v%v%v", name, short_name, entity.City)
 			if !name_city_set.Contains(entity_hash) {
-				rows = append(rows, t.AddressF{OSM_ID:entity.OSM_ID, Name:entity.Name, City:entity.City})
+				addr := t.AddressF{}
+				addr.Name, addr.ShortName = name, short_name
+				addr.City = entity.City
+				rows = append(rows, addr)
+				log.Printf("OWN ADDR adding to result: %+v", addr)
 				name_city_set.Add(entity_hash)
 			}
 		}

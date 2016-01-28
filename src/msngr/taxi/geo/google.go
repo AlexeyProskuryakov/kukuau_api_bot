@@ -47,7 +47,7 @@ func (input GoogleResultAddress) ToFastAddress() t.AddressPackage {
 			row := t.AddressF{}
 			terms_len := len(prediction.Terms)
 			if terms_len > 0 {
-				row.Name, row.ShortName = _get_street_name_shortname(prediction.Terms[0].Value)
+				row.Name, row.ShortName = GetStreetNameAndShortName(prediction.Terms[0].Value)
 			}
 			if terms_len > 1 {
 				row.City = prediction.Terms[1].Value
@@ -252,7 +252,7 @@ func _process_address_components(components []GoogleAddressComponent) (string, s
 	return route, google_set
 }
 
-func _get_street_name_shortname(input string) (string, string) {
+func GetStreetNameAndShortName(input string) (string, string) {
 	addr_split := strings.Split(input, " ")
 	var street_type, street_name string
 	for _, sn_part := range addr_split {

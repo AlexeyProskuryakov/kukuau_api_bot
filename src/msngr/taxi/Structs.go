@@ -40,7 +40,7 @@ type AddressF struct {
 }
 
 func (a AddressF) String() string {
-	return fmt.Sprintf("[%v]g[%v]o[%v] '%v' (%v) (%v) at %v %v %v %v %v\nIDS:\tParent: %v, Region: %v, District: %v, City: %v, Place: %v\n",
+	return fmt.Sprintf("[%v]g[%v]o[%v] '%v' (%v) [%v] \n\tHouse:%v City:%v Region:%v District:%v Place:%v\nIDS:\tParent: %v, Region: %v, District: %v, City: %v, Place: %v\n",
 		a.ID, a.GID, a.OSM_ID,
 		a.Name, a.FullName, a.ShortName, a.HouseNumber, a.City, a.Region, a.District, a.Place,
 		a.IDParent, a.IDRegion, a.IDDistrict, a.IDCity, a.IDPlace)
