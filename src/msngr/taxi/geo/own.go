@@ -72,12 +72,13 @@ func get_own_result(client *elastic.Client, query elastic.Query, sort elastic.So
 			name, short_name := GetStreetNameAndShortName(entity.Name)
 			entity_hash := fmt.Sprintf("%v%v%v", name, short_name, entity.City)
 			if !name_city_set.Contains(entity_hash) {
-				addr := t.AddressF{}
-				addr.Name, addr.ShortName = name, short_name
-				addr.City = entity.City
-				addr.OSM_ID = entity.OSM_ID
+				addr := t.AddressF{
+					Name:name,
+					ShortName:short_name,
+					OSM_ID:entity.OSM_ID,
+					City:entity.City,
+				}
 				rows = append(rows, addr)
-				log.Printf("OWN ADDR adding to result: %+v", addr)
 				name_city_set.Add(entity_hash)
 			}
 		}
@@ -174,7 +175,7 @@ func (oh *OwnAddressHandler) GetExternalInfo(key, name string) (*t.AddressF, err
 				ext_set := GetSetOfAddressF(nitem)
 				log.Printf("OWN External set: \n%+v", ext_set)
 				if ext_set.IsSuperset(local_set) || local_set.IsSuperset(ext_set) {
-					log.Printf("OWN result of comparing: %+v", nitem )
+					log.Printf("OWN result of comparing: %+v", nitem)
 					return &nitem, nil
 				}
 			}
