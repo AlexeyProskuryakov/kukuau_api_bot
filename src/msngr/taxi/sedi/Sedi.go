@@ -1,4 +1,5 @@
 package sedi
+
 import (
 	"encoding/json"
 	"errors"
@@ -135,7 +136,6 @@ func (s *SediAPI) setLastOrderResponse(sor *SediOrdersResponse) {
 	s.l.Unlock()
 }
 
-
 func (s *SediAPI) getLastOrdersInfo() (*SediOrdersResponse, time.Time) {
 	s.l.Lock()
 	lr, lt := s.lastOrderResponse, s.lastOrderRequestTime
@@ -179,7 +179,6 @@ func login(s *SediAPI, name, phone string) {
 	profile, _ := s.GetProfile()
 	s.Info = profile
 }
-
 
 type SediResponse struct {
 	Success bool `json:"Success"`
@@ -346,12 +345,12 @@ type SediLoginInfo struct {
 	AllowAuction      bool `json:"AllowAuction"`
 	AllowCalc         bool `json:"AllowCalc"`
 	Balance           struct {
-						  AccountId int `json:"AccountID"`
-						  Currency  string `json:"Currency"`
-						  Credit    float64 `json:"Credit"`
-						  Value     float64 `json:"Value"`
-						  Locked    float64 `json:"Locked"`
-					  } `json:"Balance"`
+				  AccountId int `json:"AccountID"`
+				  Currency  string `json:"Currency"`
+				  Credit    float64 `json:"Credit"`
+				  Value     float64 `json:"Value"`
+				  Locked    float64 `json:"Locked"`
+			  } `json:"Balance"`
 	Phones            []struct {
 		Number string `json:"Number"`
 		Type   string `json:"Type"`
@@ -361,11 +360,11 @@ type SediLoginInfo struct {
 	AffilateOrders    bool `json:"AffilateOrders"`
 	Promocode         int64 `json:"Promocode"`
 	Owner             struct {
-						  ID               int `json:"ID"`
-						  Name             string `json:"Name"`
-						  Url              string `json:"Url,omitempty"`
-						  DispatcherPhones []string `json:"Phones"`
-					  } `json:"Owner"`
+				  ID               int `json:"ID"`
+				  Name             string `json:"Name"`
+				  Url              string `json:"Url,omitempty"`
+				  DispatcherPhones []string `json:"Phones"`
+			  } `json:"Owner"`
 }
 
 func (l SediLoginInfo) String() string {
@@ -505,6 +504,7 @@ func (s *SediAPI) getUserTariff(phone string) (*SediTariff, bool) {
 	s.l.Unlock()
 	return res, ok
 }
+
 var CS_REGEXP = regexp.MustCompilePOSIX("[\\+\\(](.*)")
 
 func getNormalStreetName(street string) string {
@@ -534,7 +534,6 @@ func ensureOrderDestinations(order *t.NewOrderInfo) t.NewOrderInfo {
 	}
 	return new_order
 }
-
 
 func (s *SediAPI)NewOrder(order t.NewOrderInfo) t.Answer {
 	log.Printf("SEDI NEW ORDER. Input new order info details is here: \nFrom: %v %v %v\nTo: %v %v %v",
@@ -590,7 +589,8 @@ func (s *SediAPI)NewOrder(order t.NewOrderInfo) t.Answer {
 	order_tariff := &SediTariff{}
 	if tariff, ok := s.getUserTariff(_order.Phone); ok {
 		order_tariff = tariff
-	} else { //и если они не сохранены, то калькулируем чтобы сохранить
+	} else {
+		//и если они не сохранены, то калькулируем чтобы сохранить
 		if cost, message := s.CalcOrderCost(_order); cost == -1 {
 			return t.Answer{IsSuccess:false, Message:message}
 		}
@@ -631,9 +631,9 @@ type SediAddress struct {
 	PostalCode   string `json:"PostalCode"`
 	LocalityName string `json:"LocalityName"`
 	GeoPoint     struct {
-					 Lat float64 `json:"Latitude"`
-					 Lon float64 `json:"Longtitude"`
-				 } `json:"GeoPoint"`
+			     Lat float64 `json:"Latitude"`
+			     Lon float64 `json:"Longtitude"`
+		     } `json:"GeoPoint"`
 }
 
 func (s SediAddress) String() string {
@@ -647,7 +647,6 @@ type SediCalcResponse struct {
 	Addresses []SediAddress `json:"Addresses"`
 	Duration  int `json:"Duration"`
 	Distance  float32 `json:"Distance"`
-
 }
 
 func (csr SediCalcResponse) String() string {
@@ -816,13 +815,14 @@ var STATES_MAPPING = map[string]int{
 	"inway": 3,
 	"nearcustomer": 3,
 }
+
 type SediProperty struct {
 	Key   string `json:"Key"`
 	Type  string `json:"Type"`
 	Value struct {
-			  Id   int64 `json:"ID"`
-			  Name string `json:"Name"`
-		  } `json:"Value"`
+		      Id   int64 `json:"ID"`
+		      Name string `json:"Name"`
+	      } `json:"Value"`
 	Id    int64 `json:"ID"`
 	Name  string `json:"Name"`
 }
@@ -830,23 +830,23 @@ type SediOrderInfo struct {
 	OrderId  int64 `json:"ID"`
 
 	Status   struct {
-				 Name string `json:"Name"`
-				 Id   string `json:"ID"`
-			 } `json:"Status"`
+			 Name string `json:"Name"`
+			 Id   string `json:"ID"`
+		 } `json:"Status"`
 
 	Date     float64 `json:"Date"`
 	Cost     float64 `json:"Cost"`
 	Currency string `json:"Currency"`
 	Tariff   struct {
-				 Id   int64 `json:"ID"`
-				 Name string `json:"Name"`
-			 } `json:"Tariff"`
+			 Id   int64 `json:"ID"`
+			 Name string `json:"Name"`
+		 } `json:"Tariff"`
 
 	Driver   *struct {
 		Geo   struct {
-				  Lat float64 `json:"Lat"`
-				  Lon float64 `json:"Lon"`
-			  } `json:"Geo"`
+			      Lat float64 `json:"Lat"`
+			      Lon float64 `json:"Lon"`
+		      } `json:"Geo"`
 		Car   *struct {
 			Number string `json:"Number"`
 			Id     int64 `json:"ID"`
@@ -866,8 +866,8 @@ type SediOrderInfo struct {
 	} `json:"Rating,omitempty"`
 
 	Route    struct {
-				 Length float64 `json:"Length"`
-			 } `json:"Rout"`
+			 Length float64 `json:"Length"`
+		 } `json:"Rout"`
 }
 type SediOrdersResponse struct {
 	SediResponse
@@ -1017,3 +1017,7 @@ func (s *SediAPI)WhereIt(order_id int64) (bool, string) {
 	log.Printf("SEDI WARN WhereIt IS NOT IMPLEMENT")
 	return false, ""
 }//оповестить что клиент не видит автомобиль
+
+func (p *SediAPI) Markups() []t.Markup {
+	return []t.Markup{}
+}//список наценок

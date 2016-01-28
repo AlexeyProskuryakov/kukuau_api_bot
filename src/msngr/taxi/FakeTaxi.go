@@ -24,7 +24,6 @@ func GetFakeAPI(params c.TaxiApiParams) TaxiInterface {
 	return fakeInstance
 }
 
-
 type FakeTaxiAPI struct {
 	sync.Mutex
 
@@ -129,4 +128,8 @@ func (p *FakeTaxiAPI) CallbackRequest(phone string) (bool, string) {
 func (p *FakeTaxiAPI) WhereIt(order_id int64) (bool, string) {
 	log.Printf("Whre it for %v", order_id)
 	return true, "Водитель вас тоже не видет. Покрутитеся вокруг, авось чего узреите."
+}
+
+func (p *FakeTaxiAPI) Markups() []Markup {
+	return []Markup{Markup{Name:"Животное", Value:100500, ID:1234567890}}
 }

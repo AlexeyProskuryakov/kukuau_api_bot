@@ -427,3 +427,6 @@ func (m *TaxiMasterAPI)AddressesAutocomplete(query string) t.AddressPackage {
 func (m *TaxiMasterAPI)IsConnected() bool {
 	return true
 }
+func (p *TaxiMasterAPI) Markups() []t.Markup {
+	return []t.Markup{}
+}
