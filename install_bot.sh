@@ -7,17 +7,17 @@ HOME=`pwd`
 EXEC=${GOHOME}/bin/go
 
 #ensuring libs
-${EXEC} get github.com/looplab/fsm
-${EXEC} get gopkg.in/mgo.v2
-${EXEC} get github.com/go-martini/martini
-${EXEC} get github.com/martini-contrib/auth
-${EXEC} get github.com/martini-contrib/render
-${EXEC} get gopkg.in/olivere/elastic.v2
+su -u ${USERNAME} ${EXEC} get github.com/looplab/fsm
+su -u ${USERNAME} ${EXEC} get gopkg.in/mgo.v2
+su -u ${USERNAME} ${EXEC} get github.com/go-martini/martini
+su -u ${USERNAME} ${EXEC} get github.com/martini-contrib/auth
+su -u ${USERNAME} ${EXEC} get github.com/martini-contrib/render
+su -u ${USERNAME} ${EXEC} get gopkg.in/olivere/elastic.v2
 
 #building
-${EXEC} build -o ${HOME}/build/start_bot ${HOME}/src/start_bot.go
-cp ${HOME}/config.json ${HOME}/build
-cp -r ${HOME}/templates ${HOME}/build
+su -u ${USERNAME} ${EXEC} build -o ${HOME}/build/start_bot ${HOME}/src/start_bot.go
+su -u ${USERNAME} cp ${HOME}/config.json ${HOME}/build
+su -u ${USERNAME} cp -r ${HOME}/templates ${HOME}/build
 
 #forming config
 echo "
