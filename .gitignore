@@ -18,3 +18,5 @@ run.bat
 /martini-api-example
 start_demo_bot.exe
 taxi_academ_bot.sh
+src/github.com/
+src/gopkg.in/
