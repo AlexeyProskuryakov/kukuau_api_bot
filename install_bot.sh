@@ -42,3 +42,4 @@ stderr_logfile_backups=5
 supervisorctl reread
 supervisorctl update
 
+supervisorctl restart ${NAME}
