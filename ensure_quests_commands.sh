@@ -1,3 +1,4 @@
+#!/usr/bin/env bash
 curl --user alesha:sederfes100500 -i -L -X POST \
    -H "Content-Type:application/json" \
    -d \

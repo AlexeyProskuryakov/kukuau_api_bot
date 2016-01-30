@@ -626,7 +626,7 @@ func (cop *TaxiCancelOrderProcessor) ProcessMessage(in *s.InPkg) *s.MessageResul
 		return s.ErrorMessageResult(err, cop.context.Commands[CMDS_NOT_CREATED_ORDER])
 	}
 	if order_wrapper == nil || order_wrapper.Active == false {
-		return s.ErrorMessageResult(errors.New("Order for it operation is unsuitable :("), cop.context.Commands[CMDS_NOT_CREATED_ORDER])
+		return s.ErrorMessageResult(errors.New("У вас нет активных заказов! :("), cop.context.Commands[CMDS_NOT_CREATED_ORDER])
 	}
 
 	is_success, message, err := cop.API.CancelOrder(order_wrapper.OrderId)

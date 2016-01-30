@@ -5,18 +5,14 @@ USERNAME="lexa"
 GOHOME="/usr/local/go"
 HOME=`pwd`
 EXEC=${GOHOME}/bin/go
-
 GOPATH=${HOME}
 
-#ensuring libs
 ${EXEC} get github.com/looplab/fsm
 ${EXEC} get gopkg.in/mgo.v2
 ${EXEC} get github.com/go-martini/martini
 ${EXEC} get github.com/martini-contrib/auth
 ${EXEC} get github.com/martini-contrib/render
 ${EXEC} get gopkg.in/olivere/elastic.v2
-
-#building
 ${EXEC} build -o ${HOME}/build/start_bot ${HOME}/src/start_bot.go
 cp ${HOME}/config.json ${HOME}/build
 cp -r ${HOME}/templates ${HOME}/build

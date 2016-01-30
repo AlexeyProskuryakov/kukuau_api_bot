@@ -82,6 +82,7 @@ type InRequest struct {
 
 type InUserData struct {
 	Phone string `json:"phone"`
+	Name string `json:"name"`
 }
 
 type InPkg struct {
