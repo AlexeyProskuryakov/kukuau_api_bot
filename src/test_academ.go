@@ -27,4 +27,6 @@ func main() {
 	log.Println(as.AddressesAutocomplete("Росс"))
 	log.Println(as.AddressesAutocomplete("ман"))
 	log.Println(as.AddressesAutocomplete("клав"))
+
+
 }
