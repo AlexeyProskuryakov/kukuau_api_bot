@@ -1,0 +1,57 @@
+{
+  "message": {
+    "commands": [
+      {
+        "form": {
+          "fields": [
+            {
+              "data": {
+                "value": "146607495",
+                "text": "Весенний проезд"
+              },
+              "type": "dict",
+              "name": "street_from"
+            },
+            {
+              "type": "number",
+              "name": "entrance"
+            },
+            {
+              "data": {
+                "value": "146588338",
+                "text": "Детский проезд"
+              },
+              "type": "dict",
+              "name": "street_to"
+            },
+            {
+              "data": {
+                "value": "1"
+              },
+              "type": "text",
+              "name": "house_to"
+            },
+            {
+              "data": {
+                "value": "1"
+              },
+              "type": "text",
+              "name": "house_from"
+            }
+          ]
+        },
+        "repeated": "true",
+        "fixed": "false",
+        "action": "new_order"
+      }
+    ],
+    "thread": "2c474723-ff4d-4fad-a31f-18e8063bdff2",
+    "body": "Увези меня большая черепаха...",
+    "type": "chat",
+    "id": "T6rqU-93"
+  },
+  "from": "TEST",
+  "userdata": {
+    "phone": "TESTPHONE"
+  }
+}
