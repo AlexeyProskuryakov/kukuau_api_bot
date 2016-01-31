@@ -237,6 +237,10 @@ func Run(config c.QuestConfig, qs *QuestStorage, ntf *msngr.Notifier) {
 		render.Redirect("/new_keys")
 	})
 
+	m.Get("/chat", func(render render.Render){
+		render.HTML(200, "quests/chat", map[string]interface{}{})
+	})
+
 	log.Printf("Will start web server for quest at: %v", config.WebPort)
 	m.RunOnAddr(config.WebPort)
 }

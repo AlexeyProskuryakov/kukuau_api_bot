@@ -13,3 +13,11 @@
 	height: 100%;
 	background-color: #a9b;
 }
+
+#left {
+    !postiton:fixed
+    bottom: 80;
+    right: 10;
+    width: 20;
+    background-color: green;
+}
