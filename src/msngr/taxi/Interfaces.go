@@ -22,7 +22,7 @@ type TaxiInterface interface {
 	WriteDispatcher(message string) (bool, string) //написать диспетчеру
 	CallbackRequest(phone string) (bool, string) //запросить обратный звонок
 	WhereIt(order_id int64) (bool, string) //оповестить что клиент не видит автомобиль
-
+	Markups() []Markup//наценки
 
 }
 

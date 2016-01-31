@@ -40,7 +40,6 @@ func (cip *CarInfoProvider) GetCarInfo(car_id int64) *CarInfo {
 	return car_info
 }
 
-
 func FormTaxiBotContext(im *ExternalApiMixin, db_handler *d.MainDb, tc c.TaxiConfig, ah AddressHandler, cc *CarsCache) *m.BotContext {
 	context := m.BotContext{}
 	context.Check = func() (detail string, ok bool) {
@@ -254,7 +253,6 @@ type TaxiCarPositionMessageProcessor struct {
 	d.MainDb
 	Cars    *CarInfoProvider
 	context *m.BotContext
-
 }
 
 func (cp *TaxiCarPositionMessageProcessor) ProcessMessage(in *s.InPkg) *s.MessageResult {
@@ -312,10 +310,10 @@ func (smp *TaxiWriteDispatcherMessageProcessor) ProcessMessage(in *s.InPkg) *s.M
 		}
 	} else if in.Message.Body != nil && *in.Message.Body != "" {
 		message = *in.Message.Body
-	} else{
+	} else {
 		return &s.MessageResult{Body:"Ошибка, совсем нет букв. Мне нечего отправить диспетчеру :("}
 	}
-//	log.Printf("TAXI Write dispatcher message: %s", message)
+	//	log.Printf("TAXI Write dispatcher message: %s", message)
 	ok, result := smp.API.WriteDispatcher(message)
 	var text string
 	if ok {
@@ -344,7 +342,6 @@ func (crmp *TaxiCallbackRequestMessageProcessor) ProcessMessage(in *s.InPkg) *s.
 	}
 	return &s.MessageResult{Body:text, Type:"chat"}
 }
-
 
 type TaxiWhereItMessageProcessor struct {
 	ExternalApiMixin
@@ -591,10 +588,24 @@ func (nop *TaxiNewOrderProcessor) ProcessMessage(in *s.InPkg) *s.MessageResult {
 			text = "Ваш заказ создан!"
 		} else {
 			cost, _ := nop.API.CalcOrderCost(*new_order)
-			if cost == 0{
+			if cost == 0 {
 				log.Printf("Order %v, %v with ZERO cost", nop.context.Name, new_order)
 			}
-			text = fmt.Sprintf("Ваш заказ создан! Стоимость поездки составит %+v рублей.", cost)
+			//retrieving markup information
+			var markup_text string
+			log.Printf("TCH NOP: %v", len(new_order.Markups))
+			if len(new_order.Markups) == 1 {
+				markups := nop.API.Markups()
+				for _, mkrp := range markups {
+					markup_id, _ := strconv.ParseInt(new_order.Markups[0], 10, 64)
+					log.Printf("mrkp.id: %v, markup id: %v", mkrp.ID, markup_id)
+					if mkrp.ID == markup_id {
+						markup_text = mkrp.Name
+						break
+					}
+				}
+			}
+			text = fmt.Sprintf("Ваш заказ создан! Стоимость поездки составит %+v рублей. %s", cost, markup_text)
 		}
 		return &s.MessageResult{Body:text, Commands:nop.context.Commands[CMDS_CREATED_ORDER], Type:"chat"}
 	}
@@ -615,7 +626,7 @@ func (cop *TaxiCancelOrderProcessor) ProcessMessage(in *s.InPkg) *s.MessageResul
 		return s.ErrorMessageResult(err, cop.context.Commands[CMDS_NOT_CREATED_ORDER])
 	}
 	if order_wrapper == nil || order_wrapper.Active == false {
-		return s.ErrorMessageResult(errors.New("Order for it operation is unsuitable :("), cop.context.Commands[CMDS_NOT_CREATED_ORDER])
+		return s.ErrorMessageResult(errors.New("У вас нет активных заказов! :("), cop.context.Commands[CMDS_NOT_CREATED_ORDER])
 	}
 
 	is_success, message, err := cop.API.CancelOrder(order_wrapper.OrderId)

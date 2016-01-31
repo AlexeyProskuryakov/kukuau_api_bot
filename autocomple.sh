@@ -1,3 +1,4 @@
+#!/usr/bin/env bash
 curl -XDELETE "http://localhost:9200/autocomplete"
 curl -XPOST "http://localhost:9200/autocomplete" -d '{
   "settings": {
@@ -44,6 +45,6 @@ curl -XPOST "http://localhost:9200/autocomplete" -d '{
     }
   }
 }'
-GOPATH="/data/kuku/taxi_academ_bot"
+GOPATH=`pwd`
 go get gopkg.in/olivere/elastic.v2
 go run src/ensure_elastic_autocomplete_index.go

@@ -47,7 +47,7 @@ func (input GoogleResultAddress) ToFastAddress() t.AddressPackage {
 			row := t.AddressF{}
 			terms_len := len(prediction.Terms)
 			if terms_len > 0 {
-				row.Name, row.ShortName = _get_street_name_shortname(prediction.Terms[0].Value)
+				row.Name, row.ShortName = GetStreetNameAndShortName(prediction.Terms[0].Value)
 			}
 			if terms_len > 1 {
 				row.City = prediction.Terms[1].Value
@@ -172,7 +172,7 @@ func (ah *GoogleAddressHandler) GetExternalInfo(key, name string) (*t.AddressF, 
 	if query == "" {
 		query = addr_details.Result.Name
 	}
-//	log.Printf("<<< [%v]\n%+v", query, google_set)
+	log.Printf("GOOGLE query: [%v]\nGoogle set: %+v", query, google_set)
 	if !ah.ExternalAddressSupplier.IsConnected() {
 		return nil, errors.New("GetStreetId: External service is not avaliable")
 	}
@@ -187,9 +187,9 @@ func (ah *GoogleAddressHandler) GetExternalInfo(key, name string) (*t.AddressF, 
 		nitem := ext_rows[i]
 		external_set := GetSetOfAddressF(nitem)
 
-//		log.Printf("GetStreetId [%v]:\n e: %+v < ? > g: %+v", query, external_set, google_set)
+		log.Printf("GOOGLE query [%v]:\n external set: %+v < ? > google set: %+v", query, external_set, google_set)
 		if google_set.IsSuperset(external_set) || external_set.IsSuperset(google_set) {
-//			log.Printf("GetStreetId: [%+v] \nat %v", key, nitem.FullName)
+			log.Printf("GOOGLE: OK! [%+v] \nat %v", key, nitem)
 			ah.cache[key] = &nitem
 			return &nitem, nil
 		}
@@ -252,7 +252,7 @@ func _process_address_components(components []GoogleAddressComponent) (string, s
 	return route, google_set
 }
 
-func _get_street_name_shortname(input string) (string, string) {
+func GetStreetNameAndShortName(input string) (string, string) {
 	addr_split := strings.Split(input, " ")
 	var street_type, street_name string
 	for _, sn_part := range addr_split {

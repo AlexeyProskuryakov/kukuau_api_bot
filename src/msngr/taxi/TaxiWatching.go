@@ -22,14 +22,13 @@ const (
 
 func FormNotification(context *TaxiContext, ow *d.OrderWrapper, previous_state int, car_info CarInfo, deliv_time time.Time) *s.OutPkg {
 	var text string
-
 	switch ow.OrderState {
 	case ORDER_ASSIGNED:
-		if previous_state != ORDER_ASSIGNED{
+		if previous_state != ORDER_ASSIGNED {
 			text = fmt.Sprintf("%v %v, время подачи %v.", nominated, car_info, deliv_time.Format("15:04"))
 		}
 	case ORDER_CAR_SET_OUT:
-		if previous_state != ORDER_CAR_SET_OUT{
+		if previous_state != ORDER_CAR_SET_OUT {
 			text = fmt.Sprintf("%v, время подачи %v", car_set_out, deliv_time.Format("15:04"))
 		}
 	case ORDER_CLIENT_WAIT:
@@ -113,13 +112,25 @@ func (ch *CarsCache) GetCarInfo(car_id int64) *CarInfo {
 	return &key
 }
 
-
 type TaxiContext struct {
 	API      TaxiInterface
 	DataBase *d.MainDb
 	Cars     *CarsCache
 	Notifier *n.Notifier
 }
+
+func get_arrival_time(api_order Order) time.Time {
+	arrival_time := api_order.TimeArrival
+	if arrival_time == nil {
+		arrival_time = api_order.TimeDelivery
+	}
+	if arrival_time == nil || arrival_time.Before(time.Now()) {
+		arrival_time_ := time.Now().Add(5 * time.Minute)
+		arrival_time = &arrival_time_
+	}
+	return *arrival_time
+}
+
 func process_state_change(taxiContext *TaxiContext, botContext *m.BotContext, api_order Order, db_order *d.OrderWrapper, previous_states map[int64]int) {
 	log.Printf("WATCH [%v] state of: %+v is updated (api: %v != db: %v)", botContext.Name, api_order.ID, api_order.State, db_order.OrderState)
 	order_data := api_order.ToOrderData()
@@ -150,20 +161,12 @@ func process_state_change(taxiContext *TaxiContext, botContext *m.BotContext, ap
 	//
 	if car_info := taxiContext.Cars.GetCarInfo(api_order.IDCar); car_info != nil {
 		var notification_data *s.OutPkg
-		arrival_time := api_order.TimeArrival
-		if arrival_time == nil {
-			arrival_time = api_order.TimeDelivery
-			if arrival_time == nil {
-				arrival_time_ := time.Now().Add(5 * time.Minute)
-				arrival_time = &arrival_time_
-			}
-		}
-
+		arrival_time := get_arrival_time(api_order)
 		prev_state, ok := previous_states[api_order.ID]
 		if ok {
-			notification_data = FormNotification(taxiContext, db_order, prev_state, *car_info, *arrival_time)
+			notification_data = FormNotification(taxiContext, db_order, prev_state, *car_info, arrival_time)
 		} else {
-			notification_data = FormNotification(taxiContext, db_order, -1, *car_info, *arrival_time)
+			notification_data = FormNotification(taxiContext, db_order, -1, *car_info, arrival_time)
 		}
 		if notification_data != nil {
 			notification_data.Message.Commands = form_commands_for_current_order(db_order, botContext.Commands)
@@ -189,7 +192,6 @@ func process_car_state(taxiContext *TaxiContext, botContext *m.BotContext, api_o
 const (
 	CHANGE_STATE = "state"
 	CHANGE_CAR = "car"
-
 )
 
 func get_changes(api_order Order, db_order *d.OrderWrapper) []string {

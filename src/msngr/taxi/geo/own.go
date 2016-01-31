@@ -69,9 +69,16 @@ func get_own_result(client *elastic.Client, query elastic.Query, sort elastic.So
 	name_city_set := s.NewSet()
 	for _, osm_hit := range s_result.Each(reflect.TypeOf(oae)) {
 		if entity, ok := osm_hit.(OsmAutocompleteEntity); ok {
-			entity_hash := fmt.Sprintf("%v%v", entity.Name, entity.City)
+			name, short_name := GetStreetNameAndShortName(entity.Name)
+			entity_hash := fmt.Sprintf("%v%v%v", name, short_name, entity.City)
 			if !name_city_set.Contains(entity_hash) {
-				rows = append(rows, t.AddressF{OSM_ID:entity.OSM_ID, Name:entity.Name, City:entity.City})
+				addr := t.AddressF{
+					Name:name,
+					ShortName:short_name,
+					OSM_ID:entity.OSM_ID,
+					City:entity.City,
+				}
+				rows = append(rows, addr)
 				name_city_set.Add(entity_hash)
 			}
 		}
@@ -166,9 +173,8 @@ func (oh *OwnAddressHandler) GetExternalInfo(key, name string) (*t.AddressF, err
 			for i := len(ext_rows) - 1; i >= 0; i-- {
 				nitem := ext_rows[i]
 				ext_set := GetSetOfAddressF(nitem)
-				log.Printf("OWN External set: \n%+v", ext_set)
+				log.Printf("OWN external set: %+v < ? > Local set %+v ", ext_set, local_set)
 				if ext_set.IsSuperset(local_set) || local_set.IsSuperset(ext_set) {
-					log.Printf("OWN result of comparing: %+v", nitem )
 					return &nitem, nil
 				}
 			}
