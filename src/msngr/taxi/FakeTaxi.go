@@ -32,19 +32,32 @@ type FakeTaxiAPI struct {
 	orders       []Order
 }
 
-func send_states(order_id int64, inf *FakeTaxiAPI) {
-	log.Printf("FA will send fake states for order %v", order_id, inf.SendedStates)
-	for _, i := range inf.SendedStates {
-		time.Sleep(time.Duration(inf.SleepTime) * time.Second)
-		inf.set_order_state(order_id, i)
+func send_states(order_id int64, api *FakeTaxiAPI) {
+	log.Printf("FA will send fake states for order %v", order_id, api.SendedStates)
+	for _, i := range api.SendedStates {
+		time.Sleep(time.Duration(api.SleepTime) * time.Second)
+		api.set_order_state(order_id, i)
 	}
 }
 
 func (inf *FakeTaxiAPI) set_order_state(order_id int64, new_state int) {
 	for i, order := range inf.orders {
 		if order.ID == order_id && order.State != ORDER_CANCELED {
-			log.Printf("FA send state %v to order %v", new_state, order_id)
+			log.Printf("FA set state %v to order %v", new_state, order_id)
 			inf.orders[i].State = new_state
+			if rand.Intn(2)>0{
+				log.Printf("FA set time before than now for order %v",order_id)
+				ta := time.Now().Add(-10*time.Minute)
+				if rand.Intn(2)>0{
+					inf.orders[i].TimeArrival = &ta
+				} else{
+					inf.orders[i].TimeArrival = nil
+					inf.orders[i].TimeDelivery = &ta
+				}
+			} else{
+				ta := time.Now().Add(7*time.Minute)
+				inf.orders[i].TimeDelivery = &ta
+			}
 		}
 	}
 }

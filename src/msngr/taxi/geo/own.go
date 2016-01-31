@@ -173,7 +173,7 @@ func (oh *OwnAddressHandler) GetExternalInfo(key, name string) (*t.AddressF, err
 			for i := len(ext_rows) - 1; i >= 0; i-- {
 				nitem := ext_rows[i]
 				ext_set := GetSetOfAddressF(nitem)
-				log.Printf("OWN External set: \n%+v", ext_set)
+				log.Printf("OWN external set: %+v < ? > Local set %+v ", ext_set, local_set)
 				if ext_set.IsSuperset(local_set) || local_set.IsSuperset(ext_set) {
 					return &nitem, nil
 				}

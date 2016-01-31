@@ -172,7 +172,7 @@ func (ah *GoogleAddressHandler) GetExternalInfo(key, name string) (*t.AddressF, 
 	if query == "" {
 		query = addr_details.Result.Name
 	}
-//	log.Printf("<<< [%v]\n%+v", query, google_set)
+	log.Printf("GOOGLE query: [%v]\nGoogle set: %+v", query, google_set)
 	if !ah.ExternalAddressSupplier.IsConnected() {
 		return nil, errors.New("GetStreetId: External service is not avaliable")
 	}
@@ -187,9 +187,9 @@ func (ah *GoogleAddressHandler) GetExternalInfo(key, name string) (*t.AddressF, 
 		nitem := ext_rows[i]
 		external_set := GetSetOfAddressF(nitem)
 
-//		log.Printf("GetStreetId [%v]:\n e: %+v < ? > g: %+v", query, external_set, google_set)
+		log.Printf("GOOGLE query [%v]:\n external set: %+v < ? > google set: %+v", query, external_set, google_set)
 		if google_set.IsSuperset(external_set) || external_set.IsSuperset(google_set) {
-//			log.Printf("GetStreetId: [%+v] \nat %v", key, nitem.FullName)
+			log.Printf("GOOGLE: OK! [%+v] \nat %v", key, nitem)
 			ah.cache[key] = &nitem
 			return &nitem, nil
 		}
