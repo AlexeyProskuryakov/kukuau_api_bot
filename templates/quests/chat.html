@@ -1,5 +1,129 @@
-<div id="left-bar">
-    Тут будет список контактов.
-    А также список групп.
-    И здесь же будут появляться новые контакты которые написали...
+<div id="left-bar" class="col-md-3">
+    <div class="row">
+        {{if eq_s .with "all" }}
+        <button class="btn btn-info btn-med active" onclick="write_to('all')">Написать всем</button>
+        {{else}}
+        <button class="btn btn-info btn-med" onclick="write_to('all')">Написать всем</button>
+        {{end}}
+    </div>
+    <hr>
+    <div class="row" id="contact-teams">
+        <h4>Комманды:</h4>
+        {{range $team := .all_teams}}
+        <div class="contact" sid="{{$team.SID}}">
+            <a class="btn btn-primary" href="/chat?with={{$team.Name}}">{{$team.Name}}</a>
+        </div>
+        {{end}}
+    </div>
+    <hr>
+    <div class="row" id="contacts">
+        <h4>Все контакты:</h4>
+        {{range $contact := .contacts}}
+        <div class="contact" sid="{{$contact.SID}}">
+            <a class="btn btn-primary" href="/chat?with={{$contact.SID}}">{{$contact.Name}} ({{$contact.NewMessagesCount}})</a>
+        </div>
+        {{end}}
+    </div>
+    <hr>
+
 </div>
+<div id="chat-window" class="col-md-5">
+    <div class="row">
+        {{range $message := .messages}}
+        <div class="chat-window">
+            <div class="from">{{$message.From}}</div>
+            <div class="to">{{$message.To}}</div>
+            <div class="body">{{$message.Body}}</div>
+            <div class="time">{{$message.Time}}</div>
+        </div>
+        {{end}}
+    </div>
+    <div class="row">
+        <div class="chat-input">
+            <form id="chat-form" method="post" action="/chat-input" class="form-inline">
+                <div class="form-group has-feedback">
+                    <label class="control-label">Message:</label>
+                    <textarea class="form-control" placeholder="..." name="chat-form-message" id="chat-form-message"
+                              rows="1"></textarea>
+                    <input type="hidden" name="from" value="me">
+                    <button type="submit" class="btn btn-default" aria-label="Left Align">
+                        <span class="glyphicon glyphicon-send" aria-hidden="true"></span>
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<div id="right-bar" class="col-md-4">
+    {{if .team }}
+    <div class="row">
+        {{range $team_member := .team.Members}}
+        <div class="team-name">
+            {{$team_member.Name}}
+        </div>
+        <div class="team-phone">
+            <a href="#" onclick="write_to('{{$team_member.Phone}}')"><h6>{{$team_member.Phone}}</h6></a>
+        </div>
+        {{end}}
+    </div>
+    <div class="row">
+        {{range $key := .team.FoundKeys}}
+        <p class="bg-success">
+            {{$key}}
+        </p>
+        {{end}}
+    </div>
+    {{else if .man}}
+    <div class="row">
+        <p class="bg-success">
+            {{.man}}
+        </p>
+    </div>
+    {{end}}
+
+    <div class="row">
+        <div class="accordion" id="keys-accordion">
+            {{range $key := .keys}}
+            <div class="accordion-group">
+                <div class="accordion-heading">
+                    <a class="accordion-toggle" data-toggle="collapse" data-parent="#keys-accordion"
+                       href="#{{$key.SID}}">
+                        {{$key.Key}}
+                    </a>
+                </div>
+                <div id="{{$key.SID}}" class="accordion-body collapse">
+                    <div class="accordion-inner">
+                        {{$key.Description}}
+                    </div>
+                </div>
+            </div>
+            {{end}}
+        </div>
+    </div>
+</div>
+<script>
+
+    var message = {to_name:"",from_name:"me",}
+
+    function show_message(){
+        $("#chat-form-message").text(message.to_name+": ");
+    }
+
+    function write_to(to_name){
+        message.to_name = to_name;
+        show_message();
+    }
+
+
+
+
+
+
+
+
+
+
+
+
+</script>

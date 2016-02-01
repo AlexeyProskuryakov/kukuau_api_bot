@@ -4,21 +4,24 @@ import (
 	"msngr/db"
 	"gopkg.in/mgo.v2"
 	"gopkg.in/mgo.v2/bson"
-	"errors"
+
 	"time"
-	"fmt"
+
+	"log"
 )
 
 type Message struct {
-	ID        bson.ObjectId `bson:"_id,omitempty"`
-	SID       string
-	From      string `bson:"from"`
-	To        string `bson:"to"`
-	Body      string `bson:"body"`
-	Time      time.Time `bson:"time"`
-	TimeStamp int64 `bson:"time_stamp"`
-	Answered  bool `bson:"is_answered"`
-	IsKey     bool `bson:"is_key"`
+	ID         bson.ObjectId `bson:"_id,omitempty"`
+	SID        string
+	From       string `bson:"from"`
+	To         string `bson:"to"`
+	Body       string `bson:"body"`
+	Time       time.Time `bson:"time"`
+	TimeStamp  int64 `bson:"time_stamp"`
+	Answered   int `bson:"is_answered"`
+	IsKey      bool `bson:"is_key"`
+	AnswerOf   string `bson:"answer_of,omitempty"`
+	AnsweredBy string `bson:"answered_by,omitempty"`
 }
 type Key struct {
 	ID          bson.ObjectId `bson:"_id,omitempty"`
@@ -31,10 +34,17 @@ type Key struct {
 }
 
 type TeamMember struct {
-	UserId   string `bson:"user_id"`
-	Phone    string `bson:"phone"`
-	Name     string `bson:"name"`
-	TeamName string `bson:"team_name"`
+	ID        bson.ObjectId `bson:"_id,omitempty"`
+	UserId    string `bson:"user_id"`
+	Phone     string `bson:"phone"`
+	Name      string `bson:"name"`
+	TeamName  string `bson:"team_name,omitempty"`
+	TeamSID   string `bson:"team_sid,omitempty"`
+	Passersby bool  `bson:"is_passerby,omitempty"`
+}
+
+type Passersby struct {
+	TeamMember
 }
 
 type Team struct {
@@ -46,10 +56,10 @@ type Team struct {
 
 type QuestStorage struct {
 	db.DbHelper
-	Keys        *mgo.Collection
-	Messages    *mgo.Collection
-	Teams       *mgo.Collection
-	TeamMembers *mgo.Collection
+	Keys     *mgo.Collection
+	Messages *mgo.Collection
+	Teams    *mgo.Collection
+	Peoples  *mgo.Collection
 }
 
 func (qks *QuestStorage) ensureIndexes() {
@@ -85,6 +95,7 @@ func (qks *QuestStorage) ensureIndexes() {
 	message_collection.EnsureIndex(mgo.Index{
 		Key:[]string{"is_answered"},
 	})
+
 	qks.Messages = message_collection
 
 	teams_collection := qks.Session.DB(qks.DbName).C("quest_teams")
@@ -94,7 +105,7 @@ func (qks *QuestStorage) ensureIndexes() {
 	})
 	qks.Teams = teams_collection
 
-	members_collection := qks.Session.DB(qks.DbName).C("quest_team_members")
+	members_collection := qks.Session.DB(qks.DbName).C("quest_peoples")
 	members_collection.EnsureIndex(mgo.Index{
 		Key:[]string{"name"},
 	})
@@ -105,7 +116,11 @@ func (qks *QuestStorage) ensureIndexes() {
 	members_collection.EnsureIndex(mgo.Index{
 		Key:[]string{"team_name"},
 	})
-	qks.TeamMembers = members_collection
+	members_collection.EnsureIndex(mgo.Index{
+		Key:[]string{"is_passerby"},
+	})
+
+	qks.Peoples = members_collection
 }
 
 func NewQuestStorage(conn, dbname string) *QuestStorage {
@@ -116,16 +131,17 @@ func NewQuestStorage(conn, dbname string) *QuestStorage {
 }
 
 //KEYS
-func (qks *QuestStorage) AddKey(start_key, description, next_key string) error {
+func (qks *QuestStorage) AddKey(start_key, description, next_key string) (*Key, error) {
 	kw := Key{}
 	err := qks.Keys.Find(bson.M{"start_key":start_key}).One(&kw)
 	if err == mgo.ErrNotFound {
-		err = qks.Keys.Insert(Key{StartKey:start_key, Description:description, NextKey:next_key})
-		return err
+		kw = Key{StartKey:start_key, Description:description, NextKey:next_key}
+		err = qks.Keys.Insert(kw)
+		return &kw, err
 	} else if err != nil {
-		return err
+		return nil, err
 	} else {
-		return errors.New(fmt.Sprintf("Key [%v] already exists", start_key))
+		return &kw, nil
 	}
 }
 
@@ -190,9 +206,11 @@ func (qks *QuestStorage) GetAllKeys() ([]Key, error) {
 
 
 //TEAMS
-func (qs *QuestStorage) AddTeam(name string) error {
-	err := qs.Teams.Insert(Team{Name:name})
-	return err
+func (qs *QuestStorage) AddTeam(name string) (*Team, error) {
+	team := Team{Name:name}
+	err := qs.Teams.Insert(team)
+	team.SID = team.ID.Hex()
+	return &team, err
 }
 
 func (qs *QuestStorage) GetAllTeams() ([]Team, error) {
@@ -218,31 +236,36 @@ func (qs *QuestStorage) GetTeamByName(name string) (*Team, error) {
 
 
 //TEAM MEMBERS
-func (qs *QuestStorage) AddTeamMember(user_id, m_name, phone, t_name string) error {
-	team := Team{}
-	err := qs.Teams.Find(bson.M{"name":t_name}).One(&team)
-	if err != nil {
-		return err
+func (qs *QuestStorage) AddTeamMember(user_id, m_name, phone string, team *Team) (*TeamMember, error) {
+	tm := TeamMember{}
+	err := qs.Peoples.Find(bson.M{"user_id":user_id}).One(&tm)
+	if err == mgo.ErrNotFound {
+		tm = TeamMember{Name:m_name, Phone:phone, TeamName:team.Name, TeamSID:team.ID.Hex(), UserId:user_id, Passersby:false}
+		err = qs.Peoples.Insert(tm)
+	} else {
+		err = qs.Peoples.UpdateId(tm.ID, bson.M{"$set":bson.M{"is_passerby":false, "team_name":team.Name, "team_sid":team.SID}})
 	}
-	err = qs.TeamMembers.Insert(TeamMember{Name:m_name, Phone:phone, TeamName:t_name, UserId:user_id})
-	return err
+	return &tm, err
 }
-
+func (qs *QuestStorage) SetTeamForTeamMember(new_tn *Team, user_id *TeamMember) error {
+	return qs.Peoples.Update(bson.M{"user_id":user_id.UserId}, bson.M{"$set":bson.M{"team_name":new_tn.Name, "team_sid":new_tn.SID}})
+}
 func (qs *QuestStorage) GetMembersOfTeam(team_name string) ([]TeamMember, error) {
 	res := []TeamMember{}
-	err := qs.TeamMembers.Find(bson.M{"team_name":team_name}).All(&res)
+	err := qs.Peoples.Find(bson.M{"team_name":team_name}).All(&res)
 	return res, err
 }
 
 func (qs *QuestStorage) GetAllTeamMembers() ([]TeamMember, error) {
 	res := []TeamMember{}
-	err := qs.TeamMembers.Find(bson.M{}).All(&res)
+	err := qs.Peoples.Find(bson.M{}).All(&res)
 	return res, err
 }
 
 func (qs *QuestStorage) GetTeamMembers(query bson.M) ([]TeamMember, error) {
 	res := []TeamMember{}
-	err := qs.TeamMembers.Find(query).All(&res)
+	query["is_passerby"] = true
+	err := qs.Peoples.Find(query).All(&res)
 	if err != nil && err != mgo.ErrNotFound {
 		return res, err
 	}
@@ -251,7 +274,7 @@ func (qs *QuestStorage) GetTeamMembers(query bson.M) ([]TeamMember, error) {
 
 func (qs *QuestStorage)GetTeamMemberByUserId(user_id string) (*TeamMember, error) {
 	res := TeamMember{}
-	err := qs.TeamMembers.Find(bson.M{"user_id":user_id}).One(&res)
+	err := qs.Peoples.Find(bson.M{"user_id":user_id, "is_passerby":false}).One(&res)
 	if err != nil && err != mgo.ErrNotFound {
 		return nil, err
 	} else if err == mgo.ErrNotFound {
@@ -260,23 +283,101 @@ func (qs *QuestStorage)GetTeamMemberByUserId(user_id string) (*TeamMember, error
 	return &res, nil
 }
 
+func (qs *QuestStorage)AddPasserby(user_id, phone, name string) (*TeamMember, error) {
+	res := TeamMember{}
+	err := qs.Peoples.Find(bson.M{"user_id":user_id, "phone":phone, "name":name}).One(&res)
+	if err == mgo.ErrNotFound {
+		tm := TeamMember{Name:name, UserId:user_id, Phone:phone, Passersby:true}
+		err = qs.Peoples.Insert(tm)
+	}else {
+		err = qs.Peoples.UpdateId(res.ID, bson.M{"$set":bson.M{"is_passerby":true}})
+	}
+	return &res, err
+}
+
+func (qs *QuestStorage)GetPassersby(query bson.M) (*TeamMember, error) {
+	res := TeamMember{}
+	query["is_passerby"] = true
+	err := qs.Peoples.Find(query).One(&res)
+	return &res, err
+}
 
 //MESSAGES
-func (qs *QuestStorage) StoreMessage(from, to, body string, is_key bool) error {
+func (qs *QuestStorage) StoreMessage(from, to, body string, is_key bool) (Message, error) {
 	result := Message{
 		From: from,
 		To:to,
 		Body: body,
 		Time: time.Now(),
 		TimeStamp: time.Now().Unix(),
-		Answered: false,
+		Answered: 0,
 		IsKey: is_key,
 	}
-	err := qs.Messages.Insert(&result)
-	return err
+	err := qs.Messages.Insert(result)
+	log.Printf("QS: Message stored: id is: %v", result.ID)
+	return result, err
 }
 
+func (qs *QuestStorage) SetMessageAnswered(of_sid, by_sid string) error {
+	err := qs.Messages.UpdateId(bson.ObjectIdHex(of_sid), bson.M{"$set":bson.M{"answered_by":by_sid, "answered":1}})
+	err = qs.Messages.UpdateId(bson.ObjectIdHex(by_sid), bson.M{"$set":bson.M{"answer_of":of_sid}})
+	return err
 
+}
+
+func (qs *QuestStorage) GetMessages(query bson.M) ([]Message, error) {
+	messages := []Message{}
+	err := qs.Messages.Find(query).Sort("-time").All(&messages)
+	return messages, err
+}
+
+type Contact struct {
+	ID               bson.ObjectId `bson:"_id,omitempty"`
+	SID              string `bson:"sid,omitempty"`
+	Name             string `bson:"name"`
+	NewMessagesCount int `bson:"not_answered_count"`
+	Team             *Team
+	Phone            string
+	Passersby        bool
+}
+
+func GroupTeamsBy(vs []Team, f func(Team) string) map[string]*Team {
+	vsf := map[string]*Team{}
+	for _, v := range vs {
+		if res := f(v); res != "" {
+			vsf[res] = &v
+		}
+	}
+	return vsf
+}
+
+func (qs *QuestStorage) GetContacts(teams []Team) ([]Contact, error) {
+	resp := []Contact{}
+	err := qs.Messages.Pipe([]bson.M{{"$group": bson.M{"_id":"$from", "name":"$from", "not_answered_count":bson.M{"$sum":"answered"}}}}).All(&resp)
+	if err != nil {
+		return resp, err
+	}
+
+	team_names := GroupTeamsBy(teams, func(t Team) string {
+		return t.Name
+	})
+	for i, contact := range resp {
+		if team, ok := team_names[contact.Name]; ok {
+			resp[i].Team = team
+			resp[i].SID = team.ID.Hex()
+			resp[i].Passersby = false
+		}else {
+			pb, _ := qs.GetPassersby(bson.M{"user_id":resp[i].ID})
+			if pb != nil {
+				resp[i].Phone = pb.Phone
+				resp[i].Name = pb.Name
+				resp[i].Passersby = true
+				resp[i].SID = pb.ID.Hex()
+			}
+		}
+	}
+	return resp, err
+}
 //type KeyWrapper struct {
 //	ID          bson.ObjectId `bson:"_id,omitempty"`
 //	SID         string

@@ -20,6 +20,7 @@ import (
 	"io/ioutil"
 	"strconv"
 	"regexp"
+	"html/template"
 )
 
 var users = map[string]string{
@@ -93,6 +94,13 @@ func Run(config c.QuestConfig, qs *QuestStorage, ntf *msngr.Notifier) {
 		Charset: "UTF-8",
 		IndentJSON: true,
 		IndentXML: true,
+		Funcs:[]template.FuncMap{
+			template.FuncMap{
+				"eq_s":func(a, b string) bool {
+					return a == b
+				},
+			},
+		},
 	}))
 
 	m.Use(auth.BasicFunc(func(username, password string) bool {
@@ -117,8 +125,8 @@ func Run(config c.QuestConfig, qs *QuestStorage, ntf *msngr.Notifier) {
 
 		log.Printf("QUESTS WEB add key %s -> %s -> %s", start_key, description, next_key)
 		if start_key != "" && description != "" {
-			err := qs.AddKey(start_key, description, next_key)
-			log.Printf("QW is error? %v", err)
+			key, err := qs.AddKey(start_key, description, next_key)
+			log.Printf("QW is error? %v key: %v", err, key)
 			render.Redirect("/new_keys")
 		} else {
 			render.HTML(200, "quests/new_keys", get_keys_info("Невалидные значения ключа или ответа", qs))
@@ -236,9 +244,50 @@ func Run(config c.QuestConfig, qs *QuestStorage, ntf *msngr.Notifier) {
 
 		render.Redirect("/new_keys")
 	})
+	m.Get("/chat", func(render render.Render, params martini.Params, req *http.Request) {
+		with := req.PostForm.Get("with")
 
-	m.Get("/chat", func(render render.Render){
-		render.HTML(200, "quests/chat", map[string]interface{}{})
+		var team *Team
+		var man *TeamMember
+		if with != "" {
+			team, _ = qs.GetTeamByName(with)
+			if team == nil {
+				man, _ = qs.GetPassersby(bson.M{"user_id":with})
+			}
+		}
+		result_data := map[string]interface{}{
+			"team":team,
+			"man":man,
+		}
+
+		keys, _ := qs.GetAllKeys()
+		all_teams, _ := qs.GetAllTeams()
+
+		if len(all_teams) != 0 {
+			result_data["all_teams"] = all_teams
+		}
+		if len(keys) != 0 {
+			result_data["keys"] = keys
+		}
+		var messages_from string
+		if team != nil {
+			messages_from = team.Name
+		} else if man != nil {
+			messages_from = man.ID.Hex()
+		} else {
+			messages_from = "all"
+		}
+		log.Printf("QSERV Chat with:[%v]", with)
+		result_data["with"] = messages_from
+		if messages, err := qs.GetMessages(bson.M{"$or":[]bson.M{bson.M{"from":messages_from}, bson.M{"to":messages_from}}}); err == nil {
+			result_data["messages"] = messages
+		}
+		if contacts, err := qs.GetContacts(all_teams); err == nil {
+			result_data["contacts"] = contacts
+		} else {
+			log.Printf("QSERV: contacts err: %v", err)
+		}
+		render.HTML(200, "quests/chat", result_data)
 	})
 
 	log.Printf("Will start web server for quest at: %v", config.WebPort)

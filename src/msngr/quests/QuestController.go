@@ -19,13 +19,20 @@ import (
 const (
 	ME = "me"
 	BAD_KEY = "Не верный ключ"
-	NOT_SEQUENED_KEY = "Вы не должны были найти этот ключ сейчас. Верните его на место. Ищите ключ согласно описанию."
+	NOT_NEXT_KEY = "Вы не должны были найти этот ключ сейчас. Верните его на место. Ищите ключ согласно описанию."
+	BAD_GROUP_INPUT = "Не могу определить группу по введеному ключу :("
+	NOT_TEAM_MEMBER = "Пользователь не является участником и ключ не стартовый."
 )
 
 var (
 	DB_ERROR = errors.New("Ошибка на стороне базы данных")
 	DB_ERROR_RESULT = &s.MessageResult{Type:"chat", Body:DB_ERROR.Error()}
+	USER_DATA_ERROR_RESULT = &s.MessageResult{Type:"chat", Body:"Не хватает данных для сохранения сообщения :("}
 )
+
+func WRONG_TEAM_MEMBER(bad, good string) string {
+	return fmt.Sprintf("Пользователь не является участником группы %s. Пользователь учасник группы %s.", bad, good)
+}
 
 type QuestCommandRequestProcessor struct {
 	c.ConfigStorage
@@ -65,12 +72,23 @@ func ProcessKeyUserResult(team *Team, key string, qs *QuestStorage) (string, err
 
 	previous_key, err := qs.GetKeyByNextKey(key)
 	if previous_key != nil {
+		log.Printf("Q: i found previous key which have next_key == %v and: " +
+		"\nit was in team founded keys? %v," +
+		"\nit founded? %v" +
+		"\nitfounded by this team? %v (by %v)",
+			key,
+			utils.InS(previous_key.StartKey, team.FoundKeys),
+			previous_key.Founded,
+			previous_key.FoundedBy == team.Name,
+			previous_key.FoundedBy,
+		)
 		if utils.InS(previous_key.StartKey, team.FoundKeys) && previous_key.Founded && previous_key.FoundedBy == team.Name {
 			return key_info.Description, nil, true
 		} else {
-			return NOT_SEQUENED_KEY, nil, false
+			return NOT_NEXT_KEY, nil, false
 		}
 	}
+	log.Printf("Q: i not found any key which have next_key == %v and i think that it is first key in sequence", key)
 	return key_info.Description, nil, true
 }
 
@@ -79,23 +97,8 @@ func GetTeamNameFromKey(key string) (string, error) {
 	if len(found) == 2 {
 		return found[1], nil
 	} else {
-		return "", errors.New("Не могу определить группу по введеному ключу :(")
+		return "", errors.New(BAD_GROUP_INPUT)
 	}
-}
-
-func GetOrPersistUserTeam(in *s.InPkg, team_name string, qs *QuestStorage) (*Team, error) {
-	team, err := qs.GetTeamByName(team_name)
-	member, err := qs.GetTeamMemberByUserId(in.From)
-	if err != nil {
-		return nil, err
-	}
-	if team == nil {
-		err = qs.AddTeam(team_name)
-	}
-	if member == nil {
-		err = qs.AddTeamMember(in.From, in.UserData.Name, in.UserData.Phone, team_name)
-	}
-	return team, err
 }
 
 func (qmpp QuestMessagePersistProcessor) ProcessMessage(in *s.InPkg) *s.MessageResult {
@@ -105,18 +108,59 @@ func (qmpp QuestMessagePersistProcessor) ProcessMessage(in *s.InPkg) *s.MessageR
 		key = strings.TrimSpace(key)
 		if key_reg.MatchString(key) {
 			key = strings.ToLower(key)
-			err := qmpp.Storage.StoreMessage(in.From, ME, key, true)
-			if err != nil {
-				log.Printf("Q E : at storing key as message %v", err)
-				return DB_ERROR_RESULT
-			}
+			log.Printf("Q: Here is key: %v", key)
 			team_name, err := GetTeamNameFromKey(key)
 			if err != nil {
-				return &s.MessageResult{Type:"chat", Body:"Не могу определить группу по введеному ключу :(", }
+				return &s.MessageResult{Type:"chat", Body:BAD_GROUP_INPUT}
 			}
-			team, err := GetOrPersistUserTeam(in, team_name, qmpp.Storage)
+			team, err := qmpp.Storage.GetTeamByName(team_name)
+			if team == nil {
+				team, err = qmpp.Storage.AddTeam(team_name)
+				if err != nil {
+					log.Printf("Q E : at adding team %v", err)
+					return DB_ERROR_RESULT
+				}
+			}
+			log.Printf("Q:Team recognised: %+v", team)
+			prev_key, err := qmpp.Storage.GetKeyByNextKey(key);
+			log.Printf("Q:prevkey? %+v , Err? %v", prev_key, err)
+			if err != nil {
+				return DB_ERROR_RESULT
+			}
+			member, err := qmpp.Storage.GetTeamMemberByUserId(in.From)
+
+			if member == nil {
+				if prev_key == nil {
+					log.Printf("Q:Recognised register key from %v [%+v], add him to team: %v", in.From, in.UserData, team_name)
+					member, err = qmpp.Storage.AddTeamMember(in.From, in.UserData.Name, in.UserData.Phone, team)
+					if err != nil {
+						log.Printf("Q E : at adding team member%v", err)
+						return DB_ERROR_RESULT
+					}
+				}else {
+					log.Printf("Q:Register key [%v] not recognised because we have previous key: %v, " +
+					"\nQ:but member for[%v] is nil:( all in:\n%+v", key, prev_key, in.UserData,in)
+
+				}
+			} else {
+				if prev_key == nil {
+					log.Printf("Q:will change team at member [%v]  %v -> %v", member.Name, member.TeamName, team_name)
+					qmpp.Storage.SetTeamForTeamMember(team, member)
+					member, err = qmpp.Storage.AddTeamMember(in.From, in.UserData.Name, in.UserData.Phone, team)
+				} else if !member.Passersby && member.TeamName != "" && member.TeamSID != "" && member.TeamName != team_name {
+					return &s.MessageResult{Type:"chat", Body:WRONG_TEAM_MEMBER(team_name, member.TeamName)}
+				} else if member.Passersby && prev_key != nil {
+					return &s.MessageResult{Type:"chat", Body:NOT_TEAM_MEMBER}
+				}
+			}
+
 			if err != nil {
 				log.Printf("Q E : at getting or persisting user team %v", err)
+				return DB_ERROR_RESULT
+			}
+			_, err = qmpp.Storage.StoreMessage(team.Name, ME, key, true)
+			if err != nil {
+				log.Printf("Q E : at storing key as message %v", err)
 				return DB_ERROR_RESULT
 			}
 
@@ -132,11 +176,20 @@ func (qmpp QuestMessagePersistProcessor) ProcessMessage(in *s.InPkg) *s.MessageR
 			}
 			return &s.MessageResult{Type:"chat", Body:descr, }
 		} else {
-			err := qmpp.Storage.StoreMessage(in.From, ME, key, false)
-			if err != nil {
-				log.Printf("Q E : at storing message %v", err)
-				return DB_ERROR_RESULT
+			var from string
+			member, _ := qmpp.Storage.GetTeamMemberByUserId(in.From)
+			if member != nil {
+				from = member.TeamName
+
+			} else if in.UserData != nil {
+				user_data := in.UserData
+				from = in.From
+				qmpp.Storage.AddPasserby(in.From, user_data.Phone, user_data.Name)
+
+			} else {
+				return USER_DATA_ERROR_RESULT
 			}
+			qmpp.Storage.StoreMessage(from, ME, key, false)
 		}
 	} else {
 		return &s.MessageResult{Type:"chat", Body:"Сообщения нет :( ", }
@@ -165,5 +218,4 @@ func FormQuestBotContext(conf c.Configuration, qname string, cs c.ConfigStorage,
 	go Run(qconf, qs, notifier)
 
 	return &result
-
 }

@@ -15,9 +15,12 @@
 }
 
 #left {
-    !postiton:fixed
+    postiton:fixed !important
     bottom: 80;
     right: 10;
     width: 20;
     background-color: green;
+}
+#chat-window{
+
 }

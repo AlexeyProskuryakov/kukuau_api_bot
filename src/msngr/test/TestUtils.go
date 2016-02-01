@@ -1,6 +1,5 @@
 package test
 
-
 import (
 	"path"
 	s "msngr/structs"
@@ -19,7 +18,7 @@ const (
 
 func GetTestFileName(fn string) string {
 	dir, err := os.Getwd()
-	if err != nil{
+	if err != nil {
 		panic(err)
 	}
 	test_dir := path.Join(dir, TEST_RESOURCE_PATH, fn)
@@ -57,8 +56,8 @@ func POST(address string, out *s.InPkg) (*s.OutPkg, error) {
 
 	req.Header.Add("Content-Type", "application/json")
 
-	print, _ := json.MarshalIndent(out, "", "	")
-	log.Printf("TEST POST >> %+v \n%+v \n %s", address, req.Header, print)
+	//print, _ := json.MarshalIndent(out, "", "	")
+	log.Printf("TP >> %+v [%v]",  *out.Message.Body, out.UserData.Name)
 
 	client := &http.Client{}
 	resp, err := client.Do(req)
@@ -72,9 +71,9 @@ func POST(address string, out *s.InPkg) (*s.OutPkg, error) {
 			log.Printf("TEST POST << ERROR:%+v", err)
 			return nil, err
 		} else {
-			log.Printf("TEST POST << %v", string(body))
 			in := s.OutPkg{}
 			err := json.Unmarshal(body, &in)
+			log.Printf("TP << %+v [%v]", in.Message.Body, out.UserData.Name)
 			if err != nil {
 				log.Printf("TEST POST err in unmarshal %v", err)
 				return nil, err
