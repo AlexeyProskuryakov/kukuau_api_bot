@@ -18,20 +18,21 @@ import (
 
 const (
 	ME = "me"
-	BAD_KEY = "Не верный ключ"
+	BAD_KEY = "Не верный ключ."
 	NOT_NEXT_KEY = "Вы не должны были найти этот ключ сейчас. Верните его на место. Ищите ключ согласно описанию."
 	BAD_GROUP_INPUT = "Не могу определить группу по введеному ключу :("
-	NOT_TEAM_MEMBER = "Пользователь не является участником и ключ не стартовый."
+	NOT_TEAM_MEMBER = "Вы не являетесь участником квеста."
 )
 
 var (
 	DB_ERROR = errors.New("Ошибка на стороне базы данных")
 	DB_ERROR_RESULT = &s.MessageResult{Type:"chat", Body:DB_ERROR.Error()}
+	BAD_KEY_RESULT = &s.MessageResult{Type:"chat", Body:BAD_KEY}
 	USER_DATA_ERROR_RESULT = &s.MessageResult{Type:"chat", Body:"Не хватает данных для сохранения сообщения :("}
 )
 
 func WRONG_TEAM_MEMBER(bad, good string) string {
-	return fmt.Sprintf("Пользователь не является участником группы %s. Пользователь учасник группы %s.", bad, good)
+	return fmt.Sprintf("Вы не являетесь участником группы %s. Вы учасник группы %s.", bad, good)
 }
 
 type QuestCommandRequestProcessor struct {
@@ -59,24 +60,15 @@ type QuestMessagePersistProcessor struct {
 
 var key_reg = regexp.MustCompile("^\\#[\\w\\dа-яА-Я]+\\-?(?P<team>[\\w\\da-zа-я]+)?")
 
-func ProcessKeyUserResult(team *Team, key string, qs *QuestStorage) (string, error, bool) {
+func ValidateKeyBySequent(team *Team, key_info *Key, qs *QuestStorage) (string, error, bool) {
 	//return description or some text for user or "" if error
-	key_info, err := qs.GetKey(key)
-	if err != nil {
-		log.Printf("QUEST key [%v] is ERR! %v", err)
-		return "", DB_ERROR, false
-	}
-	if key_info == nil {
-		return BAD_KEY, nil, false
-	}
-
-	previous_key, err := qs.GetKeyByNextKey(key)
+	previous_key, _ := qs.GetKeyByNextKey(key_info.StartKey)
 	if previous_key != nil {
 		log.Printf("Q: i found previous key which have next_key == %v and: " +
 		"\nit was in team founded keys? %v," +
 		"\nit founded? %v" +
 		"\nitfounded by this team? %v (by %v)",
-			key,
+			key_info.StartKey,
 			utils.InS(previous_key.StartKey, team.FoundKeys),
 			previous_key.Founded,
 			previous_key.FoundedBy == team.Name,
@@ -88,7 +80,7 @@ func ProcessKeyUserResult(team *Team, key string, qs *QuestStorage) (string, err
 			return NOT_NEXT_KEY, nil, false
 		}
 	}
-	log.Printf("Q: i not found any key which have next_key == %v and i think that it is first key in sequence", key)
+	log.Printf("Q: i not found any key which have next_key == %v and i think that it is first key in sequence", key_info)
 	return key_info.Description, nil, true
 }
 
@@ -109,6 +101,15 @@ func (qmpp QuestMessagePersistProcessor) ProcessMessage(in *s.InPkg) *s.MessageR
 		if key_reg.MatchString(key) {
 			key = strings.ToLower(key)
 			log.Printf("Q: Here is key: %v", key)
+			key_info, err := qmpp.Storage.GetKey(key)
+			if err != nil {
+				log.Printf("QUEST key [%v] is ERR! %v", err)
+				return DB_ERROR_RESULT
+			}
+			if key_info == nil {
+				return BAD_KEY_RESULT
+			}
+
 			team_name, err := GetTeamNameFromKey(key)
 			if err != nil {
 				return &s.MessageResult{Type:"chat", Body:BAD_GROUP_INPUT}
@@ -139,8 +140,8 @@ func (qmpp QuestMessagePersistProcessor) ProcessMessage(in *s.InPkg) *s.MessageR
 					}
 				}else {
 					log.Printf("Q:Register key [%v] not recognised because we have previous key: %v, " +
-					"\nQ:but member for[%v] is nil:( all in:\n%+v", key, prev_key, in.UserData,in)
-
+					"\nQ:but member for[%v] is nil:( all in:\n%+v", key, prev_key, in.UserData, in)
+					return BAD_KEY_RESULT
 				}
 			} else {
 				if prev_key == nil {
@@ -158,13 +159,7 @@ func (qmpp QuestMessagePersistProcessor) ProcessMessage(in *s.InPkg) *s.MessageR
 				log.Printf("Q E : at getting or persisting user team %v", err)
 				return DB_ERROR_RESULT
 			}
-			_, err = qmpp.Storage.StoreMessage(team.Name, ME, key, true)
-			if err != nil {
-				log.Printf("Q E : at storing key as message %v", err)
-				return DB_ERROR_RESULT
-			}
-
-			descr, err, ok := ProcessKeyUserResult(team, key, qmpp.Storage)
+			descr, err, ok := ValidateKeyBySequent(team, key_info, qmpp.Storage)
 			log.Printf("QUESTS want to send key %v i have this answer for key: %v, err: %v, ok? %v", key, descr, err, ok)
 			if err != nil {
 				log.Printf("Q E : at processing key result %v", err)
@@ -172,6 +167,11 @@ func (qmpp QuestMessagePersistProcessor) ProcessMessage(in *s.InPkg) *s.MessageR
 			}
 			if ok {
 				qmpp.Storage.SetKeyFounded(key, team_name)
+				_, err = qmpp.Storage.StoreMessage(team.Name, ME, key, true)
+				if err != nil {
+					log.Printf("Q E : at storing key as message %v", err)
+					return DB_ERROR_RESULT
+				}
 
 			}
 			return &s.MessageResult{Type:"chat", Body:descr, }

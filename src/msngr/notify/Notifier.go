@@ -7,20 +7,19 @@ import (
 	"net/http"
 	s "msngr/structs"
 	"io/ioutil"
+	"msngr/utils"
 )
-
 
 type Notifier struct {
 	address string
 	key     string
 }
 
-
 func NewNotifier(addr, key string) *Notifier {
 	return &Notifier{address: addr, key: key}
 }
 
-func (n Notifier) Notify(outPkg s.OutPkg) error{
+func (n Notifier) Notify(outPkg s.OutPkg) error {
 	jsoned_out, err := json.Marshal(&outPkg)
 	if err != nil {
 		log.Printf("NTF error at unmarshal %v", err)
@@ -48,13 +47,17 @@ func (n Notifier) Notify(outPkg s.OutPkg) error{
 	}
 	if resp != nil {
 		body, err := ioutil.ReadAll(resp.Body)
-		if err != nil{
+		if err != nil {
 			log.Printf("N << ERROR:%+v", err)
 			return err
-		} else{
+		} else {
 			log.Printf("N << %v", string(body))
 		}
 		defer resp.Body.Close()
 	}
 	return nil
+}
+
+func (n Notifier) NotifyText(to, text string) error {
+	return n.Notify(s.OutPkg{To:to, Message:&s.OutMessage{ID:utils.GenId(), Type:"chat", Body:text}})
 }

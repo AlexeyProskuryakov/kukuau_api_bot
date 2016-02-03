@@ -1,96 +1,131 @@
-<div id="left-bar" class="col-md-3">
+<div id="left-bar" class="col-md-2">
+    {{$with := .with}}
+    {{$all := "all"}}
+    {{$all_tm := "all_team_members"}}
     <div class="row">
-        {{if eq_s .with "all" }}
-        <button class="btn btn-info btn-med active" onclick="write_to('all')">Написать всем</button>
-        {{else}}
-        <button class="btn btn-info btn-med" onclick="write_to('all')">Написать всем</button>
+        <a class="bg-danger a-contact
+        {{if eq_s $with $all}}
+        c-active
         {{end}}
+        " href="/chat?with={{$all}}">Написать всем</a>
     </div>
-    <hr>
-    <div class="row" id="contact-teams">
-        <h4>Комманды:</h4>
-        {{range $team := .all_teams}}
-        <div class="contact" sid="{{$team.SID}}">
-            <a class="btn btn-primary" href="/chat?with={{$team.Name}}">{{$team.Name}}</a>
-        </div>
+    <div class="row">
+        <a class="bg-warning a-contact
+        {{if eq_s $with $all_tm}}
+        c-active
         {{end}}
+        " href="/chat?with={{$all_tm}}">Написать всем участникам квестов</a>
     </div>
     <hr>
     <div class="row" id="contacts">
-        <h4>Все контакты:</h4>
+        <h4>Контакты:</h4>
         {{range $contact := .contacts}}
-        <div class="contact" sid="{{$contact.SID}}">
-            <a class="btn btn-primary" href="/chat?with={{$contact.SID}}">{{$contact.Name}} ({{$contact.NewMessagesCount}})</a>
+        <div class="contact" id="{{$contact.ID}}">
+            <a id="a-{{$contact.ID}}" class="bg-success a-contact
+            {{if eq_s $with $contact.ID}}
+            c-active
+            {{end}}
+            " href="/chat?with={{$contact.ID}}">
+                {{if $contact.IsTeam}}
+                Комманда {{$contact.Name}}
+                {{else}}
+                {{$contact.Name}} [{{$contact.Phone}}]
+                {{end}}
+
+
+            <span class="small" id="s-{{$contact.ID}}">
+                {{if $contact.NewMessagesCount}}
+                ( {{$contact.NewMessagesCount}} )
+                {{end}}
+            </span>
+            </a>
         </div>
         {{end}}
     </div>
     <hr>
 
 </div>
-<div id="chat-window" class="col-md-5">
+<div id="chat-window" class="col-md-7">
     <div class="row">
-        {{range $message := .messages}}
-        <div class="chat-window">
-            <div class="from">{{$message.From}}</div>
-            <div class="to">{{$message.To}}</div>
-            <div class="body">{{$message.Body}}</div>
-            <div class="time">{{$message.Time}}</div>
+        <div class="message-wrap col-lg-8">
+            <div class="msg-wrap" id="chat-wrapper">
+                {{range $message := .messages}}
+                {{if eq_s $message.From "me" }}
+                <div class="media msg">
+                    <div class="media-body">
+                        <small class="pull-left time"><i class="fa fa-clock-o"></i>{{$message.Time}}</small>
+                        <h5 class="media-heading pull-right">{{$message.From}}</h5>
+                        <small class="col-lg-10">{{$message.Body}}
+                        </small>
+                    </div>
+                </div>
+                {{else}}
+                <div class="media msg">
+                    <div class="media-body">
+                        <small class="pull-right time"><i class="fa fa-clock-o"></i>{{$message.Time}}</small>
+
+                        <h5 class="media-heading">{{$message.From}}</h5>
+                        <small class="col-lg-10">{{$message.Body}}
+                        </small>
+                    </div>
+                </div>
+                {{end}}
+                {{end}}
+
+            </div>
+
         </div>
-        {{end}}
     </div>
+    <hr>
     <div class="row">
         <div class="chat-input">
-            <form id="chat-form" method="post" action="/chat-input" class="form-inline">
-                <div class="form-group has-feedback">
+            <form id="chat-form" method="post" action="/send_message">
+                <div class="form-group form-inline">
                     <label class="control-label">Message:</label>
                     <textarea class="form-control" placeholder="..." name="chat-form-message" id="chat-form-message"
-                              rows="1"></textarea>
-                    <input type="hidden" name="from" value="me">
-                    <button type="submit" class="btn btn-default" aria-label="Left Align">
+                              rows="2"></textarea>
+
+                    <button type="submit" class="btn btn-default">
                         <span class="glyphicon glyphicon-send" aria-hidden="true"></span>
                     </button>
+                </div>
+                <div class="form-group">
+                    <input type="hidden" name="from" value="me">
+                    <input type="hidden" name="to" value="{{$with}}" id="with">
                 </div>
             </form>
         </div>
     </div>
 </div>
 
-<div id="right-bar" class="col-md-4">
-    {{if .team }}
+<div id="right-bar" class="col-md-2">
+    {{if .collocutor.IsTeam}}
     <div class="row">
-        {{range $team_member := .team.Members}}
+        {{range $team_member := .collocutor.Info.Members}}
         <div class="team-name">
             {{$team_member.Name}}
         </div>
         <div class="team-phone">
-            <a href="#" onclick="write_to('{{$team_member.Phone}}')"><h6>{{$team_member.Phone}}</h6></a>
+            <a href="/chat?with={{$team_member.UserId}}"><h6>{{$team_member.Phone}}</h6></a>
         </div>
         {{end}}
     </div>
-    <div class="row">
-        {{range $key := .team.FoundKeys}}
-        <p class="bg-success">
-            {{$key}}
-        </p>
-        {{end}}
-    </div>
-    {{else if .man}}
-    <div class="row">
-        <p class="bg-success">
-            {{.man}}
-        </p>
-    </div>
-    {{end}}
 
     <div class="row">
         <div class="accordion" id="keys-accordion">
-            {{range $key := .keys}}
+            {{range $key := .collocutor.Info.AllKeys}}
             <div class="accordion-group">
                 <div class="accordion-heading">
-                    <a class="accordion-toggle" data-toggle="collapse" data-parent="#keys-accordion"
-                       href="#{{$key.SID}}">
-                        {{$key.Key}}
-                    </a>
+                    <p class="{{if $key.Founded}}
+                    bg-info
+                    {{else}}
+                    bg-success
+                    {{end}}">
+                        <a class="accordion-toggle" data-toggle="collapse" data-parent="#keys-accordion"
+                           href="#{{$key.SID}}">
+                            {{$key.StartKey}} > {{$key.NextKey}}
+                        </a>
+                    </p>
                 </div>
                 <div id="{{$key.SID}}" class="accordion-body collapse">
                     <div class="accordion-inner">
@@ -101,29 +136,22 @@
             {{end}}
         </div>
     </div>
+    {{end}}
+
+
+    {{if .collocutor.IsMan}}
+    <div class="row">
+        <h4> {{.collocutor.Name}} <span class="small">{{.collocutor.Info.Phone}}</span></h4>
+        {{if .collocutor.Info.Passersby}}
+        <p class="bg-warning">Не участник</p>
+        {{else}}
+        <p class="bg-info">Участник комманды <a class="btn btn-default" href="/chat?with={{.collocutor.Info.TeamName}}">{{.collocutor.Info.TeamName}}</a>
+        </p>
+        {{end}}
+
+    </div>
+    {{end}}
+
 </div>
-<script>
+<script src="script.js"></script>
 
-    var message = {to_name:"",from_name:"me",}
-
-    function show_message(){
-        $("#chat-form-message").text(message.to_name+": ");
-    }
-
-    function write_to(to_name){
-        message.to_name = to_name;
-        show_message();
-    }
-
-
-
-
-
-
-
-
-
-
-
-
-</script>

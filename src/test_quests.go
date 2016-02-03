@@ -30,7 +30,7 @@ func send_key(key string, userData *s.InUserData) string {
 }
 
 //todo create prepare
-func prepare_keys(salt string, commands_count int) {
+func PREPARE_KEYS(salt string, commands_count int) {
 	qs := q.NewQuestStorage(config.Main.Database.ConnString, config.Main.Database.Name)
 	qs.Keys.RemoveAll(bson.M{})
 	qs.Messages.RemoveAll(bson.M{})
@@ -53,11 +53,16 @@ func kr(kn, c int) string {
 func k(kn, c int) string {
 	return fmt.Sprintf("#%+v-%v", kn, c)
 }
-func next_ok(kn, c int, first *s.InUserData) {
-	result := send_key(k(kn, c), first)
-	log.Printf("ASSERT THAT NEXT COMMAND IS GOOD [%v] |||%v||| real: %v | want: %v", kn, result == kr(kn, c), result, kr(kn, c))
+func ok(kn, c int, who *s.InUserData) {
+	result := send_key(k(kn, c), who)
+	log.Printf("ASSERT KEY IS OK:   |||%v||| real: %v | want: %v | by: %v", result == kr(kn, c), result, kr(kn, c), who.Name)
 
 }
+func not_ok(kn, c int, who *s.InUserData) {
+	result := send_key(k(kn, c), who)
+	log.Printf("ASSERT KEY NOT OK:  |||%v||| real: %v | not want: %v | by: %v", result != kr(kn, c), result, kr(kn, c), who.Name)
+}
+
 func prepare_command(n_t, ph string, count int) []*s.InUserData {
 	result := []*s.InUserData{}
 	for i := int(0); i < count; i++ {
@@ -67,82 +72,84 @@ func prepare_command(n_t, ph string, count int) []*s.InUserData {
 	return result
 }
 
+func test_sequented(team []*s.InUserData) {
+	not_ok(1, 9, team[7])
+	not_ok(1, 9, team[9])
+	not_ok(1, 9, team[8])
 
-func not_ok(kn, c int, who *s.InUserData) {
-	result := send_key(k(kn, c), who)
-	log.Printf("ASSERT KEY NOT OK |||%v||| real: %v | not eqaual: %v", result != kr(kn,c), result, kr(kn,c))
+	not_ok(1, 8, team[1])
+	not_ok(1, 8, team[1])
+	not_ok(1, 8, team[2])
+	not_ok(1, 8, team[3])
+
+	not_ok(2, 6, team[1])
+	not_ok(3, 6, team[3])
+	//
+	ok(0, 7, team[7])
+	ok(1, 7, team[7])
+	ok(2, 7, team[7])
+	ok(3, 7, team[7])
+	//
+	ok(0, 7, team[8])
+	ok(4, 7, team[8])
+
+	not_ok(6, 7, team[8])
+	not_ok(6, 7, team[7])
+
+	ok(5, 7, team[7])
+	ok(5, 7, team[8])
+
+	not_ok(8, 7, team[8])
+	not_ok(8, 7, team[7])
+
+	ok(5, 7, team[7])
+	ok(5, 7, team[8])
+
+	not_ok(8, 7, team[8])
+	not_ok(8, 7, team[7])
+
+	ok(5, 7, team[7])
+	ok(5, 7, team[8])
 }
 
-func test_sequented(team []*s.InUserData){
-	not_ok(1,9,team[7])
-	not_ok(1,9,team[9])
-	not_ok(1,9,team[8])
+func test_new_user() {
+	PREPARE_KEYS(salt, 3)
+	team := prepare_command("alesha", "TEST", 2)
+
+	not_ok(1, 1, team[1])
+	not_ok(1, 1, team[1])
+	ok(0,1, team[1])
+	ok(0,1, team[0])
+
+	ok(1,1, team[0])
+	ok(2,1, team[0])
+	ok(0,1, team[0])
 
 
-	not_ok(1,8,team[1])
-	not_ok(1,8,team[1])
-	not_ok(1,8,team[2])
-	not_ok(1,8,team[3])
+	ok(2,1, team[1])
 
-	not_ok(2,6, team[1])
-	not_ok(3,6, team[3])
-	//
-	next_ok(0,7, team[7])
-	next_ok(1,7, team[7])
-	next_ok(2,7, team[7])
-	next_ok(3,7, team[7])
-	//
-	next_ok(0,7, team[8])
-	next_ok(4,7, team[8])
 
-	not_ok(6,7, team[8])
-	not_ok(6,7, team[7])
-
-	next_ok(5,7, team[7])
-	next_ok(5,7, team[8])
-
-	not_ok(8,7, team[8])
-	not_ok(8,7, team[7])
-
-	next_ok(5,7, team[7])
-	next_ok(5,7, team[8])
-
-	not_ok(8,7, team[8])
-	not_ok(8,7, team[7])
-
-	next_ok(5,7, team[7])
-	next_ok(5,7, team[8])
 }
+
 func main() {
+	PREPARE_KEYS(salt, 10)
+	//prepare_keys(salt, 10)
+	team := prepare_command("alesha", "TEST", 20)
+	ok(0,1,team[1])
+	ok(0,2,team[1])
+	ok(1,2, team[1])
+	ok(2,2, team[1])
+	ok(3,2, team[1])
+	ok(4,2, team[1])
 
-	prepare_keys(salt, 10)
-	team := prepare_command("alesha", "TEST", 10)
-	next_ok(0,1,team[1])
-	next_ok(0,2,team[1])
-	next_ok(1,2, team[1])
-	next_ok(2,2, team[1])
-	next_ok(3,2, team[1])
-	next_ok(4,2, team[1])
-
-	next_ok(0,1, team[1])
-	next_ok(1,1, team[1])
-
+	ok(0,1, team[1])
+	ok(1,1, team[1])
 	test_sequented(team)
+	test_new_user()
 
 
 	//next_ok(0,2, team[1])
 	//next_ok(1,2, team[1])
-
-
-
-
-
-
-
-
-
-
-
 
 
 	//test_register(team, 2)

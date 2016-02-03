@@ -15,6 +15,7 @@ import (
 )
 
 var DEBUG bool
+var TEST bool
 //var textProvider = tm.NewTextMessageSupplier()
 
 type BotContext struct {
@@ -47,14 +48,14 @@ func getInPackage(r *http.Request) (*s.InPkg, error) {
 	}
 	body, err := ioutil.ReadAll(r.Body)
 	if err != nil {
-		log.Printf("error at reading: %q \n", err)
+		log.Printf("BOT: error at reading: %q \n", err)
 	}
 	if DEBUG {
-		log.Printf("BOT RECEIVED: \n%s\n", string(body))
+		log.Printf("BOT: RECEIVED: \n%s\n", string(body))
 	}
 	err = json.Unmarshal(body, &in)
 	if err != nil {
-		log.Printf("error at unmarshal: %q \n", err)
+		log.Printf("BOT: error at unmarshal: %q \n %s", err, body)
 	}
 	return &in, err
 }

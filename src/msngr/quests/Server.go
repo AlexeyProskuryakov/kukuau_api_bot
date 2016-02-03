@@ -8,9 +8,7 @@ import (
 
 	c "msngr/configuration"
 
-	"msngr/notify"
-	"msngr/structs"
-	"msngr/utils"
+	ntf "msngr/notify"
 
 	"log"
 	"gopkg.in/mgo.v2/bson"
@@ -21,6 +19,9 @@ import (
 	"strconv"
 	"regexp"
 	"html/template"
+	"encoding/json"
+	"time"
+	"msngr/utils"
 )
 
 var users = map[string]string{
@@ -28,6 +29,11 @@ var users = map[string]string{
 	"leha":"qwerty100500",
 	"dima":"123",
 }
+
+const (
+	ALL = "all"
+	ALL_TEAM_MEMBERS = "all_team_members"
+)
 
 func ParseExportXlsx(xlf *xlsx.File, qs *QuestStorage, skip_row, skip_cell int) error {
 	for _, sheet := range xlf.Sheets {
@@ -75,6 +81,14 @@ func get_keys_info(err_text string, qs *QuestStorage) map[string]interface{} {
 	return result
 }
 
+func send_messages_to_peoples(people []TeamMember, ntf *ntf.Notifier, text string) {
+	go func() {
+		for _, user := range people {
+			ntf.NotifyText(user.UserId, text)
+		}
+	}()
+}
+
 func get_messages_info(err_text string, qs *QuestStorage) map[string]interface{} {
 	teams, _ := qs.GetAllTeams()
 	result := map[string]interface{}{}
@@ -86,7 +100,8 @@ func get_messages_info(err_text string, qs *QuestStorage) map[string]interface{}
 	return result
 }
 
-func Run(config c.QuestConfig, qs *QuestStorage, ntf *msngr.Notifier) {
+func Run(config c.QuestConfig, qs *QuestStorage, ntf *ntf.Notifier) {
+
 	m := martini.Classic()
 	m.Use(render.Renderer(render.Options{
 		Layout: "quests/layout",
@@ -157,56 +172,26 @@ func Run(config c.QuestConfig, qs *QuestStorage, ntf *msngr.Notifier) {
 		render.Redirect("/new_keys")
 	})
 
-	m.Get("/messages", func(render render.Render) {
-		//fake
-		teams, _ := qs.GetAllTeams()
+	//m.Post("/message_answer_all", func(render render.Render, request *http.Request) {
+	//	users, _ := qs.GetAllTeamMembers()
+	//	answer := request.FormValue("message_all")
+	//	if answer != "" {
+	//		go func() {
+	//			for _, user := range users {
+	//				ntf.Notify(structs.OutPkg{To:user.UserId,
+	//					Message: &structs.OutMessage{
+	//						ID: utils.GenId(),
+	//						Type: "chat",
+	//						Body: answer,
+	//					}})
+	//			}
+	//		}()
+	//	}else {
+	//		render.HTML(200, "quests/messages", get_messages_info("Ответ не может быть пустым", qs))
+	//	}
+	//	render.Redirect("/messages")
+	//})
 
-		render.HTML(200, "quests/messages", map[string]interface{}{
-			"teams":teams,
-		})
-	})
-
-	m.Get("/messages/:team_id", func(render render.Render, params martini.Params) {
-
-	})
-
-	m.Post("/message_answer_all", func(render render.Render, request *http.Request) {
-		users, _ := qs.GetAllTeamMembers()
-		answer := request.FormValue("message_all")
-		if answer != "" {
-			go func() {
-				for _, user := range users {
-					ntf.Notify(structs.OutPkg{To:user.UserId,
-						Message: &structs.OutMessage{
-							ID: utils.GenId(),
-							Type: "chat",
-							Body: answer,
-						}})
-				}
-			}()
-		}else {
-			render.HTML(200, "quests/messages", get_messages_info("Ответ не может быть пустым", qs))
-		}
-		render.Redirect("/messages")
-	})
-
-	m.Get("/messages/new_count/:after", func(render render.Render, params martini.Params) {
-		//after_input, err := strconv.ParseInt(params["after"], 10, 64)
-		//if err != nil {
-		//	render.JSON(200, map[string]interface{}{"error":err.Error()})
-		//}
-		//messages, err := qs.GetMessages(bson.M{
-		//	"answered":false,
-		//	"is_key":false,
-		//	"time":bson.M{"$gte":after_input},
-		//})
-		//
-		//if err != nil {
-		//	render.JSON(200, map[string]interface{}{"error":err.Error()})
-		//}else {
-		//	render.JSON(200, map[string]interface{}{"error":false, "count":len(messages) })
-		//}
-	})
 
 	xlsFileReg := regexp.MustCompile(".+\\.xlsx?")
 
@@ -245,49 +230,198 @@ func Run(config c.QuestConfig, qs *QuestStorage, ntf *msngr.Notifier) {
 		render.Redirect("/new_keys")
 	})
 	m.Get("/chat", func(render render.Render, params martini.Params, req *http.Request) {
-		with := req.PostForm.Get("with")
-
-		var team *Team
-		var man *TeamMember
-		if with != "" {
-			team, _ = qs.GetTeamByName(with)
-			if team == nil {
-				man, _ = qs.GetPassersby(bson.M{"user_id":with})
+		var with string
+		result_data := map[string]interface{}{}
+		query := req.URL.Query()
+		for key, value := range query {
+			if key == "with" && len(value) > 0 {
+				with = value[0]
+				log.Printf("QS: with found is: %v", with)
+				break
 			}
 		}
-		result_data := map[string]interface{}{
-			"team":team,
-			"man":man,
+		type Collocutor struct {
+			IsTeam bool
+			IsMan  bool
+			IsAll  bool
+			Info   interface{}
+			Name   string
+		}
+		collocutor := Collocutor{}
+
+		var messages []Message
+
+		if with != ALL && with != ALL_TEAM_MEMBERS {
+			if team, _ := qs.GetTeamByName(with); team != nil {
+				type TeamInfo struct {
+					FoundedKeys []string
+					Members     []TeamMember
+					AllKeys     []Key
+				}
+
+				collocutor.Name = team.Name
+				collocutor.IsTeam = true
+				members, _ := qs.GetMembersOfTeam(team.Name)
+				keys, _ := qs.GetKeys(bson.M{"for_team":team.Name})
+
+				collocutor.Info = TeamInfo{FoundedKeys:team.FoundKeys, Members:members, AllKeys:keys}
+
+				messages, _ = qs.GetMessages(bson.M{
+					"$or":[]bson.M{
+						bson.M{"from":team.Name},
+						bson.M{"to":team.Name},
+					},
+				})
+			}else {
+				if peoples, _ := qs.GetPeoples(bson.M{"user_id":with}); len(peoples) > 0 {
+					man := peoples[0]
+					collocutor.IsMan = true
+					collocutor.Name = man.Name
+					collocutor.Info = man
+
+					messages, _ = qs.GetMessages(bson.M{
+						"$or":[]bson.M{
+							bson.M{"from":man.UserId},
+							bson.M{"to":man.UserId},
+						},
+					})
+					for i, _ := range messages {
+						if messages[i].From != ME {
+							messages[i].From = man.Name
+						}
+					}
+				} else {
+					with = "all"
+				}
+			}
 		}
 
-		keys, _ := qs.GetAllKeys()
+		if strings.HasPrefix(with, "all") {
+			collocutor.IsAll = true
+			collocutor.Name = with
+			messages, _ = qs.GetMessages(bson.M{"to":with})
+		}
+
+		result_data["with"] = with
+		result_data["collocutor"] = collocutor
+		result_data["messages"] = messages
+
 		all_teams, _ := qs.GetAllTeams()
-
-		if len(all_teams) != 0 {
-			result_data["all_teams"] = all_teams
-		}
-		if len(keys) != 0 {
-			result_data["keys"] = keys
-		}
-		var messages_from string
-		if team != nil {
-			messages_from = team.Name
-		} else if man != nil {
-			messages_from = man.ID.Hex()
-		} else {
-			messages_from = "all"
-		}
-		log.Printf("QSERV Chat with:[%v]", with)
-		result_data["with"] = messages_from
-		if messages, err := qs.GetMessages(bson.M{"$or":[]bson.M{bson.M{"from":messages_from}, bson.M{"to":messages_from}}}); err == nil {
-			result_data["messages"] = messages
-		}
 		if contacts, err := qs.GetContacts(all_teams); err == nil {
 			result_data["contacts"] = contacts
-		} else {
-			log.Printf("QSERV: contacts err: %v", err)
 		}
+		log.Printf("QS: Result data: %+v", result_data)
 		render.HTML(200, "quests/chat", result_data)
+	})
+
+	m.Post("/send_message", func(render render.Render, req *http.Request) {
+		v := req.URL.Query()
+		for key, value := range v {
+			log.Printf("key: %v\n", key)
+			log.Printf("value: %v\n", value)
+		}
+
+		from := req.FormValue("from")
+		to := req.FormValue("to")
+		text := req.FormValue("chat-form-message")
+		if from != "" && to != "" && text != "" {
+			if to == "all" {
+				peoples, _ := qs.GetPeoples(bson.M{})
+				send_messages_to_peoples(peoples, ntf, text)
+			} else if to == "all_team_members" {
+				peoples, _ := qs.GetAllTeamMembers()
+				send_messages_to_peoples(peoples, ntf, text)
+			} else {
+				team, _ := qs.GetTeamByName(to)
+				if team == nil {
+					man, _ := qs.GetManByUserId(to)
+					if man != nil {
+						ntf.NotifyText(man.UserId, text)
+					}
+				}else {
+					peoples, _ := qs.GetMembersOfTeam(team.Name)
+					send_messages_to_peoples(peoples, ntf, text)
+				}
+			}
+			qs.StoreMessage(from, to, text, false)
+			log.Printf("QS: will answered all messages from %v by %v", from, to)
+			qs.SetMessagesAnswered(to, from)
+
+		} else {
+			render.Redirect("/chat")
+		}
+		render.Redirect(fmt.Sprintf("/chat?with=%v", to))
+	})
+
+	m.Post("/new_messages", func(render render.Render, req *http.Request) {
+		type NewMessagesReq struct {
+			For   string `json:"m_for"`
+			After int64 `json:"after"`
+		}
+		q := NewMessagesReq{}
+		request_body, err := ioutil.ReadAll(req.Body)
+		if err != nil {
+			render.JSON(500, map[string]interface{}{"ok":false, "detail":"can not read request body"})
+			return
+		}
+		err = json.Unmarshal(request_body, &q)
+		if err != nil {
+			render.JSON(500, map[string]interface{}{"ok":false, "detail":fmt.Sprintf("can not unmarshal request body %v \n %s", err, request_body)})
+			return
+		}
+
+		messages, err := qs.GetMessages(bson.M{"from":q.For, "time_stamp":bson.M{"$gt":q.After}})
+		log.Printf("and  find: %+v", messages)
+		if err != nil {
+			render.JSON(500, map[string]interface{}{"ok":false, "detail":fmt.Sprintf("error in db: %v", err)})
+			return
+		}
+		render.JSON(200, map[string]interface{}{"messages":messages, "next_":time.Now().Unix()})
+	})
+
+	m.Post("/new_contacts", func(render render.Render, req *http.Request) {
+		type NewContactsReq struct {
+			After int64 `json:"after"`
+			Exist []string `json:"exist"`
+		}
+		cr := NewContactsReq{}
+		request_body, err := ioutil.ReadAll(req.Body)
+		log.Printf("1will found by %+v %s", cr, request_body)
+		if err != nil {
+			render.JSON(500, map[string]interface{}{"ok":false, "detail":"can not read request body"})
+			return
+		}
+		log.Printf("2will found by %+v", cr)
+		err = json.Unmarshal(request_body, &cr)
+		if err != nil {
+			render.JSON(500, map[string]interface{}{"ok":false, "detail":fmt.Sprintf("can not unmarshal request body %v \n %s", err, request_body)})
+			return
+		}
+		log.Printf("3will found by %+v", cr)
+		contacts, err := qs.GetContactsAfter(cr.After)
+		if err != nil {
+			log.Printf("err :%v", err)
+			render.JSON(500, map[string]interface{}{"ok":false, "detail":fmt.Sprintf("db err body %v \n %s", err)})
+			return
+		}
+		new_contacts := []Contact{}
+		old_contacts := []Contact{}
+
+		for _, contact := range contacts {
+			log.Printf("new? old? %v.id in %+v", contact, cr.Exist)
+			if utils.InS(contact.ID, cr.Exist) {
+				old_contacts = append(old_contacts, contact)
+			}else {
+				new_contacts = append(new_contacts, contact)
+			}
+		}
+		render.JSON(200, map[string]interface{}{
+			"ok":true,
+			"new":new_contacts,
+			"old":old_contacts,
+			"next_":time.Now().Unix(),
+		})
+
 	})
 
 	log.Printf("Will start web server for quest at: %v", config.WebPort)
