@@ -1,4 +1,4 @@
-#!/usr/bin/env bash
+#!/bin/bash
 NAME="KlichatBot"
 USERNAME="alesha"
 
@@ -24,6 +24,7 @@ build(){
     cp -r ${HOME}/templates ${HOME}/build
     cp -r ${HOME}/static ${HOME}/build
 }
+
 install() {
     #forming config
     echo "
@@ -49,3 +50,16 @@ install() {
 
     supervisorctl restart ${NAME}
  }
+
+case "$1" in
+    build)
+        build
+            ;;
+    install)
+        install
+            ;;
+    *)
+            echo "usage: {build|install (with sudo please...)}" >&2
+            exit 3
+            ;;
+esac
