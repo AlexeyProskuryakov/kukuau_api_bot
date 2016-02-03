@@ -89,9 +89,33 @@ func send_messages_to_peoples(people []TeamMember, ntf *ntf.Notifier, text strin
 	}()
 }
 
+func nonJsonLogger() martini.Handler {
+	return func(res http.ResponseWriter, req *http.Request, c martini.Context, log *log.Logger) {
+		//log.Printf("METHDO: %v, HEADERS: %+v", req.Method, req.Header)
+		if req.Method == "GET" || req.Header.Get("Content-Type") != "application/json" {
+			start := time.Now()
+			addr := req.Header.Get("X-Real-IP")
+			if addr == "" {
+				addr = req.Header.Get("X-Forwarded-For")
+				if addr == "" {
+					addr = req.RemoteAddr
+				}
+			}
+
+			log.Printf("Started %s %s for %s", req.Method, req.URL.Path, addr)
+
+			rw := res.(martini.ResponseWriter)
+			c.Next()
+			log.Printf("Completed %v %s in %v\n", rw.Status(), http.StatusText(rw.Status()), time.Since(start))
+		}
+	}
+}
+
 func Run(config c.QuestConfig, qs *QuestStorage, ntf *ntf.Notifier) {
 
-	m := martini.Classic()
+	m := martini.New()
+	m.Use(nonJsonLogger())
+	m.Use(martini.Recovery())
 	m.Use(render.Renderer(render.Options{
 		Layout: "quests/layout",
 		Extensions: []string{".tmpl", ".html"},
@@ -114,15 +138,17 @@ func Run(config c.QuestConfig, qs *QuestStorage, ntf *ntf.Notifier) {
 
 	m.Use(martini.Static("static"))
 
-	m.Get("/", func(user auth.User, render render.Render) {
+	r := martini.NewRouter()
+
+	r.Get("/", func(user auth.User, render render.Render) {
 		render.HTML(200, "quests/index", map[string]interface{}{})
 	})
 
-	m.Get("/new_keys", func(render render.Render) {
+	r.Get("/new_keys", func(render render.Render) {
 		render.HTML(200, "quests/new_keys", get_keys_info("", qs))
 	})
 
-	m.Post("/add_key", func(user auth.User, render render.Render, request *http.Request) {
+	r.Post("/add_key", func(user auth.User, render render.Render, request *http.Request) {
 		start_key := request.FormValue("start-key")
 		next_key := request.FormValue("next-key")
 		description := request.FormValue("description")
@@ -137,14 +163,14 @@ func Run(config c.QuestConfig, qs *QuestStorage, ntf *ntf.Notifier) {
 		}
 	})
 
-	m.Post("/delete_key/:key", func(params martini.Params, render render.Render) {
+	r.Post("/delete_key/:key", func(params martini.Params, render render.Render) {
 		key := params["key"]
 		err := qs.DeleteKey(key)
 		log.Printf("QUESTS WEB will delete %v (%v)", key, err)
 		render.Redirect("/new_keys")
 	})
 
-	m.Post("/update_key/:key", func(params martini.Params, render render.Render, request *http.Request) {
+	r.Post("/update_key/:key", func(params martini.Params, render render.Render, request *http.Request) {
 		key_id := params["key"]
 
 		start_key := request.FormValue("start-key")
@@ -156,15 +182,14 @@ func Run(config c.QuestConfig, qs *QuestStorage, ntf *ntf.Notifier) {
 		render.Redirect("/new_keys")
 	})
 
-	m.Get("/delete_key_all", func(render render.Render) {
+	r.Get("/delete_key_all", func(render render.Render) {
 		qs.Keys.RemoveAll(bson.M{})
 		render.Redirect("/new_keys")
 	})
 
-
 	xlsFileReg := regexp.MustCompile(".+\\.xlsx?")
 
-	m.Post("/load/up", func(render render.Render, request *http.Request) {
+	r.Post("/load/up", func(render render.Render, request *http.Request) {
 		file, header, err := request.FormFile("file")
 
 		log.Printf("Form file information: file: %+v \nheader:%v, %v\nerr:%v", file, header.Filename, header.Header, err)
@@ -198,7 +223,7 @@ func Run(config c.QuestConfig, qs *QuestStorage, ntf *ntf.Notifier) {
 
 		render.Redirect("/new_keys")
 	})
-	m.Get("/chat", func(render render.Render, params martini.Params, req *http.Request) {
+	r.Get("/chat", func(render render.Render, params martini.Params, req *http.Request) {
 		var with string
 		result_data := map[string]interface{}{}
 		query := req.URL.Query()
@@ -282,26 +307,30 @@ func Run(config c.QuestConfig, qs *QuestStorage, ntf *ntf.Notifier) {
 		render.HTML(200, "quests/chat", result_data)
 	})
 
-	m.Post("/send_message", func(render render.Render, req *http.Request) {
+	r.Post("/send_message", func(render render.Render, req *http.Request) {
 		from := req.FormValue("from")
 		to := req.FormValue("to")
 		text := req.FormValue("chat-form-message")
 		if from != "" && to != "" && text != "" {
 			if to == "all" {
 				peoples, _ := qs.GetPeoples(bson.M{})
+				log.Printf("QSERV: will send [%v] to all %v peoples", text, len(peoples))
 				send_messages_to_peoples(peoples, ntf, text)
 			} else if to == "all_team_members" {
 				peoples, _ := qs.GetAllTeamMembers()
+				log.Printf("QSERV: will send [%v] to all team members %v peoples", text, len(peoples))
 				send_messages_to_peoples(peoples, ntf, text)
 			} else {
 				team, _ := qs.GetTeamByName(to)
 				if team == nil {
 					man, _ := qs.GetManByUserId(to)
 					if man != nil {
+						log.Printf("QSERV: will send [%v] to %v", text, man.UserId)
 						ntf.NotifyText(man.UserId, text)
 					}
 				}else {
 					peoples, _ := qs.GetMembersOfTeam(team.Name)
+					log.Printf("QSERV: will send [%v] to team members of %v team to %v peoples", text, team.Name, len(peoples))
 					send_messages_to_peoples(peoples, ntf, text)
 				}
 			}
@@ -315,7 +344,7 @@ func Run(config c.QuestConfig, qs *QuestStorage, ntf *ntf.Notifier) {
 		render.Redirect(fmt.Sprintf("/chat?with=%v", to))
 	})
 
-	m.Post("/new_messages", func(render render.Render, req *http.Request) {
+	r.Post("/new_messages", func(render render.Render, req *http.Request) {
 		type NewMessagesReq struct {
 			For   string `json:"m_for"`
 			After int64 `json:"after"`
@@ -333,7 +362,6 @@ func Run(config c.QuestConfig, qs *QuestStorage, ntf *ntf.Notifier) {
 		}
 
 		messages, err := qs.GetMessages(bson.M{"from":q.For, "time_stamp":bson.M{"$gt":q.After}})
-		log.Printf("and  find: %+v", messages)
 		if err != nil {
 			render.JSON(500, map[string]interface{}{"ok":false, "detail":fmt.Sprintf("error in db: %v", err)})
 			return
@@ -341,7 +369,7 @@ func Run(config c.QuestConfig, qs *QuestStorage, ntf *ntf.Notifier) {
 		render.JSON(200, map[string]interface{}{"messages":messages, "next_":time.Now().Unix()})
 	})
 
-	m.Post("/new_contacts", func(render render.Render, req *http.Request) {
+	r.Post("/new_contacts", func(render render.Render, req *http.Request) {
 		type NewContactsReq struct {
 			After int64 `json:"after"`
 			Exist []string `json:"exist"`
@@ -359,7 +387,6 @@ func Run(config c.QuestConfig, qs *QuestStorage, ntf *ntf.Notifier) {
 		}
 		contacts, err := qs.GetContactsAfter(cr.After)
 		if err != nil {
-			log.Printf("err :%v", err)
 			render.JSON(500, map[string]interface{}{"ok":false, "detail":fmt.Sprintf("db err body %v \n %s", err)})
 			return
 		}
@@ -383,5 +410,8 @@ func Run(config c.QuestConfig, qs *QuestStorage, ntf *ntf.Notifier) {
 	})
 
 	log.Printf("Will start web server for quest at: %v", config.WebPort)
+
+	//m.MapTo(r, (*martini.Routes)(nil))
+	m.Action(r.Handle)
 	m.RunOnAddr(config.WebPort)
 }

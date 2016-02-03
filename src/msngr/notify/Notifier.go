@@ -10,16 +10,18 @@ import (
 	"msngr/utils"
 )
 
+
 type Notifier struct {
 	address string
 	key     string
 }
 
+
 func NewNotifier(addr, key string) *Notifier {
 	return &Notifier{address: addr, key: key}
 }
 
-func (n Notifier) Notify(outPkg s.OutPkg) error {
+func (n Notifier) Notify(outPkg s.OutPkg) error{
 	jsoned_out, err := json.Marshal(&outPkg)
 	if err != nil {
 		log.Printf("NTF error at unmarshal %v", err)
@@ -47,10 +49,10 @@ func (n Notifier) Notify(outPkg s.OutPkg) error {
 	}
 	if resp != nil {
 		body, err := ioutil.ReadAll(resp.Body)
-		if err != nil {
+		if err != nil{
 			log.Printf("N << ERROR:%+v", err)
 			return err
-		} else {
+		} else{
 			log.Printf("N << %v", string(body))
 		}
 		defer resp.Body.Close()
@@ -58,6 +60,7 @@ func (n Notifier) Notify(outPkg s.OutPkg) error {
 	return nil
 }
 
-func (n Notifier) NotifyText(to, text string) error {
+func (n Notifier) NotifyText(to, text string) error{
+	log.Printf("N! Will notify %v by text %v", to, text)
 	return n.Notify(s.OutPkg{To:to, Message:&s.OutMessage{ID:utils.GenId(), Type:"chat", Body:text}})
 }
