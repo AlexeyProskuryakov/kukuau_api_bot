@@ -89,17 +89,6 @@ func send_messages_to_peoples(people []TeamMember, ntf *ntf.Notifier, text strin
 	}()
 }
 
-func get_messages_info(err_text string, qs *QuestStorage) map[string]interface{} {
-	teams, _ := qs.GetAllTeams()
-	result := map[string]interface{}{}
-	if err_text != "" {
-		result["is_error"] = true
-		result["error_text"] = err_text
-	}
-	result["teams"] = teams
-	return result
-}
-
 func Run(config c.QuestConfig, qs *QuestStorage, ntf *ntf.Notifier) {
 
 	m := martini.Classic()
@@ -171,26 +160,6 @@ func Run(config c.QuestConfig, qs *QuestStorage, ntf *ntf.Notifier) {
 		qs.Keys.RemoveAll(bson.M{})
 		render.Redirect("/new_keys")
 	})
-
-	//m.Post("/message_answer_all", func(render render.Render, request *http.Request) {
-	//	users, _ := qs.GetAllTeamMembers()
-	//	answer := request.FormValue("message_all")
-	//	if answer != "" {
-	//		go func() {
-	//			for _, user := range users {
-	//				ntf.Notify(structs.OutPkg{To:user.UserId,
-	//					Message: &structs.OutMessage{
-	//						ID: utils.GenId(),
-	//						Type: "chat",
-	//						Body: answer,
-	//					}})
-	//			}
-	//		}()
-	//	}else {
-	//		render.HTML(200, "quests/messages", get_messages_info("Ответ не может быть пустым", qs))
-	//	}
-	//	render.Redirect("/messages")
-	//})
 
 
 	xlsFileReg := regexp.MustCompile(".+\\.xlsx?")
@@ -310,17 +279,10 @@ func Run(config c.QuestConfig, qs *QuestStorage, ntf *ntf.Notifier) {
 		if contacts, err := qs.GetContacts(all_teams); err == nil {
 			result_data["contacts"] = contacts
 		}
-		log.Printf("QS: Result data: %+v", result_data)
 		render.HTML(200, "quests/chat", result_data)
 	})
 
 	m.Post("/send_message", func(render render.Render, req *http.Request) {
-		v := req.URL.Query()
-		for key, value := range v {
-			log.Printf("key: %v\n", key)
-			log.Printf("value: %v\n", value)
-		}
-
 		from := req.FormValue("from")
 		to := req.FormValue("to")
 		text := req.FormValue("chat-form-message")
@@ -386,18 +348,15 @@ func Run(config c.QuestConfig, qs *QuestStorage, ntf *ntf.Notifier) {
 		}
 		cr := NewContactsReq{}
 		request_body, err := ioutil.ReadAll(req.Body)
-		log.Printf("1will found by %+v %s", cr, request_body)
 		if err != nil {
 			render.JSON(500, map[string]interface{}{"ok":false, "detail":"can not read request body"})
 			return
 		}
-		log.Printf("2will found by %+v", cr)
 		err = json.Unmarshal(request_body, &cr)
 		if err != nil {
 			render.JSON(500, map[string]interface{}{"ok":false, "detail":fmt.Sprintf("can not unmarshal request body %v \n %s", err, request_body)})
 			return
 		}
-		log.Printf("3will found by %+v", cr)
 		contacts, err := qs.GetContactsAfter(cr.After)
 		if err != nil {
 			log.Printf("err :%v", err)
@@ -408,7 +367,6 @@ func Run(config c.QuestConfig, qs *QuestStorage, ntf *ntf.Notifier) {
 		old_contacts := []Contact{}
 
 		for _, contact := range contacts {
-			log.Printf("new? old? %v.id in %+v", contact, cr.Exist)
 			if utils.InS(contact.ID, cr.Exist) {
 				old_contacts = append(old_contacts, contact)
 			}else {

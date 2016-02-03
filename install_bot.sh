@@ -16,6 +16,7 @@ ${EXEC} get gopkg.in/olivere/elastic.v2
 
 
 #building
+rm -rf ${HOME}/build
 mkdir ${HOME}/build
 ${EXEC} build -o ${HOME}/build/start_bot ${HOME}/src/start_bot.go
 cp ${HOME}/config.json ${HOME}/build

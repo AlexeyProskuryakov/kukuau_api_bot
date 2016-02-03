@@ -175,5 +175,6 @@ body::-webkit-scrollbar {
     background-color: #000;!important
 }
 .c-active{
-    background-color: #000;!important
+    background-color: #000;
+    color: #FFF;
 }
