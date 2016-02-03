@@ -20,6 +20,7 @@ mkdir ${HOME}/build
 ${EXEC} build -o ${HOME}/build/start_bot ${HOME}/src/start_bot.go
 cp ${HOME}/config.json ${HOME}/build
 cp -r ${HOME}/templates ${HOME}/build
+cp -r ${HOME}/static ${HOME}/build
 
 #forming config
 echo "
