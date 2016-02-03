@@ -36,7 +36,7 @@ function set_contact_new_message(contact_id, count){
 }
 
 function add_new_contact(contact){
-    var c_text = "<div class='contat' id='{{ID}}'><a class='btn btn-primary btn-med' href='/chat?with={{ID}}'> {{#IsTeam}} Команда {{/IsTeam}}{{Name}} ({{NewMessagesCount}})</a></div>";
+    var c_text = "<div class='contact' id='{{ID}}'><a class='bg-success a-contact' href='/chat?with={{ID}}'> {{#IsTeam}} Команда {{/IsTeam}}{{Name}} <span class='small' id='s-{{ID}}'>({{NewMessagesCount}})<span></a></div>";
     var result = Mustache.render(c_text, contact);
     console.log(result);
     $("#contacts").append(result);
