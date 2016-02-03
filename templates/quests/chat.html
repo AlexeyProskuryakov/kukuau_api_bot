@@ -50,23 +50,22 @@
         <div class="message-wrap col-lg-8">
             <div class="msg-wrap" id="chat-wrapper">
                 {{range $message := .messages}}
+                <hr>
                 {{if eq_s $message.From "me" }}
                 <div class="media msg">
                     <div class="media-body">
                         <small class="pull-left time"><i class="fa fa-clock-o"></i>{{$message.Time}}</small>
                         <h5 class="media-heading pull-right">{{$message.From}}</h5>
-                        <small class="col-lg-10">{{$message.Body}}
-                        </small>
+                        <br>
+                        <small class="col-lg-10 pull-right bg-info">{{$message.Body}}</small>
                     </div>
                 </div>
                 {{else}}
                 <div class="media msg">
                     <div class="media-body">
                         <small class="pull-right time"><i class="fa fa-clock-o"></i>{{$message.Time}}</small>
-
                         <h5 class="media-heading">{{$message.From}}</h5>
-                        <small class="col-lg-10">{{$message.Body}}
-                        </small>
+                        <small class="col-lg-10 bg-success">{{$message.Body}}</small>
                     </div>
                 </div>
                 {{end}}
