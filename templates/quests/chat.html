@@ -27,9 +27,9 @@
             {{end}}
             " href="/chat?with={{$contact.ID}}">
                 {{if $contact.IsTeam}}
-                Комманда {{$contact.Name}}
+                Комманда [{{$contact.Name}}]
                 {{else}}
-                {{$contact.Name}} [{{$contact.Phone}}]
+                {{$contact.Name}}
                 {{end}}
 
 
@@ -82,7 +82,7 @@
                 <div class="form-group form-inline">
                     <label class="control-label">Message:</label>
                     <textarea class="form-control" placeholder="..." name="chat-form-message" id="chat-form-message"
-                              rows="2"></textarea>
+                              rows="2" autofocus></textarea>
 
                     <button type="submit" class="btn btn-default">
                         <span class="glyphicon glyphicon-send" aria-hidden="true"></span>

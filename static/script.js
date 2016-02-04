@@ -31,14 +31,12 @@ function update_messages(){
 
 function set_contact_new_message(contact_id, count){
     var c_w = $("#s-"+contact_id);
-    console.log("c_w: ",c_w);
     c_w.text("("+count+")");
 }
 
 function add_new_contact(contact){
     var c_text = "<div class='contact' id='{{ID}}'><a class='bg-success a-contact' href='/chat?with={{ID}}'> {{#IsTeam}} Команда {{/IsTeam}}{{Name}} <span class='small' id='s-{{ID}}'>({{NewMessagesCount}})<span></a></div>";
     var result = Mustache.render(c_text, contact);
-    console.log(result);
     $("#contacts").append(result);
 }
 
@@ -50,7 +48,6 @@ function update_contacts(){
             ex_values.push(exists[k]["id"]);
         }
     }
-    console.log("exist:",ex_values)
     data = {after: contacts_updated, exist:ex_values}
     $.ajax({type:"POST",
         url:            "/new_contacts",
@@ -78,11 +75,13 @@ $("#chat-form-message").keydown(function(e){
     }
 });
 setInterval(function(){
-    // console.log("will ask about new messages");
+
     update_messages();
     update_contacts();
     return true;
 }, 5000);
+
+$("#chat-form-message").focus();
 
 
 

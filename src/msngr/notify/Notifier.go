@@ -27,7 +27,6 @@ func (n Notifier) Notify(outPkg s.OutPkg) error{
 		log.Printf("NTF error at unmarshal %v", err)
 		return err
 	}
-
 	body := bytes.NewBuffer(jsoned_out)
 	req, err := http.NewRequest("POST", n.address, body)
 	if err != nil {
@@ -39,7 +38,7 @@ func (n Notifier) Notify(outPkg s.OutPkg) error{
 	req.Header.Add("Accept", "application/json")
 	req.Header.Add("Authorization", n.key)
 
-	log.Printf("N >> %+v \n%+v \n %+v", n.address, req.Header, req.Body)
+	log.Printf("N >> %+v \n>>%+v \n>>%s", n.address, req.Header, jsoned_out)
 
 	client := &http.Client{}
 	resp, err := client.Do(req)
@@ -61,6 +60,5 @@ func (n Notifier) Notify(outPkg s.OutPkg) error{
 }
 
 func (n Notifier) NotifyText(to, text string) error{
-	log.Printf("N! Will notify %v by text %v", to, text)
 	return n.Notify(s.OutPkg{To:to, Message:&s.OutMessage{ID:utils.GenId(), Type:"chat", Body:text}})
 }

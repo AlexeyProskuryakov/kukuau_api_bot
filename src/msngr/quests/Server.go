@@ -230,7 +230,7 @@ func Run(config c.QuestConfig, qs *QuestStorage, ntf *ntf.Notifier) {
 		for key, value := range query {
 			if key == "with" && len(value) > 0 {
 				with = value[0]
-				log.Printf("QS: with found is: %v", with)
+				log.Printf("QSERV: with found is: %v", with)
 				break
 			}
 		}
@@ -335,7 +335,7 @@ func Run(config c.QuestConfig, qs *QuestStorage, ntf *ntf.Notifier) {
 				}
 			}
 			qs.StoreMessage(from, to, text, false)
-			log.Printf("QS: will answered all messages from %v by %v", from, to)
+			log.Printf("QSERV: will answered all messages from %v by %v", to, from)
 			qs.SetMessagesAnswered(to, from)
 
 		} else {
@@ -366,6 +366,20 @@ func Run(config c.QuestConfig, qs *QuestStorage, ntf *ntf.Notifier) {
 			render.JSON(500, map[string]interface{}{"ok":false, "detail":fmt.Sprintf("error in db: %v", err)})
 			return
 		}
+
+		for i, message := range messages {
+			team, _ := qs.GetTeamByName(message.From)
+			if team != nil {
+				messages[i].From = team.Name
+			}else {
+				man, _ := qs.GetManByUserId(message.From)
+				if man != nil {
+					messages[i].From = man.Name
+				}
+
+			}
+		}
+
 		render.JSON(200, map[string]interface{}{"messages":messages, "next_":time.Now().Unix()})
 	})
 

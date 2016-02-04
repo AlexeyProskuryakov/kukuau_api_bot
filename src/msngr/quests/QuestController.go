@@ -178,22 +178,22 @@ func (qmpp QuestMessagePersistProcessor) ProcessMessage(in *s.InPkg) *s.MessageR
 			return &s.MessageResult{Type:"chat", Body:descr, }
 		} else {
 			var from string
-			log.Printf("Q: From %v is message: [%v]",in.From,key)
+			log.Printf("Q: From %v is message: [%v]", in.From, key)
 			member, _ := qmpp.Storage.GetTeamMemberByUserId(in.From)
 			if member != nil {
 				from = member.TeamName
-				log.Printf("Q: message from member %v of group %v ",in.From, from)
+				log.Printf("Q: message from member %v of group %v ", in.From, from)
 
 			} else if in.UserData != nil {
 				user_data := in.UserData
 				from = in.From
 				qmpp.Storage.AddPasserby(in.From, user_data.Phone, user_data.Name)
-				log.Printf("Q: message from passersby %v",in.From)
+				log.Printf("Q: message from passersby %v", in.From)
 			} else {
 				log.Printf("Q: but %v it is not team member and not have userdata", in.From)
 				return USER_DATA_ERROR_RESULT
 			}
-			log.Printf("Q: will storing message from:v to:%v ")
+			log.Printf("Q: will storing msg:[%v] from:v to:%v as not key answer", key, from, ME)
 			qmpp.Storage.StoreMessage(from, ME, key, false)
 		}
 	} else {

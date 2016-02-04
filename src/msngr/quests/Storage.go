@@ -6,7 +6,6 @@ import (
 	"gopkg.in/mgo.v2/bson"
 
 	"time"
-	"log"
 	"sort"
 )
 
@@ -337,7 +336,6 @@ func (qs *QuestStorage) StoreMessage(from, to, body string, is_key bool) (Messag
 		IsKey: is_key,
 	}
 	err := qs.Messages.Insert(result)
-	log.Printf("QS: Message stored: id is: %v", result.ID)
 	return result, err
 }
 
