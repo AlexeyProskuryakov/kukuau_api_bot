@@ -58,7 +58,6 @@ type UserWrapper struct {
 	LastUpdate  time.Time `bson:"last_update"`
 }
 
-
 func (uw *UserWrapper) GetStateValue(state_key string) (string, bool) {
 	res, ok := uw.States[state_key]
 	return res, ok
@@ -111,7 +110,6 @@ type DbHelper struct {
 	try_to_connect bool
 
 	Session        *mgo.Session
-
 }
 
 func NewDbHelper(conn, dbname string) *DbHelper {
@@ -139,7 +137,6 @@ func (odbh *DbHelper) Check() bool {
 	}
 	return false
 }
-
 
 func (odbh *DbHelper) reConnect() {
 	odbh.Lock()
@@ -173,7 +170,6 @@ func (odbh *DbHelper) reConnect() {
 		}
 	}
 }
-
 
 func (odbh *MainDb) ensureIndexes() {
 	orders_collection := odbh.Session.DB(odbh.DbName).C("orders")
@@ -250,7 +246,6 @@ func (odbh *MainDb) ensureIndexes() {
 		Unique:false,
 	})
 
-
 	odbh.Users.Collection = users_collection
 	odbh.Orders.Collection = orders_collection
 	odbh.Errors.Collection = error_collection
@@ -289,7 +284,9 @@ func (oh *orderHandler) GetById(order_id int64, source string) (*OrderWrapper, e
 
 func (oh *orderHandler) SetActive(order_id int64, source string, state bool) error {
 	if !oh.parent.Check() {
-		utils.After(oh.parent.Check, func() { oh.SetActive(order_id, source, state) })
+		utils.After(oh.parent.Check, func() {
+			oh.SetActive(order_id, source, state)
+		})
 		return nil
 	}
 	err := oh.Collection.Update(bson.M{"order_id": order_id, "source":source}, bson.M{"$set":bson.M{"active":state}})
@@ -301,7 +298,9 @@ func (oh *orderHandler) SetActive(order_id int64, source string, state bool) err
 
 func (oh *orderHandler) SetState(order_id int64, source string, new_state int, order_data *OrderData) error {
 	if !oh.parent.Check() {
-		utils.After(oh.parent.Check, func() {oh.SetState(order_id, source, new_state, order_data)})
+		utils.After(oh.parent.Check, func() {
+			oh.SetState(order_id, source, new_state, order_data)
+		})
 		return nil
 	}
 	var to_set bson.M
@@ -326,7 +325,9 @@ func (oh *orderHandler) SetState(order_id int64, source string, new_state int, o
 
 func (oh *orderHandler) SetFeedback(for_whom string, for_state int, feedback string, source string) (*int64, error) {
 	if !oh.parent.Check() {
-		utils.After(oh.parent.Check, func() { oh.SetFeedback(for_whom, for_state, feedback, source) })
+		utils.After(oh.parent.Check, func() {
+			oh.SetFeedback(for_whom, for_state, feedback, source)
+		})
 		return nil, nil
 	}
 	order := OrderWrapper{}
@@ -365,7 +366,6 @@ func (oh *orderHandler) AddOrderObject(order *OrderWrapper) error {
 	err := oh.Collection.Insert(order)
 	return err
 }
-
 
 func (oh *orderHandler) Count() int {
 	result, _ := oh.Collection.Count()
@@ -409,8 +409,6 @@ func (oh *orderHandler) GetByOwner(whom, source string, active bool) (*OrderWrap
 	}
 	return &result, nil
 }
-
-
 
 func (oh *orderHandler) GetOrders(q bson.M) ([]OrderWrapper, error) {
 	if !oh.parent.Check() {
@@ -567,7 +565,6 @@ func (uh *userHandler) GetBy(req bson.M) (*[]UserWrapper, error) {
 	err := uh.Collection.Find(req).Sort("last_update").All(&result)
 	return &result, err
 }
-
 
 func (eh *errorHandler) StoreError(username, error string) error {
 	if !eh.parent.Check() {

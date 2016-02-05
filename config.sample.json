@@ -61,43 +61,6 @@
         }
       }
     },
-    "academ": {
-      "available_commands": {
-        "created_order": [
-          "where_it",
-          "callback_request"
-        ]
-      },
-      "api": {
-        "geo_orbit": {
-          "lat": 54.852277,
-          "lon": 83.096504,
-          "radius": 50000
-        },
-        "name": "infinity",
-        "data": {
-          "id_service": 5000181745,
-          "login": "kukuautest",
-          "password": "789kukuau987",
-          "connection_strings": [
-            "http://212.20.48.191:8080/WebAPITaxi/",
-            "http://109.202.17.249:8080/WebAPITaxi"
-          ],
-          "host": "212.20.48.191:8080"
-        },
-        "not_send_price": false
-      },
-      "dict_url": "http://msg.kuku-au.com:9193/taxi/academ/streets",
-      "information": {
-        "phone": "8 (383) 334-88-88",
-        "text": "Такси “Академ” – это профессиональное транспортное обслуживание в Новосибирске и области. Телефон для связи: +7 (383) 334-8888"
-      },
-      "key": "Kuku academ_taxi_key",
-      "markups": [
-        "5030781832"
-      ],
-      "name": "academ"
-    },
     "karavan": {
       "name": "karavan",
       "dict_url": "http://localhost:9191/taxi/karavan/streets",
@@ -151,8 +114,97 @@
         "not_send_price": false
       }
     },
-    "fake": {
-      "name": "fake",
+    "academ": {
+      "available_commands": {
+        "created_order": [
+          "where_it",
+          "callback_request"
+        ]
+      },
+      "api": {
+        "geo_orbit": {
+          "lat": 54.852277,
+          "lon": 83.096504,
+          "radius": 50000
+        },
+        "name": "infinity",
+        "data": {
+          "id_service": 5000181745,
+          "login": "kukuautest",
+          "password": "789kukuau987",
+          "connection_strings": [
+            "http://212.20.48.191:8080/WebAPITaxi/",
+            "http://109.202.17.249:8080/WebAPITaxi"
+          ],
+          "host": "212.20.48.191:8080"
+        },
+        "not_send_price": false
+      },
+      "dict_url": "http://msg.kuku-au.com:9193/taxi/academ/streets",
+      "information": {
+        "phone": "8 (383) 334-88-88",
+        "text": "Такси “Академ” – это профессиональное транспортное обслуживание в Новосибирске и области. Телефон для связи: +7 (383) 334-8888"
+      },
+      "key": "Kuku academ_taxi_key",
+      "markups": [
+        "5030781832"
+      ],
+      "name": "academ"
+    },
+    "fake_sedi": {
+      "name": "fake_sedi",
+      "dict_url": "http://localhost:9191/taxi/fake/streets",
+      "key": "Kuku demo_taxi_key",
+      "information": {
+        "phone": "123-45-67",
+        "text": "Такси ! Самое лучшее такси в академгородке!"
+      },
+      "available_commands": {
+        "created_order": [
+          "where_it",
+          "callback_request",
+          "car_position"
+        ]
+      },
+      "api": {
+        "geo_orbit": {
+          "lat": 54.8580438,
+          "lon": 83.1100316,
+          "radius": 50000
+        },
+        "name": "sedi",
+        "data": {
+          "login": "test1",
+          "password": "test1",
+          "connection_strings": [],
+          "host": "http://test2.sedi.ru",
+          "api_key": "76E3F6C3-285C-4BC8-BCB6-E0CF26B39FE1",
+          "user_key": "6_kilogram_tarelok%)",
+          "city": "Санкт-Петербург",
+          "phone": "+79811064022",
+          "name": "4ikist",
+          "sale_kw": ""
+        },
+        "not_send_price": true,
+        "markups": [
+          "5059339030"
+        ],
+        "fake": {
+          "sended_states": [
+            2,
+            4,
+            5,
+            6,
+            7,
+            8,
+            9
+          ],
+          "sleep_time": 1
+        }
+      }
+    },
+    "fake_infinity": {
+      "name": "fake_infinity",
       "dict_url": "http://localhost:9191/taxi/fake/streets",
       "key": "Kuku demo_taxi_key",
       "information": {
@@ -174,16 +226,14 @@
         },
         "name": "fake",
         "data": {
-          "login": "test1",
-          "password": "test1",
-          "connection_strings": [],
-          "host": "http://test2.sedi.ru",
-          "api_key": "76E3F6C3-285C-4BC8-BCB6-E0CF26B39FE1",
-          "user_key": "6_kilogram_tarelok%)",
-          "city": "Санкт-Петербург",
-          "phone": "+79811064022",
-          "name": "4ikist",
-          "sale_kw": ""
+          "id_service": 5000181745,
+          "login": "kukuautest",
+          "password": "789kukuau987",
+          "connection_strings": [
+            "http://212.20.48.191:8080/WebAPITaxi/",
+            "http://109.202.17.249:8080/WebAPITaxi"
+          ],
+          "host": "212.20.48.191:8080"
         },
         "not_send_price": true,
         "markups": [

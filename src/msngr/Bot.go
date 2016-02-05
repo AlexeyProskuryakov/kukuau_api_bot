@@ -9,13 +9,14 @@ import (
 	"errors"
 	s "msngr/structs"
 	u "msngr/utils"
-	tm "msngr/text_messages"
+	//tm "msngr/text_messages"
 	"strings"
 	"msngr/configuration"
 )
 
 var DEBUG bool
-var textProvider = tm.NewTextMessageSupplier()
+var TEST bool
+//var textProvider = tm.NewTextMessageSupplier()
 
 type BotContext struct {
 	Name             string
@@ -47,14 +48,14 @@ func getInPackage(r *http.Request) (*s.InPkg, error) {
 	}
 	body, err := ioutil.ReadAll(r.Body)
 	if err != nil {
-		log.Printf("error at reading: %q \n", err)
+		log.Printf("BOT: error at reading: %q \n", err)
 	}
 	if DEBUG {
-		log.Printf("BOT RECEIVED: \n%s\n", string(body))
+		log.Printf("BOT: RECEIVED: \n%s\n", string(body))
 	}
 	err = json.Unmarshal(body, &in)
 	if err != nil {
-		log.Printf("error at unmarshal: %q \n", err)
+		log.Printf("BOT: error at unmarshal: %q \n %s", err, body)
 	}
 	return &in, err
 }
@@ -190,9 +191,9 @@ func FormBotController(context *BotContext) controllerHandler {
 						out, isDeferred, message_error = process_message(non_commands_processor, out, in)
 					} else {
 						log.Printf("warn will sended message without commands: %v\n from %v (userdata: %v)", in.Message, in.From, in.UserData)
-						out.Message = &s.OutMessage{Type: "chat", Thread: in.Message.Thread, ID: u.GenId(), Body: textProvider.GenerateMessage()}
-						setOutPackage(w, out, false, false)
-						return
+						//out.Message = &s.OutMessage{Type: "chat", Thread: in.Message.Thread, ID: u.GenId(), Body: textProvider.GenerateMessage()}
+						//setOutPackage(w, out, false, false)
+						//return
 					}
 				} else{
 					out, isDeferred, message_error = process_message_pkg(out, in, context)

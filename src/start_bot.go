@@ -77,6 +77,7 @@ func main() {
 
 	d.DELETE_DB = *test
 	m.DEBUG = *test
+	m.TEST = *test
 
 	log.Printf("configuration for db:\nconnection string: %+v\ndatabase name: %+v", conf.Main.Database.ConnString, conf.Main.Database.Name)
 	db := d.NewMainDb(conf.Main.Database.ConnString, conf.Main.Database.Name)
@@ -86,7 +87,6 @@ func main() {
 		log.Println("!!!!!!!!!!start at test mode!!!!!!!!!!!!!")
 		conf.Main.Database.Name = conf.Main.Database.Name + "_test"
 		db.Session.DB(conf.Main.Database.Name).DropDatabase()
-
 	}
 
 	for taxi_name, taxi_conf := range conf.Taxis {
@@ -160,7 +160,9 @@ func main() {
 		Addr: server_address,
 	}
 
+	if conf.Main.ConsoleAddr != "" {
+		go cnsl.Run(conf, db, cs)
+	}
 
-	go cnsl.Run(conf, db, cs)
 	log.Fatal(server.ListenAndServe())
 }

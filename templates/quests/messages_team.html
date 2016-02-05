@@ -1,0 +1,62 @@
+<div class="container-fluid">
+  <div class="row">
+    <div class="col-md-2" id="left-side-bar">
+      <div class="row">
+        <a href="/messages">Написать всем</a>
+      </div>
+      {{range $team := .teams}}
+      <div class="row">
+        <a href="#{{$team.SID}}">{{$team.Name}}</a>
+      </div>
+      {{end}}
+    </div>
+    <div class="col-md-7" id="main-window">
+      {{range $message := .messages}}
+      <div class="row">
+        {{if $message.IsOutput}}  
+        <div class="col-md-6">
+          {{$message.Body}}
+        </div>
+        {{else}}
+        <div class="col-md-6 col-md-offset-6">
+         {{$message.Body}}
+       </div>
+       {{end}}
+       <br>
+     </div>
+     {{end}}
+   </div>
+   <div class="col-md-3" id="right-side-bar">
+    <div id="team-info">
+      <table>
+        {{range $member := .team.Members}}    
+          <tr>
+          <td>
+            {{$member.Name}}
+          </td>
+          <td>
+            {{$member.Phone}}
+          </td>
+          </tr>
+        {{end}}
+      </table>
+    </div>
+    <div class="accordion" id="keys-accordion">
+      {{range $key := .keys}}
+      <div class="accordion-group">
+        <div class="accordion-heading">
+          <a class="accordion-toggle" data-toggle="collapse" data-parent="#keys-accordion" href="#{{$key.SID}}">
+            {{$key.Key}}
+          </a>
+        </div>
+        <div id="{{$key.SID}}" class="accordion-body collapse">
+          <div class="accordion-inner">
+            {{$key.Description}}
+          </div>
+        </div>
+      </div>
+      {{end}}
+    </div>
+  </div>
+</div>
+</div>

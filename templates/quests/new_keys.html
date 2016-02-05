@@ -2,22 +2,18 @@
     <div class="row">
         <div class="col-md-6 col-md-offset-3">
             <h2> Добавьте новый квестовый ключ: </h2>
-
-            <form action="/add_key" method="post">
+            <h3>
+                <small>Чтоб удалить все ключи введи путь delete_key_all</small>
+            </h3>
+            <form action="/add_key" method="post" id="manage-key-form">
                 <div class="form-group">
-                    <label for="key">Ключ: </label>
-                    <input type="text" class="form-control" id="key" name="key">
+                    <label for="start-key">Ключ: </label>
+                    <input type="text" class="form-control" id="start-key" name="start-key">
 
                     <label for="next-key">Ожидаемый ключ после получения описания: </label>
                     <input type="text" class="form-control" id="next-key" name="next-key">
                 </div>
-                <div class="form-group">
-                    <div class="checkbox">
-                        <label for="is-first">
-                            <input type="checkbox" id="is-first" name="is-first"> Начальный ключ?
-                        </label>
-                    </div>
-                </div>
+
                 <div class="form-group">
                     <label for="description">Описание:</label>
                     <textarea name="description" class="form-control" rows="5" id="description"></textarea>
@@ -25,20 +21,19 @@
                 <div class="form-group">
                     <button type="submit" class="btn btn-info">Добавить</button>
                 </div>
-
             </form>
             {{ if .is_error }}
             <div class="text-danger">{{.error_text}}</div>
             {{ end }}
         </div>
-         <div class="col-md-1">
+        <div class="col-md-1">
             <a class="btn" href="/load/klichat_quest_keys.txt">
-                <span class="glyphicon glyphicon-save" aria-hidden="true"></span>
+                <span class="glyphicon glyphicon-open" aria-hidden="true"></span>
             </a>
         </div>
         <div class="col-md-1">
             <button class="btn" data-target="#upload-modal" data-toggle="modal">
-                <span class="glyphicon glyphicon-open" aria-hidden="true"></span>
+                <span class="glyphicon glyphicon-save" aria-hidden="true"></span>
             </button>
 
             <!-- Modal -->
@@ -52,8 +47,21 @@
                         </div>
                         <div class="modal-body">
                             <form action="/load/up" method="post" enctype="multipart/form-data">
-                                <input type="file" name="file" class="file file-loading">
-                                <br>
+                                <div class="form-group">
+                                    <input type="file" name="file" class="file file-loading">
+                                </div>
+                                <div class="form-group">
+                                    <label for="skip-cols">
+                                        Пропускать колонки (штук):
+                                    </label>
+                                    <input id="skip-cols" type="number" name="skip-cols" class="">
+                                    <br>
+                                    <label for="skip-rows">
+                                        Пропускать строки (штук):
+                                    </label>
+                                    <input id="skip-rows" type="number" name="skip-rows" class="">
+                                    <br>
+                                </div>
                                 <button class="btn btn-sm" type="submit">Загрузить</button>
                             </form>
                         </div>
@@ -71,6 +79,7 @@
     <div class="row">
         <div class="col-md-6 col-md-offset-3">
             <h3> Добавленные ключи:</h3>
+
         </div>
     </div>
     <div class="row">
@@ -80,14 +89,13 @@
                 <td>Ключ для получения описания</td>
                 <td>Описание</td>
                 <td>Ключ ожидаемый по этому описанию</td>
-                <td>Начальный?</td>
             </tr>
 
             </thead>
             {{range $key_info := .keys}}
             <tr>
                 <td class="col-md-2">
-                    {{$key_info.Key}}
+                    {{$key_info.StartKey}}
                 </td>
                 <td class="col-md-5">
                     {{$key_info.Description}}
@@ -95,10 +103,51 @@
                 <td class="col-md-2">
                     {{$key_info.NextKey}}
                 </td>
-                <td class="col-md-1">
-                    {{$key_info.IsFirst}}
-                </td>
 
+                <td class="col-md-1">
+
+                    <button type="submit" class="btn btn-main" class="change-key-button"
+                            data-target="#change-key-modal-{{$key_info.SID}}" data-toggle="modal">Изменить
+                    </button>
+
+
+                    <!-- Modal -->
+                    <div class="modal fade" id="change-key-modal-{{$key_info.SID}}" role="dialog">
+                        <div class="modal-dialog">
+                            <!-- Modal content-->
+                            <div class="modal-content">
+                                <div class="modal-header">
+                                    <button type="button" class="close" data-dismiss="modal">&times;</button>
+                                </div>
+                                <div class="modal-body">
+                                    <form action="/update_key/{{$key_info.SID}}" method="post">
+                                        <div class="form-group">
+                                            <label for="start-key-{{$key_info.SID}}">Ключ: </label>
+                                            <input type="text" class="form-control" id="start-key-{{$key_info.SID}}"
+                                                   name="start-key" value="{{$key_info.StartKey}}">
+
+                                            <label for="next-key-{{$key_info.SID}}">Ожидаемый ключ после получения
+                                                описания: </label>
+                                            <input type="text" class="form-control" id="next-key-{{$key_info.SID}}"
+                                                   name="next-key" value="{{$key_info.NextKey}}">
+                                        </div>
+
+                                        <div class="form-group">
+                                            <label for="description-{{$key_info.SID}}">Описание:</label>
+                                            <textarea class="form-control" rows="5" id="description-{{$key_info.SID}}"
+                                                      name="description">{{$key_info.Description}}</textarea>
+                                        </div>
+                                        <div class="form-group">
+                                            <button type="submit" class="btn btn-info">Применить</button>
+                                        </div>
+                                    </form>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+
+                </td>
                 <td class="col-md-1">
                     <form action="/delete_key/{{$key_info.SID}}" method="post">
                         <div class="form-group">
@@ -112,3 +161,4 @@
     </div>
 
 </div>
+

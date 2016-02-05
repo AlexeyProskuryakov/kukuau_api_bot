@@ -4,52 +4,131 @@ import (
 	"github.com/go-martini/martini"
 	"github.com/martini-contrib/auth"
 	"github.com/martini-contrib/render"
+	"github.com/tealeg/xlsx"
 
 	c "msngr/configuration"
 
-	"msngr/notify"
-	"msngr/structs"
-
+	ntf "msngr/notify"
 
 	"log"
 	"gopkg.in/mgo.v2/bson"
 	"net/http"
-	"msngr/utils"
-	"errors"
 	"fmt"
 	"strings"
 	"io/ioutil"
+	"strconv"
+	"regexp"
+	"html/template"
+	"encoding/json"
+	"time"
+	"msngr/utils"
 )
 
 var users = map[string]string{
 	"alesha":"sederfes100500",
 	"leha":"qwerty100500",
+	"dima":"123",
 }
 
-func ParseExportFile(raw_data string, qs *QuestStorage) error {
-	keys := strings.Fields(string(raw_data))
-	for i, key := range keys {
-		key_params := strings.Split(key, ";")
-		next_key := key_params[2]
-		var is_first bool
-		if len(key_params) == 4 {
-			is_first = key_params[3] == "true" || i == 0
-		} else {
-			is_first = i == 0
+const (
+	ALL = "all"
+	ALL_TEAM_MEMBERS = "all_team_members"
+)
+
+func ParseExportXlsx(xlf *xlsx.File, qs *QuestStorage, skip_row, skip_cell int) error {
+	for _, sheet := range xlf.Sheets {
+		if sheet != nil {
+			sh_name := strings.TrimSpace(strings.ToLower(sheet.Name))
+			if strings.HasSuffix(sh_name, "ключ") || strings.HasPrefix(sh_name, "ключ") {
+
+				for ir, row := range sheet.Rows {
+					if row != nil && ir >= skip_row {
+						key := row.Cells[skip_cell].Value
+						description := row.Cells[skip_cell + 1].Value
+						next_key_raw := row.Cells[skip_cell + 2].Value
+						if key != "" && description != "" {
+							qs.AddKey(key, description, next_key_raw)
+						}
+
+					}
+				}
+			}
 		}
-		qs.AddKey(key_params[0], key_params[1], &next_key, is_first)
 	}
 	return nil
 }
 
-func Run(config c.QuestConfig, qs *QuestStorage, ntf *msngr.Notifier) {
-	m := martini.Classic()
+var keys_cache []Key
+
+func get_keys_info(err_text string, qs *QuestStorage) map[string]interface{} {
+	var keys []Key
+	var e error
+	result := map[string]interface{}{}
+	if err_text == "" {
+		keys, e = qs.GetAllKeys()
+	} else {
+		keys = keys_cache
+	}
+	if e != nil || err_text != "" {
+		result["is_error"] = true
+		if e != nil {
+			result["error_text"] = e.Error()
+		} else {
+			result["error_text"] = err_text
+		}
+	}
+	result["keys"] = keys
+	return result
+}
+
+func send_messages_to_peoples(people []TeamMember, ntf *ntf.Notifier, text string) {
+	go func() {
+		for _, user := range people {
+			ntf.NotifyText(user.UserId, text)
+		}
+	}()
+}
+
+func nonJsonLogger() martini.Handler {
+	return func(res http.ResponseWriter, req *http.Request, c martini.Context, log *log.Logger) {
+		//log.Printf("METHDO: %v, HEADERS: %+v", req.Method, req.Header)
+		if req.Method == "GET" || req.Header.Get("Content-Type") != "application/json" {
+			start := time.Now()
+			addr := req.Header.Get("X-Real-IP")
+			if addr == "" {
+				addr = req.Header.Get("X-Forwarded-For")
+				if addr == "" {
+					addr = req.RemoteAddr
+				}
+			}
+
+			log.Printf("Started %s %s for %s", req.Method, req.URL.Path, addr)
+
+			rw := res.(martini.ResponseWriter)
+			c.Next()
+			log.Printf("Completed %v %s in %v\n", rw.Status(), http.StatusText(rw.Status()), time.Since(start))
+		}
+	}
+}
+
+func Run(config c.QuestConfig, qs *QuestStorage, ntf *ntf.Notifier) {
+
+	m := martini.New()
+	m.Use(nonJsonLogger())
+	m.Use(martini.Recovery())
 	m.Use(render.Renderer(render.Options{
 		Layout: "quests/layout",
 		Extensions: []string{".tmpl", ".html"},
 		Charset: "UTF-8",
 		IndentJSON: true,
 		IndentXML: true,
+		Funcs:[]template.FuncMap{
+			template.FuncMap{
+				"eq_s":func(a, b string) bool {
+					return a == b
+				},
+			},
+		},
 	}))
 
 	m.Use(auth.BasicFunc(func(username, password string) bool {
@@ -57,198 +136,296 @@ func Run(config c.QuestConfig, qs *QuestStorage, ntf *msngr.Notifier) {
 		return ok && pwd == password
 	}))
 
+	m.Use(martini.Static("static"))
 
-	m.Get("/", func(user auth.User, render render.Render) {
+	r := martini.NewRouter()
+
+	r.Get("/", func(user auth.User, render render.Render) {
 		render.HTML(200, "quests/index", map[string]interface{}{})
 	})
 
-	get_result_error_map := func(error_info string) map[string]interface{} {
-		keys, _ := qs.GetAllKeys()
-		result_map := map[string]interface{}{
-			"keys": keys,
-			"error_text":error_info,
-			"is_error":true,
-		}
-		return result_map
-	}
-
-	get_result_map := func(user auth.User) map[string]interface{} {
-		keys, _ := qs.GetAllKeys()
-		result_map := map[string]interface{}{
-			"keys": keys,
-			"error_text":"",
-			"is_error":false,
-		}
-		return result_map
-	}
-
-	m.Get("/new_keys", func(user auth.User, render render.Render) {
-		render.HTML(200, "quests/new_keys", get_result_map(user))
+	r.Get("/new_keys", func(render render.Render) {
+		render.HTML(200, "quests/new_keys", get_keys_info("", qs))
 	})
 
-
-	m.Post("/add_key", func(user auth.User, render render.Render, request *http.Request) {
-		key := request.FormValue("key")
-		next_key_raw := request.FormValue("next-key")
+	r.Post("/add_key", func(user auth.User, render render.Render, request *http.Request) {
+		start_key := request.FormValue("start-key")
+		next_key := request.FormValue("next-key")
 		description := request.FormValue("description")
-		is_first_raw := request.FormValue("is-first")
-		log.Printf("QUEST: adding key: is first raw: %+v", is_first_raw)
-		var is_first bool
-		if is_first_raw == "on" {
-			is_first = true
-		}
-		log.Printf("QUEST: key: %s\nAnswer: %s ", key, description)
-		if key != "" && description != "" {
-			var next_key *string
-			if next_key_raw == "" {
-				next_key = nil
-			} else {
-				next_key = &next_key_raw
-			}
-			qs.AddKey(key, description, next_key, is_first)
+
+		log.Printf("QUESTS WEB add key %s -> %s -> %s", start_key, description, next_key)
+		if start_key != "" && description != "" {
+			key, err := qs.AddKey(start_key, description, next_key)
+			log.Printf("QW is error? %v key: %v", err, key)
 			render.Redirect("/new_keys")
 		} else {
-			render.HTML(200, "quests/keys_new", get_result_error_map("Невалидные значения ключа, ответа или позиции."))
+			render.HTML(200, "quests/new_keys", get_keys_info("Невалидные значения ключа или ответа", qs))
 		}
 	})
 
-	m.Post("/delete_key/:key", func(params martini.Params, render render.Render) {
+	r.Post("/delete_key/:key", func(params martini.Params, render render.Render) {
 		key := params["key"]
 		err := qs.DeleteKey(key)
 		log.Printf("QUESTS WEB will delete %v (%v)", key, err)
 		render.Redirect("/new_keys")
 	})
 
-	m.Get("/users_keys", func(render render.Render) {
-		users_keys, _ := qs.GetMessages(bson.M{"data.answered":false, "is_key":true})
-		result_map := map[string]interface{}{
-			"keys":users_keys,
-		}
-		render.HTML(200, "quests/users_keys", result_map)
-	})
+	r.Post("/update_key/:key", func(params martini.Params, render render.Render, request *http.Request) {
+		key_id := params["key"]
 
-	m.Get("/messages", func(user auth.User, render render.Render) {
-		messages, _ := qs.GetMessages(bson.M{"data.answered":false, "is_key":false})
-		log.Printf("/messages: %+v", messages)
-		result_map := map[string]interface{}{
-			"messages":messages,
-			"error_text":"",
-			"is_error":false,
-		}
-		render.HTML(200, "quests/messages", result_map)
-	})
+		start_key := request.FormValue("start-key")
+		next_key := request.FormValue("next-key")
+		description := request.FormValue("description")
 
-
-	ensure_messages_error := func(err error) map[string]interface{} {
-		messages, _ := qs.GetMessages(bson.M{"data.answered":false})
-		return map[string]interface{}{
-			"error_text":err.Error(),
-			"is_error":true,
-			"messages":messages,
-		}
-	}
-
-	m.Post("/message_answer/:id", func(params martini.Params, user auth.User, render render.Render, request *http.Request) {
-		answer := request.FormValue("message_answer")
-		log.Printf("Operator was answer: %s", answer)
-		if answer != "" {
-			message, err := qs.GetMessage(params["id"])
-			if err != nil {
-				render.HTML(200, "quests/messages", ensure_messages_error(err))
-			}
-			go func() {
-				ntf.Notify(structs.OutPkg{To:message.From,
-					Message: &structs.OutMessage{
-						ID: utils.GenId(),
-						Type: "chat",
-						Body: answer,
-					}})
-			}()
-			qs.SetMessageAnswer(message.ID)
-			render.Redirect("/messages")
-		} else {
-			render.HTML(200, "quests/messages", ensure_messages_error(errors.New("Сообщение не может быть пустым.")))
-		}
-	})
-
-	m.Post("/message_all", func(render render.Render, request *http.Request) {
-		users, err := qs.GetSubscribedUsers()
-		if err != nil {
-			render.HTML(200, "quests/messages", ensure_messages_error(err))
-		}
-		answer := request.FormValue("message_all")
-		if answer != "" {
-			go func() {
-				for _, user := range users {
-					ntf.Notify(structs.OutPkg{To:user.UserId,
-						Message: &structs.OutMessage{
-							ID: utils.GenId(),
-							Type: "chat",
-							Body: answer,
-						}})
-				}
-			}()
-		}else {
-			render.HTML(200, "quests/messages", ensure_messages_error(errors.New("Сообщение не может быть пустым.")))
-		}
-		render.Redirect("/messages")
-	})
-
-	m.Get("/messages/update", func(render render.Render) {
-		messages, err := qs.GetMessages(bson.M{"data.answered":false, "is_key":false})
-		if err != nil {
-			render.JSON(200, map[string]interface{}{"error":err.Error()})
-		}else {
-			type Message struct {
-				From string `json:"from"`
-				Body string `json:"body"`
-				Id   string `json:"id"`
-			}
-			mes_result := []Message{}
-			for _, mes := range messages {
-				mes_result = append(mes_result, Message{From:mes.From, Body:mes.Body, Id:mes.SID})
-			}
-			render.JSON(200, map[string]interface{}{"error":false, "data":mes_result})
-		}
-	})
-
-	m.Get("/load/klichat_quest_keys.txt", func(render render.Render) {
-		var str_buff string
-		keys, err := qs.GetAllKeys()
-		if err != nil {
-			err_message := []byte(fmt.Sprintf("Error at getting all keys: %v", err.Error()))
-			render.Data(500, err_message)
-		}
-		for _, key := range keys {
-			var next_key string
-			if key.NextKey != nil {
-				next_key_p := key.NextKey
-				next_key = *next_key_p
-			}
-
-			str_buff += fmt.Sprintf("%s;%s;%s;%v\r\n", key.Key, strings.TrimSpace(key.Description), next_key, key.IsFirst)
-		}
-		render.Data(200, []byte(str_buff))
-	})
-
-
-
-	m.Post("/load/up", func(render render.Render, request *http.Request) {
-		file, _, err := request.FormFile("file")
-		if err != nil {
-			render.HTML(200, "quests/keys_new", get_result_error_map(fmt.Sprintf("Ошибка загрузки файлика: %v", err)))
-		}
-		defer file.Close()
-		data, err := ioutil.ReadAll(file)
-		if err != nil {
-			render.HTML(200, "quests/keys_new", get_result_error_map(fmt.Sprintf("Ошибка загрузки файлика: %v", err)))
-		}
-		raw_data := string(data)
-		log.Printf("Result: %s", raw_data)
-		ParseExportFile(raw_data, qs)
+		err := qs.UpdateKey(key_id, start_key, description, next_key)
+		log.Printf("QUESTS WEB was update key %s %s %s %s\n err? %v", key_id, start_key, description, next_key, err)
 		render.Redirect("/new_keys")
 	})
 
+	r.Get("/delete_key_all", func(render render.Render) {
+		qs.Keys.RemoveAll(bson.M{})
+		render.Redirect("/new_keys")
+	})
+
+	xlsFileReg := regexp.MustCompile(".+\\.xlsx?")
+
+	r.Post("/load/up", func(render render.Render, request *http.Request) {
+		file, header, err := request.FormFile("file")
+
+		log.Printf("Form file information: file: %+v \nheader:%v, %v\nerr:%v", file, header.Filename, header.Header, err)
+
+		if err != nil {
+			render.HTML(200, "quests/new_keys", get_keys_info(fmt.Sprintf("Ошибка загрузки файлика: %v", err), qs))
+			return
+		}
+		defer file.Close()
+
+		data, err := ioutil.ReadAll(file)
+		if err != nil {
+			render.HTML(200, "quests/new_keys", get_keys_info(fmt.Sprintf("Ошибка загрузки файлика: %v", err), qs))
+			return
+		}
+
+		if xlsFileReg.MatchString(header.Filename) {
+			xlFile, err := xlsx.OpenBinary(data)
+			log.Printf("file: %+v, err: %v", xlFile, err)
+			if err != nil || xlFile == nil {
+				render.HTML(200, "quests/new_keys", get_keys_info(fmt.Sprintf("Ошибка обработки файлика: %v", err), qs))
+				return
+			}
+			skip_rows, _ := strconv.Atoi(request.FormValue("skip-rows"))
+			skip_cols, _ := strconv.Atoi(request.FormValue("skip-cols"))
+
+			ParseExportXlsx(xlFile, qs, skip_rows, skip_cols)
+		} else {
+			render.HTML(200, "quests/new_keys", get_keys_info("Файл имеет не то расширение :(", qs))
+		}
+
+		render.Redirect("/new_keys")
+	})
+	r.Get("/chat", func(render render.Render, params martini.Params, req *http.Request) {
+		var with string
+		result_data := map[string]interface{}{}
+		query := req.URL.Query()
+		for key, value := range query {
+			if key == "with" && len(value) > 0 {
+				with = value[0]
+				log.Printf("QSERV: with found is: %v", with)
+				break
+			}
+		}
+		type Collocutor struct {
+			IsTeam bool
+			IsMan  bool
+			IsAll  bool
+			Info   interface{}
+			Name   string
+		}
+		collocutor := Collocutor{}
+
+		var messages []Message
+
+		if with != ALL && with != ALL_TEAM_MEMBERS {
+			if team, _ := qs.GetTeamByName(with); team != nil {
+				type TeamInfo struct {
+					FoundedKeys []string
+					Members     []TeamMember
+					AllKeys     []Key
+				}
+
+				collocutor.Name = team.Name
+				collocutor.IsTeam = true
+				members, _ := qs.GetMembersOfTeam(team.Name)
+				keys, _ := qs.GetKeys(bson.M{"for_team":team.Name})
+
+				collocutor.Info = TeamInfo{FoundedKeys:team.FoundKeys, Members:members, AllKeys:keys}
+
+				messages, _ = qs.GetMessages(bson.M{
+					"$or":[]bson.M{
+						bson.M{"from":team.Name},
+						bson.M{"to":team.Name},
+					},
+				})
+			}else {
+				if peoples, _ := qs.GetPeoples(bson.M{"user_id":with}); len(peoples) > 0 {
+					man := peoples[0]
+					collocutor.IsMan = true
+					collocutor.Name = man.Name
+					collocutor.Info = man
+
+					messages, _ = qs.GetMessages(bson.M{
+						"$or":[]bson.M{
+							bson.M{"from":man.UserId},
+							bson.M{"to":man.UserId},
+						},
+					})
+					for i, _ := range messages {
+						if messages[i].From != ME {
+							messages[i].From = man.Name
+						}
+					}
+				} else {
+					with = "all"
+				}
+			}
+		}
+
+		if strings.HasPrefix(with, "all") {
+			collocutor.IsAll = true
+			collocutor.Name = with
+			messages, _ = qs.GetMessages(bson.M{"to":with})
+		}
+
+		result_data["with"] = with
+		result_data["collocutor"] = collocutor
+		result_data["messages"] = messages
+
+		all_teams, _ := qs.GetAllTeams()
+		if contacts, err := qs.GetContacts(all_teams); err == nil {
+			result_data["contacts"] = contacts
+		}
+		render.HTML(200, "quests/chat", result_data)
+	})
+
+	r.Post("/send_message", func(render render.Render, req *http.Request) {
+		from := req.FormValue("from")
+		to := req.FormValue("to")
+		text := req.FormValue("chat-form-message")
+		if from != "" && to != "" && text != "" {
+			if to == "all" {
+				peoples, _ := qs.GetPeoples(bson.M{})
+				log.Printf("QSERV: will send [%v] to all %v peoples", text, len(peoples))
+				send_messages_to_peoples(peoples, ntf, text)
+			} else if to == "all_team_members" {
+				peoples, _ := qs.GetAllTeamMembers()
+				log.Printf("QSERV: will send [%v] to all team members %v peoples", text, len(peoples))
+				send_messages_to_peoples(peoples, ntf, text)
+			} else {
+				team, _ := qs.GetTeamByName(to)
+				if team == nil {
+					man, _ := qs.GetManByUserId(to)
+					if man != nil {
+						log.Printf("QSERV: will send [%v] to %v", text, man.UserId)
+						ntf.NotifyText(man.UserId, text)
+					}
+				}else {
+					peoples, _ := qs.GetMembersOfTeam(team.Name)
+					log.Printf("QSERV: will send [%v] to team members of %v team to %v peoples", text, team.Name, len(peoples))
+					send_messages_to_peoples(peoples, ntf, text)
+				}
+			}
+			qs.StoreMessage(from, to, text, false)
+			log.Printf("QSERV: will answered all messages from %v by %v", to, from)
+			qs.SetMessagesAnswered(to, from)
+
+		} else {
+			render.Redirect("/chat")
+		}
+		render.Redirect(fmt.Sprintf("/chat?with=%v", to))
+	})
+
+	r.Post("/new_messages", func(render render.Render, req *http.Request) {
+		type NewMessagesReq struct {
+			For   string `json:"m_for"`
+			After int64 `json:"after"`
+		}
+		q := NewMessagesReq{}
+		request_body, err := ioutil.ReadAll(req.Body)
+		if err != nil {
+			render.JSON(500, map[string]interface{}{"ok":false, "detail":"can not read request body"})
+			return
+		}
+		err = json.Unmarshal(request_body, &q)
+		if err != nil {
+			render.JSON(500, map[string]interface{}{"ok":false, "detail":fmt.Sprintf("can not unmarshal request body %v \n %s", err, request_body)})
+			return
+		}
+
+		messages, err := qs.GetMessages(bson.M{"from":q.For, "time_stamp":bson.M{"$gt":q.After}})
+		if err != nil {
+			render.JSON(500, map[string]interface{}{"ok":false, "detail":fmt.Sprintf("error in db: %v", err)})
+			return
+		}
+
+		for i, message := range messages {
+			team, _ := qs.GetTeamByName(message.From)
+			if team != nil {
+				messages[i].From = team.Name
+			}else {
+				man, _ := qs.GetManByUserId(message.From)
+				if man != nil {
+					messages[i].From = man.Name
+				}
+
+			}
+		}
+
+		render.JSON(200, map[string]interface{}{"messages":messages, "next_":time.Now().Unix()})
+	})
+
+	r.Post("/new_contacts", func(render render.Render, req *http.Request) {
+		type NewContactsReq struct {
+			After int64 `json:"after"`
+			Exist []string `json:"exist"`
+		}
+		cr := NewContactsReq{}
+		request_body, err := ioutil.ReadAll(req.Body)
+		if err != nil {
+			render.JSON(500, map[string]interface{}{"ok":false, "detail":"can not read request body"})
+			return
+		}
+		err = json.Unmarshal(request_body, &cr)
+		if err != nil {
+			render.JSON(500, map[string]interface{}{"ok":false, "detail":fmt.Sprintf("can not unmarshal request body %v \n %s", err, request_body)})
+			return
+		}
+		contacts, err := qs.GetContactsAfter(cr.After)
+		if err != nil {
+			render.JSON(500, map[string]interface{}{"ok":false, "detail":fmt.Sprintf("db err body %v \n %s", err)})
+			return
+		}
+		new_contacts := []Contact{}
+		old_contacts := []Contact{}
+
+		for _, contact := range contacts {
+			if utils.InS(contact.ID, cr.Exist) {
+				old_contacts = append(old_contacts, contact)
+			}else {
+				new_contacts = append(new_contacts, contact)
+			}
+		}
+		render.JSON(200, map[string]interface{}{
+			"ok":true,
+			"new":new_contacts,
+			"old":old_contacts,
+			"next_":time.Now().Unix(),
+		})
+
+	})
+
 	log.Printf("Will start web server for quest at: %v", config.WebPort)
+
+	//m.MapTo(r, (*martini.Routes)(nil))
+	m.Action(r.Handle)
 	m.RunOnAddr(config.WebPort)
 }

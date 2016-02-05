@@ -7,7 +7,8 @@ import (
 	"log"
 	"os"
 
-	u "msngr/utils"
+	//u "msngr/utils"
+	"path"
 )
 
 type ApiData struct {
@@ -121,12 +122,19 @@ type Configuration struct {
 
 
 func ReadConfig() Configuration {
-	fn := u.FoundFile("config.json")
-	if fn == nil {
-		log.Printf("can not find config.json file :(")
-		os.Exit(-1)
+	//log.Printf("Path sep: %s", RuneToAscii(os.PathSeparator))
+	//fn := u.FoundFile("config.json")
+	//if fn == nil {
+	//	log.Printf("can not find config.json file :(")
+	//	os.Exit(-1)
+	//}
+	//cdata, err := ioutil.ReadFile(*fn)
+	dir, err := os.Getwd()
+	if err != nil{
+		log.Printf("ca not recognise current dir %v", err)
 	}
-	cdata, err := ioutil.ReadFile(*fn)
+	fn := path.Join(dir,"config.json")
+	cdata, err := ioutil.ReadFile(fn)
 	if err != nil {
 		log.Printf("error reading config")
 		os.Exit(-1)
