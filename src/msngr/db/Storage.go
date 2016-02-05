@@ -595,10 +595,10 @@ func (mh *messageHandler) SetMessagesAnswered(from, by string) error {
 }
 
 func (mh *messageHandler) GetMessages(query bson.M) ([]MessageWrapper, error) {
-	if !mh.parent.Check() {
-		return errors.New("БД не доступна")
-	}
 	result := []MessageWrapper{}
+	if !mh.parent.Check() {
+		return result,errors.New("БД не доступна")
+	}
 	err := mh.Collection.Find(query).Sort("-time_stamp").All(&result)
 	return result, err
 }

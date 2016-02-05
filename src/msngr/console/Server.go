@@ -18,10 +18,11 @@ import (
 	d "msngr/db"
 	c "msngr/configuration"
 	u "msngr/utils"
+	ntf "msngr/notify"
 	"gopkg.in/mgo.v2/bson"
 )
 
-func Run(addr string, db *d.MainDb, cs c.ConfigStorage) {
+func Run(addr string, notifier *ntf.Notifier,  db *d.MainDb, cs c.ConfigStorage) {
 	m := martini.Classic()
 
 	martini.Env = martini.Dev

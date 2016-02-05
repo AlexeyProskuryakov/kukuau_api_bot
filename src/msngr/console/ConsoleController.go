@@ -32,7 +32,7 @@ type ConsoleInformationProcessor struct {
 	Information string
 }
 
-func (cip *ConsoleInformationProcessor) ProcessMessage(in *s.InPkg) *s.RequestResult {
+func (cip ConsoleInformationProcessor) ProcessMessage(in *s.InPkg) *s.MessageResult {
 	result := s.MessageResult{Type:"chat", Body:cip.Information}
 	return &result
 }
@@ -41,7 +41,7 @@ type ConsoleMessageProcessor struct {
 	d.MainDb
 }
 
-func (cmp *ConsoleMessageProcessor) ProcessMessage(in *s.InPkg) *s.RequestResult {
+func (cmp ConsoleMessageProcessor) ProcessMessage(in *s.InPkg) *s.MessageResult {
 	body := in.Message.Body
 	userData := in.UserData
 	if body != nil && userData != nil {
@@ -50,13 +50,13 @@ func (cmp *ConsoleMessageProcessor) ProcessMessage(in *s.InPkg) *s.RequestResult
 			cmp.Users.AddUser(in.From, userData.Name, userData.Phone, userData.Email)
 		}
 		cmp.Messages.StoreMessage(in.From, ME, *body)
-		return s.MessageResult{Type:"chat", Body:"", IsDeferred:true}
+		return &s.MessageResult{Type:"chat", Body:"", IsDeferred:true}
 	}else {
-		return s.MessageResult{Type:"chat", Body:"Нет данных для сообщения или данных пользователя"}
+		return &s.MessageResult{Type:"chat", Body:"Нет данных для сообщения или данных пользователя"}
 	}
 }
 
-func FormConsoleBotContext(conf c.Configuration, db_handler *d.MainDb) *m.BotContext {
+func FormConsoleBotContext(conf c.Configuration, db_handler *d.MainDb, cs c.ConfigStorage) *m.BotContext {
 	result := m.BotContext{}
 	result.Request_commands = map[string]s.RequestCommandProcessor{
 		"commands":&ConsoleRequestProcessor{},
@@ -64,12 +64,12 @@ func FormConsoleBotContext(conf c.Configuration, db_handler *d.MainDb) *m.BotCon
 
 	result.Message_commands = map[string]s.MessageCommandProcessor{
 		"information":&ConsoleInformationProcessor{Information:conf.Console.Information},
-		"":ConsoleMessageProcessor{MainDb:db_handler},
+		"":ConsoleMessageProcessor{MainDb:*db_handler},
 	}
 
 	notifier :=n.NewNotifier(conf.Main.CallbackAddr, conf.Console.Key)
-	go eRun(qconf, qs, notifier)
+	go Run(conf.Console.WebPort, notifier, db_handler, cs)
 
 	return &result
 }
->>>>>>> console
+

@@ -161,7 +161,7 @@ func main() {
 	}
 
 	if conf.Console.WebPort != "" && conf.Console.Key != ""{
-		cnsl_context := cnsl.FormConsoleBotContext(conf, db)
+		cnsl_context := cnsl.FormConsoleBotContext(conf, db, cs)
 		cnsl_controller := m.FormBotController(cnsl_context)
 		http.HandleFunc(fmt.Sprintf("/console"), cnsl_controller)
 	}
