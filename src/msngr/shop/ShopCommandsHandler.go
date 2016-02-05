@@ -138,7 +138,9 @@ func (cp ShopCommandsProcessor) ProcessRequest(in *s.InPkg) *s.RequestResult {
 		user_data := in.UserData
 		if user_data != nil && in.UserData.Phone != "" {
 			phone := in.UserData.Phone
-			cp.Users.AddUser(in.From, phone)
+			email := in.UserData.Email
+			name := in.UserData.Name
+			cp.Users.AddUser(in.From, name, phone, email)
 		}
 	}
 	commands := []s.OutCommand{}
