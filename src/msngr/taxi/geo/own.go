@@ -72,7 +72,7 @@ func form_own_result(client *elastic.Client, query elastic.Query, sort elastic.S
 	for _, osm_hit := range s_result.Each(reflect.TypeOf(oae)) {
 		if entity, ok := osm_hit.(OsmAutocompleteEntity); ok {
 			street_name, street_type := GetStreetNameAndShortName(entity.Name)
-			log.Printf("OWN GEO HIT:%+v\nAS: Street name: %v, type: %v", entity, street_name, street_type)
+			//log.Printf("OWN GEO HIT:%+v\nAS: Street name: %v, type: %v", entity, street_name, street_type)
 			entity_hash := fmt.Sprintf("%v%v%v", street_name, street_type, entity.City)
 			if !name_city_set.Contains(entity_hash) && street_type != "" {
 				addr := t.AddressF{
@@ -83,8 +83,6 @@ func form_own_result(client *elastic.Client, query elastic.Query, sort elastic.S
 				}
 				rows = append(rows, addr)
 				name_city_set.Add(entity_hash)
-			}else{
-				log.Printf("OWN `%v` not valid hit", entity_hash)
 			}
 		}
 	}
