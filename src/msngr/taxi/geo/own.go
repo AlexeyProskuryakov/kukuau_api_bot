@@ -58,7 +58,7 @@ type OsmAutocompleteEntity struct {
 	City   string `json:"city"`
 }
 
-func get_own_result(client *elastic.Client, query elastic.Query, sort elastic.Sorter) []t.AddressF {
+func form_own_result(client *elastic.Client, query elastic.Query, sort elastic.Sorter) []t.AddressF {
 	rows := []t.AddressF{}
 	s_result, err := client.Search().Index("autocomplete").Query(query).SortBy(sort).Pretty(true).Do()
 	if err != nil {
@@ -70,6 +70,7 @@ func get_own_result(client *elastic.Client, query elastic.Query, sort elastic.So
 	for _, osm_hit := range s_result.Each(reflect.TypeOf(oae)) {
 		if entity, ok := osm_hit.(OsmAutocompleteEntity); ok {
 			name, short_name := GetStreetNameAndShortName(entity.Name)
+			log.Printf("OWN GEO AS: Street name: %v, type: %v", name, short_name)
 			entity_hash := fmt.Sprintf("%v%v%v", name, short_name, entity.City)
 			if !name_city_set.Contains(entity_hash) {
 				addr := t.AddressF{
@@ -100,7 +101,7 @@ func (oh *OwnAddressHandler) AddressesAutocomplete(q string) t.AddressPackage {
 	SortMode("min").
 	Asc()
 
-	rows = get_own_result(oh.client, query, sort)
+	rows = form_own_result(oh.client, query, sort)
 	return result
 }
 
