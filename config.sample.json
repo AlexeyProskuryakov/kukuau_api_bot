@@ -62,10 +62,16 @@
       }
     },
     "academ": {
+      "available_commands": {
+        "created_order": [
+          "where_it",
+          "callback_request"
+        ]
+      },
       "api": {
         "geo_orbit": {
-          "lat": 54.760457,
-          "lon": 83.103499,
+          "lat": 54.852277,
+          "lon": 83.096504,
           "radius": 50000
         },
         "name": "infinity",
@@ -74,21 +80,21 @@
           "login": "kukuautest",
           "password": "789kukuau987",
           "connection_strings": [
-            "http://212.20.48.191:8080/WebAPITaxi/"
+            "http://212.20.48.191:8080/WebAPITaxi/",
+            "http://109.202.17.249:8080/WebAPITaxi"
           ],
           "host": "212.20.48.191:8080"
         },
         "not_send_price": false
       },
-      "dict_url": "http://127.0.0.1:9191/taxi/academ/streets",
+      "dict_url": "http://msg.kuku-au.com:9193/taxi/academ/streets",
       "information": {
-        "phone": "123-45-67",
-        "text": "Такси академ! Самое лучшее такси в академгородке!"
+        "phone": "8 (383) 334-88-88",
+        "text": "Такси “Академ” – это профессиональное транспортное обслуживание в Новосибирске и области. Телефон для связи: +7 (383) 334-8888"
       },
-      "key": "Kuku acedem_taxi_key",
+      "key": "Kuku academ_taxi_key",
       "markups": [
-        "5030781832",
-        "5008745388"
+        "5030781832"
       ],
       "name": "academ"
     },
