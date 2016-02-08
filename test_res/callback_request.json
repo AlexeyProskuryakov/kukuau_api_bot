@@ -6,12 +6,13 @@
       }
     ],
     "thread": "2c474723-ff4d-4fad-a31f-18e8063bdff2",
-    "body": "Позвони мне! Позвони!",
+    "body": "Позвони мне! Позвони! Тело сообщения для окончательного тестирования интеграции с мессенджером Кличат",
     "type": "chat",
     "id": "T6rqU-93"
   },
   "from": "TEST",
   "userdata": {
-    "phone": "TESTPHONE"
+    "phone": "TESTPHONE",
+    "name": "TESTNAME"
   }
 }
