@@ -101,6 +101,9 @@ type GoogleAddressHandler struct {
 }
 
 func NewGoogleAddressHandler(key string, orbit c.TaxiGeoOrbit, external t.AddressSupplier) *GoogleAddressHandler {
+	if key == ""{
+		return nil
+	}
 	result := GoogleAddressHandler{key:key, orbit:orbit}
 	result.cache = make(map[string]*t.AddressF)
 	result.cache_dests = make(map[string]*GoogleDetailPlaceResult)

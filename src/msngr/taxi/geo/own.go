@@ -28,6 +28,9 @@ type OwnAddressHandler struct {
 }
 
 func NewOwnAddressHandler(conn_str string, orbit c.TaxiGeoOrbit, external t.AddressSupplier) *OwnAddressHandler {
+	if conn_str == "" {
+		return nil
+	}
 	client, err := elastic.NewClient(elastic.SetURL(conn_str))
 	if err != nil {
 		log.Printf("Error at connect to elastic")
