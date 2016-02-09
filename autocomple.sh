@@ -1,26 +1,61 @@
 #!/usr/bin/env bash
-curl -XDELETE "http://localhost:9200/autocomplete"
-curl -XPOST "http://localhost:9200/autocomplete" -d '{
+curl -XDELETE "http://localhost:9200/autocomplete_photon"
+curl -XPOST "http://localhost:9200/autocomplete_photon" -d '{
   "settings": {
     "index": {
       "analysis": {
-        "analyzer": {
-          "autocomplete_analyzer": {
-            "type": "custom",
-            "tokenizer": "lowercase",
-            "filter": [
-              "asciifolding",
-              "title_ngram"
-            ]
+        "similarity" : {
+            "photonsimilarity" : {
+              "type" : "BM25"
+            }
+          },
+          "char_filter" : {
+            "punctuationgreedy" : {
+              "type" : "pattern_replace",
+              "pattern" : "[\\.,]"
+            }
+          },
+        "analyzer" : {
+            "index_ngram" : {
+              "char_filter" : [ "punctuationgreedy" ],
+              "filter" : [ "word_delimiter", "lowercase", "asciifolding", "unique", "wordending", "photonngram" ],
+              "tokenizer" : "standard"
+            },
+            "index_raw" : {
+              "char_filter" : [ "punctuationgreedy" ],
+              "filter" : [ "word_delimiter", "lowercase", "asciifolding", "unique" ],
+              "tokenizer" : "standard"
+            },
+            "search_raw" : {
+              "char_filter" : [ "punctuationgreedy" ],
+              "filter" : [ "word_delimiter", "lowercase", "asciifolding", "unique" ],
+              "tokenizer" : "standard"
+            },
+            "search_ngram" : {
+              "char_filter" : [ "punctuationgreedy" ],
+              "filter" : [ "word_delimiter", "lowercase", "asciifolding", "unique", "wordendingautocomplete" ],
+              "tokenizer" : "standard"
+            }
+          },
+          "filter" : {
+            "photonngram" : {
+              "min_gram" : "1",
+              "type" : "edgeNGram",
+              "max_gram" : "100"
+            },
+            "wordending" : {
+              "type" : "wordending",
+              "mode" : "default"
+            },
+            "photonlength" : {
+              "min" : "2",
+              "type" : "length"
+            },
+            "wordendingautocomplete" : {
+              "type" : "wordending",
+              "mode" : "autocomplete"
+            }
           }
-        },
-        "filter": {
-          "title_ngram": {
-            "type": "nGram",
-            "min_gram": 2,
-            "max_gram": 10
-          }
-        }
       }
     }
   },
@@ -33,6 +68,20 @@ curl -XPOST "http://localhost:9200/autocomplete" -d '{
         "name": {
           "type": "string",
           "analyzer": "autocomplete_analyzer"
+
+        },
+        "photon_name":{
+            "type":"string",
+             "fields" : {
+                  "ngrams" : {
+                    "type" : "string",
+                    "index_analyzer" : "index_ngram"
+                  },
+                  "raw" : {
+                    "type" : "string",
+                    "index_analyzer" : "index_raw"
+                  }
+             }
         },
         "osm_id": {
           "type": "long",

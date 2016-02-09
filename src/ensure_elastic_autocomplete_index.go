@@ -28,6 +28,7 @@ type ElEntity struct {
 
 type AutocompleteEntity struct {
 	Name string `json:"name"`
+	PhotonName string `json:"photon_name"`
 	OSM_ID int64 `json:"osm_id"`
 	City string `json:"city"`
 	Location Coordinates `json:"location"`
@@ -69,7 +70,7 @@ func main() {
 			index_el.Location = entity.Coordinates
 
 			_, err = client.Index().
-			Index("autocomplete").
+			Index("autocomplete_photon").
 			Type("name").
 			Id(fmt.Sprintf("%v", entity.OSM_ID)).
 			BodyJson(index_el).

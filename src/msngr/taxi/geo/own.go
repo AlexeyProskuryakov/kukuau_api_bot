@@ -63,19 +63,25 @@ type OsmAutocompleteEntity struct {
 
 func form_own_result(client *elastic.Client, query elastic.Query, sort elastic.Sorter) []t.AddressF {
 	rows := []t.AddressF{}
-	s_result, err := client.Search().Index("autocomplete").Query(query).SortBy(sort).Pretty(true).Do()
+	s_result, err := client.Search().Index("autocomplete").Query(query).Size(1000).SortBy(sort).Pretty(true).Do()
 	if err != nil {
 		log.Printf("error in own address handler search at search in elastic: \n%v", err)
 		return rows
 	}
 	log.Printf("OWN Found %v in index", s_result.TotalHits())
 
+	for _, sh := range s_result.Hits.Hits {
+		if sh != nil {
+			log.Printf("OWN Search hit is: %+v", *sh)
+		}
+	}
 	var oae OsmAutocompleteEntity
 	name_city_set := s.NewSet()
 	for _, osm_hit := range s_result.Each(reflect.TypeOf(oae)) {
+		log.Printf("OWN RAw hit: %+v", osm_hit)
 		if entity, ok := osm_hit.(OsmAutocompleteEntity); ok {
 			street_name, street_type := GetStreetNameAndShortName(entity.Name)
-			//log.Printf("OWN GEO HIT:%+v\nAS: Street name: %v, type: %v", entity, street_name, street_type)
+			log.Printf("OWN GEO HIT:%+v\nAS: Street name: %v, type: %v", entity, street_name, street_type)
 			entity_hash := fmt.Sprintf("%v%v%v", street_name, street_type, entity.City)
 			if !name_city_set.Contains(entity_hash) && street_type != "" {
 				addr := t.AddressF{
@@ -97,14 +103,9 @@ func (oh *OwnAddressHandler) AddressesAutocomplete(q string) t.AddressPackage {
 	result := t.AddressPackage{Rows:&rows}
 
 	t_query := elastic.NewTermQuery("name", q)
-	filter := elastic.NewGeoDistanceFilter("location").Distance("150km").Lat(oh.orbit.Lat).Lon(oh.orbit.Lon)
+	filter := elastic.NewGeoDistanceFilter("location").Distance("75km").Lat(oh.orbit.Lat).Lon(oh.orbit.Lon)
 	query := elastic.NewFilteredQuery(t_query).Filter(filter)
-	sort := elastic.NewGeoDistanceSort("location").
-	Order(true).
-	Point(oh.orbit.Lat, oh.orbit.Lon).
-	Unit("km").
-	SortMode("min").
-	Asc()
+	sort := elastic.NewGeoDistanceSort("location").Order(true).Point(oh.orbit.Lat, oh.orbit.Lon).Unit("km").SortMode("min").Asc()
 
 	rows = form_own_result(oh.client, query, sort)
 	return result
