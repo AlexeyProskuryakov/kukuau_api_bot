@@ -10,6 +10,7 @@ import (
 	"bytes"
 	"errors"
 	"os"
+	"msngr"
 )
 
 const (
@@ -41,9 +42,10 @@ func ReadTestFile(fn string) *s.InPkg {
 }
 
 func POST(address string, out *s.InPkg) (*s.OutPkg, error) {
+	log.Printf("will send: %v to %v", address, out)
 	jsoned_out, err := json.Marshal(out)
 	if err != nil {
-		log.Printf("TEST POST error at unmarshal %v", err)
+		log.Printf("TEST POST error at unmarshal %v out: %v", err, out)
 		return nil, err
 	}
 
@@ -57,7 +59,9 @@ func POST(address string, out *s.InPkg) (*s.OutPkg, error) {
 	req.Header.Add("Content-Type", "application/json")
 
 	//print, _ := json.MarshalIndent(out, "", "	")
-	log.Printf("TP >> %+v [%v]",  *out.Message.Body, out.UserData.Name)
+	if out.Message != nil && out.Message.Body != nil {
+		log.Printf("TP >> %+v [%v]", *out.Message.Body, out.UserData.Name)
+	}
 
 	client := &http.Client{}
 	resp, err := client.Do(req)
@@ -73,9 +77,11 @@ func POST(address string, out *s.InPkg) (*s.OutPkg, error) {
 		} else {
 			in := s.OutPkg{}
 			err := json.Unmarshal(body, &in)
-			log.Printf("TP << %+v [%v]", in.Message.Body, out.UserData.Name)
+			if in.Message != nil {
+				log.Printf("TP << %+v [%v]", in.Message.Body, out.UserData.Name)
+			}
 			if err != nil {
-				log.Printf("TEST POST err in unmarshal %v", err)
+				log.Printf("!TEST POST err in unmarshal [%v] body: %s", err, body)
 				return nil, err
 			}
 			return &in, nil
@@ -83,6 +89,36 @@ func POST(address string, out *s.InPkg) (*s.OutPkg, error) {
 		defer resp.Body.Close()
 	}
 	return nil, errors.New("response is nil :(")
+}
+
+func HandleAddress(address, port string, errors chan s.MessageError) chan string {
+	result := make(chan string, 1000)
+	go func() {
+		log.Printf("TSTU will work at localhost%v/%v", port, address)
+
+		http.HandleFunc(address, func(w http.ResponseWriter, r *http.Request) {
+			in, err := msngr.FormInPackage(r)
+			log.Printf("TSTU: handling request by %+v", in)
+			if err != nil {
+				log.Printf("TSTU: at %v can not recognise request %+v because %v", address, r, err)
+			}
+			out_err := <-errors
+
+			if in.Message.Body != nil {
+				body := in.Message.Body
+				out := &s.OutPkg{To:in.From, Message:&s.OutMessage{Body:*body, Error:out_err}}
+				log.Printf("TSTU: sending not defered, error %+v", out)
+				msngr.PutOutPackage(w, out, true, false)
+				result <- out_err.Condition
+			}
+
+		})
+		server := &http.Server{Addr: port}
+		result <- "listen"
+		log.Fatal(server.ListenAndServe())
+
+	}()
+	return result
 }
 
 func FakeAddressSupplier() {

@@ -7,7 +7,7 @@ import (
 	"log"
 	"os"
 
-	//u "msngr/utils"
+//u "msngr/utils"
 	"path"
 )
 
@@ -35,9 +35,9 @@ type TaxiApiParams struct {
 	NotSendPrice bool `json:"not_send_price"`
 
 	Fake         struct {
-					 SendedStates []int `json:"sended_states"`
-					 SleepTime    int `json:"sleep_time"`
-				 } `json:"fake"`
+			     SendedStates []int `json:"sended_states"`
+			     SleepTime    int `json:"sleep_time"`
+		     } `json:"fake"`
 }
 
 func (api TaxiApiParams) String() string {
@@ -75,9 +75,9 @@ type TaxiConfig struct {
 	Key               string `json:"key"`
 	Name              string `json:"name"`
 	Information       struct {
-						  Phone string `json:"phone"`
-						  Text  string `json:"text"`
-					  } `json:"information"`
+				  Phone string `json:"phone"`
+				  Text  string `json:"text"`
+			  } `json:"information"`
 	Markups           *[]string `json:"markups,omitempty"`
 	AvailableCommands map[string][]string `json:"available_commands"`
 }
@@ -94,33 +94,41 @@ type QuestConfig struct {
 	ErrorPhrase  string `json:"error_phrase"`
 	Info         string `json:"information"`
 	WebPort      string `json:"web_port"`
-	Key			 string `json:"key"`
+	Key          string `json:"key"`
 }
 
 type Configuration struct {
 	Main   struct {
-			   Port         int    `json:"port"`
-			   CallbackAddr string `json:"callback_addr"`
-			   ConsoleAddr  string `json:"console_addr"`
-			   LoggingFile  string `json:"log_file"`
-			   GoogleKey    string `json:"google_key"`
-			   ElasticConn  string `json:"elastic_conn"`
-			   Database     struct {
-								ConnString string `json:"connection_string"`
-								Name       string `json:"name"`
-							} `json:"database"`
-
-		   } `json:"main"`
+		       Port            int    `json:"port"`
+		       CallbackAddr    string `json:"callback_addr"`
+		       ConsoleAddr     string `json:"console_addr"`
+		       LoggingFile     string `json:"log_file"`
+		       TestLoggingFile string `json:"test_log_file"`
+		       GoogleKey       string `json:"google_key"`
+		       ElasticConn     string `json:"elastic_conn"`
+		       Database        struct {
+					       ConnString string `json:"connection_string"`
+					       Name       string `json:"name"`
+				       } `json:"database"`
+	       } `json:"main"`
 	Taxis  map[string]TaxiConfig `json:"taxis"`
 	Shops  map[string]ShopConfig `json:"shops"`
 	Quests map[string]QuestConfig `json:"quests"`
 	RuPost struct {
-			   ExternalUrl string `json:"external_url"`
-			   WorkUrl     string `json:"work_url"`
-		   } `json:"ru_post"`
+		       ExternalUrl string `json:"external_url"`
+		       WorkUrl     string `json:"work_url"`
+	       } `json:"ru_post"`
 }
 
+func (conf *Configuration) SetLogFile(fn string) {
+	f, err := os.OpenFile(fn, os.O_RDWR | os.O_CREATE | os.O_TRUNC, 0666)
+	if err != nil {
+		log.Fatalf("error opening log file: %v", err)
+	}
 
+	log.SetOutput(f)
+	log.Println("Logging file is setted to %v", fn)
+}
 func ReadConfig() Configuration {
 	//log.Printf("Path sep: %s", RuneToAscii(os.PathSeparator))
 	//fn := u.FoundFile("config.json")
@@ -130,10 +138,10 @@ func ReadConfig() Configuration {
 	//}
 	//cdata, err := ioutil.ReadFile(*fn)
 	dir, err := os.Getwd()
-	if err != nil{
+	if err != nil {
 		log.Printf("ca not recognise current dir %v", err)
 	}
-	fn := path.Join(dir,"config.json")
+	fn := path.Join(dir, "config.json")
 	cdata, err := ioutil.ReadFile(fn)
 	if err != nil {
 		log.Printf("error reading config")
@@ -148,13 +156,14 @@ func ReadConfig() Configuration {
 	}
 
 	if conf.Main.LoggingFile != "" {
+
 		f, err := os.OpenFile(conf.Main.LoggingFile, os.O_RDWR | os.O_CREATE | os.O_TRUNC, 0666)
 		if err != nil {
 			log.Fatalf("error opening log file: %v", err)
 		}
 
 		log.SetOutput(f)
-		log.Println("Logging file is setted here...")
+		log.Println("Logging file is setted to %v", conf.Main.LoggingFile)
 	}
 
 	return conf
