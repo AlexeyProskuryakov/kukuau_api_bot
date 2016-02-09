@@ -97,38 +97,44 @@ type QuestConfig struct {
 	Key          string `json:"key"`
 }
 
-type Configuration struct {
-	Main   struct {
-		       Port            int    `json:"port"`
-		       CallbackAddr    string `json:"callback_addr"`
-		       ConsoleAddr     string `json:"console_addr"`
-		       LoggingFile     string `json:"log_file"`
-		       TestLoggingFile string `json:"test_log_file"`
-		       GoogleKey       string `json:"google_key"`
-		       ElasticConn     string `json:"elastic_conn"`
-		       Database        struct {
-					       ConnString string `json:"connection_string"`
-					       Name       string `json:"name"`
-				       } `json:"database"`
-	       } `json:"main"`
-	Taxis  map[string]TaxiConfig `json:"taxis"`
-	Shops  map[string]ShopConfig `json:"shops"`
-	Quests map[string]QuestConfig `json:"quests"`
-	RuPost struct {
-		       ExternalUrl string `json:"external_url"`
-		       WorkUrl     string `json:"work_url"`
-	       } `json:"ru_post"`
+type ConsoleConfig struct {
+	WebPort     string `json:"web_port"`
+	Key         string `json:"key"`
+	Information string `json:"information"`
 }
 
+type Configuration struct {
+	Main    struct {
+			Port         int    `json:"port"`
+			CallbackAddr string `json:"callback_addr"`
+			LoggingFile  string `json:"log_file"`
+			GoogleKey    string `json:"google_key"`
+			ElasticConn  string `json:"elastic_conn"`
+			Database     struct {
+					     ConnString string `json:"connection_string"`
+					     Name       string `json:"name"`
+				     } `json:"database"`
+		} `json:"main"`
+	Console ConsoleConfig  `json:"console"`
+	Taxis   map[string]TaxiConfig `json:"taxis"`
+	Shops   map[string]ShopConfig `json:"shops"`
+	Quests  map[string]QuestConfig `json:"quests"`
+	RuPost  struct {
+			ExternalUrl string `json:"external_url"`
+			WorkUrl     string `json:"work_url"`
+		} `json:"ru_post"`
+}
 func (conf *Configuration) SetLogFile(fn string) {
 	f, err := os.OpenFile(fn, os.O_RDWR | os.O_CREATE | os.O_TRUNC, 0666)
 	if err != nil {
 		log.Fatalf("error opening log file: %v", err)
 	}
-
 	log.SetOutput(f)
 	log.Println("Logging file is setted to %v", fn)
 }
+
+
+
 func ReadConfig() Configuration {
 	//log.Printf("Path sep: %s", RuneToAscii(os.PathSeparator))
 	//fn := u.FoundFile("config.json")

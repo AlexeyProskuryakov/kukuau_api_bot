@@ -48,5 +48,4 @@ func main() {
 	InsertTestUser(db, "test2", "test2")
 	result := make(chan string, 1000)
 	i.StartBot(db, result)
-
 }

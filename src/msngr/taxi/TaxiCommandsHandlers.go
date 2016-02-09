@@ -399,9 +399,8 @@ type TaxiCommandsProcessor struct {
 }
 
 func (cp *TaxiCommandsProcessor) ProcessRequest(in *s.InPkg) *s.RequestResult {
-	phone, _ := _get_phone(in)
-	if phone != nil {
-		cp.Users.AddUser(in.From, *phone)
+	if in.UserData != nil {
+		cp.Users.AddUser(in.From, in.UserData.Name, in.UserData.Phone, in.UserData.Email)
 	}
 
 	result, err := FormCommands(in.From, cp.MainDb, cp.context)
@@ -530,8 +529,8 @@ func (nop *TaxiNewOrderProcessor) ProcessMessage(in *s.InPkg) *s.MessageResult {
 		commands := *in.Message.Commands
 		phone, err := _get_phone(in)
 		if err != nil {
-			uwrpr, err := nop.Users.GetUserById(in.From)
-			if err != nil {
+			uwrpr, _ := nop.Users.GetUserById(in.From)
+			if uwrpr == nil {
 				return s.ErrorMessageResult(errors.New("Не предоставлен номер телефона"), nop.context.Commands[CMDS_NOT_CREATED_ORDER])
 			} else {
 				phone = &(uwrpr.Phone)
@@ -687,10 +686,10 @@ func (fp *TaxiFeedbackProcessor) ProcessMessage(in *s.InPkg) *s.MessageResult {
 	fdbk, rate := _get_feedback(commands[0].Form.Fields)
 	phone, err := _get_phone(in)
 	if phone == nil {
-		user, uerr := fp.Users.GetUserById(in.From)
-		if uerr != nil {
+		user, _ := fp.Users.GetUserById(in.From)
+		if user == nil {
 			log.Printf("Error at implying user by id %v", in.From)
-			return s.ErrorMessageResult(err, fp.context.Commands[CMDS_FEEDBACK])
+			return s.ErrorMessageResult(errors.New("Не могу определить пользователя"), fp.context.Commands[CMDS_FEEDBACK])
 		}else {
 			phone = &(user.Phone)
 		}

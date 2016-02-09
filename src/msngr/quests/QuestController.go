@@ -42,7 +42,14 @@ type QuestCommandRequestProcessor struct {
 }
 
 func (qcp *QuestCommandRequestProcessor) ProcessRequest(in *s.InPkg) *s.RequestResult {
-	result := s.RequestResult{Commands:&[]s.OutCommand{}}
+	result := s.RequestResult{Commands:&[]s.OutCommand{
+		s.OutCommand{
+			Title:    "Информация",
+			Action:   "information",
+			Position: 0,
+		},
+	},
+	}
 	return &result
 }
 
