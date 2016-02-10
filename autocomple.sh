@@ -4,8 +4,8 @@ curl -XPOST "http://localhost:9200/autocomplete" -d '{
   "settings": {
     "index": {
       "analysis": {
-        "analyzer": {
-          "autocomplete_analyzer": {
+        "analyzer" : {
+         "autocomplete_analyzer": {
             "type": "custom",
             "tokenizer": "lowercase",
             "filter": [
@@ -13,14 +13,14 @@ curl -XPOST "http://localhost:9200/autocomplete" -d '{
               "title_ngram"
             ]
           }
-        },
-        "filter": {
-          "title_ngram": {
-            "type": "nGram",
-            "min_gram": 2,
-            "max_gram": 10
+         },
+          "filter" : {
+            "title_ngram": {
+                "type": "nGram",
+                "min_gram": 3,
+                "max_gram": 7
+            }
           }
-        }
       }
     }
   },
@@ -33,10 +33,10 @@ curl -XPOST "http://localhost:9200/autocomplete" -d '{
         "name": {
           "type": "string",
           "analyzer": "autocomplete_analyzer"
+
         },
         "osm_id": {
-          "type": "long",
-          "index": "not_analyzed"
+          "type": "long"
         },
         "location":{
           "type":"geo_point"
@@ -45,6 +45,6 @@ curl -XPOST "http://localhost:9200/autocomplete" -d '{
     }
   }
 }'
-GOPATH=`pwd`
-go get gopkg.in/olivere/elastic.v2
+#GOPATH=`pwd`
+#go get gopkg.in/olivere/elastic.v2
 go run src/ensure_elastic_autocomplete_index.go

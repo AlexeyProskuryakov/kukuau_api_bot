@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 {
   "main": {
     "port": 9393,
@@ -48,3 +49,53 @@
     }
   }
 }
+=======
+curl -XDELETE "http://localhost:9200/autocomplete_test1" &&
+curl -XPOST "http://localhost:9200/autocomplete_test1" -d '{
+  "settings": {
+    "index": {
+      "analysis": {
+        "analyzer": {
+          "autocomplete_analyzer": {
+            "type": "custom",
+            "tokenizer": "lowercase",
+            "filter": [
+              "lowercase",
+              "asciifolding",
+              "title_ngram",
+              "word_delimiter"
+            ]
+          }
+        },
+        "filter": {
+          "title_ngram": {
+            "type": "nGram",
+            "min_gram": 3,
+            "max_gram": 7
+          }
+        }
+      }
+    }
+  },
+  "mappings": {
+    "name": {
+      "_all": {
+        "enabled": false
+      },
+      "properties": {
+        "name": {
+          "type": "string",
+          "analyzer": "autocomplete_analyzer"
+        },
+        "osm_id": {
+          "type": "long",
+          "index": "not_analyzed"
+        },
+        "location":{
+          "type":"geo_point"
+        }
+      }
+    }
+  }
+}'
+>>>>>>> 8d644f839269aef108c2fb46c86b88600b77fb64
