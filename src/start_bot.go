@@ -61,13 +61,13 @@ func get_address_instruments(c c.Configuration, taxi_name string, external_suppl
 	if own == nil {
 		google := geo.NewGoogleAddressHandler(c.Main.GoogleKey, c.Taxis[taxi_name].Api.GeoOrbit, external_supplier)
 		if google == nil {
-			log.Printf("For %v Will use external address supplier and no any address handler", taxi_name)
+			log.Printf("[GAI]For %v Will use external address supplier and no any address handler", taxi_name)
 			return nil, external_supplier
 		}
-		log.Printf("For %v Will use google addresses", taxi_name)
+		log.Printf("[GAI]For %v Will use google addresses", taxi_name)
 		return google, google
 	}
-	log.Printf("For %v Will use own addresses", taxi_name)
+	log.Printf("[GAI]For %v Will use own addresses", taxi_name)
 	return own, own
 }
 func main() {
@@ -77,6 +77,7 @@ func main() {
 
 	d.DELETE_DB = *test
 	m.DEBUG = *test
+	m.TEST = *test
 
 	log.Printf("configuration for db:\nconnection string: %+v\ndatabase name: %+v", conf.Main.Database.ConnString, conf.Main.Database.Name)
 	db := d.NewMainDb(conf.Main.Database.ConnString, conf.Main.Database.Name)
@@ -86,7 +87,6 @@ func main() {
 		log.Println("!!!!!!!!!!start at test mode!!!!!!!!!!!!!")
 		conf.Main.Database.Name = conf.Main.Database.Name + "_test"
 		db.Session.DB(conf.Main.Database.Name).DropDatabase()
-
 	}
 
 	for taxi_name, taxi_conf := range conf.Taxis {
@@ -160,7 +160,11 @@ func main() {
 		Addr: server_address,
 	}
 
+	if conf.Console.WebPort != "" && conf.Console.Key != ""{
+		cnsl_context := cnsl.FormConsoleBotContext(conf, db, cs)
+		cnsl_controller := m.FormBotController(cnsl_context)
+		http.HandleFunc(fmt.Sprintf("/console"), cnsl_controller)
+	}
 
-	go cnsl.Run(conf, db, cs)
 	log.Fatal(server.ListenAndServe())
 }

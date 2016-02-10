@@ -1,6 +1,6 @@
 package utils
-import (
 
+import (
 	"fmt"
 	"math/rand"
 	"reflect"
@@ -17,7 +17,6 @@ import (
 	"strconv"
 )
 
-
 func GenId() string {
 	t := time.Now().UnixNano()
 	s := rand.NewSource(t)
@@ -32,22 +31,23 @@ func PHash(pwd string) (string) {
 	return result
 }
 
-func get_parent_path(path string)string{
+func get_parent_path(path string) string {
 	separator := RuneToAscii(os.PathSeparator)
 	path_elements := strings.Split(path, separator)
-	return strings.Join(path_elements[:len(path_elements)-1], separator)
+	return strings.Join(path_elements[:len(path_elements) - 1], separator)
 }
 
 func RuneToAscii(r rune) string {
-    if r < 128 {
-        return string(r)
-    } else {
-        return "\\u" + strconv.FormatInt(int64(r), 16)
-    }
+	if r < 128 {
+		return string(r)
+	} else {
+		return "\\u" + strconv.FormatInt(int64(r), 16)
+	}
 }
 func FoundFile(fname string) *string {
-	log.Printf("Path sep: %s", RuneToAscii(os.PathSeparator))
+	log.Printf("Found file: %v\nPath sep: %s", fname, RuneToAscii(os.PathSeparator))
 	dir, err := os.Getwd()
+
 	prev_dir := dir
 	if err != nil {
 		return nil

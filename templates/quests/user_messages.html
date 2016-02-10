@@ -1,24 +1,33 @@
 <div class="container-fluid">
     <div class="row">
         <div class="col-md-5 col-md-offset-3">
-            <h2>Поступившие ключи от пользователей:</h2>
+            <h2>Поступившие сообщения от пользователя {{ .user }}:</h2>
         </div>
         <div class="col-md-1">
             <button class="btn btn-success" onclick="reload()">Загрузить новые</button>
         </div>
     </div>
     <table class="table table-striped">
-        {{range $key := .keys}}
+        <thead>
+            <tr>
+                <td>Сообщение</td>
+                <td>Время</td>
+                <td>Отвечено?</td>
+            </tr>
+
+            </thead>
+        {{range $message := .messages}}
         <tr>
-            <td class="col-md-2">
-                {{$key.From.Name}}
+            <td class="col-md-4">
+                {{$message.Body}}
             </td>
             <td class="col-md-4">
-                {{$key.Body}}
+                {{$message.Time}}
             </td>
-            <td class="col-md-4">
-                {{$key.Time}}
+            <td class="col-md-1">
+                {{$message.Answered}}
             </td>
+
         </tr>
         {{end}}
     </table>

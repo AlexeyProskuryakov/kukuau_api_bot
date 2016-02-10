@@ -40,28 +40,28 @@ type infinity struct {
 	LoginTime     time.Time
 	Cookie        *http.Cookie
 	LoginResponse struct {
-					  Success   bool  `json:"success"`
-					  IDClient  int64 `json:"idClient"`
-					  Params    struct {
-									ProtocolVersion            int    `json:"ProtocolVersion"`
-									RefreshOrdersSeconds       int    `json:"RefreshOrdersSeconds"`
-									LoginRegEx                 string `json:"LoginRegEx"`
-									MyPhoneRegEx               string `json:"MyPhoneRegEx"`
-									OurPhoneDisplay            string `json:"OurPhoneDisplay"`
-									OurPhoneNumber             string `json:"OurPhoneNumber"`
-									DefaultInfinityServiceID   int64  `json:"DefaultInfinityServiceID"`
-									DefaultInfinityServiceName string `json:"DefaultInfinityServiceName"`
-									DefaultRegionID            int64  `json:"DefaultRegionID"`
-									DefaultRegionName          string `json:"DefaultRegionName"`
-									DefaultDistrictID          string `json:"DefaultDistrictID"` // Can be null, so used as string here.
-									DefaultDistrictName        string `json:"DefaultDistrictName"`
-									DefaultCityID              int64  `json:"DefaultCityID"`
-									DefaultCityName            string `json:"DefaultCityName"`
-									DefaultPlaceID             string `json:"DefaultPlaceID"`    // Can be null, so used as string here.
-									DefaultPlaceName           string `json:"DefaultPlaceName"`
-								} `json:"params"`
-					  SessionID string `json:"sessionid"`
-				  }
+			      Success   bool  `json:"success"`
+			      IDClient  int64 `json:"idClient"`
+			      Params    struct {
+						ProtocolVersion            int    `json:"ProtocolVersion"`
+						RefreshOrdersSeconds       int    `json:"RefreshOrdersSeconds"`
+						LoginRegEx                 string `json:"LoginRegEx"`
+						MyPhoneRegEx               string `json:"MyPhoneRegEx"`
+						OurPhoneDisplay            string `json:"OurPhoneDisplay"`
+						OurPhoneNumber             string `json:"OurPhoneNumber"`
+						DefaultInfinityServiceID   int64  `json:"DefaultInfinityServiceID"`
+						DefaultInfinityServiceName string `json:"DefaultInfinityServiceName"`
+						DefaultRegionID            int64  `json:"DefaultRegionID"`
+						DefaultRegionName          string `json:"DefaultRegionName"`
+						DefaultDistrictID          string `json:"DefaultDistrictID"` // Can be null, so used as string here.
+						DefaultDistrictName        string `json:"DefaultDistrictName"`
+						DefaultCityID              int64  `json:"DefaultCityID"`
+						DefaultCityName            string `json:"DefaultCityName"`
+						DefaultPlaceID             string `json:"DefaultPlaceID"`    // Can be null, so used as string here.
+						DefaultPlaceName           string `json:"DefaultPlaceName"`
+					} `json:"params"`
+			      SessionID string `json:"sessionid"`
+		      }
 	Services      []InfinityServices `json:"InfinityServices"`
 	Config        t.TaxiAPIConfig
 }
@@ -294,8 +294,8 @@ func (p *infinity) NewOrder(order t.NewOrderInfo) t.Answer {
 }
 
 func (p *infinity) CalcOrderCost(order t.NewOrderInfo) (int, string) {
-//	order.Delivery.IdStreet = strconv.ParseInt(order.Delivery.IdAddress, 10, 64)
-//	order.Destinations[0].IdStreet = strconv.ParseInt(order.Destinations[0].IdAddress, 10, 64)
+	//	order.Delivery.IdStreet = strconv.ParseInt(order.Delivery.IdAddress, 10, 64)
+	//	order.Destinations[0].IdStreet = strconv.ParseInt(order.Destinations[0].IdAddress, 10, 64)
 
 	order.IdService = p.Config.GetIdService()
 	param, err := json.Marshal(order)
@@ -390,7 +390,9 @@ func (p *infinity) WriteDispatcher(message string) (bool, string /*, string*/) {
 		log.Printf("error at marshal json to infinity %v", string(message))
 		return false, fmt.Sprint(err)
 	}
-	body, err := p._request("RemoteCall", map[string]string{"params": string(tmp), "method": "Taxi.WebAPI.Client.SendMessage"})
+	params := map[string]string{"params": string(tmp), "method": "Taxi.WebAPI.Client.SendMessage"}
+	//	log.Printf("INF: Write dispatcher: %+v", params)
+	body, err := p._request("RemoteCall", params)
 	var temp t.Answer
 	err = json.Unmarshal(body, &temp)
 	if err != nil {
@@ -406,7 +408,7 @@ func (p *infinity) CallbackRequest(phone string) (bool, string) {
 		log.Printf("error at marshal json to infinity %v", string(phone))
 		return false, fmt.Sprint(err)
 	}
-	log.Printf("Callback request (jsoned) %s", tmp)
+	//	log.Printf("Callback request (jsoned) %s", tmp)
 	body, err := p._request("RemoteCall", map[string]string{"params": string(tmp), "method": "Taxi.WebAPI.Client.CallbackRequest"})
 	var temp t.Answer
 	err = json.Unmarshal(body, &temp)
@@ -434,24 +436,24 @@ func (p *infinity) ClearHistory() (bool, string) {
 //Taxi.WebAPI.Client.CancelOrder (Отказ от заказа) Устанавливает для указанного заказа состояние «Отменен»
 //Параметры:
 //Идентификатор заказа (Int64)
-func (p *infinity) CancelOrder(order int64) (bool, string) {
+func (p *infinity) CancelOrder(order int64) (bool, string, error) {
 	tmp, err := json.Marshal(order)
 	if err != nil {
 		log.Printf("error at marshal json to infinity %v", string(order))
-		return false, fmt.Sprint(err)
+		return false, fmt.Sprint(err), err
 	}
 
 	body, err := p._request("RemoteCall", map[string]string{"params": string(tmp), "method": "Taxi.WebAPI.Client.CancelOrder"})
 	if err != nil {
-		return false, fmt.Sprint(err)
+		return false, fmt.Sprint(err), err
 	}
 	var temp t.Answer
 	err = json.Unmarshal(body, &temp)
 	if err != nil {
 		log.Printf("error at unmarshal json from infinity %v", string(body))
-		return false, fmt.Sprint(err)
+		return false, fmt.Sprint(err), err
 	}
-	return temp.IsSuccess, temp.Message
+	return temp.IsSuccess, temp.Message, nil
 }
 
 //Taxi.WebAPI.Client.Feedback (Отправка отзыва о заказе)
@@ -662,19 +664,26 @@ func (p *infinity) OrdersClosedlastN() []t.Order {
 }
 
 //Taxi.Markups (Список доступных наценок)
-func (p *infinity) Markups() []t.Order {
+func (p *infinity) Markups() []t.Markup {
+	type MarkupsResult struct {
+		Rows []t.Markup `json:"rows"`
+	}
+	var temp []MarkupsResult
+
 	body, err := p._request("GetViewData", map[string]string{"params": "[{\"viewName\": \"Taxi.Markups\"}]"})
 	if err != nil {
 		log.Print("error at connection to inf at markups %( ")
-		return []t.Order{}
+		return []t.Markup{}
 	}
-	var temp []t.Order
+
+	log.Printf("INF: markups result: %s", body)
 	err = json.Unmarshal(body, &temp)
+	log.Printf("INF: markups result: %+v", temp)
 	if err != nil {
-		log.Printf("error at unmarshal json from infinity %s", string(body))
-		return []t.Order{}
+		log.Printf("error at unmarshal json from infinity %s, %v", string(body), err)
+		return []t.Markup{}
 	}
-	return temp
+	return temp[0].Rows
 }
 
 //Taxi.Services (Список услуг)
@@ -704,7 +713,7 @@ func (p *infinity) AddressesAutocomplete(text string) t.AddressPackage {
 		return t.AddressPackage{}
 	}
 	var temp []t.AddressPackage
-	log.Printf("INF ADDRESS AUTOCOMPLETE FOR %s \nRETRIEVE THIS:%s", text, string(body))
+	//log.Printf("INF ADDRESS AUTOCOMPLETE FOR %s \nRETRIEVE THIS:%s", text, string(body))
 	err = json.Unmarshal(body, &temp)
 	if err != nil {
 		log.Printf("error at unmarshal json from infinity %s", string(body))

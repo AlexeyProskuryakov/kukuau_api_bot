@@ -1,0 +1,19 @@
+{
+  "message": {
+    "commands": [
+      {
+        "repeated": "true",
+        "fixed": "false",
+        "action": "car_position"
+      }
+    ],
+    "thread": "2c474723-ff4d-4fad-a31f-18e8063bdff2",
+    "body": "Где тачка-то? Я уже тут замерзаю!",
+    "type": "chat",
+    "id": "T6rqU-93"
+  },
+  "from": "TEST_CAR_POSITION",
+  "userdata": {
+    "phone": "TESTPHONE"
+  }
+}

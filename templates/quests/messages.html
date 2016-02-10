@@ -1,105 +1,31 @@
 <div class="container-fluid">
-    <div class="row">
-        <div class="col-md-6 col-md-offset-3">
-            <h2>
-                Написать сообщение <b>всем</b> участникам:
-                <form action="/message_all" method="post">
-                    <div class="form-group">
-                        <textarea name="message_all" class="form-control" rows="2" cols="2"
-                                  id="message_all"></textarea>
-                    </div>
-                    <div class="form-group">
-                        <button type="submit" class="btn btn-danger">Написать</button>
-                    </div>
-                </form>
-            </h2>
-        </div>
+  <div class="row">
+    <div class="col-md-2" id="left-side-bar">
+      <div class="row">
+        <form action="/messages_all" method="POST">
+          <div class="form-group">
+            <label for="message_all">Сообщение всем коммандам: </label>
+            <textarea class="form-control" id="message_all" name="message_all" rows="5"> </textarea>
+          </div>
+        </form>
+      </div>
+      <h1>Выберите комманду которой требуется написать сообщение</h1>
+      {{range $team := .teams}}
+      <div class="row">
+        <a href="/messages/{{$team.SID}}">Комманда {{$team.Name}}</a>
+      </div>
+      {{end}}
     </div>
-    <div class="row">
-        <div class="col-md-6 col-md-offset-3">
-            <h2>Последние сообщения от участников:</h2>
-        </div>
-        <div class="col-md-2">
-            <button class="btn btn-success" onclick="refresh()" id="get-new-messages">Загрузить новые</button>
-        </div>
+    <div class="col-md-7" id="main-window">
+      
+    </div>
+    <div class="col-md-3" id="right-side-bar">
+      <div id="team-info">
 
+      </div>
+      <div class="accordion" id="keys-accordion">
+
+      </div>
     </div>
-    <div class="row">
-        {{ if .is_error }}
-        <div class="col-md-6 col-md-offset-3">
-            <div class="text-danger">{{.error_text}}</div>
-        </div>
-        {{ end }}
-    </div>
-    <table class="table table-striped" id="message-table">
-        {{range $message := .messages}}
-        <tr class="message-table-row" id="{{$message.SID}}">
-            <td class="col-md-2 from-td">
-                {{$message.From}}
-            </td>
-            <td class="col-md-4 body-td">
-                {{$message.Body}}
-            </td>
-            <td class="col-md-4 answer-td">
-                <form action="/message_answer/{{$message.SID}}" method="post" class="answer-form">
-                        <textarea name="message_answer" class="form-control" rows="2"></textarea>
-                        <button type="submit" class="btn btn-warning form-control">Ответить</button>
-                </form>
-            </td>
-        </tr>
-        {{end}}
-    </table>
+  </div>
 </div>
-<script>
-//var update_messages = function(){
-    //$.get("/messages/update").done(function(result){
-   //     var table = $("#message-table");
-    //    if (result.data != undefined && result.error == false ){
-   //         result.data.forEach(function(message){
-    //            var message_tr = $("#"+message.id);
-    //            if (!(message_tr.length)){
-   //                 tr = $('<tr/>', {class:"message-table-row", id:message.id});
-   //                 ftd = $('<td/>', {class:"col-md-2 from-td", text:message.from});
-   //                 btd = $('<td/>', {class:"col-md-4 body-td", text:message.body});
-   //
-   //                 atd = $('<td/>', {class:"col-md-4 answer-td"});
-   //
-  //
-   //                 form = $('<form/>', {action:"/message_answer/"+message.id, method:"post", class:"answer-form"});
-   //                 ta = $('<textarea/>', {name:"message_answer", class:"form-control", rows:"2"});
-   //                 ta.appendTo(form);
-   //                 btn = $('<button/>', {type:"submit", class:"btn btn-warning form-control", text:"Ответить"});
-   //                 btn.appendTo(form);
-   //
-   //                 form.appendTo(atd);
-//
-  //                  ftd.appendTo(tr);
-  //                  btd.appendTo(tr);
-  //                  atd.appendTo(tr);
-//
-  //                  tr.prependTo(table);
-  //              }
-  //          });
-  //      }
-  //  });
-//};
-
-var refresh = function(){
-    window.location.reload();
-};
-
-var after = Math.floor(Date.now() / 1000);
-
-var get_new_messages_count = function(){
-    $.get("/messages/new_count/"+after).done(function(result){
-        if (result.count != undefined && result.error == false && result.count != 0){
-            $("#get-new-messages").text("Загрузить новые ("+result.count+")");
-        }
-    });
-}
-
-window.setInterval(function(){
-    get_new_messages_count();
-},
-5000);
-</script>

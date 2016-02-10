@@ -2,10 +2,11 @@ package geo
 
 import (
 
-	"log"
-	"fmt"
 	"encoding/json"
 	"errors"
+	"fmt"
+	"log"
+	"strings"
 
 	t "msngr/taxi"
 	u "msngr/utils"
@@ -46,7 +47,7 @@ func (input GoogleResultAddress) ToFastAddress() t.AddressPackage {
 			row := t.AddressF{}
 			terms_len := len(prediction.Terms)
 			if terms_len > 0 {
-				row.Name, row.ShortName = _get_street_name_shortname(prediction.Terms[0].Value)
+				row.Name, row.ShortName = GetStreetNameAndShortName(prediction.Terms[0].Value)
 			}
 			if terms_len > 1 {
 				row.City = prediction.Terms[1].Value
@@ -100,6 +101,9 @@ type GoogleAddressHandler struct {
 }
 
 func NewGoogleAddressHandler(key string, orbit c.TaxiGeoOrbit, external t.AddressSupplier) *GoogleAddressHandler {
+	if key == ""{
+		return nil
+	}
 	result := GoogleAddressHandler{key:key, orbit:orbit}
 	result.cache = make(map[string]*t.AddressF)
 	result.cache_dests = make(map[string]*GoogleDetailPlaceResult)
@@ -165,13 +169,13 @@ func (ah *GoogleAddressHandler) GetExternalInfo(key, name string) (*t.AddressF, 
 		ah.cache_dests[key] = addr_details
 	}
 	address_components := addr_details.Result.AddressComponents
-	log.Printf(">>> [%v]\n%+v", key, address_components)
+	//	log.Printf(">>> [%v]\n%+v", key, address_components)
 	query, google_set := _process_address_components(address_components)
 
 	if query == "" {
 		query = addr_details.Result.Name
 	}
-	log.Printf("<<< [%v]\n%+v", query, google_set)
+	log.Printf("GOOGLE query: [%v]\nGoogle set: %+v", query, google_set)
 	if !ah.ExternalAddressSupplier.IsConnected() {
 		return nil, errors.New("GetStreetId: External service is not avaliable")
 	}
@@ -186,9 +190,9 @@ func (ah *GoogleAddressHandler) GetExternalInfo(key, name string) (*t.AddressF, 
 		nitem := ext_rows[i]
 		external_set := GetSetOfAddressF(nitem)
 
-		log.Printf("GetStreetId [%v]:\n e: %+v < ? > g: %+v", query, external_set, google_set)
+		log.Printf("GOOGLE query [%v]:\n external set: %+v < ? > google set: %+v", query, external_set, google_set)
 		if google_set.IsSuperset(external_set) || external_set.IsSuperset(google_set) {
-			log.Printf("GetStreetId: [%+v] \nat %v", key, nitem.FullName)
+			log.Printf("GOOGLE: OK! [%+v] \nat %v", key, nitem)
 			ah.cache[key] = &nitem
 			return &nitem, nil
 		}
@@ -202,7 +206,7 @@ func (ah *GoogleAddressHandler) AddressesAutocomplete(q string) t.AddressPackage
 	result := t.AddressPackage{Rows:&rows}
 	suff := "/place/autocomplete/json"
 	url := GOOGLE_API_URL + suff
-	log.Printf(fmt.Sprintf("location= %v,%v", ah.orbit.Lat, ah.orbit.Lon))
+	//	log.Printf(fmt.Sprintf("location= %v,%v", ah.orbit.Lat, ah.orbit.Lon))
 	address_result := GoogleResultAddress{}
 	params := map[string]string{
 		"components": "country:ru",
@@ -235,7 +239,7 @@ func _process_address_components(components []GoogleAddressComponent) (string, s
 	google_set := s.NewSet()
 	for _, component := range components {
 		if u.IntersectionS(NOT_IMPLY_TYPES, component.Types) {
-			log.Printf("component type %+v \ncontains not imply types: %v", component, component.Types)
+			//			log.Printf("component type %+v \ncontains not imply types: %v", component, component.Types)
 			continue
 		} else {
 			long_name, err := AddStringToSet(google_set, component.LongName)
@@ -250,3 +254,32 @@ func _process_address_components(components []GoogleAddressComponent) (string, s
 	}
 	return route, google_set
 }
+
+func GetStreetNameAndShortName(input string) (string, string) {
+	addr_split := strings.Split(input, " ")
+	var street_type, street_name string
+	for _, sn_part := range addr_split {
+		if u.InS(sn_part, []string{"улица", "проспект", "площадь", "переулок", "шоссе", "магистраль", "бульвар", "проезд"}) {
+			street_type = _shorten_street_type(sn_part)
+		} else {
+			if street_name == "" {
+				street_name += sn_part
+			}else {
+				street_name += " "
+				street_name += sn_part
+			}
+		}
+	}
+	return street_name, street_type
+}
+
+func _shorten_street_type(input string) string {
+	runes_array := []rune(input)
+	if u.InS(input, []string{"улица", "проспект", "площадь"}) {
+		return string(runes_array[:2]) + "."
+	}else if u.InS(input, []string{"переулок", "шоссе", "магистраль"}) {
+		return string(runes_array[:3]) + "."
+	}
+	return string(runes_array)
+}
+

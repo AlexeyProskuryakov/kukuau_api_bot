@@ -1,0 +1,58 @@
+{
+  "message": {
+    "commands": [
+      {
+        "form": {
+          "fields": [
+            {
+              "data": {
+                "text": "Ленина ул",
+                "value": "{\"Coordinates\":{\"lat\":0,\"lon\":0},\"osm_id\":0,\"GID\":\"\",\"ID\":5000110920,\"Name\":\"Ленина\",\"City\":\"г Бердск\",\"IDParent\":5000110802,\"ShortName\":\"ул\",\"ItemType\":5,\"FullName\":\" ул Ленина\",\"IDRegion\":5000110801,\"IDDistrict\":0,\"IDCity\":5000110802,\"IDPlace\":0,\"Region\":\"обл Новосибирская\",\"PostalCode\":\"\",\"HouseNumber\":\"\"}"
+              },
+              "type": "dict",
+              "name": "street_from"
+            },
+            {
+              "type": "number",
+              "name": "entrance"
+            },
+            {
+              "data": {
+                "value": "{\"Coordinates\":{\"lat\":0,\"lon\":0},\"osm_id\":0,\"GID\":\"\",\"ID\":5001314735,\"Name\":\"Ключ-Камышенское плато\",\"City\":\"г Новосибирск\",\"IDParent\":5001313711,\"ShortName\":\"ул\",\"ItemType\":5,\"FullName\":\"обл Новосибирская г Новосибирск ул Ключ-Камышенское плато\",\"IDRegion\":5000110801,\"IDDistrict\":0,\"IDCity\":5001313711,\"IDPlace\":0,\"Region\":\"обл Новосибирская\",\"PostalCode\":\"\",\"HouseNumber\":\"\"}",
+                "text": "Ключ-Камышенское плато ул"
+              },
+              "type": "dict",
+              "name": "street_to"
+            },
+            {
+              "data": {
+                "value": "1"
+              },
+              "type": "text",
+              "name": "house_to"
+            },
+            {
+              "data": {
+                "value": "1"
+              },
+              "type": "text",
+              "name": "house_from"
+            }
+          ]
+        },
+        "repeated": "true",
+        "fixed": "false",
+        "action": "new_order"
+      }
+    ],
+    "thread": "2c474723-ff4d-4fad-a31f-18e8063bdff2",
+    "body": "\u041e\u0442\u043a\u0443\u0434\u0430: \u041a\u043e\u043c\u043c\u0443\u043d\u0438\u0441\u0442\u0438\u0447\u0435\u0441\u043a\u0430\u044f \u0443\u043b, 1, \u043d\u0435\u0442. \u041a\u0443\u0434\u0430: \u0420\u0430\u0434\u0443\u0436\u043d\u0430\u044f \u0443\u043b, 2.",
+    "type": "chat",
+    "id": "T6rqU-93"
+  },
+  "from": "TEST",
+  "userdata": {
+    "phone": "TESTPHONE",
+    "name": "TESTNAME"
+  }
+}

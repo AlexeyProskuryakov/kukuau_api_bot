@@ -1,4 +1,5 @@
 package taxi
+
 import (
 	"msngr/utils"
 	"msngr/db"
@@ -40,7 +41,7 @@ type AddressF struct {
 }
 
 func (a AddressF) String() string {
-	return fmt.Sprintf("[%v]g[%v]o[%v] '%v' (%v) (%v) at %v %v %v %v %v\nIDS:\tParent: %v, Region: %v, District: %v, City: %v, Place: %v\n",
+	return fmt.Sprintf("[%v]g[%v]o[%v] '%v' (%v) [%v] \n\tHouse:%v City:%v Region:%v District:%v Place:%v\nIDS:\tParent: %v, Region: %v, District: %v, City: %v, Place: %v\n",
 		a.ID, a.GID, a.OSM_ID,
 		a.Name, a.FullName, a.ShortName, a.HouseNumber, a.City, a.Region, a.District, a.Place,
 		a.IDParent, a.IDRegion, a.IDDistrict, a.IDCity, a.IDPlace)
@@ -90,9 +91,9 @@ type Destination struct {
 	Lat           float64 `json:"lat,omitempty"`           // : <Широта координаты адреса (при указании места на карте). Если указано, информация о доставке по указанию и адресе игнорируется>,
 	Lon           float64 `json:"lon,omitempty"`           // : <Долгота координаты адреса (при указании места на карте). Если указано, информация о доставке по указанию и адресе игнорируется>,"isByDirection" : <Заказ машины с указанием пункта назначения при подаче (если задано в true,информация о адресе игнонрируются)>,
 
-	IdDistrict    *int64   `json:"idDistrict"`              // : <Идентификатор района (Int64)>,
-	IdCity        *int64   `json:"idCity"`                  // : <Идентификатор города (Int64)>,
-	IdPlace       *int64   `json:"idPlace"`                 // : <Идентификатор поселения (Int64)>,
+	IdDistrict    *int64   `json:"idDistrict"`             // : <Идентификатор района (Int64)>,
+	IdCity        *int64   `json:"idCity"`                 // : <Идентификатор города (Int64)>,
+	IdPlace       *int64   `json:"idPlace"`                // : <Идентификатор поселения (Int64)>,
 
 	Building      string  `json:"building,omitempty"`      // : <Строение (строка)>,
 	Fraction      string  `json:"fraction,omitempty"`      // : <Корпус (строка)>,
@@ -125,18 +126,18 @@ func (d Delivery) String() string {
 	)
 }
 
-
-type NewOrderInfo struct {                                             //request
+type NewOrderInfo struct {
+								   //request
 	Phone           string `json:"phone"`
-	DeliveryTime    string `json:"deliveryTime,omitempty"`             //<Время подачи в формате yyyy-MM-dd HH:mm:ss>
-	DeliveryMinutes int  `json:"deliveryMinutes"`                    // <Количество минут до подачи (0-сейчас, но не менее минимального времени на подачу, указанного в настройках системы), не анализируется если задано поле deliveryTime >
-	IdService       int64  `json:"idService"`                         //<Идентификатор услуги заказа (не может быть пустым)>
-	Notes           string `json:"notes,omitempty"`                    // <Комментарий к заказу>
-	Markups         []string    `json:"markups,omitempty"`             //Markups           [2]int64 `json:"markups"`           // <Массив идентификаторов наценок заказа>
-	Attributes      []int64      `json:"attributes,omitempty"`        // <Массив идентификаторов дополнительных атрибутов заказа>
-	Delivery        *Delivery      `json:"delivery"`                   // Инфомация о месте подачи машины
-	Destinations    []*Destination `json:"destinations"`               // Пункты назначения заказа (массив, не может быть пустым)
-	IsNotCash       bool          `json:"isNotCash,omitempty"`         //: // Флаг безналичного заказа <true или false (bool)>
+	DeliveryTime    string `json:"deliveryTime,omitempty"`     //<Время подачи в формате yyyy-MM-dd HH:mm:ss>
+	DeliveryMinutes int  `json:"deliveryMinutes"`              // <Количество минут до подачи (0-сейчас, но не менее минимального времени на подачу, указанного в настройках системы), не анализируется если задано поле deliveryTime >
+	IdService       int64  `json:"idService"`                  //<Идентификатор услуги заказа (не может быть пустым)>
+	Notes           string `json:"notes,omitempty"`            // <Комментарий к заказу>
+	Markups         []string    `json:"markups,omitempty"`     //Markups           [2]int64 `json:"markups"`           // <Массив идентификаторов наценок заказа>
+	Attributes      []int64      `json:"attributes,omitempty"` // <Массив идентификаторов дополнительных атрибутов заказа>
+	Delivery        *Delivery      `json:"delivery"`           // Инфомация о месте подачи машины
+	Destinations    []*Destination `json:"destinations"`       // Пункты назначения заказа (массив, не может быть пустым)
+	IsNotCash       bool          `json:"isNotCash,omitempty"` //: // Флаг безналичного заказа <true или false (bool)>
 }
 
 func (o NewOrderInfo) String() string {
@@ -150,10 +151,10 @@ func (o NewOrderInfo) String() string {
 }
 
 type Order struct {
-														/**
-														Key fields is:
-														ID, State, Cost, TimeArrival, TimeDelivery, IDCar
-														 */
+							    /**
+							    Key fields is:
+							    ID, State, Cost, TimeArrival, TimeDelivery, IDCar
+							     */
 	ID                int64  `json:"ID"`                // ID
 	State             int    `json:"State"`             //Состояние заказа
 	Cost              int    `json:"Cost"`              //Стоимость
@@ -186,6 +187,14 @@ func (o Order) String() string {
 		o.ID,
 		o.State, o.Cost, o.TimeArrival, o.TimeDelivery, o.IDCar,
 	)
+}
+
+type Markup struct {
+	ID            int64 `json:"ID"`
+	Name          string `json:"Name"`
+	Type          int64 `json:"Type"`
+	Value         int `json:"Value"`
+	Accessibility int `json:"Accessibility"`
 }
 
 type AnswerContent struct {
@@ -251,8 +260,8 @@ const (
 
 	ORDER_NOT_PAYED = 8
 	ORDER_FIXED = 12
-
 )
+
 var InfinityStatusesName = map[int]string{
 	1:  "Не распределен",
 	2:  "Назначен",
@@ -269,7 +278,6 @@ var InfinityStatusesName = map[int]string{
 	14: "Горящий заказ",
 	15: "Не подтвержден",
 }
-
 
 func IsOrderNotActual(state int) bool {
 	return utils.In(state, []int{0, ORDER_PAYED, ORDER_CANCELED, ORDER_NOT_CREATED, ORDER_NOT_PAYED})

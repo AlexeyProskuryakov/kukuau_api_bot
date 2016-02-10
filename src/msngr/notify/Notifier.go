@@ -7,6 +7,7 @@ import (
 	"net/http"
 	s "msngr/structs"
 	"io/ioutil"
+	"msngr/utils"
 )
 
 
@@ -26,7 +27,6 @@ func (n Notifier) Notify(outPkg s.OutPkg) error{
 		log.Printf("NTF error at unmarshal %v", err)
 		return err
 	}
-
 	body := bytes.NewBuffer(jsoned_out)
 	req, err := http.NewRequest("POST", n.address, body)
 	if err != nil {
@@ -38,7 +38,7 @@ func (n Notifier) Notify(outPkg s.OutPkg) error{
 	req.Header.Add("Accept", "application/json")
 	req.Header.Add("Authorization", n.key)
 
-	log.Printf("N >> %+v \n%+v \n %+v", n.address, req.Header, req.Body)
+	log.Printf("N >> %+v \n>>%+v \n>>%s", n.address, req.Header, jsoned_out)
 
 	client := &http.Client{}
 	resp, err := client.Do(req)
@@ -57,4 +57,8 @@ func (n Notifier) Notify(outPkg s.OutPkg) error{
 		defer resp.Body.Close()
 	}
 	return nil
+}
+
+func (n Notifier) NotifyText(to, text string) error{
+	return n.Notify(s.OutPkg{To:to, Message:&s.OutMessage{ID:utils.GenId(), Type:"chat", Body:text}})
 }
