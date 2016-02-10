@@ -124,6 +124,16 @@ type Configuration struct {
 			WorkUrl     string `json:"work_url"`
 		} `json:"ru_post"`
 }
+func (conf *Configuration) SetLogFile(fn string) {
+	f, err := os.OpenFile(fn, os.O_RDWR | os.O_CREATE | os.O_TRUNC, 0666)
+	if err != nil {
+		log.Fatalf("error opening log file: %v", err)
+	}
+	log.SetOutput(f)
+	log.Println("Logging file is setted to %v", fn)
+}
+
+
 
 func ReadConfig() Configuration {
 	//log.Printf("Path sep: %s", RuneToAscii(os.PathSeparator))
@@ -152,13 +162,14 @@ func ReadConfig() Configuration {
 	}
 
 	if conf.Main.LoggingFile != "" {
+
 		f, err := os.OpenFile(conf.Main.LoggingFile, os.O_RDWR | os.O_CREATE | os.O_TRUNC, 0666)
 		if err != nil {
 			log.Fatalf("error opening log file: %v", err)
 		}
 
 		log.SetOutput(f)
-		log.Println("Logging file is setted here...")
+		log.Println("Logging file is setted to %v", conf.Main.LoggingFile)
 	}
 
 	return conf

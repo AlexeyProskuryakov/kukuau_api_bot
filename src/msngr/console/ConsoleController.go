@@ -49,7 +49,7 @@ func (cmp ConsoleMessageProcessor) ProcessMessage(in *s.InPkg) *s.MessageResult 
 		if u == nil {
 			cmp.Users.AddUser(in.From, userData.Name, userData.Phone, userData.Email)
 		}
-		cmp.Messages.StoreMessage(in.From, ME, *body)
+		cmp.Messages.StoreMessage(in.From, ME, *body, in.Message.ID)
 		return &s.MessageResult{Type:"chat", Body:"", IsDeferred:true}
 	}else {
 		return &s.MessageResult{Type:"chat", Body:"Нет данных для сообщения или данных пользователя"}
@@ -67,7 +67,7 @@ func FormConsoleBotContext(conf c.Configuration, db_handler *d.MainDb, cs c.Conf
 		"":ConsoleMessageProcessor{MainDb:*db_handler},
 	}
 
-	notifier :=n.NewNotifier(conf.Main.CallbackAddr, conf.Console.Key)
+	notifier :=n.NewNotifier(conf.Main.CallbackAddr,conf.Console.Key, db_handler )
 	go Run(conf.Console.WebPort, notifier, db_handler, cs)
 
 	return &result

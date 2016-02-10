@@ -7,7 +7,8 @@
       "name": "bot",
       "connection_string": "localhost:27017"
     },
-    "google_key": "AIzaSyBXW3UaS5e4FtOt-XJqLFHGpvrFlf45DV4",
+//    "google_key": "AIzaSyBXW3UaS5e4FtOt-XJqLFHGpvrFlf45DV4",
+      "google_key": "AIzaSyBkmvXK-SqfQcyj2XlXgTx-r_B18TJb-vY",
     "elastic_conn": "http://localhost:9200/"
   },
   "console":{

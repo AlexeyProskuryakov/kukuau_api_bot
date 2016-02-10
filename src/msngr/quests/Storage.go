@@ -7,6 +7,7 @@ import (
 
 	"time"
 	"sort"
+	"errors"
 )
 
 type Message struct {
@@ -145,7 +146,7 @@ func (qks *QuestStorage) AddKey(start_key, description, next_key string) (*Key, 
 	} else if err != nil {
 		return nil, err
 	} else {
-		return &kw, nil
+		return &kw, errors.New("Key already exist!")
 	}
 }
 

@@ -70,14 +70,16 @@ type ErrorWrapper struct {
 }
 
 type MessageWrapper struct {
-	ID          bson.ObjectId `bson:"_id,omitempty"`
-	SID         string
-	From        string `bson:"from"`
-	To          string `bson:"to"`
-	Body        string `bson:"body"`
-	TimeStamp   int64 `bson:"time_stamp"`
-	NotAnswered int `bson:"not_answered"`
-	AnsweredBy  string `bson:"answered_by"`
+	ID               bson.ObjectId `bson:"_id,omitempty"`
+	SID              string
+	From             string `bson:"from"`
+	Body             string `bson:"body"`
+	To               string `bson:"to"`
+	Time             int64 `bson:"time"`
+	Answered         bool `bson:"answered"`
+	MessageID        string `bson:"message_id"`
+	MessageStatus    string `bson:"message_status"`
+	MessageCondition string `bson:"message_condition"`
 }
 
 type messageHandler struct {
@@ -250,6 +252,13 @@ func (odbh *MainDb) ensureIndexes() {
 	message_collection.EnsureIndex(mgo.Index{
 		Key:[]string{"time_stamp"},
 		Unique:false,
+	})
+	message_collection.EnsureIndex(mgo.Index{
+		Key:[]string{"message_id"},
+		Unique:true,
+	})
+	message_collection.EnsureIndex(mgo.Index{
+		Key:[]string{"message_condition"},
 	})
 
 	odbh.Users.Collection = users_collection
@@ -573,14 +582,18 @@ func (eh *errorHandler) GetBy(req bson.M) (*[]ErrorWrapper, error) {
 	return &result, err
 }
 
-//MESSAGES
-func (mh *messageHandler) StoreMessage(from, to, body string) error {
+
+func (mh *messageHandler) StoreMessage(from, to, body string, message_id string) error {
 	if !mh.parent.Check() {
 		return errors.New("БД не доступна")
 	}
-	result := MessageWrapper{From:from, To: to, Body:body, TimeStamp:time.Now().Unix(), NotAnswered:1}
-	err := mh.Collection.Insert(&result)
-	return err
+	found, err := mh.GetMessageByMessageId(message_id)
+	result := MessageWrapper{From:from, To:to, Body:body, Time:time.Now().Unix(), Answered:false, MessageID:message_id, MessageStatus:"sended"}
+	if found == nil&&err == nil {
+		err := mh.Collection.Insert(&result)
+		return err
+	}
+	return errors.New(fmt.Sprintf("I have duplicate!%+v", found))
 }
 
 func (mh *messageHandler) SetMessagesAnswered(from, by string) error {
@@ -601,4 +614,18 @@ func (mh *messageHandler) GetMessages(query bson.M) ([]MessageWrapper, error) {
 	}
 	err := mh.Collection.Find(query).Sort("-time_stamp").All(&result)
 	return result, err
+}
+
+func (mh *messageHandler) GetMessageByMessageId(message_id string) (*MessageWrapper, error) {
+	result := MessageWrapper{}
+	err := mh.Collection.Find(bson.M{"message_id":message_id}).One(&result)
+	if err == mgo.ErrNotFound {
+		return nil, nil
+	}else if err != nil {
+		return nil, err
+	}
+	return &result, nil
+}
+func (mh *messageHandler) UpdateMessageStatus(message_id, status, condition string) error {
+	return mh.Collection.Update(bson.M{"message_id":message_id}, bson.M{"$set":bson.M{"message_status":status, "message_condition":condition}})
 }

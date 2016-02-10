@@ -58,17 +58,13 @@ func ParseExportXlsx(xlf *xlsx.File, qs *QuestStorage, skip_row, skip_cell int) 
 	return nil
 }
 
-var keys_cache []Key
-
 func get_keys_info(err_text string, qs *QuestStorage) map[string]interface{} {
 	var keys []Key
 	var e error
 	result := map[string]interface{}{}
-	if err_text == "" {
-		keys, e = qs.GetAllKeys()
-	} else {
-		keys = keys_cache
-	}
+
+	keys, e = qs.GetAllKeys()
+
 	if e != nil || err_text != "" {
 		result["is_error"] = true
 		if e != nil {
@@ -149,18 +145,22 @@ func Run(config c.QuestConfig, qs *QuestStorage, ntf *ntf.Notifier) {
 	})
 
 	r.Post("/add_key", func(user auth.User, render render.Render, request *http.Request) {
-		start_key := request.FormValue("start-key")
-		next_key := request.FormValue("next-key")
+		start_key := strings.TrimSpace(request.FormValue("start-key"))
+		next_key := strings.TrimSpace(request.FormValue("next-key"))
 		description := request.FormValue("description")
 
 		log.Printf("QUESTS WEB add key %s -> %s -> %s", start_key, description, next_key)
 		if start_key != "" && description != "" {
 			key, err := qs.AddKey(start_key, description, next_key)
-			log.Printf("QW is error? %v key: %v", err, key)
-			render.Redirect("/new_keys")
+			if key != nil &&err != nil {
+				render.HTML(200, "quests/new_keys", get_keys_info("Такой ключ уже существует. Используйте изменение ключа если хотите его изменить.", qs))
+				return
+			}
 		} else {
 			render.HTML(200, "quests/new_keys", get_keys_info("Невалидные значения ключа или ответа", qs))
+			return
 		}
+		render.Redirect("/new_keys")
 	})
 
 	r.Post("/delete_key/:key", func(params martini.Params, render render.Render) {
@@ -173,8 +173,8 @@ func Run(config c.QuestConfig, qs *QuestStorage, ntf *ntf.Notifier) {
 	r.Post("/update_key/:key", func(params martini.Params, render render.Render, request *http.Request) {
 		key_id := params["key"]
 
-		start_key := request.FormValue("start-key")
-		next_key := request.FormValue("next-key")
+		start_key := strings.TrimSpace(request.FormValue("start-key"))
+		next_key := strings.TrimSpace(request.FormValue("next-key"))
 		description := request.FormValue("description")
 
 		err := qs.UpdateKey(key_id, start_key, description, next_key)
