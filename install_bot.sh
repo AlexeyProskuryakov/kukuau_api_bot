@@ -1,13 +1,9 @@
 #!/bin/bash
 NAME="KlichatBot"
 USERNAME="alesha"
-
 GOHOME="/usr/local/go"
 HOME=`pwd`
 EXEC=${GOHOME}/bin/go
-
-#building
-${EXEC} build -o ${HOME}/build/start_demo_bot ${HOME}/src/start_demo_bot.go
 
 #forming config
 
