@@ -51,9 +51,9 @@ type UserWrapper struct {
 	States     map[string]string `bson:"states"`
 	UserId     string `bson:"user_id"`
 	UserName   string `bson:"user_name"`
-	Password   string
-	Phone      string
-	Email      string
+	Password   string `bson:"password"`
+	Phone      string `bson:"phone"`
+	Email      string `bson:"email"`
 	LastUpdate time.Time `bson:"last_update"`
 	Role       string `bson:"role"`
 }
@@ -463,6 +463,14 @@ func (uh *userHandler) AddUser(user_id, name, phone, email string) error {
 		return err
 	}
 	return nil
+}
+
+func (uh userHandler) AddUserObject(uw UserWrapper) error {
+	if !uh.parent.Check() {
+		return errors.New("БД не доступна")
+	}
+	err := uh.Collection.Insert(uw)
+	return err
 }
 
 func (uh *userHandler) SetUserMultiplyState(user_id, state_key, state_value string) error {

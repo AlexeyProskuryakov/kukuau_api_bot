@@ -58,6 +58,21 @@ func GetKeysInfo(err_text string, qs *quests.QuestStorage) map[string]interface{
 	return result
 }
 
+func GetUsersInfo(err_text string, db *d.MainDb) map[string]interface{} {
+	result := map[string]interface{}{}
+	users, e := db.Users.GetBy(bson.M{})
+	if e != nil || err_text != "" {
+		result["is_error"] = true
+		if e != nil {
+			result["error_text"] = e.Error()
+		} else {
+			result["error_text"] = err_text
+		}
+	}
+	result["users"] = users
+	return result
+}
+
 type ByContactsLastMessageTime []usrs.Contact
 
 func (s ByContactsLastMessageTime) Len() int {
@@ -439,6 +454,62 @@ func Run(addr string, notifier *ntf.Notifier, db *d.MainDb, cs c.ConfigStorage, 
 
 	})
 
+	r.Get("/users", func(render render.Render, req *http.Request) {
+		render.HTML(200, "console/users", GetUsersInfo("", db))
+	})
+
+	r.Post("/add_user", func(user auth.User, render render.Render, request *http.Request) {
+		u_id := request.FormValue("user-id")
+		u_name := request.FormValue("user-name")
+		u_phone := request.FormValue("user-phone")
+		u_email := request.FormValue("user-e-mail")
+		u_role := request.FormValue("user-role")
+		u_pwd := request.FormValue("user-pwd")
+
+		log.Printf("CONSOLE WEB add user [%s]  '%s' +%s %s |%v| {%s}", u_id, u_name, u_phone, u_email, u_role, u_pwd)
+		if u_name != "" && u_id != "" {
+			db.Users.AddUserObject(d.UserWrapper{UserId:u_id, UserName:u_name, Email:u_email, Phone:u_phone, Role:u_role, Password:u.PHash(u_pwd), LastUpdate:time.Now()})
+			render.Redirect("/users")
+		} else {
+			render.HTML(200, "console/users", GetUsersInfo("Невалидные значения имени и (или) идентификатора добавляемого пользователя", db))
+		}
+	})
+
+	r.Post("/delete_user/:id", func(params martini.Params, render render.Render) {
+		uid := params["id"]
+		err := db.Users.Collection.Remove(bson.M{"user_id":uid})
+		log.Printf("CONSOLE WEB will delete user %v (%v)", uid, err)
+		render.Redirect("/users")
+	})
+
+	r.Post("/update_user/:id", func(params martini.Params, render render.Render, request *http.Request) {
+		u_id := params["id"]
+		u_name := request.FormValue("user-name")
+		u_phone := request.FormValue("user-phone")
+		u_email := request.FormValue("user-e-mail")
+		u_role := request.FormValue("user-role")
+		u_pwd := request.FormValue("user-pwd")
+
+		upd := bson.M{}
+		if u_name != "" {
+			upd["user_name"] = u_name
+		}
+		if u_email != "" {
+			upd["email"] = u_email
+		}
+		if u_phone != "" {
+			upd["phone"] = u_phone
+		}
+		if u_role != "" {
+			upd["role"] = u_role
+		}
+		if u_pwd != "" {
+			upd["password"] = u.PHash(u_pwd)
+		}
+		db.Users.Collection.Update(bson.M{"user_id":u_id}, bson.M{"$set":upd})
+		log.Printf("CONSOLE WEB update user [%s]  '%s' +%s %s |%v| {%v}", u_id, u_name, u_phone, u_email, u_role, u_pwd)
+		render.Redirect("/users")
+	})
 	m.Action(r.Handle)
 	m.RunOnAddr(addr)
 }
