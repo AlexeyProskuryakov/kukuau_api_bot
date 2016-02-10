@@ -10,8 +10,9 @@
     "type": "chat",
     "id": "T6rqU-93"
   },
-  "from": "KUKUAU",
+  "from": "TEST",
   "userdata": {
-    "phone": "89811064022"
+    "phone": "TESTPHONE",
+    "name": "TESTNAME"
   }
 }

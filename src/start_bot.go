@@ -24,6 +24,7 @@ func InsertTestUser(db *d.MainDb, user, pwd string) {
 	}
 }
 
+
 func main() {
 
 	var test = flag.Bool("test", false, "go in test use?")

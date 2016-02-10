@@ -21,4 +21,6 @@ taxi_academ_bot.sh
 
 src/github.com/
 src/gopkg.in/
+src/start_demo_bot
 
+install.sh

@@ -592,12 +592,12 @@ func (nop *TaxiNewOrderProcessor) ProcessMessage(in *s.InPkg) *s.MessageResult {
 			}
 			//retrieving markup information
 			var markup_text string
-			log.Printf("TCH NOP: %v", len(new_order.Markups))
+			//log.Printf("TCH NOP: %v", len(new_order.Markups))
 			if len(new_order.Markups) == 1 {
 				markups := nop.API.Markups()
 				for _, mkrp := range markups {
 					markup_id, _ := strconv.ParseInt(new_order.Markups[0], 10, 64)
-					log.Printf("mrkp.id: %v, markup id: %v", mkrp.ID, markup_id)
+					//log.Printf("mrkp.id: %v, markup id: %v", mkrp.ID, markup_id)
 					if mkrp.ID == markup_id {
 						markup_text = mkrp.Name
 						break
