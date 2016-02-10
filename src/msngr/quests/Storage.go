@@ -384,7 +384,7 @@ func (s ByContactsTeam) Swap(i, j int) {
 }
 func (s ByContactsTeam) Less(i, j int) bool {
 	if (s[i].IsTeam && s[j].IsTeam) || (!s[i].IsTeam && !s[j].IsTeam) {
-		return s[i].Time < s[j].Time
+		return s[i].Time > s[j].Time
 	}
 	return false
 }
