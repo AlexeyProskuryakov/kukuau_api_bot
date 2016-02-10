@@ -12,6 +12,7 @@ ${EXEC} build -o ${HOME}/build/start_demo_bot ${HOME}/src/start_demo_bot.go
 #forming config
 
 build(){
+    GOPATH=${HOME}
     ${EXEC} get github.com/looplab/fsm
     ${EXEC} get github.com/tealeg/xlsx
     ${EXEC} get gopkg.in/mgo.v2
