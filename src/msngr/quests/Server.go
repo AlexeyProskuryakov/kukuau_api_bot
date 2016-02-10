@@ -36,10 +36,6 @@ const (
 	ALL_TEAM_MEMBERS = "all_team_members"
 )
 
-
-var keys_cache []Step
-
-
 func GetKeysInfo(err_text string, qs *QuestStorage) map[string]interface{} {
 	var e error
 	result := map[string]interface{}{}

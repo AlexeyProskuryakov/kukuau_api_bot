@@ -106,7 +106,7 @@ func HandleAddress(address, port string, errors chan s.MessageError) chan string
 
 			if in.Message.Body != nil {
 				body := in.Message.Body
-				out := &s.OutPkg{To:in.From, Message:&s.OutMessage{Body:*body, Error:out_err}}
+				out := &s.OutPkg{To:in.From, Message:&s.OutMessage{Body:*body, Error:&out_err}}
 				log.Printf("TSTU: sending not defered, error %+v", out)
 				msngr.PutOutPackage(w, out, true, false)
 				result <- out_err.Condition

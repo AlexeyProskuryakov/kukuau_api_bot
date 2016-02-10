@@ -8,6 +8,7 @@ import (
 	"time"
 	"sort"
 	"errors"
+	"log"
 )
 
 type Message struct {
@@ -172,14 +173,18 @@ func (qs *QuestStorage) GetKeys(query bson.M) ([]Step, error) {
 	return result, nil
 }
 
-func (qs *QuestStorage) 	GetKeyByStartKey(start_key string) (*Step, error) {
+func (qs *QuestStorage) GetKeyByStartKey(start_key string) (*Step, error) {
 	result := Step{}
+	log.Printf("QS: Will search key by start_key = %v", start_key)
 	err := qs.Keys.Find(bson.M{"start_key":start_key}).One(&result)
 	if err != nil && err != mgo.ErrNotFound {
+		log.Printf("QS: Error %v",err)
 		return nil, err
 	} else if err == mgo.ErrNotFound {
+		log.Printf("QS: Not found key")
 		return nil, nil
 	}
+	
 	return &result, nil
 }
 
@@ -369,13 +374,6 @@ type Contact struct {
 //CONTACTS
 type ByContactsTeam []Contact
 
-// We implement `sort.Interface` - `Len`, `Less`, and
-// `Swap` - on our type so we can use the `sort` package's
-// generic `Sort` function. `Len` and `Swap`
-// will usually be similar across types and `Less` will
-// hold the actual custom sorting logic. In our case we
-// want to sort in order of increasing string length, so
-// we use `len(s[i])` and `len(s[j])` here.
 func (s ByContactsTeam) Len() int {
 	return len(s)
 }
@@ -384,7 +382,7 @@ func (s ByContactsTeam) Swap(i, j int) {
 }
 func (s ByContactsTeam) Less(i, j int) bool {
 	if (s[i].IsTeam && s[j].IsTeam) || (!s[i].IsTeam && !s[j].IsTeam) {
-		return s[i].Time < s[j].Time
+		return s[i].Time > s[j].Time
 	}
 	return false
 }

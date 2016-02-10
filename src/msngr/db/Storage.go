@@ -75,8 +75,9 @@ type MessageWrapper struct {
 	From             string `bson:"from"`
 	Body             string `bson:"body"`
 	To               string `bson:"to"`
-	Time             int64 `bson:"time"`
-	Answered         bool `bson:"answered"`
+	Time             time.Time `bson:"time"`
+	TimeStamp        int64 `bson:"time_stamp"`
+	NotAnswered      int `bson:"not_answered"`
 	MessageID        string `bson:"message_id"`
 	MessageStatus    string `bson:"message_status"`
 	MessageCondition string `bson:"message_condition"`
@@ -458,7 +459,7 @@ func (uh *userHandler) AddUser(user_id, name, phone, email string) error {
 	}
 	tmp, err := uh.GetUser(bson.M{"user_id": user_id, "phone": phone})
 	if tmp == nil {
-		err = uh.Collection.Insert(&UserWrapper{UserId: user_id, Phone: phone, LastUpdate: time.Now()})
+		err = uh.Collection.Insert(&UserWrapper{UserId: user_id, UserName:name, Email:email, Phone: phone, LastUpdate: time.Now()})
 		return err
 	}
 	return nil
@@ -553,7 +554,7 @@ func (uh *userHandler) GetBy(req bson.M) ([]UserWrapper, error) {
 		return nil, errors.New("БД не доступна")
 	}
 	result := []UserWrapper{}
-	err := uh.Collection.Find(req).Sort("last_update").One(&result)
+	err := uh.Collection.Find(req).Sort("last_update").All(&result)
 	if err != nil && err != mgo.ErrNotFound {
 		return nil, err
 	}else if err == mgo.ErrNotFound {
@@ -582,17 +583,19 @@ func (eh *errorHandler) GetBy(req bson.M) (*[]ErrorWrapper, error) {
 	return &result, err
 }
 
-
 func (mh *messageHandler) StoreMessage(from, to, body string, message_id string) error {
+	log.Printf("DB: sm :%v -> %v [%v] {%v}", from, to, body, message_id)
 	if !mh.parent.Check() {
 		return errors.New("БД не доступна")
 	}
 	found, err := mh.GetMessageByMessageId(message_id)
-	result := MessageWrapper{From:from, To:to, Body:body, Time:time.Now().Unix(), Answered:false, MessageID:message_id, MessageStatus:"sended"}
+	result := MessageWrapper{From:from, To:to, Body:body, TimeStamp:time.Now().Unix(), Time:time.Now(), NotAnswered:1, MessageID:message_id, MessageStatus:"sended"}
 	if found == nil&&err == nil {
 		err := mh.Collection.Insert(&result)
+		log.Printf("DB: sm OK! %v", result)
 		return err
 	}
+	log.Printf("DB: sm DUPLICATE ;(")
 	return errors.New(fmt.Sprintf("I have duplicate!%+v", found))
 }
 
@@ -610,7 +613,7 @@ func (mh *messageHandler) SetMessagesAnswered(from, by string) error {
 func (mh *messageHandler) GetMessages(query bson.M) ([]MessageWrapper, error) {
 	result := []MessageWrapper{}
 	if !mh.parent.Check() {
-		return result,errors.New("БД не доступна")
+		return result, errors.New("БД не доступна")
 	}
 	err := mh.Collection.Find(query).Sort("-time_stamp").All(&result)
 	return result, err

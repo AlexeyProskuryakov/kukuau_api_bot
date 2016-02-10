@@ -42,13 +42,16 @@ func (n Notifier) Notify(outPkg s.OutPkg) error {
 
 	log.Printf("N >> %+v \n>>%+v \n>>%s", n.address, req.Header, jsoned_out)
 
+	n._db.Messages.StoreMessage("me", outPkg.To, outPkg.Message.Body, outPkg.Message.ID)
+
 	client := &http.Client{}
 	resp, err := client.Do(req)
 	if err != nil {
 		log.Printf("NTF error at do request %v", err)
+		n._db.Messages.UpdateMessageStatus(outPkg.Message.ID, "error", err.Error())
 		return err
 	}
-	n._db.Messages.StoreMessage("ME", outPkg.To, outPkg.Message.Body, outPkg.Message.ID)
+
 	if resp != nil {
 		body, err := ioutil.ReadAll(resp.Body)
 		if err != nil {

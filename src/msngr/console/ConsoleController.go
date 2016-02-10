@@ -65,13 +65,15 @@ func (cmp ConsoleMessageProcessor) ProcessMessage(in *s.InPkg) *s.MessageResult 
 			step, err := cmp.quest_storage.GetKeyByStartKey(r_body)
 			if step != nil {
 				return &s.MessageResult{Type:"chat", Body:step.Description}
-			} else if err == nil {
+			}
+			if step == nil && err == nil {
 				keys, err := cmp.quest_storage.GetAllKeys()
+				//log.Printf("CC: keys: %v, err: %v", keys, err)
 				key_s := []string{}
 				for _, k := range keys {
 					key_s = append(key_s, k.StartKey)
 				}
-				if err != nil {
+				if err == nil {
 					return &s.MessageResult{Type:"chat", Body:fmt.Sprintf("Попробуте другие ключи! Я знаю такие: %+v.", strings.Join(key_s, " "))}
 				}
 			}
@@ -95,7 +97,7 @@ func FormConsoleBotContext(conf c.Configuration, db_handler *d.MainDb, cs c.Conf
 	}
 
 	notifier := n.NewNotifier(conf.Main.CallbackAddr, conf.Console.Key, db_handler)
-	go Run(conf.Console.WebPort, notifier, db_handler, cs, qs)
+	go Run(conf.Console.WebPort, notifier, db_handler, cs, qs, notifier)
 
 	return &result
 }
