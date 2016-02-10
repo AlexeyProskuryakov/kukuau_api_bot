@@ -67,7 +67,7 @@ type QuestMessagePersistProcessor struct {
 
 var key_reg = regexp.MustCompile("^\\#[\\w\\dа-яА-Я]+\\-?(?P<team>[\\w\\da-zа-я]+)?")
 
-func ValidateKeyBySequent(team *Team, key_info *Key, qs *QuestStorage) (string, error, bool) {
+func ValidateKeyBySequent(team *Team, key_info *Step, qs *QuestStorage) (string, error, bool) {
 	//return description or some text for user or "" if error
 	previous_key, _ := qs.GetKeyByNextKey(key_info.StartKey)
 	if previous_key != nil {
@@ -109,7 +109,7 @@ func (qmpp QuestMessagePersistProcessor) ProcessMessage(in *s.InPkg) *s.MessageR
 		if key_reg.MatchString(key) {
 			key = strings.ToLower(key)
 			log.Printf("Q: Here is key: %v", key)
-			key_info, err := qmpp.Storage.GetKey(key)
+			key_info, err := qmpp.Storage.GetKeyByStartKey(key)
 			if err != nil {
 				log.Printf("QUEST key [%v] is ERR! %v", err)
 				return DB_ERROR_RESULT
