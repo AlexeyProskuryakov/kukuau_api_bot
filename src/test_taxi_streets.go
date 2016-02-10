@@ -86,9 +86,10 @@ func main() {
 //	assert_not_duplicates(s_res)
 //	assert_only_street_names(s_res)
 //
-//	s_res = get_streets("карла м")
-//	assert_not_duplicates(s_res)
-//	assert_only_street_names(s_res)
+	s_res = get_streets("карла")
+	assert_not_duplicates(s_res)
+	assert_only_street_names(s_res)
+	assert_not_empty(s_res)
 //
 //	s_res = get_streets("ленина")
 //	assert_not_duplicates(s_res)
@@ -108,10 +109,10 @@ func main() {
 //	assert_not_duplicates(s_res)
 //	assert_only_street_names(s_res)
 //
-	s_res = get_streets("весенний")
-	assert_not_duplicates(s_res)
-	assert_only_street_names(s_res)
-	assert_not_empty(s_res)
+//	s_res = get_streets("весенний")
+//	assert_not_duplicates(s_res)
+//	assert_only_street_names(s_res)
+//	assert_not_empty(s_res)
 //
 //	s_res = get_streets("морск")
 //	assert_not_duplicates(s_res)

@@ -1,60 +1,48 @@
-{
-  "phone": "89231243359",
-  "deliveryMinutes": 0,
-  "idService": 5000181745,
-  "attributes": [
-    5008806844
-  ],
-  "delivery": {
-    "idRegion": 5000160101,
-    "idStreet": 5000163548,
-    "idDistrict": null,
-    "idCity": null,
-    "idPlace": null,
-    "house": "8",
-    "entrance": "3"
-  },
-  "destinations": [
-    {
-      "idRegion": 5000160101,
-      "idDistrict": null,
-      "idCity": null,
-      "idPlace": null,
-      "idStreet": 5000162783,
-      "house": "11"
+curl -XDELETE "http://localhost:9200/autocomplete_test1" &&
+curl -XPOST "http://localhost:9200/autocomplete_test1" -d '{
+  "settings": {
+    "index": {
+      "analysis": {
+        "analyzer": {
+          "autocomplete_analyzer": {
+            "type": "custom",
+            "tokenizer": "lowercase",
+            "filter": [
+              "lowercase",
+              "asciifolding",
+              "title_ngram",
+              "word_delimiter"
+            ]
+          }
+        },
+        "filter": {
+          "title_ngram": {
+            "type": "nGram",
+            "min_gram": 3,
+            "max_gram": 7
+          }
+        }
+      }
     }
-  ]
-}
-
-{
-  "phone": "TESTPHONE",
-  "deliveryMinutes": 0,
-  "idService": 5000181745,
-  "notes": "Тестирование.",
-  "markups": [
-    "5030781832",
-    "5008745388"
-  ],
-  "delivery": {
-    "idRegion": 5000160101,
-    "idStreet": 5000163548,
-    "house": "1",
-    "Street": "Лесосечная 1",
-    "City": "г Новосибирск",
-    "idDistrict": null,
-    "idCity": null,
-    "idPlace": null
   },
-  "destinations": [
-    {
-      "idRegion": 5000160101,
-      "idStreet": 5000162817,
-      "house": "11",
-      "Street": "Николаева 11",
-      "City": "г Новосибирск",
-      "idDistrict": null,
-      "idCity": null,
-      "idPlace": null
+  "mappings": {
+    "name": {
+      "_all": {
+        "enabled": false
+      },
+      "properties": {
+        "name": {
+          "type": "string",
+          "analyzer": "autocomplete_analyzer"
+        },
+        "osm_id": {
+          "type": "long",
+          "index": "not_analyzed"
+        },
+        "location":{
+          "type":"geo_point"
+        }
+      }
     }
-  ]
-}
+  }
+}'

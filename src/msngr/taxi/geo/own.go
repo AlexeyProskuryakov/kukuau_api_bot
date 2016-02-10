@@ -4,8 +4,10 @@ import (
 	"log"
 	"fmt"
 	"errors"
-	"strings"
+	"math"
 	"reflect"
+	"sort"
+	"strings"
 
 	"gopkg.in/olivere/elastic.v2"
 
@@ -25,6 +27,30 @@ type OwnAddressHandler struct {
 	orbit                   c.TaxiGeoOrbit
 	client                  *elastic.Client
 	connect_string          string
+	city_handler            *CityHandler
+}
+
+func CountsOfCities(index string, client *elastic.Client) map[string]int {
+
+	cities := map[string]int{}
+
+	//	agg := elastic.NewSumAggregation().Field("city")
+	var eet OsmAutocompleteEntity
+	result, err := client.Search().Index(index).Query(elastic.NewMatchAllQuery()).Size(math.MaxInt32).Do()
+	if err != nil {
+		log.Printf("elastic err: %v", err)
+		return cities
+	}
+	for _, hit := range result.Each(reflect.TypeOf(eet)) {
+		if entity, ok := hit.(OsmAutocompleteEntity); ok {
+			if val, ok := cities[entity.City]; ok {
+				cities[entity.City] = val + 1
+			}else {
+				cities[entity.City] = 1
+			}
+		}
+	}
+	return cities
 }
 
 func NewOwnAddressHandler(conn_str string, orbit c.TaxiGeoOrbit, external t.AddressSupplier) *OwnAddressHandler {
@@ -40,7 +66,9 @@ func NewOwnAddressHandler(conn_str string, orbit c.TaxiGeoOrbit, external t.Addr
 		client:client,
 		connect_string:conn_str,
 		orbit:orbit,
-		ExternalAddressSupplier:external}
+		ExternalAddressSupplier:external,
+		city_handler:&CityHandler{city_weights:CountsOfCities("autocomplete", client)},
+	}
 	return &result
 }
 
@@ -61,9 +89,43 @@ type OsmAutocompleteEntity struct {
 	City   string `json:"city"`
 }
 
-func form_own_result(client *elastic.Client, query elastic.Query, sort elastic.Sorter) []t.AddressF {
+type CityHandler struct {
+	city_weights map[string]int
+}
+
+func (ch *CityHandler) GetWeight(city string) (int, bool) {
+	w, ok := ch.city_weights[city]
+	return w, ok
+}
+
+type ByCitySize struct {
+	data   []t.AddressF
+	cities *CityHandler
+}
+
+func ByCitySizeWithCityCounts(data []t.AddressF, city_handler *CityHandler) ByCitySize {
+	return ByCitySize{data:data, cities:city_handler}
+}
+
+func (s ByCitySize) Len() int {
+	return len(s.data)
+}
+func (s ByCitySize) Swap(i, j int) {
+	s.data[i], s.data[j] = s.data[j], s.data[i]
+}
+func (s ByCitySize) Less(i, j int) bool {
+	if s_c_i, ok_i := s.cities.GetWeight(s.data[i].City); ok_i {
+		if s_c_j, ok_j := s.cities.GetWeight(s.data[j].City); ok_j {
+			return s_c_i > s_c_j
+		}
+	}
+	return false
+}
+
+
+func (oh *OwnAddressHandler)form_own_result(query elastic.Query, sort_by elastic.Sorter) []t.AddressF {
 	rows := []t.AddressF{}
-	s_result, err := client.Search().Index("autocomplete").Query(query).Size(1000).SortBy(sort).Pretty(true).Do()
+	s_result, err := oh.client.Search().Index("autocomplete").Query(query).Size(1000).SortBy(sort_by).Pretty(true).Do()
 	if err != nil {
 		log.Printf("error in own address handler search at search in elastic: \n%v", err)
 		return rows
@@ -95,7 +157,9 @@ func form_own_result(client *elastic.Client, query elastic.Query, sort elastic.S
 			}
 		}
 	}
-	return rows
+	city_sort := ByCitySizeWithCityCounts(rows, oh.city_handler)
+	sort.Sort(city_sort)
+	return city_sort.data
 }
 
 func (oh *OwnAddressHandler) AddressesAutocomplete(q string) t.AddressPackage {
@@ -106,8 +170,7 @@ func (oh *OwnAddressHandler) AddressesAutocomplete(q string) t.AddressPackage {
 	filter := elastic.NewGeoDistanceFilter("location").Distance("75km").Lat(oh.orbit.Lat).Lon(oh.orbit.Lon)
 	query := elastic.NewFilteredQuery(t_query).Filter(filter)
 	sort := elastic.NewGeoDistanceSort("location").Order(true).Point(oh.orbit.Lat, oh.orbit.Lon).Unit("km").SortMode("min").Asc()
-
-	rows = form_own_result(oh.client, query, sort)
+	rows = oh.form_own_result(query, sort)
 	return result
 }
 
