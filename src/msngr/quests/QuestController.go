@@ -14,6 +14,7 @@ import (
 	"strings"
 	"errors"
 	"msngr/utils"
+	"msngr/db"
 )
 
 const (
@@ -209,7 +210,7 @@ func (qmpp QuestMessagePersistProcessor) ProcessMessage(in *s.InPkg) *s.MessageR
 	return &s.MessageResult{Type:"chat", Body:"Ваше сообщение доставлено. Скоро вам ответят.", }
 }
 
-func FormQuestBotContext(conf c.Configuration, qname string, cs c.ConfigStorage, qs *QuestStorage) *m.BotContext {
+func FormQuestBotContext(conf c.Configuration, qname string, cs c.ConfigStorage, qs *QuestStorage, db *db.MainDb) *m.BotContext {
 	result := m.BotContext{}
 	qconf, ok := conf.Quests[qname]
 	if !ok {
@@ -226,7 +227,7 @@ func FormQuestBotContext(conf c.Configuration, qname string, cs c.ConfigStorage,
 	}
 
 	result.CommandsStorage = cs
-	notifier := msngr.NewNotifier(conf.Main.CallbackAddr, qconf.Key)
+	notifier := msngr.NewNotifier(conf.Main.CallbackAddr, qconf.Key, db)
 	go Run(qconf, qs, notifier)
 
 	return &result

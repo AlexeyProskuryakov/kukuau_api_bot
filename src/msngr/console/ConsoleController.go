@@ -58,20 +58,20 @@ func (cmp ConsoleMessageProcessor) ProcessMessage(in *s.InPkg) *s.MessageResult 
 			cmp.Users.AddUser(in.From, userData.Name, userData.Phone, userData.Email)
 		}
 		r_body := *body
-		cmp.Messages.StoreMessage(in.From, ME, r_body)
+		cmp.Messages.StoreMessage(in.From, ME, r_body, in.Message.ID)
 		r_body = strings.ToLower(strings.TrimSpace(r_body))
 		if key_reg.MatchString(r_body) {
 			log.Printf("CC: Here is key: %v", r_body)
 			step, err := cmp.quest_storage.GetKeyByStartKey(r_body)
 			if step != nil {
 				return &s.MessageResult{Type:"chat", Body:step.Description}
-			} else if err == nil{
+			} else if err == nil {
 				keys, err := cmp.quest_storage.GetAllKeys()
 				key_s := []string{}
-				for _, k := range keys{
+				for _, k := range keys {
 					key_s = append(key_s, k.StartKey)
 				}
-				if err != nil{
+				if err != nil {
 					return &s.MessageResult{Type:"chat", Body:fmt.Sprintf("Попробуте другие ключи! Я знаю такие: %+v.", strings.Join(key_s, " "))}
 				}
 			}
@@ -94,7 +94,7 @@ func FormConsoleBotContext(conf c.Configuration, db_handler *d.MainDb, cs c.Conf
 		"":ConsoleMessageProcessor{MainDb:*db_handler, quest_storage:qs},
 	}
 
-	notifier := n.NewNotifier(conf.Main.CallbackAddr, conf.Console.Key)
+	notifier := n.NewNotifier(conf.Main.CallbackAddr, conf.Console.Key, db_handler)
 	go Run(conf.Console.WebPort, notifier, db_handler, cs, qs)
 
 	return &result

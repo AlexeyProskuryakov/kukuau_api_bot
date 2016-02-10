@@ -8,20 +8,22 @@ import (
 	s "msngr/structs"
 	"io/ioutil"
 	"msngr/utils"
+	db "msngr/db"
+	"fmt"
+	"errors"
 )
-
 
 type Notifier struct {
 	address string
 	key     string
+	_db     *db.MainDb
 }
 
-
-func NewNotifier(addr, key string) *Notifier {
-	return &Notifier{address: addr, key: key}
+func NewNotifier(addr, key string, dbh *db.MainDb) *Notifier {
+	return &Notifier{address: addr, key: key, _db:dbh}
 }
 
-func (n Notifier) Notify(outPkg s.OutPkg) error{
+func (n Notifier) Notify(outPkg s.OutPkg) error {
 	jsoned_out, err := json.Marshal(&outPkg)
 	if err != nil {
 		log.Printf("NTF error at unmarshal %v", err)
@@ -46,19 +48,27 @@ func (n Notifier) Notify(outPkg s.OutPkg) error{
 		log.Printf("NTF error at do request %v", err)
 		return err
 	}
+	n._db.Messages.StoreMessage("ME", outPkg.To, outPkg.Message.Body, outPkg.Message.ID)
 	if resp != nil {
 		body, err := ioutil.ReadAll(resp.Body)
-		if err != nil{
+		if err != nil {
 			log.Printf("N << ERROR:%+v", err)
+			n._db.Messages.UpdateMessageStatus(outPkg.Message.ID, "error", fmt.Sprintf("%v", resp.StatusCode))
 			return err
-		} else{
+		} else {
 			log.Printf("N << %v", string(body))
+			n._db.Messages.UpdateMessageStatus(outPkg.Message.ID, "sended", "ok")
 		}
 		defer resp.Body.Close()
+	}else{
+		n._db.Messages.UpdateMessageStatus(outPkg.Message.ID, "error", "404")
+		return errors.New("404")
 	}
 	return nil
 }
 
-func (n Notifier) NotifyText(to, text string) error{
-	return n.Notify(s.OutPkg{To:to, Message:&s.OutMessage{ID:utils.GenId(), Type:"chat", Body:text}})
+func (n Notifier) NotifyText(to, text string) (*s.OutPkg, error) {
+	result := s.OutPkg{To:to, Message:&s.OutMessage{ID:utils.GenId(), Type:"chat", Body:text}}
+	err := n.Notify(result)
+	return &result, err
 }
