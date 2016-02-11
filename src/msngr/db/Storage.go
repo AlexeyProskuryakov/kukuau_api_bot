@@ -48,14 +48,14 @@ type OrderWrapper struct {
 }
 
 type UserWrapper struct {
-	GlobalState string `bson:"global_state"`
-	States      map[string]string `bson:"states"`
-	UserId      string `bson:"user_id"`
-	UserName    string `bson:"user_name"`
-	Password    string
-	Phone       string
-
-	LastUpdate  time.Time `bson:"last_update"`
+	States     map[string]string `bson:"states"`
+	UserId     string `bson:"user_id"`
+	UserName   string `bson:"user_name"`
+	Password   string
+	Phone      string
+	Email      string
+	LastUpdate time.Time `bson:"last_update"`
+	Role       string `bson:"role"`
 }
 
 func (uw *UserWrapper) GetStateValue(state_key string) (string, bool) {
@@ -214,15 +214,15 @@ func (odbh *MainDb) ensureIndexes() {
 	})
 	users_collection.EnsureIndex(mgo.Index{
 		Key:        []string{"last_update"},
-		Background: true,
 	})
 	users_collection.EnsureIndex(mgo.Index{
 		Key:        []string{"user_state"},
-		Background: true,
 	})
 	users_collection.EnsureIndex(mgo.Index{
 		Key:        []string{"user_name"},
-		Background: true,
+	})
+	users_collection.EnsureIndex(mgo.Index{
+		Key:        []string{"role"},
 	})
 
 	error_collection := odbh.Session.DB(odbh.DbName).C("errors")
@@ -242,11 +242,15 @@ func (odbh *MainDb) ensureIndexes() {
 		Unique:false,
 	})
 	message_collection.EnsureIndex(mgo.Index{
-		Key:[]string{"answered"},
+		Key:[]string{"to"},
 		Unique:false,
 	})
 	message_collection.EnsureIndex(mgo.Index{
-		Key:[]string{"time"},
+		Key:[]string{"not_answered"},
+		Unique:false,
+	})
+	message_collection.EnsureIndex(mgo.Index{
+		Key:[]string{"time_stamp"},
 		Unique:false,
 	})
 	message_collection.EnsureIndex(mgo.Index{
@@ -433,7 +437,7 @@ func (oh *orderHandler) GetOrders(q bson.M) ([]OrderWrapper, error) {
 	return result, nil
 }
 
-func (uh *userHandler) CheckUser(req bson.M) (*UserWrapper, error) {
+func (uh *userHandler) GetUser(req bson.M) (*UserWrapper, error) {
 	if !uh.parent.Check() {
 		return nil, errors.New("БД не доступна")
 	}
@@ -448,33 +452,16 @@ func (uh *userHandler) CheckUser(req bson.M) (*UserWrapper, error) {
 	return &tmp, nil
 }
 
-func (uh *userHandler) AddUser(user_id, phone string) error {
+func (uh *userHandler) AddUser(user_id, name, phone, email string) error {
 	if !uh.parent.Check() {
 		return errors.New("БД не доступна")
 	}
-	tmp, err := uh.CheckUser(bson.M{"user_id": user_id, "phone": phone})
+	tmp, err := uh.GetUser(bson.M{"user_id": user_id, "phone": phone})
 	if tmp == nil {
-		err = uh.Collection.Insert(&UserWrapper{UserId: user_id, GlobalState: REGISTERED, Phone: phone, LastUpdate: time.Now()})
+		err = uh.Collection.Insert(&UserWrapper{UserId: user_id, Phone: phone, LastUpdate: time.Now()})
 		return err
 	}
 	return nil
-}
-
-func (uh *userHandler) SetUserGlobalState(user_id string, state string) error {
-	if !uh.parent.Check() {
-		return errors.New("БД не доступна")
-	}
-	tmp, _ := uh.CheckUser(bson.M{"user_id": user_id})
-	if tmp == nil {
-		err := uh.Collection.Insert(&UserWrapper{UserId: user_id, GlobalState: state, LastUpdate: time.Now()})
-		return err
-	} else {
-		err := uh.Collection.Update(
-			bson.M{"user_id": user_id},
-			bson.M{"$set": bson.M{"user_state": state, "last_update": time.Now()}},
-		)
-		return err
-	}
 }
 
 func (uh *userHandler) SetUserMultiplyState(user_id, state_key, state_value string) error {
@@ -485,7 +472,7 @@ func (uh *userHandler) SetUserMultiplyState(user_id, state_key, state_value stri
 	if !uh.parent.Check() {
 		return errors.New("БД не доступна")
 	}
-	tmp, _ := uh.CheckUser(bson.M{"user_id": user_id})
+	tmp, _ := uh.GetUser(bson.M{"user_id": user_id})
 	if tmp == nil {
 		err := uh.Collection.Insert(&UserWrapper{UserId: user_id, States: map[string]string{state_key:state_value}, LastUpdate: time.Now()})
 		return err
@@ -502,7 +489,7 @@ func (uh *userHandler) GetUserMultiplyState(user_id, state_key string) (string, 
 	if !uh.parent.Check() {
 		return "", errors.New("БД не доступна")
 	}
-	tmp, _ := uh.CheckUser(bson.M{"user_id": user_id})
+	tmp, _ := uh.GetUser(bson.M{"user_id": user_id})
 	if tmp == nil {
 		return "", errors.New("Пользователь не найден")
 	} else {
@@ -517,9 +504,9 @@ func (uh *userHandler) SetUserPassword(username, password string) error {
 	if !uh.parent.Check() {
 		return errors.New("БД не доступна")
 	}
-	tmp, _ := uh.CheckUser(bson.M{"user_name": username})
+	tmp, _ := uh.GetUser(bson.M{"user_name": username})
 	if tmp == nil {
-		err := uh.Collection.Insert(&UserWrapper{UserId: username, UserName: username, Password: password, GlobalState: REGISTERED, LastUpdate: time.Now()})
+		err := uh.Collection.Insert(&UserWrapper{UserId: username, UserName: username, Password: utils.PHash(password), LastUpdate: time.Now()})
 		return err
 	} else if utils.PHash(password) != tmp.Password {
 		log.Println("changing password! for user ", username)
@@ -530,15 +517,6 @@ func (uh *userHandler) SetUserPassword(username, password string) error {
 		return err
 	}
 	return nil
-}
-
-func (uh *userHandler) GetUserGlobalState(user_id string) (*string, error) {
-	if !uh.parent.Check() {
-		return nil, errors.New("БД не доступна")
-	}
-	result := UserWrapper{}
-	err := uh.Collection.Find(bson.M{"user_id": user_id}).One(&result)
-	return &(result.GlobalState), err
 }
 
 func (uh *userHandler) CheckUserPassword(username, password string) (bool, error) {
@@ -559,6 +537,8 @@ func (uh *userHandler) GetUserById(user_id string) (*UserWrapper, error) {
 	if err != nil && err != mgo.ErrNotFound {
 		log.Printf("Ощибка определения пользователя %v", err)
 		return nil, err
+	}else if err == mgo.ErrNotFound {
+		return nil, nil
 	}
 	return &result, err
 }
@@ -568,15 +548,21 @@ func (uh *userHandler) Count() int {
 	return r
 }
 
-func (uh *userHandler) GetBy(req bson.M) (*[]UserWrapper, error) {
+func (uh *userHandler) GetBy(req bson.M) ([]UserWrapper, error) {
 	if !uh.parent.Check() {
 		return nil, errors.New("БД не доступна")
 	}
 	result := []UserWrapper{}
-	err := uh.Collection.Find(req).Sort("last_update").All(&result)
-	return &result, err
+	err := uh.Collection.Find(req).Sort("last_update").One(&result)
+	if err != nil && err != mgo.ErrNotFound {
+		return nil, err
+	}else if err == mgo.ErrNotFound {
+		return result, nil
+	}
+	return result, nil
 }
 
+//ERRORS
 func (eh *errorHandler) StoreError(username, error string) error {
 	if !eh.parent.Check() {
 		return errors.New("БД не доступна")
@@ -596,6 +582,7 @@ func (eh *errorHandler) GetBy(req bson.M) (*[]ErrorWrapper, error) {
 	return &result, err
 }
 
+
 func (mh *messageHandler) StoreMessage(from, to, body string, message_id string) error {
 	if !mh.parent.Check() {
 		return errors.New("БД не доступна")
@@ -607,12 +594,25 @@ func (mh *messageHandler) StoreMessage(from, to, body string, message_id string)
 		return err
 	}
 	return errors.New(fmt.Sprintf("I have duplicate!%+v", found))
+}
 
+func (mh *messageHandler) SetMessagesAnswered(from, by string) error {
+	if !mh.parent.Check() {
+		return errors.New("БД не доступна")
+	}
+	_, err := mh.Collection.UpdateAll(
+		bson.M{"from":from, "not_answered":bson.M{"$ne":0}},
+		bson.M{"$set":bson.M{"not_answered":0, "answered_by":by}},
+	)
+	return err
 }
 
 func (mh *messageHandler) GetMessages(query bson.M) ([]MessageWrapper, error) {
 	result := []MessageWrapper{}
-	err := mh.Collection.Find(query).Sort("time").All(&result)
+	if !mh.parent.Check() {
+		return result,errors.New("БД не доступна")
+	}
+	err := mh.Collection.Find(query).Sort("-time_stamp").All(&result)
 	return result, err
 }
 

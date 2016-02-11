@@ -5,16 +5,54 @@ import (
 	"reflect"
 	"fmt"
 	"math"
+//	"strings"
+//	"msngr/taxi/set"
+	"regexp"
+//	"msngr/taxi/set"
+	"strings"
+
+	"sort"
 )
+
+
+var reg = regexp.MustCompile("[а-яА-Я]{2,3}\\.")
+
+var corrects = map[string]string{
+	"ул.":"улица",
+	"пл.":"площадь",
+	"пр.":"проспект",
+	"Ул.":"Улица",
+	"пер.":"переулок",
+}
 
 type OsmName struct {
 	Default string `json:"default"`
 	Ru      string `json:"ru"`
 }
 
+func (on OsmName) String() string {
+	return fmt.Sprintf("%v (%v)", on.Ru, on.Default)
+}
+
+func (on OsmName) Is(s string) bool {
+	return on.Ru == s || on.Default == s
+}
+
+func (on OsmName) GetAny() string {
+	if on.Ru != "" {
+		return on.Ru
+	}else {
+		return on.Default
+	}
+}
+
 type Coordinates struct {
 	Lat float64 `json:"lat"`
 	Lon float64 `json:"lon"`
+}
+
+func (c Coordinates) String() string {
+	return fmt.Sprintf("{%v,%v}", c.Lat, c.Lon)
 }
 
 type ElEntity struct {
@@ -24,69 +62,208 @@ type ElEntity struct {
 	Name        OsmName `json:"name"`
 	Street      OsmName `json:"street"`
 	OSM_ID      int64 `json:"osm_id"`
+	OSM_key     string `json:"osm_key"`
+	Importance  float64 `json:"importance"`
+}
+
+func (e ElEntity) String() string {
+	return fmt.Sprintf("[%v] {%v} Name: %v |%v| %v", e.OSM_ID, e.OSM_key, e.Name, e.Importance, e.City)
 }
 
 type AutocompleteEntity struct {
-	Name string `json:"name"`
-	OSM_ID int64 `json:"osm_id"`
-	City string `json:"city"`
-	Location Coordinates `json:"location"`
+	Name       string `json:"name"`
+	PhotonName string `json:"photon_name"`
+	OSM_ID     int64 `json:"osm_id"`
+	City       string `json:"city"`
+	Location   Coordinates `json:"location"`
 }
 
-func main() {
+func (e AutocompleteEntity) String() string {
+	return fmt.Sprintf("[%v] %v at %v in %v", e.OSM_ID, e.Name, e.City, e.Location)
+}
+
+
+func CorrectAddressesAtAutocomplete() {
+	client, err := elastic.NewClient()
+	searchPhotonResult, err := client.Search().
+	Index("photon").
+	Size(math.MaxInt32).
+	Pretty(true).
+	Do()
+	if err != nil {
+		log.Printf("ERROR: %v", err)
+		return
+	}
+	var eet ElEntity
+	count := 0
+	log.Printf("Start searching... At %v results", searchPhotonResult.TotalHits())
+
+	for _, photon_hit := range searchPhotonResult.Each(reflect.TypeOf(eet)) {
+		if entity, ok := photon_hit.(ElEntity); ok {
+			name := fmt.Sprintf("%v %v", entity.Name.Ru, entity.Name.Default)
+			if entity.OSM_key == "highway" && reg.MatchString(name) {
+				if subst, ok := corrects[reg.FindAllString(name, -1)[0]]; ok {
+					var name_to_save string
+					if entity.Name.Ru != "" {
+						name_to_save = entity.Name.Ru
+					} else {
+						name_to_save = entity.Name.Default
+					}
+					//correcting
+					if !strings.Contains(name_to_save, " ") {
+						name_to_save = reg.ReplaceAllString(name_to_save, fmt.Sprintf("%v ", subst))
+					} else {
+						name_to_save = reg.ReplaceAllString(name_to_save, subst)
+					}
+					//delete from autocomplete osm_id
+					deleteResult, err := client.Delete().Index("autocomplete").Type("name").Id(fmt.Sprintf("%v", entity.OSM_ID)).Do()
+					if err != nil {
+						log.Printf("Error at deleting in autocomplete")
+						continue
+					}
+					if deleteResult == nil {
+						log.Printf("Delete result: %v", deleteResult)
+					}
+
+					index_el := AutocompleteEntity{Name:name_to_save, OSM_ID:entity.OSM_ID, City:entity.City.GetAny(), Location:entity.Coordinates}
+					//paste
+					log.Printf("Will paste this: %+v", index_el)
+					_, err = client.Index().Index("autocomplete").Type("name").Id(fmt.Sprintf("%v", entity.OSM_ID)).BodyJson(index_el).Do()
+					if err != nil {
+						log.Printf("Error at adding to autocomplete: %v", err)
+						continue
+					}
+					count += 1
+
+				}
+			}
+		}
+	}
+	log.Printf("ALL: %v", count)
+
+}
+
+func EnsureAutocomplete(index_name string) {
 	client, err := elastic.NewClient()
 	if err != nil {
 		log.Printf("elastic err: %v", err)
 		return
 	}
 	termQuery := elastic.NewTermQuery("osm_key", "highway")
-	searchPhotonResult, err := client.Search().
-	Index("photon").
-	Query(&termQuery).
-	Size(math.MaxInt32).
-	Pretty(true).
-	Do()
+	searchPhotonResult, err := client.Search().Index("photon").Query(&termQuery).Size(math.MaxInt32).Pretty(true).Do()
 	if err != nil {
-		log.Printf("ERROR: %v",err)
+		log.Printf("ERROR: %v", err)
 		return
 	}
 	log.Println(searchPhotonResult)
 	var eet ElEntity
-	var prev_state string
 	var count int
 	for _, photon_hit := range searchPhotonResult.Each(reflect.TypeOf(eet)) {
 		if entity, ok := photon_hit.(ElEntity); ok {
-			index_el := AutocompleteEntity{}
-			if entity.Name.Ru != ""{
-				index_el.Name = entity.Name.Ru
-			} else if entity.Name.Default != ""{
-				index_el.Name = entity.Name.Default
-			} else{
+			name_to_save := entity.Name.GetAny()
+			if name_to_save == "" {
 				continue
 			}
-			index_el.OSM_ID = entity.OSM_ID
-			index_el.City = entity.City.Default
-			index_el.Location = entity.Coordinates
 
-			_, err = client.Index().
-			Index("autocomplete").
-			Type("name").
-			Id(fmt.Sprintf("%v", entity.OSM_ID)).
-			BodyJson(index_el).
-			Do()
-			if err != nil {
-				// Handle error
-				log.Printf("add el erro: %v", err)
-				continue
+			if reg.MatchString(name_to_save) {
+				if subst, ok := corrects[reg.FindAllString(name_to_save, -1)[0]]; ok {
+					//correcting
+					if !strings.Contains(name_to_save, " ") {
+						name_to_save = reg.ReplaceAllString(name_to_save, fmt.Sprintf("%v ", subst))
+					} else {
+						name_to_save = reg.ReplaceAllString(name_to_save, subst)
+					}
+					name_to_save = strings.TrimSpace(name_to_save)
+				}
 			}
-			if prev_state != entity.State.Default {
-				log.Printf("load for: %v, loaded: %v", entity.State.Default, count)
-				prev_state = entity.State.Default
+
+			index_el := AutocompleteEntity{Name:name_to_save, OSM_ID: entity.OSM_ID, City:entity.City.GetAny(), Location:entity.Coordinates}
+
+			_, err = client.Index().Index(index_name).Type("name").Id(fmt.Sprintf("%v", entity.OSM_ID)).BodyJson(index_el).Do()
+
+			if err != nil {
+				log.Printf("Error at adding to autocomplete: %v", err)
+				continue
 			}
 			count += 1
 		}
 
 	}
 	log.Printf("Was processed: %v results", count)
+}
 
+
+
+
+func CountsOfCities(index string) map[string]int {
+	client, err := elastic.NewClient()
+	cities := map[string]int{}
+	if err != nil {
+		log.Printf("elastic err: %v", err)
+		return cities
+	}
+	//	agg := elastic.NewSumAggregation().Field("city")
+	var eet AutocompleteEntity
+	result, err := client.Search().Index(index).Query(elastic.NewMatchAllQuery()).Size(math.MaxInt32).Do()
+	for _, hit := range result.Each(reflect.TypeOf(eet)) {
+		if entity, ok := hit.(AutocompleteEntity); ok {
+			if val, ok := cities[entity.City]; ok {
+				cities[entity.City] = val + 1
+			}else {
+				cities[entity.City] = 1
+			}
+		}
+	}
+	return cities
+}
+
+
+type ByCitySize struct {
+	data []string
+	cities map[string]int
+}
+func ByCitySizeWithCityCounts(data []string, cities map[string]int) ByCitySize{
+	return ByCitySize{data:data, cities:cities}
+}
+// We implement `sort.Interface` - `Len`, `Less`, and
+// `Swap` - on our type so we can use the `sort` package's
+// generic `Sort` function. `Len` and `Swap`
+// will usually be similar across types and `Less` will
+// hold the actual custom sorting logic. In our case we
+// want to sort in order of increasing string length, so
+// we use `len(s[i])` and `len(s[j])` here.
+func (s ByCitySize) Len() int {
+    return len(s.data)
+}
+func (s ByCitySize) Swap(i, j int) {
+    s.data[i], s.data[j] = s.data[j], s.data[i]
+}
+func (s ByCitySize) Less(i, j int) bool {
+    if s_c_i, ok_i := s.cities[s.data[i]];ok_i{
+		if s_c_j, ok_j := s.cities[s.data[j]]; ok_j{
+			return s_c_i < s_c_j
+		}
+	}
+	return false
+}
+
+func to_list_keys(input map[string]int) []string {
+	res := []string{}
+	for k,_:=range input{
+		res = append(res, k)
+	}
+	return res
+}
+
+func main() {
+	EnsureAutocomplete("autocomplete")
+	//	CorrectAddressesAtAutocomplete()
+	cs := CountsOfCities("autocomplete")
+	keys := ByCitySizeWithCityCounts(to_list_keys(cs), cs)
+	sort.Sort(keys)
+//	sort.Reverse(keys)
+
+	for _, k := range keys.data{
+		log.Printf("%v : %v", k, cs[k])
+	}
 }

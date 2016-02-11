@@ -1,60 +1,101 @@
+<<<<<<< HEAD
 {
-  "phone": "89231243359",
-  "deliveryMinutes": 0,
-  "idService": 5000181745,
-  "attributes": [
-    5008806844
-  ],
-  "delivery": {
-    "idRegion": 5000160101,
-    "idStreet": 5000163548,
-    "idDistrict": null,
-    "idCity": null,
-    "idPlace": null,
-    "house": "8",
-    "entrance": "3"
+  "main": {
+    "port": 9393,
+    "callback_addr": "http://msg.kuku-au.com:8088/api/v1/send",
+    "log_file": "",
+    "database": {
+      "name": "bot",
+      "connection_string": "localhost:27017"
+    },
+    "elastic_conn": "http://localhost:9200",
+    "google_key": "AdddIzaSyBkmvXK-SqfQcyj2XlXgTx-r_B18TJb-vY"
   },
-  "destinations": [
-    {
-      "idRegion": 5000160101,
-      "idDistrict": null,
-      "idCity": null,
-      "idPlace": null,
-      "idStreet": 5000162783,
-      "house": "11"
+  "taxis": {
+    "fake": {
+      "name": "fake",
+      "dict_url": "http://msg.kuku-au.com:9191/taxi/fake/streets",
+      "key": "Kuku fake_taxi_key",
+      "information": {
+        "phone": "123-45-67",
+        "text": "Тестовое такси!"
+      },
+      "api": {
+        "geo_orbit": {
+          "lat": 54.8580438,
+          "lon": 83.1100316,
+          "radius": 50000
+        },
+        "name": "fake",
+        "data": {
+          "login": "test1",
+          "password": "test1",
+          "connection_strings": [
+            "http://109.202.25.248:8080/WebAPITaxi/"
+          ],
+          "host": "109.202.25.248:8080"
+        },
+        "fake": {
+          "sended_states": [
+            2,
+            3,
+            4,
+            5,
+            7
+          ],
+          "sleep_time": 3
+        }
+      }
     }
-  ]
+  }
 }
-
-{
-  "phone": "TESTPHONE",
-  "deliveryMinutes": 0,
-  "idService": 5000181745,
-  "notes": "Тестирование.",
-  "markups": [
-    "5030781832",
-    "5008745388"
-  ],
-  "delivery": {
-    "idRegion": 5000160101,
-    "idStreet": 5000163548,
-    "house": "1",
-    "Street": "Лесосечная 1",
-    "City": "г Новосибирск",
-    "idDistrict": null,
-    "idCity": null,
-    "idPlace": null
+=======
+curl -XDELETE "http://localhost:9200/autocomplete_test1" &&
+curl -XPOST "http://localhost:9200/autocomplete_test1" -d '{
+  "settings": {
+    "index": {
+      "analysis": {
+        "analyzer": {
+          "autocomplete_analyzer": {
+            "type": "custom",
+            "tokenizer": "lowercase",
+            "filter": [
+              "lowercase",
+              "asciifolding",
+              "title_ngram",
+              "word_delimiter"
+            ]
+          }
+        },
+        "filter": {
+          "title_ngram": {
+            "type": "nGram",
+            "min_gram": 3,
+            "max_gram": 7
+          }
+        }
+      }
+    }
   },
-  "destinations": [
-    {
-      "idRegion": 5000160101,
-      "idStreet": 5000162817,
-      "house": "11",
-      "Street": "Николаева 11",
-      "City": "г Новосибирск",
-      "idDistrict": null,
-      "idCity": null,
-      "idPlace": null
+  "mappings": {
+    "name": {
+      "_all": {
+        "enabled": false
+      },
+      "properties": {
+        "name": {
+          "type": "string",
+          "analyzer": "autocomplete_analyzer"
+        },
+        "osm_id": {
+          "type": "long",
+          "index": "not_analyzed"
+        },
+        "location":{
+          "type":"geo_point"
+        }
+      }
     }
-  ]
-}
+  }
+}'
+>>>>>>> 8d644f839269aef108c2fb46c86b88600b77fb64

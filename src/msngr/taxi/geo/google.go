@@ -2,10 +2,11 @@ package geo
 
 import (
 
-	"log"
-	"fmt"
 	"encoding/json"
 	"errors"
+	"fmt"
+	"log"
+	"strings"
 
 	t "msngr/taxi"
 	u "msngr/utils"
@@ -13,7 +14,6 @@ import (
 	s "msngr/taxi/set"
 	"msngr/utils"
 
-"strings"
 )
 
 var NOT_IMPLY_TYPES = []string{"country"}
@@ -101,6 +101,9 @@ type GoogleAddressHandler struct {
 }
 
 func NewGoogleAddressHandler(key string, orbit c.TaxiGeoOrbit, external t.AddressSupplier) *GoogleAddressHandler {
+	if key == ""{
+		return nil
+	}
 	result := GoogleAddressHandler{key:key, orbit:orbit}
 	result.cache = make(map[string]*t.AddressF)
 	result.cache_dests = make(map[string]*GoogleDetailPlaceResult)
@@ -166,7 +169,7 @@ func (ah *GoogleAddressHandler) GetExternalInfo(key, name string) (*t.AddressF, 
 		ah.cache_dests[key] = addr_details
 	}
 	address_components := addr_details.Result.AddressComponents
-//	log.Printf(">>> [%v]\n%+v", key, address_components)
+	//	log.Printf(">>> [%v]\n%+v", key, address_components)
 	query, google_set := _process_address_components(address_components)
 
 	if query == "" {
@@ -203,7 +206,7 @@ func (ah *GoogleAddressHandler) AddressesAutocomplete(q string) t.AddressPackage
 	result := t.AddressPackage{Rows:&rows}
 	suff := "/place/autocomplete/json"
 	url := GOOGLE_API_URL + suff
-//	log.Printf(fmt.Sprintf("location= %v,%v", ah.orbit.Lat, ah.orbit.Lon))
+	//	log.Printf(fmt.Sprintf("location= %v,%v", ah.orbit.Lat, ah.orbit.Lon))
 	address_result := GoogleResultAddress{}
 	params := map[string]string{
 		"components": "country:ru",
@@ -236,7 +239,7 @@ func _process_address_components(components []GoogleAddressComponent) (string, s
 	google_set := s.NewSet()
 	for _, component := range components {
 		if u.IntersectionS(NOT_IMPLY_TYPES, component.Types) {
-//			log.Printf("component type %+v \ncontains not imply types: %v", component, component.Types)
+			//			log.Printf("component type %+v \ncontains not imply types: %v", component, component.Types)
 			continue
 		} else {
 			long_name, err := AddStringToSet(google_set, component.LongName)
@@ -256,7 +259,7 @@ func GetStreetNameAndShortName(input string) (string, string) {
 	addr_split := strings.Split(input, " ")
 	var street_type, street_name string
 	for _, sn_part := range addr_split {
-		if u.InS(sn_part, []string{"улица", "проспект", "площадь", "переулок", "шоссе", "магистраль"}) {
+		if u.InS(sn_part, []string{"улица", "проспект", "площадь", "переулок", "шоссе", "магистраль", "бульвар", "проезд"}) {
 			street_type = _shorten_street_type(sn_part)
 		} else {
 			if street_name == "" {

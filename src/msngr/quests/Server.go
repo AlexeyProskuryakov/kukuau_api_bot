@@ -22,6 +22,7 @@ import (
 	"encoding/json"
 	"time"
 	"msngr/utils"
+	w "msngr/web"
 )
 
 var users = map[string]string{
@@ -35,40 +36,16 @@ const (
 	ALL_TEAM_MEMBERS = "all_team_members"
 )
 
-func ParseExportXlsx(xlf *xlsx.File, qs *QuestStorage, skip_row, skip_cell int) error {
-	for _, sheet := range xlf.Sheets {
-		if sheet != nil {
-			sh_name := strings.TrimSpace(strings.ToLower(sheet.Name))
-			if strings.HasSuffix(sh_name, "ключ") || strings.HasPrefix(sh_name, "ключ") {
 
-				for ir, row := range sheet.Rows {
-					if row != nil && ir >= skip_row {
-						key := row.Cells[skip_cell].Value
-						description := row.Cells[skip_cell + 1].Value
-						next_key_raw := row.Cells[skip_cell + 2].Value
-						if key != "" && description != "" {
-							qs.AddKey(key, description, next_key_raw)
-						}
+var keys_cache []Step
 
-					}
-				}
-			}
-		}
-	}
-	return nil
-}
 
-var keys_cache []Key
-
-func get_keys_info(err_text string, qs *QuestStorage) map[string]interface{} {
-	var keys []Key
+func GetKeysInfo(err_text string, qs *QuestStorage) map[string]interface{} {
 	var e error
 	result := map[string]interface{}{}
-	if err_text == "" {
-		keys, e = qs.GetAllKeys()
-	} else {
-		keys = keys_cache
-	}
+
+	keys, e := qs.GetAllKeys()
+
 	if e != nil || err_text != "" {
 		result["is_error"] = true
 		if e != nil {
@@ -89,32 +66,11 @@ func send_messages_to_peoples(people []TeamMember, ntf *ntf.Notifier, text strin
 	}()
 }
 
-func nonJsonLogger() martini.Handler {
-	return func(res http.ResponseWriter, req *http.Request, c martini.Context, log *log.Logger) {
-		//log.Printf("METHDO: %v, HEADERS: %+v", req.Method, req.Header)
-		if req.Method == "GET" || req.Header.Get("Content-Type") != "application/json" {
-			start := time.Now()
-			addr := req.Header.Get("X-Real-IP")
-			if addr == "" {
-				addr = req.Header.Get("X-Forwarded-For")
-				if addr == "" {
-					addr = req.RemoteAddr
-				}
-			}
 
-			log.Printf("Started %s %s for %s", req.Method, req.URL.Path, addr)
-
-			rw := res.(martini.ResponseWriter)
-			c.Next()
-			log.Printf("Completed %v %s in %v\n", rw.Status(), http.StatusText(rw.Status()), time.Since(start))
-		}
-	}
-}
 
 func Run(config c.QuestConfig, qs *QuestStorage, ntf *ntf.Notifier) {
-
 	m := martini.New()
-	m.Use(nonJsonLogger())
+	m.Use(w.NonJsonLogger())
 	m.Use(martini.Recovery())
 	m.Use(render.Renderer(render.Options{
 		Layout: "quests/layout",
@@ -145,22 +101,27 @@ func Run(config c.QuestConfig, qs *QuestStorage, ntf *ntf.Notifier) {
 	})
 
 	r.Get("/new_keys", func(render render.Render) {
-		render.HTML(200, "quests/new_keys", get_keys_info("", qs))
+		render.HTML(200, "quests/new_keys", GetKeysInfo("", qs))
 	})
 
 	r.Post("/add_key", func(user auth.User, render render.Render, request *http.Request) {
-		start_key := request.FormValue("start-key")
-		next_key := request.FormValue("next-key")
+		start_key := strings.TrimSpace(request.FormValue("start-key"))
+		next_key := strings.TrimSpace(request.FormValue("next-key"))
 		description := request.FormValue("description")
 
 		log.Printf("QUESTS WEB add key %s -> %s -> %s", start_key, description, next_key)
 		if start_key != "" && description != "" {
 			key, err := qs.AddKey(start_key, description, next_key)
-			log.Printf("QW is error? %v key: %v", err, key)
-			render.Redirect("/new_keys")
+			if key != nil &&err != nil {
+				render.HTML(200, "quests/new_keys", GetKeysInfo("Такой ключ уже существует. Используйте изменение ключа если хотите его изменить.", qs))
+				return
+			}
 		} else {
-			render.HTML(200, "quests/new_keys", get_keys_info("Невалидные значения ключа или ответа", qs))
+
+			render.HTML(200, "quests/new_keys", GetKeysInfo("Невалидные значения ключа или ответа", qs))
+			return
 		}
+		render.Redirect("/new_keys")
 	})
 
 	r.Post("/delete_key/:key", func(params martini.Params, render render.Render) {
@@ -173,8 +134,8 @@ func Run(config c.QuestConfig, qs *QuestStorage, ntf *ntf.Notifier) {
 	r.Post("/update_key/:key", func(params martini.Params, render render.Render, request *http.Request) {
 		key_id := params["key"]
 
-		start_key := request.FormValue("start-key")
-		next_key := request.FormValue("next-key")
+		start_key := strings.TrimSpace(request.FormValue("start-key"))
+		next_key := strings.TrimSpace(request.FormValue("next-key"))
 		description := request.FormValue("description")
 
 		err := qs.UpdateKey(key_id, start_key, description, next_key)
@@ -195,14 +156,14 @@ func Run(config c.QuestConfig, qs *QuestStorage, ntf *ntf.Notifier) {
 		log.Printf("Form file information: file: %+v \nheader:%v, %v\nerr:%v", file, header.Filename, header.Header, err)
 
 		if err != nil {
-			render.HTML(200, "quests/new_keys", get_keys_info(fmt.Sprintf("Ошибка загрузки файлика: %v", err), qs))
+			render.HTML(200, "quests/new_keys", GetKeysInfo(fmt.Sprintf("Ошибка загрузки файлика: %v", err), qs))
 			return
 		}
 		defer file.Close()
 
 		data, err := ioutil.ReadAll(file)
 		if err != nil {
-			render.HTML(200, "quests/new_keys", get_keys_info(fmt.Sprintf("Ошибка загрузки файлика: %v", err), qs))
+			render.HTML(200, "quests/new_keys", GetKeysInfo(fmt.Sprintf("Ошибка загрузки файлика: %v", err), qs))
 			return
 		}
 
@@ -210,15 +171,19 @@ func Run(config c.QuestConfig, qs *QuestStorage, ntf *ntf.Notifier) {
 			xlFile, err := xlsx.OpenBinary(data)
 			log.Printf("file: %+v, err: %v", xlFile, err)
 			if err != nil || xlFile == nil {
-				render.HTML(200, "quests/new_keys", get_keys_info(fmt.Sprintf("Ошибка обработки файлика: %v", err), qs))
+				render.HTML(200, "quests/new_keys", GetKeysInfo(fmt.Sprintf("Ошибка обработки файлика: %v", err), qs))
 				return
 			}
 			skip_rows, _ := strconv.Atoi(request.FormValue("skip-rows"))
 			skip_cols, _ := strconv.Atoi(request.FormValue("skip-cols"))
 
-			ParseExportXlsx(xlFile, qs, skip_rows, skip_cols)
+			parse_res, _ := w.ParseExportXlsx(xlFile, skip_rows, skip_cols)
+			for _, prel := range parse_res{
+				qs.AddKey(prel[0], prel[1], prel[2])
+			}
+
 		} else {
-			render.HTML(200, "quests/new_keys", get_keys_info("Файл имеет не то расширение :(", qs))
+			render.HTML(200, "quests/new_keys", GetKeysInfo("Файл имеет не то расширение :(", qs))
 		}
 
 		render.Redirect("/new_keys")
@@ -250,7 +215,7 @@ func Run(config c.QuestConfig, qs *QuestStorage, ntf *ntf.Notifier) {
 				type TeamInfo struct {
 					FoundedKeys []string
 					Members     []TeamMember
-					AllKeys     []Key
+					AllKeys     []Step
 				}
 
 				collocutor.Name = team.Name

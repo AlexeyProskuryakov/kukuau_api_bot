@@ -7,6 +7,7 @@ import (
 
 	"time"
 	"sort"
+	"errors"
 )
 
 type Message struct {
@@ -22,7 +23,7 @@ type Message struct {
 	AnswerOf    string `bson:"answer_of,omitempty"`
 	AnsweredBy  string `bson:"answered_by,omitempty"`
 }
-type Key struct {
+type Step struct {
 	ID          bson.ObjectId `bson:"_id,omitempty"`
 	SID         string
 	Founded     bool `bson:"is_found"`
@@ -132,11 +133,11 @@ func NewQuestStorage(conn, dbname string) *QuestStorage {
 }
 
 //KEYS
-func (qks *QuestStorage) AddKey(start_key, description, next_key string) (*Key, error) {
-	kw := Key{}
+func (qks *QuestStorage) AddKey(start_key, description, next_key string) (*Step, error) {
+	kw := Step{}
 	err := qks.Keys.Find(bson.M{"start_key":start_key}).One(&kw)
 	if err == mgo.ErrNotFound {
-		kw = Key{StartKey:start_key, Description:description, NextKey:next_key}
+		kw = Step{StartKey:start_key, Description:description, NextKey:next_key}
 		if team_name, err := GetTeamNameFromKey(start_key); team_name != "" && err == nil {
 			kw.ForTeam = team_name
 		}
@@ -145,7 +146,7 @@ func (qks *QuestStorage) AddKey(start_key, description, next_key string) (*Key, 
 	} else if err != nil {
 		return nil, err
 	} else {
-		return &kw, nil
+		return &kw, errors.New("Key already exist!")
 	}
 }
 
@@ -159,8 +160,8 @@ func (qks *QuestStorage) UpdateKey(key_id, start_key, description, next_key stri
 	return err
 }
 
-func (qs *QuestStorage) GetKeys(query bson.M) ([]Key, error) {
-	result := []Key{}
+func (qs *QuestStorage) GetKeys(query bson.M) ([]Step, error) {
+	result := []Step{}
 	err := qs.Keys.Find(query).All(&result)
 	if err != nil && err != mgo.ErrNotFound {
 		return result, err
@@ -171,9 +172,9 @@ func (qs *QuestStorage) GetKeys(query bson.M) ([]Key, error) {
 	return result, nil
 }
 
-func (qs *QuestStorage) GetKey(key string) (*Key, error) {
-	result := Key{}
-	err := qs.Keys.Find(bson.M{"start_key":key}).One(&result)
+func (qs *QuestStorage) 	GetKeyByStartKey(start_key string) (*Step, error) {
+	result := Step{}
+	err := qs.Keys.Find(bson.M{"start_key":start_key}).One(&result)
 	if err != nil && err != mgo.ErrNotFound {
 		return nil, err
 	} else if err == mgo.ErrNotFound {
@@ -191,8 +192,8 @@ func (qs *QuestStorage) SetKeyFounded(key, by string) error {
 	return err
 }
 
-func (qs *QuestStorage) GetKeyByNextKey(next_key string) (*Key, error) {
-	result := Key{}
+func (qs *QuestStorage) GetKeyByNextKey(next_key string) (*Step, error) {
+	result := Step{}
 	err := qs.Keys.Find(bson.M{"next_key":next_key}).One(&result)
 	if err != nil && err != mgo.ErrNotFound {
 		return nil, err
@@ -202,8 +203,8 @@ func (qs *QuestStorage) GetKeyByNextKey(next_key string) (*Key, error) {
 	return &result, nil
 }
 
-func (qks *QuestStorage) GetAllKeys() ([]Key, error) {
-	result := []Key{}
+func (qks *QuestStorage) GetAllKeys() ([]Step, error) {
+	result := []Step{}
 	err := qks.Keys.Find(bson.M{}).All(&result)
 	for i, key := range result {
 		result[i].SID = key.ID.Hex()
@@ -341,7 +342,7 @@ func (qs *QuestStorage) StoreMessage(from, to, body string, is_key bool) (Messag
 
 func (qs *QuestStorage) SetMessagesAnswered(from, by string) error {
 	_, err := qs.Messages.UpdateAll(
-		bson.M{"from":from},
+		bson.M{"from":from, "not_answered":bson.M{"$ne":0}},
 		bson.M{"$set":bson.M{
 			"answered_by":by,
 			"not_answered":0}})
@@ -362,6 +363,7 @@ type Contact struct {
 	Phone            string
 	IsPassersby      bool
 	IsTeam           bool
+	Time 		int64 `bson:"time"`
 }
 
 //CONTACTS
@@ -375,14 +377,14 @@ type ByContactsTeam []Contact
 // want to sort in order of increasing string length, so
 // we use `len(s[i])` and `len(s[j])` here.
 func (s ByContactsTeam) Len() int {
-    return len(s)
+	return len(s)
 }
 func (s ByContactsTeam) Swap(i, j int) {
-    s[i], s[j] = s[j], s[i]
+	s[i], s[j] = s[j], s[i]
 }
 func (s ByContactsTeam) Less(i, j int) bool {
-	if s[i].IsTeam && !s[j].IsTeam{
-		return true
+	if (s[i].IsTeam && s[j].IsTeam) || (!s[i].IsTeam && !s[j].IsTeam) {
+		return s[i].Time > s[j].Time
 	}
 	return false
 }
@@ -390,7 +392,7 @@ func (s ByContactsTeam) Less(i, j int) bool {
 func (qs *QuestStorage) GetContacts(teams []Team) ([]Contact, error) {
 	resp := []Contact{}
 	err := qs.Messages.Pipe([]bson.M{
-		bson.M{"$group": bson.M{"_id":"$from", "not_answered_count":bson.M{"$sum":"$not_answered"}, "name":bson.M{"$first":"$from"}}}}).All(&resp)
+		bson.M{"$group": bson.M{"_id":"$from", "not_answered_count":bson.M{"$sum":"$not_answered"}, "name":bson.M{"$first":"$from"}, "time":bson.M{"$max":"$time_stamp"}}}}).All(&resp)
 	if err != nil {
 		return resp, err
 	}
@@ -450,195 +452,3 @@ func (qs QuestStorage) GetContactsAfter(after int64) ([]Contact, error) {
 	}
 	return result, nil
 }
-
-//type KeyWrapper struct {
-//	ID          bson.ObjectId `bson:"_id,omitempty"`
-//	SID         string
-//	Key         string `bson:"key"`
-//	Description string `bson:"description"`
-//
-//	IsFirst     bool   `bson:"is_first"`
-//	NextKey     *string `bson:"next_key"`
-//}
-//
-//func (kw KeyWrapper) String() string {
-//	return fmt.Sprintf("KW [%s] [%s] %v -> \n%s\n -> %s", kw.ID, kw.IsFirst, kw.Key, kw.Description, kw.NextKey)
-//}
-//
-//type QuestMessageWrapper struct {
-//	ID        bson.ObjectId `bson:"_id,omitempty"`
-//	SID       string
-//	From      string `bson:"from"`
-//	Body      string `bson:"body"`
-//	TimeStamp int64 `bson:"time"`
-//	Time      time.Time `bson:"time_obj"`
-//	Answered  bool `bson:"answered"`
-//	IsKey     bool `bson:"is_key"`
-//}
-//
-
-//
-
-//
-//func (qks *QuestStorage) GetKeyInfo(key string) (*KeyWrapper, error) {
-//	kw := KeyWrapper{}
-//	err := qks.Keys.Find(bson.M{"key":key}).One(&kw)
-//	if err != nil {
-//		return nil, err
-//	}
-//	return &kw, nil
-//}
-//
-//func (qks *QuestStorage) DeleteKey(key_id string) error {
-//	err := qks.Keys.RemoveId(bson.ObjectIdHex(key_id))
-//	return err
-//}
-//
-//func (qks *QuestStorage) GetDescription(key string) (string, error) {
-//	result := KeyWrapper{}
-//	err := qks.Keys.Find(bson.M{"key":key}).One(&result)
-//	return result.Description, err
-//}
-//
-//func (qks *QuestStorage) StoreMessage(from, body string, time time.Time, is_key bool) error {
-//	result := QuestMessageWrapper{
-//		From: from,
-//		Body: body,
-//		TimeStamp: time.Unix(),
-//		Answered: false,
-//		IsKey: is_key,
-//	}
-//	err := qks.Messages.Insert(&result)
-//	return err
-//}
-//
-//func (qks *QuestStorage) SetMessageAnswer(message_id bson.ObjectId) error {
-//	err := qks.Messages.UpdateId(message_id, bson.M{"$set":bson.M{"answered":true}})
-//	return err
-//}
-//
-//func (qs *QuestStorage) GetMessage(message_id string) (*QuestMessageWrapper, error) {
-//	result := QuestMessageWrapper{}
-//	err := qs.Messages.FindId(bson.ObjectIdHex(message_id)).One(&result)
-//	result.SID = result.ID.Hex()
-//	return &result, err
-//}
-//
-//func (qks *QuestStorage) GetMessages(query bson.M) ([]QuestMessageWrapper, error) {
-//	result := []QuestMessageWrapper{}
-//	err := qks.Messages.Find(query).Sort("-time").All(&result)
-//	for i, message := range result {
-//		result[i].SID = message.ID.Hex()
-//		result[i].Time = time.Unix(message.TimeStamp, 0)
-//	}
-//	return result, err
-//}
-//
-//type QuestUserWrapper struct {
-//	ID      bson.ObjectId `bson:"_id,omitempty"`
-//	UserId  string    `bson:"user_id"`
-//	Name    string    `bson:"name"`
-//	Phone   string    `bson:"phone"`
-//	EMail   string    `bson:"email"`
-//	State   map[string]string `bson:"state"`
-//	Keys    map[string][]string `bson:"found_keys"`
-//	LastKey map[string]*string `bson:"last_key"`
-//}
-//
-//func (qks *QuestStorage)AddUser(user_id, name, email, phone, state, provider string) error {
-//	find := bson.M{"user_id":user_id}
-//	user := QuestUserWrapper{}
-//	err := qks.Users.Find(find).One(&user)
-//	if err == mgo.ErrNotFound {
-//		qks.Users.Insert(QuestUserWrapper{UserId:user_id, Name:name, Phone:phone, EMail:email, State:map[string]string{provider:state}})
-//	} else if err != nil {
-//		return err
-//	} else {
-//		qks.Users.Update(find, bson.M{"$set":bson.M{fmt.Sprintf("state.%s", provider):state}})
-//	}
-//	return nil
-//}
-//func (qs *QuestStorage) SetUserState(user_id, state, provider string) error {
-//	find := bson.M{"user_id":user_id}
-//	err := qs.Users.Update(find, bson.M{"$set":bson.M{fmt.Sprintf("state.%s", provider):state}})
-//	return err
-//}
-//
-//func (qks *QuestStorage) GetUserState(user_id, provider string) (string, error) {
-//	find := bson.M{"user_id":user_id}
-//	user := QuestUserWrapper{}
-//	err := qks.Users.Find(find).One(&user)
-//	if err != nil {
-//		return "", err
-//	}
-//	if state, ok := user.State[provider]; ok {
-//		return state, nil
-//	} else {
-//		return "", nil
-//	}
-//}
-//
-//func (qks *QuestStorage) SetUserLastKey(user_id, key, provider string) error {
-//	find := bson.M{"user_id":user_id}
-//	err := qks.Users.Update(find, bson.M{
-//		"$addToSet":bson.M{fmt.Sprintf("found_keys.%s", provider):key},
-//		"$set":bson.M{fmt.Sprintf("last_key.%s", provider):key},
-//	})
-//	return err
-//}
-//
-//type CurrentProviderUserInfo struct {
-//	UserId    string
-//	State     string
-//	FoundKeys []string
-//	LastKey   *string
-//	User      QuestUserWrapper
-//}
-//
-//func (qks *QuestStorage) GetUserInfo(user_id, provider string) (*CurrentProviderUserInfo, error) {
-//	find := bson.M{"user_id":user_id}
-//	user := QuestUserWrapper{}
-//	err := qks.Users.Find(find).One(&user)
-//	if err != nil {
-//		return nil, err
-//	}
-//	state, _ := user.State[provider]
-//	keys, _ := user.Keys[provider]
-//	last_key, _ := user.LastKey[provider]
-//
-//	return &CurrentProviderUserInfo{
-//		UserId:user.UserId,
-//		State:state,
-//		FoundKeys:keys,
-//		LastKey:last_key,
-//		User:user,
-//	}, nil
-//
-//}
-//
-//func (qks *QuestStorage) GetUserKeys(user_id, key, provider string) ([]string, error) {
-//	find := bson.M{"user_id":user_id}
-//	user := QuestUserWrapper{}
-//	err := qks.Users.Find(find).One(&user)
-//	if err != nil {
-//		return []string{}, err
-//	} else {
-//		if keys, ok := user.Keys[provider]; ok {
-//			return keys, nil
-//		}else {
-//			return []string{}, nil
-//		}
-//	}
-//}
-//
-//func (qks *QuestStorage) GetSubscribedUsers() ([]QuestUserWrapper, error) {
-//	users := []QuestUserWrapper{}
-//	err := qks.Users.Find(bson.M{fmt.Sprintf("state.%s", PROVIDER):SUBSCRIBED}).All(&users)
-//	return users, err
-//}
-//
-//func (qs *QuestStorage) GetAllUsers() ([]QuestUserWrapper, error) {
-//	users := []QuestUserWrapper{}
-//	err := qs.Users.Find(bson.M{}).All(&users)
-//	return users, err
-//}

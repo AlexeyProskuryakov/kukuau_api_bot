@@ -11,9 +11,9 @@
       "google_key": "AIzaSyBkmvXK-SqfQcyj2XlXgTx-r_B18TJb-vY",
     "elastic_conn": "http://localhost:9200/"
   },
-  "console": {
+  "console":{
     "web_port": ":9595",
-    "key": "Kuku main key",
+    "key":"main key",
     "information": "Привет! Это мы Кличим Чат или Клиент Чат или просто Кличат! Пиши сообщения и Саша тебе ответит:)"
   },
   "taxis": {
