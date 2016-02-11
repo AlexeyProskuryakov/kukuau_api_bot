@@ -38,17 +38,17 @@ func GetTaxiAPIInstruments(params c.TaxiApiParams) (t.TaxiInterface, t.AddressSu
 
 func get_address_instruments(c c.Configuration, taxi_name string, external_supplier t.AddressSupplier) (t.AddressHandler, t.AddressSupplier) {
 	if c.Taxis[taxi_name].Api.Name == sedi.SEDI {
-		log.Printf("For %v Will use SEDI address supplier no any address handler", taxi_name)
+		log.Printf("[ADDRESSES ENGINE] For %v Will use SEDI address supplier no any address handler", taxi_name)
 		return nil, external_supplier
 	}
 	own := geo.NewOwnAddressHandler(c.Main.ElasticConn, c.Taxis[taxi_name].Api.GeoOrbit, external_supplier)
 	if own == nil {
 		google := geo.NewGoogleAddressHandler(c.Main.GoogleKey, c.Taxis[taxi_name].Api.GeoOrbit, external_supplier)
 		if google == nil {
-			log.Printf("For %v Will use external address supplier and no any address handler", taxi_name)
+			log.Printf("[ADDRESSES ENGINE] For %v Will use external address supplier and no any address handler", taxi_name)
 			return nil, external_supplier
 		}
-		log.Printf("For %v Will use google addresses", taxi_name)
+		log.Printf("[ADDRESSES ENGINE] For %v Will use google addresses", taxi_name)
 		return google, google
 	}
 	log.Printf("For %v Will use own addresses", taxi_name)

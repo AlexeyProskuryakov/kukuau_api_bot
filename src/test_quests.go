@@ -32,7 +32,7 @@ func send_key(key string, userData *s.InUserData) string {
 //todo create prepare
 func PREPARE_KEYS(salt string, commands_count int) {
 	qs := q.NewQuestStorage(config.Main.Database.ConnString, config.Main.Database.Name)
-	qs.Keys.RemoveAll(bson.M{})
+	qs.Steps.RemoveAll(bson.M{})
 	qs.Messages.RemoveAll(bson.M{})
 	qs.Peoples.RemoveAll(bson.M{})
 	qs.Teams.RemoveAll(bson.M{})

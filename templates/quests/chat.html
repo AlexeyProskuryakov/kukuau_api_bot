@@ -17,7 +17,7 @@
         " href="/chat?with={{$all_tm}}">Написать всем участникам квестов</a>
     </div>
     <hr>
-    <div class="row" id="contacts">
+    <div class="row" id="team-contacts">
         {{range $contact := .contacts}}
         <div class="contact" id="{{$contact.ID}}">
             <a id="a-{{$contact.ID}}" class="bg-success a-contact
@@ -26,10 +26,32 @@
             {{end}}
             " href="/chat?with={{$contact.ID}}">
                 {{if $contact.IsTeam}}
-                Комманда [{{$contact.Name}}]
+
+                Комманда {{$contact.Name}}
+            <span class="small" id="s-{{$contact.ID}}">
+                {{if $contact.NewMessagesCount}}
+                ( {{$contact.NewMessagesCount}} )
+                {{end}}
+                {{end}}
+            </span>
+            </a>
+        </div>
+        {{end}}
+        </div>
+        <hr>
+    <div class="row" id="man-contacts">
+        {{range $contact := .contacts}}
+        <div class="contact" id="{{$contact.ID}}">
+            <a id="a-{{$contact.ID}}" class="bg-success a-contact
+            {{if eq_s $with $contact.ID}}
+            c-active
+            {{end}}
+            " href="/chat?with={{$contact.ID}}">
+                {{if $contact.IsTeam}}
+
                 {{else}}
                 {{$contact.Name}}
-                {{end}}
+
 
 
             <span class="small" id="s-{{$contact.ID}}">
@@ -37,9 +59,11 @@
                 ( {{$contact.NewMessagesCount}} )
                 {{end}}
             </span>
+                {{end}}
             </a>
         </div>
         {{end}}
+
     </div>
     <hr>
 

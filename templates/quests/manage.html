@@ -1,0 +1,42 @@
+<div class="container-fluid">
+    <div class="row">
+
+        <div class="col-md-6 col-md-offset-3">
+            <h2>Перезагрузка квеста. <span class="small">Удалятся комманды, шаги, пользователи все повыходят из комманд.</span>
+            </h2>
+
+        </div>
+    </div>
+    <div class="row">
+
+        <div class="col-md-3 col-md-offset-3">
+            <!--<button class="btn btn-danger btn-lg btn-block" id="delete-all" onclick="delete_all()"> Выполнить</button>-->
+            <button class="btn btn-danger btn-lg btn-block" data-target="#delete-modal" data-toggle="modal">
+                Выполнить
+            </button>
+
+            <!-- Modal -->
+            <div class="modal fade" id="delete-modal" role="dialog">
+                <div class="modal-dialog">
+                    <!-- Modal content-->
+                    <div class="modal-content">
+                        <div class="modal-header">
+                            <button type="button" class="close" data-dismiss="modal">&times;</button>
+                            <h3>Уверены?</h3>
+                        </div>
+                        <div class="modal-body">
+                            <button type="button" class="btn btn-info btn-lg" data-dismiss="modal">Нет</button>
+                            <button type="button" class="btn btn-danger btn-lg" onclick="delete_all()" data-dismiss="modal">Да</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="row">
+        <div class="col-md-6 col-md-offset-3" id="delete-result">
+
+        </div>
+    </div>
+</div>
+<script src="script.js"></script>

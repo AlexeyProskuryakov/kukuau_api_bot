@@ -35,9 +35,14 @@ function set_contact_new_message(contact_id, count){
 }
 
 function add_new_contact(contact){
+    console.log("add new contact",contact);
     var c_text = "<div class='contact' id='{{ID}}'><a class='bg-success a-contact' href='/chat?with={{ID}}'> {{#IsTeam}} Команда {{/IsTeam}}{{Name}} <span class='small' id='s-{{ID}}'>({{NewMessagesCount}})<span></a></div>";
     var result = Mustache.render(c_text, contact);
-    $("#contacts").prepend(result);
+    if (contact.IsTeam == true) {
+        $("#team-contacts").prepend(result);
+    } else {
+        $("#man-contacts").prepend(result);
+    }
 }
 
 function update_contacts(){
@@ -84,5 +89,19 @@ setInterval(function(){
 $("#chat-form-message").focus();
 
 
+function delete_all(){
+     $.ajax({
+        type:"POST",
+        url:            "/delete_all",
+        success:        function(x){
+            if (x.ok == true) {
+                console.log(x);
+                text = "<div><p class='bg-success'>Удалено шагов: {{steps_removed}}</p><p class='bg-success'>Обновленно пользователей: {{peoples_updated}}</p><p class='bg-success'>Удалено комманд: {{teams_removed}}</p></div>";
+                el = Mustache.render(text, x);
+                $("#delete-result").prepend(el);
+            }
+        }
+    });
+}
 
 

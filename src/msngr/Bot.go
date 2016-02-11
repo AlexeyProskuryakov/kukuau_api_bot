@@ -7,9 +7,10 @@ import (
 	"log"
 	"net/http"
 	"errors"
+	"strings"
+
 	s "msngr/structs"
 	u "msngr/utils"
-	"strings"
 	"msngr/configuration"
 	db "msngr/db"
 

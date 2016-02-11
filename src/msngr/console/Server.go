@@ -274,8 +274,10 @@ func Run(addr string, notifier *ntf.Notifier, db *d.MainDb, cs c.ConfigStorage, 
 	})
 
 	r.Get("/delete_key_all", func(render render.Render) {
-		qs.Keys.RemoveAll(bson.M{})
+
+
 		log.Printf("CONSOLE WEB was delete all keys")
+		qs.Steps.RemoveAll(bson.M{})
 		render.Redirect("/new_keys")
 	})
 

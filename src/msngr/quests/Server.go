@@ -62,8 +62,6 @@ func send_messages_to_peoples(people []TeamMember, ntf *ntf.Notifier, text strin
 	}()
 }
 
-
-
 func Run(config c.QuestConfig, qs *QuestStorage, ntf *ntf.Notifier) {
 	m := martini.New()
 	m.Use(w.NonJsonLogger())
@@ -140,7 +138,7 @@ func Run(config c.QuestConfig, qs *QuestStorage, ntf *ntf.Notifier) {
 	})
 
 	r.Get("/delete_key_all", func(render render.Render) {
-		qs.Keys.RemoveAll(bson.M{})
+		qs.Steps.RemoveAll(bson.M{})
 		render.Redirect("/new_keys")
 	})
 
@@ -174,7 +172,7 @@ func Run(config c.QuestConfig, qs *QuestStorage, ntf *ntf.Notifier) {
 			skip_cols, _ := strconv.Atoi(request.FormValue("skip-cols"))
 
 			parse_res, _ := w.ParseExportXlsx(xlFile, skip_rows, skip_cols)
-			for _, prel := range parse_res{
+			for _, prel := range parse_res {
 				qs.AddKey(prel[0], prel[1], prel[2])
 			}
 
@@ -382,6 +380,27 @@ func Run(config c.QuestConfig, qs *QuestStorage, ntf *ntf.Notifier) {
 			"next_":time.Now().Unix(),
 		})
 
+	})
+	r.Get("/manage", func(render render.Render, req *http.Request) {
+		render.HTML(200, "quests/manage", map[string]interface{}{})
+	})
+	r.Post("/delete_all", func(render render.Render, req *http.Request) {
+		//1. Steps or keys:
+		si, _ := qs.Steps.RemoveAll(bson.M{})
+		//2 Peoples
+		pi, _ := qs.Peoples.UpdateAll(bson.M{"is_passerby":false, "team_name":bson.M{"$exists":true}, "team_sid":bson.M{"$exists":true}}, bson.M{"$set":bson.M{"is_passerby":true}, "$unset":bson.M{"team_name":"", "team_sid":""}})
+		//3 teams
+		ti, _ := qs.Teams.RemoveAll(bson.M{})
+		render.JSON(200, map[string]interface{}{
+			"ok":true,
+			"steps_removed":si.Removed,
+			//"steps_removed":0,
+			"peoples_updated":pi.Updated,
+			//"peoples_updated":0,
+			"teams_removed":ti.Removed,
+			//"teams_removed":0,
+
+		})
 	})
 
 	log.Printf("Will start web server for quest at: %v", config.WebPort)
