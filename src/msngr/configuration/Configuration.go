@@ -11,6 +11,12 @@ import (
 	"path"
 )
 
+type Transformation struct {
+	Field     string `json:"field"`
+	RegexCode string `json:"regex_code"`
+	To        string `json:"to"`
+}
+
 type ApiData struct {
 	Host               string `json:"host"`
 	Login              string `json:"login"`
@@ -33,7 +39,7 @@ type TaxiApiParams struct {
 	Data         ApiData `json:"data"`
 	GeoOrbit     TaxiGeoOrbit `json:"geo_orbit"`
 	NotSendPrice bool `json:"not_send_price"`
-
+	Transformations []Transformation `json:"transformations"`
 	Fake         struct {
 			     SendedStates []int `json:"sended_states"`
 			     SleepTime    int `json:"sleep_time"`
@@ -62,6 +68,9 @@ func (api TaxiApiParams) GetIdService() int64 {
 func (api TaxiApiParams) GetAPIData() ApiData {
 	return api.Data
 }
+func (api TaxiApiParams) GetTransformations() []Transformation{
+	return api.Transformations
+}
 
 type TaxiGeoOrbit struct {
 	Lat    float64 `json:"lat"`
@@ -80,6 +89,7 @@ type TaxiConfig struct {
 			  } `json:"information"`
 	Markups           *[]string `json:"markups,omitempty"`
 	AvailableCommands map[string][]string `json:"available_commands"`
+
 }
 
 type ShopConfig struct {

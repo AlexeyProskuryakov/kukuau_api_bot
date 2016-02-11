@@ -3,62 +3,46 @@ package taxi
 import (
 	"testing"
 	"strings"
-
 	c "msngr/configuration"
-	d "msngr/db"
-	s "msngr/structs"
-	tst "msngr/test"
-
+	"fmt"
 )
 
-type FakeAddressSupplier struct {
+func TestApplyTransformation(t *testing.T){
+	tr := []c.Transformation{c.Transformation{Field:"phone", RegexCode:"\\+?7([\\d]{8,10})", To:"8$1"}}
 
-}
-
-func (f FakeAddressSupplier)IsConnected() bool {
-	return true
-}
-
-func (f FakeAddressSupplier)AddressesAutocomplete(query string) AddressPackage {
-	return AddressPackage{}
-}
-
-func NewFakeAddressSupplier() AddressSupplier {
-	return FakeAddressSupplier{}
-}
-
-func TestOrderPrice(t *testing.T) {
-	config := c.ReadConfig()
-	taxi_conf := config.Taxis["fake"]
-
-
-	external_api := GetFakeAPI(taxi_conf.Api)
-	external_address_supplier := NewFakeAddressSupplier()
-
-	db := d.NewMainDb(config.Main.Database.ConnString, config.Main.Database.Name + "_test")
-	gah := NewGoogleAddressHandler(config.Main.GoogleKey, taxi_conf.GeoOrbit, external_address_supplier)
-
-	apiMixin := ExternalApiMixin{API: external_api}
-	botContext := FormTaxiBotContext(&apiMixin, db, taxi_conf, gah, NewCarsCache(&apiMixin))
-
-	new_order_package := tst.ReadTestFile("new_order_ok_google_streets.json")
-
-	nop, ok := botContext.Message_commands["new_order"]
-	if !ok {
-		t.Fail()
+	o := NewOrderInfo{Phone:"+79231378736", Notes:"test banana"}
+	to := ApplyTransforms(&o, tr)
+	if !strings.HasPrefix(to.Phone, "8"){
+		t.Error(fmt.Sprintf("Phone not contains 8 at first cur: %v", to.Phone))
 	}
 
-	s.StartAfter(botContext.Check, func() {
-		result := nop.ProcessMessage(new_order_package)
+	o = NewOrderInfo{Phone:"79992095923"}
+	to = ApplyTransforms(&o, tr)
+	if !strings.EqualFold(to.Phone, "89992095923"){
+		t.Error("If phone must be changed if not have +")
+	}
 
-		price_in_message := strings.Contains(result.Body, "Стоимость")
-		if taxi_conf.Api.NotSendPrice && price_in_message {
-			t.Errorf("in config not_send_price is true but in result message price is sended: \n%+v", result.Body)
-		}
+	o = NewOrderInfo{Phone:"9992095923"}
+	to = ApplyTransforms(&o, tr)
+	if !strings.EqualFold(to.Phone, o.Phone){
+		t.Error("If phone is not valid to regexp not change it! Non 7")
+	}
 
-		order_created_in_message := strings.Contains(result.Body, "Ваш заказ создан!")
-		if !order_created_in_message {
-			t.Errorf("[Ваш заказ создан!] not in result message:\n%+v", result.Body)
-		}
-	})
+	o = NewOrderInfo{Phone:"79992"}
+	to = ApplyTransforms(&o, tr)
+	if !strings.EqualFold(to.Phone, o.Phone){
+		t.Error("If phone is not valid to regexp not change it! So little")
+	}
+
+	o = NewOrderInfo{Phone:"test fooo bar"}
+	to = ApplyTransforms(&o, tr)
+	if !strings.EqualFold(to.Phone, o.Phone){
+		t.Error("If phone is not valid to regexp not change it! Chars")
+	}
+
+	o = NewOrderInfo{Phone:"   "}
+	to = ApplyTransforms(&o, tr)
+	if !strings.EqualFold(to.Phone, o.Phone){
+		t.Error("If phone is not valid to regexp not change it! Spaces")
+	}
 }

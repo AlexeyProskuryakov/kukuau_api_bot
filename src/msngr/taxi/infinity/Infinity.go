@@ -676,9 +676,9 @@ func (p *infinity) Markups() []t.Markup {
 		return []t.Markup{}
 	}
 
-	log.Printf("INF: markups result: %s", body)
+	//log.Printf("INF: markups result: %s", body)
 	err = json.Unmarshal(body, &temp)
-	log.Printf("INF: markups result: %+v", temp)
+	//log.Printf("INF: markups result: %+v", temp)
 	if err != nil {
 		log.Printf("error at unmarshal json from infinity %s, %v", string(body), err)
 		return []t.Markup{}

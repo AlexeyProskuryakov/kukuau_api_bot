@@ -15,6 +15,8 @@ import (
 	u "msngr/utils"
 	c "msngr/configuration"
 	m "msngr"
+	"reflect"
+	"regexp"
 )
 
 const (
@@ -60,9 +62,9 @@ func FormTaxiBotContext(im *ExternalApiMixin, db_handler *d.MainDb, tc c.TaxiCon
 	}
 	context.Message_commands = map[string]s.MessageCommandProcessor{
 		"information":      &TaxiInformationProcessor{information:&(tc.Information.Text)},
-		"new_order":        &TaxiNewOrderProcessor{ExternalApiMixin: *im, MainDb: *db_handler, context:&context, AddressHandler:ah},
+		"new_order":        &TaxiNewOrderProcessor{ExternalApiMixin: *im, MainDb: *db_handler, context:&context, AddressHandler:ah, Config: tc},
 		"cancel_order":     &TaxiCancelOrderProcessor{ExternalApiMixin: *im, MainDb: *db_handler, context:&context, alert_phone:tc.Information.Phone},
-		"calculate_price":  &TaxiCalculatePriceProcessor{ExternalApiMixin: *im, context:&context, AddressHandler:ah},
+		"calculate_price":  &TaxiCalculatePriceProcessor{ExternalApiMixin: *im, context:&context, AddressHandler:ah, Config: tc},
 		"feedback":         &TaxiFeedbackProcessor{ExternalApiMixin: *im, MainDb: *db_handler, context:&context},
 		"write_dispatcher": &TaxiWriteDispatcherMessageProcessor{ExternalApiMixin: *im},
 		"callback_request": &TaxiCallbackRequestMessageProcessor{ExternalApiMixin:*im},
@@ -508,6 +510,7 @@ type TaxiNewOrderProcessor struct {
 	d.MainDb
 	AddressHandler AddressHandler
 	context        *m.BotContext
+	Config         c.TaxiConfig
 }
 
 func _get_phone(in *s.InPkg) (phone *string, err error) {
@@ -518,7 +521,28 @@ func _get_phone(in *s.InPkg) (phone *string, err error) {
 	}
 	return nil, errors.New("Нет записи UserData.Phone")
 }
-
+func ApplyTransforms(order *NewOrderInfo, transofrmations []c.Transformation) *NewOrderInfo {
+	val := reflect.Indirect(reflect.ValueOf(order))
+	for i := 0; i < val.NumField(); i++ {
+		field := val.Field(i)
+		json_tag := val.Type().Field(i).Tag.Get("json")
+		field_name := val.Type().Field(i).Name
+		if field.IsValid() && field.CanSet() && field.Kind() == reflect.String {
+			old := field.String()
+			for _, transform := range transofrmations {
+				if transform.Field == json_tag || transform.Field == field_name {
+					reg := regexp.MustCompile(transform.RegexCode)
+					if reg.MatchString(old) {
+						new := reg.ReplaceAllString(old, transform.To)
+						log.Printf("TCH AH: Matched! Was transform to: %v, result: %v", transform.To, new)
+						field.SetString(new)
+					}
+				}
+			}
+		}
+	}
+	return order
+}
 func (nop *TaxiNewOrderProcessor) ProcessMessage(in *s.InPkg) *s.MessageResult {
 	order_wrapper, err := nop.Orders.GetByOwnerLast(in.From, nop.context.Name)
 	if err != nil {
@@ -536,13 +560,9 @@ func (nop *TaxiNewOrderProcessor) ProcessMessage(in *s.InPkg) *s.MessageResult {
 				phone = &(uwrpr.Phone)
 			}
 		}
-
 		new_order, err := _form_order(commands[0].Form.Fields, nop.AddressHandler)
-		//		log.Printf("TAXI ORDER FORMED: %v\n err? %v", new_order, err)
 		if err != nil {
-			//			log.Printf("Error at forming order: %+v", err)
 			if _, ok := err.(*AddressNotHere); ok {
-				//				log.Printf("Addrss not here! %+v", err_val)
 				return &s.MessageResult{
 					Body: "Адрес не поддерживается этим такси.",
 					Commands: nop.context.Commands[CMDS_NOT_CREATED_ORDER],
@@ -559,6 +579,9 @@ func (nop *TaxiNewOrderProcessor) ProcessMessage(in *s.InPkg) *s.MessageResult {
 				new_order.Markups = markups
 			}
 		}
+
+		new_order = ApplyTransforms(new_order, nop.Config.Api.Transformations)
+
 		ans := nop.API.NewOrder(*new_order)
 		if !ans.IsSuccess {
 			nop.Errors.StoreError(in.From, ans.Message)
@@ -651,6 +674,7 @@ type TaxiCalculatePriceProcessor struct {
 	ExternalApiMixin
 	context        *m.BotContext
 	AddressHandler AddressHandler
+	Config         c.TaxiConfig
 }
 
 func (cpp *TaxiCalculatePriceProcessor) ProcessMessage(in *s.InPkg) *s.MessageResult {
