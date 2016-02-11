@@ -181,7 +181,7 @@ func Run(addr string, notifier *ntf.Notifier, db *d.MainDb, cs c.ConfigStorage, 
 	})
 
 	r.Get("/delete_key_all", func(render render.Render) {
-		qs.Keys.RemoveAll(bson.M{})
+		qs.Steps.RemoveAll(bson.M{})
 		render.Redirect("/new_keys")
 	})
 

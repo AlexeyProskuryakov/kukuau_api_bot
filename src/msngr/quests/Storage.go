@@ -58,14 +58,14 @@ type Team struct {
 
 type QuestStorage struct {
 	db.DbHelper
-	Keys     *mgo.Collection
+	Steps    *mgo.Collection
 	Messages *mgo.Collection
 	Teams    *mgo.Collection
 	Peoples  *mgo.Collection
 }
 
 func (qks *QuestStorage) ensureIndexes() {
-	collection := qks.Session.DB(qks.DbName).C("quest_keys")
+	collection := qks.Session.DB(qks.DbName).C("quest_steps")
 	collection.EnsureIndex(mgo.Index{
 		Key:        []string{"start_key"},
 		Unique:    true,
@@ -76,7 +76,7 @@ func (qks *QuestStorage) ensureIndexes() {
 	collection.EnsureIndex(mgo.Index{
 		Key:        []string{"next_key"},
 	})
-	qks.Keys = collection
+	qks.Steps = collection
 
 	message_collection := qks.Session.DB(qks.DbName).C("quest_messages")
 	message_collection.EnsureIndex(mgo.Index{
@@ -135,13 +135,13 @@ func NewQuestStorage(conn, dbname string) *QuestStorage {
 //KEYS
 func (qks *QuestStorage) AddKey(start_key, description, next_key string) (*Step, error) {
 	kw := Step{}
-	err := qks.Keys.Find(bson.M{"start_key":start_key}).One(&kw)
+	err := qks.Steps.Find(bson.M{"start_key":start_key}).One(&kw)
 	if err == mgo.ErrNotFound {
 		kw = Step{StartKey:start_key, Description:description, NextKey:next_key}
 		if team_name, err := GetTeamNameFromKey(start_key); team_name != "" && err == nil {
 			kw.ForTeam = team_name
 		}
-		err = qks.Keys.Insert(kw)
+		err = qks.Steps.Insert(kw)
 		return &kw, err
 	} else if err != nil {
 		return nil, err
@@ -151,18 +151,18 @@ func (qks *QuestStorage) AddKey(start_key, description, next_key string) (*Step,
 }
 
 func (qks *QuestStorage) DeleteKey(key_id string) error {
-	err := qks.Keys.RemoveId(bson.ObjectIdHex(key_id))
+	err := qks.Steps.RemoveId(bson.ObjectIdHex(key_id))
 	return err
 }
 
 func (qks *QuestStorage) UpdateKey(key_id, start_key, description, next_key string) error {
-	err := qks.Keys.UpdateId(bson.ObjectIdHex(key_id), bson.M{"$set":bson.M{"description":description, "start_key":start_key, "next_key":next_key}})
+	err := qks.Steps.UpdateId(bson.ObjectIdHex(key_id), bson.M{"$set":bson.M{"description":description, "start_key":start_key, "next_key":next_key}})
 	return err
 }
 
 func (qs *QuestStorage) GetKeys(query bson.M) ([]Step, error) {
 	result := []Step{}
-	err := qs.Keys.Find(query).All(&result)
+	err := qs.Steps.Find(query).All(&result)
 	if err != nil && err != mgo.ErrNotFound {
 		return result, err
 	}
@@ -172,9 +172,9 @@ func (qs *QuestStorage) GetKeys(query bson.M) ([]Step, error) {
 	return result, nil
 }
 
-func (qs *QuestStorage) 	GetKeyByStartKey(start_key string) (*Step, error) {
+func (qs *QuestStorage)        GetKeyByStartKey(start_key string) (*Step, error) {
 	result := Step{}
-	err := qs.Keys.Find(bson.M{"start_key":start_key}).One(&result)
+	err := qs.Steps.Find(bson.M{"start_key":start_key}).One(&result)
 	if err != nil && err != mgo.ErrNotFound {
 		return nil, err
 	} else if err == mgo.ErrNotFound {
@@ -184,7 +184,7 @@ func (qs *QuestStorage) 	GetKeyByStartKey(start_key string) (*Step, error) {
 }
 
 func (qs *QuestStorage) SetKeyFounded(key, by string) error {
-	err := qs.Keys.Update(bson.M{"start_key":key}, bson.M{"$set":bson.M{"found_by":by, "is_found":true}})
+	err := qs.Steps.Update(bson.M{"start_key":key}, bson.M{"$set":bson.M{"found_by":by, "is_found":true}})
 	if err != nil {
 		return err
 	}
@@ -194,7 +194,7 @@ func (qs *QuestStorage) SetKeyFounded(key, by string) error {
 
 func (qs *QuestStorage) GetKeyByNextKey(next_key string) (*Step, error) {
 	result := Step{}
-	err := qs.Keys.Find(bson.M{"next_key":next_key}).One(&result)
+	err := qs.Steps.Find(bson.M{"next_key":next_key}).One(&result)
 	if err != nil && err != mgo.ErrNotFound {
 		return nil, err
 	} else if err == mgo.ErrNotFound {
@@ -205,7 +205,7 @@ func (qs *QuestStorage) GetKeyByNextKey(next_key string) (*Step, error) {
 
 func (qks *QuestStorage) GetAllKeys() ([]Step, error) {
 	result := []Step{}
-	err := qks.Keys.Find(bson.M{}).All(&result)
+	err := qks.Steps.Find(bson.M{}).All(&result)
 	for i, key := range result {
 		result[i].SID = key.ID.Hex()
 	}
@@ -351,6 +351,14 @@ func (qs *QuestStorage) SetMessagesAnswered(from, by string) error {
 
 func (qs *QuestStorage) GetMessages(query bson.M) ([]Message, error) {
 	messages := []Message{}
+	query["is_key"] = false
+	err := qs.Messages.Find(query).Sort("-time").Limit(25).All(&messages)
+	return messages, err
+}
+
+func (qs *QuestStorage) GetMessagesKeys(query bson.M) ([]Message, error) {
+	messages := []Message{}
+	query["is_key"] = true
 	err := qs.Messages.Find(query).Sort("-time").Limit(25).All(&messages)
 	return messages, err
 }
@@ -363,7 +371,7 @@ type Contact struct {
 	Phone            string
 	IsPassersby      bool
 	IsTeam           bool
-	Time 		int64 `bson:"time"`
+	Time             int64 `bson:"time"`
 }
 
 //CONTACTS
@@ -392,6 +400,7 @@ func (s ByContactsTeam) Less(i, j int) bool {
 func (qs *QuestStorage) GetContacts(teams []Team) ([]Contact, error) {
 	resp := []Contact{}
 	err := qs.Messages.Pipe([]bson.M{
+		bson.M{"$match":bson.M{"is_key":false}},
 		bson.M{"$group": bson.M{"_id":"$from", "not_answered_count":bson.M{"$sum":"$not_answered"}, "name":bson.M{"$first":"$from"}, "time":bson.M{"$max":"$time_stamp"}}}}).All(&resp)
 	if err != nil {
 		return resp, err
@@ -426,7 +435,7 @@ func (qs *QuestStorage) GetContacts(teams []Team) ([]Contact, error) {
 func (qs QuestStorage) GetContactsAfter(after int64) ([]Contact, error) {
 	resp := []Contact{}
 	err := qs.Messages.Pipe([]bson.M{
-		bson.M{"$match":bson.M{"time_stamp":bson.M{"$gt":after}, "from":bson.M{"$ne":ME}, "to":bson.M{"$ne":ALL}}},
+		bson.M{"$match":bson.M{"time_stamp":bson.M{"$gt":after}, "from":bson.M{"$ne":ME}, "to":bson.M{"$ne":ALL}, "is_key":false}},
 		bson.M{"$group": bson.M{"_id":"$from", "not_answered_count":bson.M{"$sum":"$not_answered"}, "name":bson.M{"$first":"$from"}}}}).All(&resp)
 	if err != nil {
 		return resp, err
