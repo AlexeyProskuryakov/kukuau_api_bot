@@ -130,9 +130,10 @@ func StartBot(db *d.MainDb, result chan string) c.Configuration {
 	}
 
 	if conf.Console.WebPort != "" && conf.Console.Key != ""  {
+		log.Printf("Will handling requests from /console")
 		bc := cnsl.FormConsoleBotContext(conf, db,cs)
 		cc := m.FormBotController(bc,db)
-		http.HandleFunc("console", cc)
+		http.HandleFunc("/console", cc)
 		result <- "console"
 	}
 

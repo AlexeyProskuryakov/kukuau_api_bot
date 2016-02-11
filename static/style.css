@@ -178,3 +178,7 @@ body::-webkit-scrollbar {
     background-color: #000;
     color: #FFF;
 }
+.cat-img{
+    width:70%;
+    height:70%;
+}

@@ -136,7 +136,7 @@ type OutMessage struct {
 	Type     string        `json:"type,omitempty"`
 	Thread   string        `json:"thread,omitempty"`
 	Body     string        `json:"body"`
-	Error    MessageError  `json:"error"`
+	Error    *MessageError  `json:"error,omitempty"`
 	Commands *[]OutCommand `json:"commands,omitempty"`
 }
 

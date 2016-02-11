@@ -82,7 +82,30 @@
 </div>
 
 <div id="right-bar" class="col-md-2">
-    <h4>Тут будет какая-нибудь инфа...</h4>
+    <h4>
+        <span class="bg-warning">{{.collocutor.Name}}</span>
+        <span class="bg-success small">{{.collocutor.Phone}}</span>
+        <span class="bg-info small">{{.collocutor.Email}}</span>
+    </h4>
+    {{if .collocutor.InfoPresent}}
+        {{if eq .collocutor.Info.CountOrdersAll 0 }}
+            <h5>В такси заказов у этого пользователя НЕТ</h5>
+        {{else}}
+            <h4>Количества заказов в службах такси: </h4>
+            {{range $order:= .collocutor.Info.CountOrdersByProvider}}
+            <h5>
+                В <span class="bg-success"> {{$order.SourceName}}:</span>
+                <span class="bg-info"> {{$order.Count}}</span>
+            </h5>
+            <hr>
+            {{end}}
+        <h5>Всего заказов в такси:
+            <span class="bg-danger">{{.collocutor.Info.CountOrdersAll}}</span>
+        </h5>
+
+        {{end}}
+    {{end}}
+
 
 </div>
 <script src="script.js"></script>
