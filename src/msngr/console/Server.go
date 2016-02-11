@@ -206,7 +206,7 @@ func Run(addr string, notifier *ntf.Notifier, db *d.MainDb, cs c.ConfigStorage, 
 				qs.AddKey(prel[0], prel[1], prel[2])
 			}
 		} else {
-			render.HTML(200, "quests/new_keys", GetKeysInfo("Файл имеет не то расширение :(", qs))
+			render.HTML(200, "console/new_keys", GetKeysInfo("Файл имеет не то расширение :(", qs))
 		}
 
 		render.Redirect("/new_keys")
@@ -299,7 +299,7 @@ func Run(addr string, notifier *ntf.Notifier, db *d.MainDb, cs c.ConfigStorage, 
 		var messages []d.MessageWrapper
 
 		if with != ALL {
-			log.Printf("CONSOLE WEB CHAT: get mesages for %v", with)
+			//log.Printf("CONSOLE WEB CHAT: get mesages for %v", with)
 			user, _ := db.Users.GetUserById(with)
 			if user != nil {
 				messages, _ = db.Messages.GetMessages(bson.M{
@@ -332,7 +332,7 @@ func Run(addr string, notifier *ntf.Notifier, db *d.MainDb, cs c.ConfigStorage, 
 		}
 
 		if strings.Contains(with, ALL) {
-			log.Printf("CONSOLE WEB CHAT: getting messages for all")
+			//log.Printf("CONSOLE WEB CHAT: getting messages for all")
 			messages, _ = db.Messages.GetMessages(bson.M{"to":with})
 		}
 		result_data["collocutor"] = collocutor

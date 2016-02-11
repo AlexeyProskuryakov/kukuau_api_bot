@@ -56,6 +56,8 @@ func (cmp ConsoleMessageProcessor) ProcessMessage(in *s.InPkg) *s.MessageResult 
 		u, _ := cmp.Users.GetUserById(in.From)
 		if u == nil {
 			cmp.Users.AddUser(in.From, userData.Name, userData.Phone, userData.Email)
+		} else {
+			cmp.Users.UpdateUserData(in.From, userData.Name, userData.Phone, userData.Email)
 		}
 		r_body := *body
 		cmp.Messages.StoreMessage(in.From, ME, r_body, in.Message.ID)

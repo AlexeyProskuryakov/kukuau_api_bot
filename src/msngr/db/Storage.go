@@ -462,7 +462,7 @@ func (uh *userHandler) AddUser(user_id, name, phone, email string) error {
 		err = uh.Collection.Insert(&UserWrapper{UserId: user_id, UserName:name, Email:email, Phone: phone, LastUpdate: time.Now()})
 		return err
 	}
-	return nil
+	return errors.New(fmt.Sprintf("Duplicate user! [%v] %v {%v}", user_id, name, phone))
 }
 
 func (uh userHandler) AddUserObject(uw UserWrapper) error {
@@ -551,7 +551,24 @@ func (uh *userHandler) GetUserById(user_id string) (*UserWrapper, error) {
 	}
 	return &result, err
 }
+func (uh *userHandler) UpdateUserData(user_id, name, phone, email string) error {
+	if !uh.parent.Check() {
+		return errors.New("БД не доступна")
+	}
+	to_upd := bson.M{}
+	if name != "" {
+		to_upd["user_name"] = name
+	}
+	if phone != "" {
+		to_upd["phone"] = phone
+	}
+	if email != "" {
+		to_upd["email"] = email
+	}
 
+	err := uh.Collection.Update(bson.M{"user_id":user_id}, bson.M{"$set":to_upd})
+	return err
+}
 func (uh *userHandler) Count() int {
 	r, _ := uh.Collection.Count()
 	return r
@@ -592,7 +609,7 @@ func (eh *errorHandler) GetBy(req bson.M) (*[]ErrorWrapper, error) {
 }
 
 func (mh *messageHandler) StoreMessage(from, to, body string, message_id string) error {
-	log.Printf("DB: sm :%v -> %v [%v] {%v}", from, to, body, message_id)
+	//log.Printf("DB: sm :%v -> %v [%v] {%v}", from, to, body, message_id)
 	if !mh.parent.Check() {
 		return errors.New("БД не доступна")
 	}
@@ -603,7 +620,7 @@ func (mh *messageHandler) StoreMessage(from, to, body string, message_id string)
 		log.Printf("DB: sm OK! %v", result)
 		return err
 	}
-	log.Printf("DB: sm DUPLICATE ;(")
+	//log.Printf("DB: sm DUPLICATE ;(")
 	return errors.New(fmt.Sprintf("I have duplicate!%+v", found))
 }
 
