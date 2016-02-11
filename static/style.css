@@ -157,7 +157,7 @@ body::-webkit-scrollbar {
 }
 
 #chat-form-message{
-    width:400px;!important
+    width:500px;!important
 }
 
 #right-bar{
@@ -179,6 +179,7 @@ body::-webkit-scrollbar {
     color: #FFF;
 }
 .cat-img{
+    overflow:auto;
     width:70%;
     height:70%;
 }
