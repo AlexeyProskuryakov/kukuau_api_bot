@@ -260,9 +260,6 @@ func (qs *QuestStorage) AddTeamMember(user_id, m_name, phone string, team *Team)
 	}
 	return &tm, err
 }
-func (qs *QuestStorage) SetTeamForTeamMember(new_tn *Team, user_id *TeamMember) error {
-	return qs.Peoples.Update(bson.M{"user_id":user_id.UserId}, bson.M{"$set":bson.M{"team_name":new_tn.Name, "team_sid":new_tn.SID}})
-}
 func (qs *QuestStorage) GetMembersOfTeam(team_name string) ([]TeamMember, error) {
 	res := []TeamMember{}
 	err := qs.Peoples.Find(bson.M{"team_name":team_name}).All(&res)

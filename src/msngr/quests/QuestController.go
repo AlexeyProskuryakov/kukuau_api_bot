@@ -61,7 +61,7 @@ func (qimp QuestInfoMessageProcessor) ProcessMessage(in *s.InPkg) *s.MessageResu
 	return &s.MessageResult{Body:qimp.Information, Type:"chat"}
 }
 
-type QuestMessagePersistProcessor struct {
+type QuestMessageProcessor struct {
 	c.ConfigStorage
 	Storage *QuestStorage
 }
@@ -101,7 +101,7 @@ func GetTeamNameFromKey(key string) (string, error) {
 	}
 }
 
-func (qmpp QuestMessagePersistProcessor) ProcessMessage(in *s.InPkg) *s.MessageResult {
+func (qmpp QuestMessageProcessor) ProcessMessage(in *s.InPkg) *s.MessageResult {
 	if in.Message.Body != nil {
 		pkey := in.Message.Body
 		key := *pkey
@@ -153,10 +153,10 @@ func (qmpp QuestMessagePersistProcessor) ProcessMessage(in *s.InPkg) *s.MessageR
 					return BAD_KEY_RESULT
 				}
 			} else {
+				log.Printf("Q:Member is: %+v", member)
 				if prev_key == nil {
 					log.Printf("Q:will change team at member [%v]  %v -> %v", member.Name, member.TeamName, team_name)
-					qmpp.Storage.SetTeamForTeamMember(team, member)
-					member, err = qmpp.Storage.AddTeamMember(in.From, in.UserData.Name, in.UserData.Phone, team)
+					qmpp.Storage.AddTeamMember(in.From, in.UserData.Name, in.UserData.Phone, team)
 				} else if !member.Passersby && member.TeamName != "" && member.TeamSID != "" && member.TeamName != team_name {
 					return &s.MessageResult{Type:"chat", Body:WRONG_TEAM_MEMBER(team_name, member.TeamName)}
 				} else if member.Passersby && prev_key != nil {
@@ -223,7 +223,7 @@ func FormQuestBotContext(conf c.Configuration, qname string, cs c.ConfigStorage,
 
 	result.Message_commands = map[string]s.MessageCommandProcessor{
 		"information":&QuestInfoMessageProcessor{Information:qconf.Info},
-		"":QuestMessagePersistProcessor{Storage:qs, ConfigStorage:cs},
+		"":QuestMessageProcessor{Storage:qs, ConfigStorage:cs},
 	}
 
 	result.CommandsStorage = cs

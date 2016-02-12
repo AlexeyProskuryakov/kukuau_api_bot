@@ -43,7 +43,7 @@ func ParseExportXlsx(xlf *xlsx.File, skip_row, skip_cell int) ([][]string, error
 				for ir, row := range sheet.Rows {
 					if row != nil && ir >= skip_row {
 						key := strings.ToLower(strings.TrimSpace(row.Cells[skip_cell].Value))
-						description := strings.ToLower(strings.TrimSpace(row.Cells[skip_cell + 1].Value))
+						description := strings.TrimSpace(row.Cells[skip_cell + 1].Value)
 						next_key_raw := strings.ToLower(strings.TrimSpace(row.Cells[skip_cell + 2].Value))
 						if key != "" && description != "" {
 							pos := []string{key, description, next_key_raw}
