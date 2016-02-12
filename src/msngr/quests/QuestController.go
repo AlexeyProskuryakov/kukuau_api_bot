@@ -66,7 +66,7 @@ type QuestMessagePersistProcessor struct {
 	Storage *QuestStorage
 }
 
-var key_reg = regexp.MustCompile("^\\#[\\w\\dа-яА-Я]+\\-?(?P<team>[\\w\\da-zа-я]+)?")
+var marker_reg = regexp.MustCompile("^\\#[\\w\\dа-яА-Я]+\\-?(?P<team>[\\w\\da-zа-я]+)?")
 
 func ValidateKeyBySequent(team *Team, key_info *Step, qs *QuestStorage) (string, error, bool) {
 	//return description or some text for user or "" if error
@@ -93,7 +93,7 @@ func ValidateKeyBySequent(team *Team, key_info *Step, qs *QuestStorage) (string,
 }
 
 func GetTeamNameFromKey(key string) (string, error) {
-	found := key_reg.FindStringSubmatch(key)
+	found := marker_reg.FindStringSubmatch(key)
 	if len(found) == 2 {
 		return found[1], nil
 	} else {
@@ -107,7 +107,7 @@ func (qmpp QuestMessagePersistProcessor) ProcessMessage(in *s.InPkg) *s.MessageR
 		key := *pkey
 		log.Printf("Q: Processing message %v from %v [%+v]", key, in.From, in.UserData)
 		key = strings.TrimSpace(key)
-		if key_reg.MatchString(key) {
+		if marker_reg.MatchString(key) {
 			key = strings.ToLower(key)
 			log.Printf("Q: Here is key: %v", key)
 			key_info, err := qmpp.Storage.GetKeyByStartKey(key)

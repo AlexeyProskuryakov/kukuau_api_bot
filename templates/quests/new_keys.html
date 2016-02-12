@@ -2,9 +2,6 @@
     <div class="row">
         <div class="col-md-6 col-md-offset-3">
             <h2> Добавьте новый квестовый шаг: </h2>
-            <h3>
-                <small>Чтоб удалить все шаги введи путь delete_key_all</small>
-            </h3>
             <form action="/add_key" method="post" id="manage-key-form">
                 <div class="form-group">
                     <label for="start-key">Маркер: </label>
@@ -25,6 +22,14 @@
             {{ if .is_error }}
             <div class="text-danger">{{.error_text}}</div>
             {{ end }}
+
+            {{ if .is_team_info}}
+                {{range $team, $info := .team_info}}
+                <p class="bg-success"> Для комманды {{$team}} найденны маркеры: </p>
+                <p class="text-primary"> {{$info}} </p>
+                <hr>
+                {{end}}
+            {{end}}
         </div>
         <div class="col-md-1">
             <a class="btn" href="/load/klichat_quest_keys.txt">
@@ -61,6 +66,24 @@
                                     </label>
                                     <input id="skip-rows" type="number" name="skip-rows" class="">
                                     <br>
+                                    <p>
+                                        <h4>
+                                            Давайте определимся с названиями листов в этой чертовой xlsx-шке. Раньше
+                                            договаривались что в названии
+                                            будет слово "ключ".
+                                            В том файле что мне попал последним этого не было. Названия листов теперь у
+                                            вас это либо
+                                            цифра, либо слово "команда" + цифра.
+                                            Бог с вами.
+                                            Но прошу, чтобы впредь в названии листов в которых находятся ключи было:
+                                    <p>либо слово "ключ" <span class="text-muted">("ключи команды 1", "2 ключ")</span>
+                                    </p>
+                                    <p> либо слово "комманда" + цифра <span class="text-muted">("команда1", "команда 100500")</span>
+                                    </p>
+                                    <p> либо просто цифра без каких-либо букв. <span class="text-muted">("1", "2", "100500")</span>
+                                    </p>
+                                    </h4>
+                                    </p>
                                 </div>
                                 <button class="btn btn-sm" type="submit">Загрузить</button>
                             </form>

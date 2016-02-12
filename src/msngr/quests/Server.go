@@ -23,6 +23,7 @@ import (
 	"time"
 	"msngr/utils"
 	w "msngr/web"
+	"errors"
 )
 
 var users = map[string]string{
@@ -36,7 +37,35 @@ const (
 	ALL_TEAM_MEMBERS = "all_team_members"
 )
 
-func GetKeysInfo(err_text string, qs *QuestStorage) map[string]interface{} {
+func ValidateKeys(kv [][]string) (map[string]string, error) {
+	teams := map[string][]string{}
+	result := map[string]string{}
+	for _, v := range kv {
+		start := v[0]
+		next := v[2]
+		team_name, tns_err := GetTeamNameFromKey(start)
+		tn_next, tnn_err := GetTeamNameFromKey(next)
+		if tnn_err != nil && tns_err != nil {
+			return result, errors.New(fmt.Sprintf("Не могу определить комманду из ключа %v или %v", start, next))
+		}
+		if team_name != tn_next && team_name != "" && tn_next != "" {
+			return result, errors.New(fmt.Sprintf("Для шага %v -> %v разные комманды.", start, next))
+		}
+
+		if tkeys, ok := teams[team_name]; ok {
+			teams[team_name] = append(tkeys, start)
+		}else {
+			teams[team_name] = []string{start}
+		}
+	}
+
+	for k, v := range teams {
+		result[k]= strings.Join(v, " > ")
+	}
+	return result, nil
+}
+
+func GetKeysErrorInfo(err_text string, qs *QuestStorage) map[string]interface{} {
 	var e error
 	result := map[string]interface{}{}
 
@@ -51,6 +80,15 @@ func GetKeysInfo(err_text string, qs *QuestStorage) map[string]interface{} {
 		}
 	}
 	result["keys"] = keys
+	return result
+}
+
+func GetKeysTeamsInfo(teams_info map[string]string, qs *QuestStorage) map[string]interface{} {
+	result := map[string]interface{}{}
+	keys, _ := qs.GetAllKeys()
+	result["keys"] = keys
+	result["is_team_info"] = true
+	result["team_info"] = teams_info
 	return result
 }
 
@@ -95,7 +133,7 @@ func Run(config c.QuestConfig, qs *QuestStorage, ntf *ntf.Notifier) {
 	})
 
 	r.Get("/new_keys", func(render render.Render) {
-		render.HTML(200, "quests/new_keys", GetKeysInfo("", qs))
+		render.HTML(200, "quests/new_keys", GetKeysErrorInfo("", qs))
 	})
 
 	r.Post("/add_key", func(user auth.User, render render.Render, request *http.Request) {
@@ -107,12 +145,12 @@ func Run(config c.QuestConfig, qs *QuestStorage, ntf *ntf.Notifier) {
 		if start_key != "" && description != "" {
 			key, err := qs.AddKey(start_key, description, next_key)
 			if key != nil &&err != nil {
-				render.HTML(200, "quests/new_keys", GetKeysInfo("Такой ключ уже существует. Используйте изменение ключа если хотите его изменить.", qs))
+				render.HTML(200, "quests/new_keys", GetKeysErrorInfo("Такой ключ уже существует. Используйте изменение ключа если хотите его изменить.", qs))
 				return
 			}
 		} else {
 
-			render.HTML(200, "quests/new_keys", GetKeysInfo("Невалидные значения ключа или ответа", qs))
+			render.HTML(200, "quests/new_keys", GetKeysErrorInfo("Невалидные значения ключа или ответа", qs))
 			return
 		}
 		render.Redirect("/new_keys")
@@ -147,37 +185,50 @@ func Run(config c.QuestConfig, qs *QuestStorage, ntf *ntf.Notifier) {
 	r.Post("/load/up", func(render render.Render, request *http.Request) {
 		file, header, err := request.FormFile("file")
 
-		log.Printf("Form file information: file: %+v \nheader:%v, %v\nerr:%v", file, header.Filename, header.Header, err)
+		log.Printf("QS: Form file information: file: %+v \nheader:%v, %v\nerr:%v", file, header.Filename, header.Header, err)
 
 		if err != nil {
-			render.HTML(200, "quests/new_keys", GetKeysInfo(fmt.Sprintf("Ошибка загрузки файлика: %v", err), qs))
+			render.HTML(200, "quests/new_keys", GetKeysErrorInfo(fmt.Sprintf("Ошибка загрузки файлика: %v", err), qs))
 			return
 		}
 		defer file.Close()
 
 		data, err := ioutil.ReadAll(file)
 		if err != nil {
-			render.HTML(200, "quests/new_keys", GetKeysInfo(fmt.Sprintf("Ошибка загрузки файлика: %v", err), qs))
+			render.HTML(200, "quests/new_keys", GetKeysErrorInfo(fmt.Sprintf("Ошибка загрузки файлика: %v", err), qs))
 			return
 		}
 
 		if xlsFileReg.MatchString(header.Filename) {
 			xlFile, err := xlsx.OpenBinary(data)
-			log.Printf("file: %+v, err: %v", xlFile, err)
+
 			if err != nil || xlFile == nil {
-				render.HTML(200, "quests/new_keys", GetKeysInfo(fmt.Sprintf("Ошибка обработки файлика: %v", err), qs))
+				render.HTML(200, "quests/new_keys", GetKeysErrorInfo(fmt.Sprintf("Ошибка обработки файлика: %v", err), qs))
 				return
 			}
-			skip_rows, _ := strconv.Atoi(request.FormValue("skip-rows"))
-			skip_cols, _ := strconv.Atoi(request.FormValue("skip-cols"))
-
-			parse_res, _ := w.ParseExportXlsx(xlFile, skip_rows, skip_cols)
+			skip_rows, errsr := strconv.Atoi(request.FormValue("skip-rows"))
+			skip_cols, errsc := strconv.Atoi(request.FormValue("skip-cols"))
+			if errsr != nil || errsc != nil {
+				render.HTML(200, "quests/new_keys", GetKeysErrorInfo("Не могу распознать количества столбцов и строк пропускаемых :(", qs))
+				return
+			}
+			log.Printf("QS: Will process file: %+v, err: %v \n with skipped rows: %v, cols: %v", xlFile, err, skip_rows, skip_cols)
+			parse_res, errp := w.ParseExportXlsx(xlFile, skip_rows, skip_cols)
+			if errp != nil {
+				render.HTML(200, "quests/new_keys", GetKeysErrorInfo("Ошибка в парсинге файла:(", qs))
+				return
+			}
+			res, val_err := ValidateKeys(parse_res)
+			if val_err != nil{
+				render.HTML(200, "quests/new_keys", GetKeysErrorInfo(val_err.Error(), qs))
+				return
+			}
 			for _, prel := range parse_res {
 				qs.AddKey(prel[0], prel[1], prel[2])
 			}
-
+			render.HTML(200, "quests/new_keys", GetKeysTeamsInfo(res, qs))
 		} else {
-			render.HTML(200, "quests/new_keys", GetKeysInfo("Файл имеет не то расширение :(", qs))
+			render.HTML(200, "quests/new_keys", GetKeysErrorInfo("Файл имеет не то расширение :(", qs))
 		}
 
 		render.Redirect("/new_keys")
