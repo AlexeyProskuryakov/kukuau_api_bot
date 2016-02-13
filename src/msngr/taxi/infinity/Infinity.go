@@ -593,12 +593,14 @@ func (p *infinity) Orders() []t.Order {
 	body, err := p._request("GetViewData", map[string]string{"params": "[{\"viewName\": \"Taxi.Orders\"}]"})
 	if err != nil {
 		log.Print("INF ORDRS error at connection to inf at orders")
+		p.ReLogin()
 		return []t.Order{}
 	}
 	temp := []Orders{}
 	err = json.Unmarshal(body, &temp)
 	if err != nil {
 		log.Printf("INF ORDRS error at unmarshal json from infinity %s", string(body))
+		p.ReLogin()
 		return []t.Order{}
 	}
 	result := []t.Order{}
