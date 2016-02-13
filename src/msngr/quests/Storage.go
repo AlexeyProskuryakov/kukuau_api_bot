@@ -21,9 +21,8 @@ type Message struct {
 	TimeStamp   int64 `bson:"time_stamp"`
 	NotAnswered int `bson:"not_answered"`
 	IsKey       bool `bson:"is_key"`
-	AnswerOf    string `bson:"answer_of,omitempty"`
-	AnsweredBy  string `bson:"answered_by,omitempty"`
 }
+
 type Step struct {
 	ID          bson.ObjectId `bson:"_id,omitempty"`
 	SID         string

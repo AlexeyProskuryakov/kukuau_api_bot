@@ -60,7 +60,7 @@ func ValidateKeys(kv [][]string) (map[string]string, error) {
 	}
 
 	for k, v := range teams {
-		result[k]= strings.Join(v, " > ")
+		result[k] = strings.Join(v, " > ")
 	}
 	return result, nil
 }
@@ -219,7 +219,7 @@ func Run(config c.QuestConfig, qs *QuestStorage, ntf *ntf.Notifier) {
 				return
 			}
 			res, val_err := ValidateKeys(parse_res)
-			if val_err != nil{
+			if val_err != nil {
 				render.HTML(200, "quests/new_keys", GetKeysErrorInfo(val_err.Error(), qs))
 				return
 			}
@@ -432,25 +432,33 @@ func Run(config c.QuestConfig, qs *QuestStorage, ntf *ntf.Notifier) {
 		})
 
 	})
+
 	r.Get("/manage", func(render render.Render, req *http.Request) {
 		render.HTML(200, "quests/manage", map[string]interface{}{})
 	})
+
 	r.Post("/delete_all", func(render render.Render, req *http.Request) {
 		//1. Steps or keys:
 		si, _ := qs.Steps.RemoveAll(bson.M{})
 		//2 Peoples
 		pi, _ := qs.Peoples.UpdateAll(bson.M{"is_passerby":false, "team_name":bson.M{"$exists":true}, "team_sid":bson.M{"$exists":true}}, bson.M{"$set":bson.M{"is_passerby":true}, "$unset":bson.M{"team_name":"", "team_sid":""}})
-		//3 teams
-		ti, _ := qs.Teams.RemoveAll(bson.M{})
+		//3 teams and messages
+		teams := []Team{}
+		qs.Teams.Find(bson.M{}).All(&teams)
+		tc := 0
+		for _, team := range teams {
+			qs.Messages.RemoveAll(bson.M{"$or":[]bson.M{bson.M{"from":team.Name}, bson.M{"to":team.Name}}})
+			qs.Teams.RemoveId(team.ID)
+			tc += 1
+		}
 		render.JSON(200, map[string]interface{}{
 			"ok":true,
 			"steps_removed":si.Removed,
 			//"steps_removed":0,
 			"peoples_updated":pi.Updated,
 			//"peoples_updated":0,
-			"teams_removed":ti.Removed,
+			"teams_removed":tc,
 			//"teams_removed":0,
-
 		})
 	})
 
