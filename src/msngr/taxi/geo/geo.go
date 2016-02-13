@@ -35,7 +35,7 @@ func StreetsSearchController(w http.ResponseWriter, r *http.Request, i t.Address
 				fmt.Fprintf(w, "%s", string(ans))
 				return
 			}
-			log.Printf("connected. All ok. Start querying for: %+v", query)
+			log.Printf("SSC connected. All ok. Start querying for: %+v", query)
 			rows := i.AddressesAutocomplete(query).Rows
 			if rows == nil {
 				return
