@@ -275,7 +275,6 @@ func Run(addr string, notifier *ntf.Notifier, db *d.MainDb, cs c.ConfigStorage, 
 
 	r.Get("/delete_key_all", func(render render.Render) {
 
-
 		log.Printf("CONSOLE WEB was delete all keys")
 		qs.Steps.RemoveAll(bson.M{})
 		render.Redirect("/new_keys")
@@ -358,6 +357,13 @@ func Run(addr string, notifier *ntf.Notifier, db *d.MainDb, cs c.ConfigStorage, 
 				//log.Printf("CONSOLE SM: will send [%v] to all %v peoples", text, len(peoples))
 				send_messages_to_peoples(peoples, ntf, text)
 				db.Messages.StoreMessage(from, to, text, u.GenId())
+
+			} else if to == "all_hash_writers" {
+				go func() {
+					peoples, _ := db.Users.GetBy(bson.M{"last_marker":bson.M{"$exists":true}})
+					send_messages_to_peoples(peoples, ntf, text)
+				}()
+
 			} else {
 				user, _ := db.Users.GetUserById(to)
 				if user != nil {

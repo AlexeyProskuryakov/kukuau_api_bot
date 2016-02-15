@@ -66,6 +66,7 @@ func (cmp ConsoleMessageProcessor) ProcessMessage(in *s.InPkg) *s.MessageResult 
 			log.Printf("CC: Here is key: %v", r_body)
 			step, err := cmp.quest_storage.GetKeyByStartKey(r_body)
 			if step != nil {
+				cmp.Users.SetUserState(in.From, "last_marker", r_body)
 				return &s.MessageResult{Type:"chat", Body:step.Description}
 			}
 			if step == nil && err == nil {

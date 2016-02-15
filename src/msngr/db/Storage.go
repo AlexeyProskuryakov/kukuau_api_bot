@@ -225,6 +225,9 @@ func (odbh *MainDb) ensureIndexes() {
 	users_collection.EnsureIndex(mgo.Index{
 		Key:        []string{"role"},
 	})
+	users_collection.EnsureIndex(mgo.Index{
+		Key:        []string{"last_marker"},
+	})
 
 	error_collection := odbh.Session.DB(odbh.DbName).C("errors")
 
@@ -473,7 +476,7 @@ func (uh userHandler) AddUserObject(uw UserWrapper) error {
 	return err
 }
 
-func (uh *userHandler) SetUserMultiplyState(user_id, state_key, state_value string) error {
+func (uh *userHandler) SetUserState(user_id, state_key, state_value string) error {
 	/**
 	Выставление сосотяние по определенному аспекту. к примеру для квестов. Или для еще какой хуйни, посему требуется ключ да значение.
 	Отличается от просто SetUserState тем что там выставляется состояние глобальное

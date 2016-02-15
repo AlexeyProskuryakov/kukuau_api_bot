@@ -251,7 +251,7 @@ func (sap ShopLogInMessageProcessor) ProcessMessage(in *s.InPkg) *s.MessageResul
 	var commands []s.OutCommand
 
 	if check {
-		sap.Users.SetUserMultiplyState(in.From, SHOP_STATE_KEY, d.LOGIN)
+		sap.Users.SetUserState(in.From, SHOP_STATE_KEY, d.LOGIN)
 		body = "Добро пожаловать в интернет магазин Desprice Markt!"
 		commands = AUTH_COMMANDS
 	}else {
@@ -263,7 +263,7 @@ func (sap ShopLogInMessageProcessor) ProcessMessage(in *s.InPkg) *s.MessageResul
 }
 
 func (lop ShopLogOutMessageProcessor) ProcessMessage(in *s.InPkg) *s.MessageResult {
-	err := lop.Users.SetUserMultiplyState(in.From, SHOP_STATE_KEY, d.LOGOUT)
+	err := lop.Users.SetUserState(in.From, SHOP_STATE_KEY, d.LOGOUT)
 	if err != nil && err != mgo.ErrNotFound {
 		return s.ErrorMessageResult(err, &NOT_AUTH_COMMANDS)
 	}

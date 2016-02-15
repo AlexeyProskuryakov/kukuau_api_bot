@@ -1,7 +1,7 @@
 <div id="left-bar" class="col-md-2">
     {{$with := .with}}
     {{$all := "all"}}
-
+    {{$all_tm := "all_hash_writers"}}
     <div class="row">
         <a class="bg-danger a-contact
         {{if eq_s $with $all}}
@@ -9,6 +9,14 @@
         {{end}}
         " href="/chat?with={{$all}}">Написать всем</a>
     </div>
+      <div class="row">
+        <a class="bg-warning a-contact
+        {{if eq_s $with $all_tm}}
+        c-active
+        {{end}}
+        " href="/chat?with={{$all_tm}}">Написать всем кто вводил маркеры</a>
+    </div>
+    <hr>
     <hr>
     <div class="row" id="contacts">
         {{range $contact := .contacts}}
