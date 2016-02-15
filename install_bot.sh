@@ -29,6 +29,7 @@ build(){
 
 install() {
     #forming config
+    mkdir logs
     echo "
 [program:${NAME}]
 command=${HOME}/build/start_bot

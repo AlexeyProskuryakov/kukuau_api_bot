@@ -518,6 +518,13 @@ func Run(addr string, notifier *ntf.Notifier, db *d.MainDb, cs c.ConfigStorage, 
 		log.Printf("CONSOLE WEB update user [%s]  '%s' +%s %s |%v| {%v}", u_id, u_name, u_phone, u_email, u_role, u_pwd)
 		render.Redirect("/users")
 	})
+
+	r.Get("/delete_chat/:between", func(params martini.Params, render render.Render, req *http.Request) {
+		between := params["between"]
+		db.Messages.Collection.RemoveAll(bson.M{"$or":[]bson.M{bson.M{"from":between}, bson.M{"to":between}}})
+		render.Redirect(fmt.Sprintf("/chat?with=%v", between))
+	})
+
 	m.Action(r.Handle)
 	m.RunOnAddr(addr)
 }
