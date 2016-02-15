@@ -462,10 +462,10 @@ func _form_order(fields []s.InField, ah AddressHandler) (*NewOrderInfo, error) {
 		if !ah.IsHere(from_key) && !ah.IsHere(to_key) {
 			return nil, &AddressNotHere{From:from_key, To:to_key}
 		}
-		del_id_street_, err := ah.GetExternalInfo(from_key, from_name)
-		dest_id_street_, err := ah.GetExternalInfo(to_key, to_name)
-		if err != nil {
-			return nil, err
+		del_id_street_, err_from := ah.GetExternalInfo(from_key, from_name)
+		dest_id_street_, err_to := ah.GetExternalInfo(to_key, to_name)
+		if err_from != nil  || err_to != nil{
+			return nil, errors.New("Не могу распознать внутренни улицу или система такси не отвечает")
 		}
 		deliv = *del_id_street_
 		dest = *dest_id_street_
@@ -569,7 +569,9 @@ func (nop *TaxiNewOrderProcessor) ProcessMessage(in *s.InPkg) *s.MessageResult {
 					Type: "chat",
 				}
 			}else {
-				return s.ErrorMessageResult(errors.New("Не могу определить адрес"), nop.context.Commands[CMDS_NOT_CREATED_ORDER])
+				return s.ErrorMessageResult(
+					errors.New(fmt.Sprintf("Не могу определить адрес, потому что... %v", err.Error())),
+					nop.context.Commands[CMDS_NOT_CREATED_ORDER])
 			}
 		}
 		new_order.Phone = *phone

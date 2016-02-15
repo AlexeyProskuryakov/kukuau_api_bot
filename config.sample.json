@@ -65,10 +65,10 @@
         }
       }
     },
-    "karavan": {
-      "name": "karavan",
-      "dict_url": "http://localhost:9191/taxi/karavan/streets",
-      "key": "Kuku karavan_taxi_key",
+    "caravan": {
+      "name": "caravan",
+      "dict_url": "http://localhost:9191/taxi/caravan/streets",
+      "key": "Kuku caravan_taxi_key",
       "information": {
         "phone": "123-45-67",
         "text": "Такси Караван! Самое лучшее такси в Бердске!"
@@ -89,12 +89,15 @@
           "id_service": 5000360106
         },
         "not_send_price": false
-      }
+      },
+      "markups":[
+        "5005378429"
+      ]
     },
     "kd": {
       "name": "kd",
       "dict_url": "http://localhost:9191/taxi/kd/streets",
-      "key": "Kuku karavan_taxi_key",
+      "key": "Kuku caravan_taxi_key",
       "information": {
         "phone": "8 (383) 292-92-92",
         "text": "Такси Каретный Двор! Самое лучшее такси в Новосибирске!"
