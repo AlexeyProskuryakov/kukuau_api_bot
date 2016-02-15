@@ -45,6 +45,19 @@ function add_new_contact(contact){
     }
 }
 
+function delete_chat(between){
+    $.ajax({
+        type:"POST",
+        url:"/delete_chat/"+between,
+        dataType:"json",
+        success: function(x){
+            $("#removed").text(x.removed);
+            $("#removed").show(500);
+
+        }
+    });
+}
+
 function update_contacts(){
     var exists = $(".contact");
     var ex_values = new Array();

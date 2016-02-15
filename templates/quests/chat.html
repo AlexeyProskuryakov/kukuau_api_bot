@@ -1,3 +1,4 @@
+
 <div id="left-bar" class="col-md-2">
     {{$with := .with}}
     {{$all := "all"}}
@@ -173,7 +174,16 @@
 
     </div>
     {{end}}
+<div class="row">
+            {{if .messages}}
+            <a href="/delete_chat/{{$with}}" class="btn btn-sm btn-danger">
+                Удалить переписку
+            </a>
+            <span class="bg-success bg-small" id="removed" style="display: none"></span>
+            {{end}}
 
 </div>
+</div>
+
 <script src="script.js"></script>
 

@@ -436,7 +436,11 @@ func Run(config c.QuestConfig, qs *QuestStorage, ntf *ntf.Notifier) {
 	r.Get("/manage", func(render render.Render, req *http.Request) {
 		render.HTML(200, "quests/manage", map[string]interface{}{})
 	})
-
+	r.Get("/delete_chat/:between", func(params martini.Params, render render.Render, req *http.Request) {
+		between := params["between"]
+		qs.Messages.RemoveAll(bson.M{"$or":[]bson.M{bson.M{"from":between}, bson.M{"to":between}}})
+		render.Redirect(fmt.Sprintf("/chat?with=%v", between))
+	})
 	r.Post("/delete_all", func(render render.Render, req *http.Request) {
 		//1. Steps or keys:
 		si, _ := qs.Steps.RemoveAll(bson.M{})
