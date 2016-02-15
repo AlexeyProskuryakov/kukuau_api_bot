@@ -1,4 +1,5 @@
 package structs
+
 import (
 	"fmt"
 	"time"
@@ -41,7 +42,6 @@ func (i_f InForm) GetText(fieldName string) (string, bool) {
 	return "", false
 }
 
-
 type InField struct {
 	Name string `json:"name"`
 	Type string `json:"type,omitempty"`
@@ -62,22 +62,29 @@ type InCommand struct {
 	Form   InForm `json:"form"`
 }
 
+type MessageError struct {
+	Code      int `json:"code"`
+	Type      string `json:"type"`
+	Condition string `json:"condition"`
+}
+
 type InMessage struct {
 	ID       string       `json:"id"`
 	Type     string       `json:"type"`
 	Thread   string       `json:"thread"`
 	Body     *string      `json:"body"`
 	Commands *[]InCommand `json:"commands"`
+	Error    *MessageError `json:"error"`
 }
 
 type InRequest struct {
 	ID    string `json:"id"`
 	Type  string `json:"type"`
 	Query struct {
-			  Title  string `json:"title,omtempty"`
-			  Action string `json:"action"`
-			  Form   InForm `json:"form"`
-		  } `json:"query"`
+		      Title  string `json:"title,omtempty"`
+		      Action string `json:"action"`
+		      Form   InForm `json:"form"`
+	      } `json:"query"`
 }
 
 type InUserData struct {
@@ -124,12 +131,12 @@ func (oc OutCommand) String() string {
 	return fmt.Sprintf("Command to send:\n\t%v[%v], position:%v, fixed? %v, repeated? %v, \n\t\tform: %+v;", oc.Title, oc.Action, oc.Position, oc.Fixed, oc.Repeated, oc.Form)
 }
 
-
 type OutMessage struct {
 	ID       string        `json:"id"`
 	Type     string        `json:"type,omitempty"`
 	Thread   string        `json:"thread,omitempty"`
 	Body     string        `json:"body"`
+	Error    *MessageError  `json:"error,omitempty"`
 	Commands *[]OutCommand `json:"commands,omitempty"`
 }
 
@@ -137,12 +144,12 @@ type OutRequest struct {
 	ID    string `json:"id,omitempty"`
 	Type  string `json:"type,omitempty"`
 	Query struct {
-			  Title  string       `json:"title,omitempty"`
-			  Action string       `json:"action"`
-			  Text   string       `json:"text,omitempty"`
-			  Form   *OutForm     `json:"form,omitempty"`
-			  Result []OutCommand `json:"result,omitempty"`
-		  } `json:"query"`
+		      Title  string       `json:"title,omitempty"`
+		      Action string       `json:"action"`
+		      Text   string       `json:"text,omitempty"`
+		      Form   *OutForm     `json:"form,omitempty"`
+		      Result []OutCommand `json:"result,omitempty"`
+	      } `json:"query"`
 }
 
 type OutPkg struct {
@@ -151,9 +158,11 @@ type OutPkg struct {
 	Request *OutRequest `json:"request,omitempty"`
 }
 
+func (o OutPkg) String() string {
+	return fmt.Sprintf("OUT{TO:%s, MESSAGE:%+v, REQUEST:%+v}", o.To, o.Message, o.Request)
+}
+
 type CheckFunc func() (string, bool)
-
-
 
 type MessageResult struct {
 	Commands   *[]OutCommand

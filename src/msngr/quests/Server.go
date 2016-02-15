@@ -22,6 +22,8 @@ import (
 	"encoding/json"
 	"time"
 	"msngr/utils"
+	w "msngr/web"
+	"errors"
 )
 
 var users = map[string]string{
@@ -35,40 +37,40 @@ const (
 	ALL_TEAM_MEMBERS = "all_team_members"
 )
 
-func ParseExportXlsx(xlf *xlsx.File, qs *QuestStorage, skip_row, skip_cell int) error {
-	for _, sheet := range xlf.Sheets {
-		if sheet != nil {
-			sh_name := strings.TrimSpace(strings.ToLower(sheet.Name))
-			if strings.HasSuffix(sh_name, "ключ") || strings.HasPrefix(sh_name, "ключ") {
+func ValidateKeys(kv [][]string) (map[string]string, error) {
+	teams := map[string][]string{}
+	result := map[string]string{}
+	for _, v := range kv {
+		start := v[0]
+		next := v[2]
+		team_name, tns_err := GetTeamNameFromKey(start)
+		tn_next, tnn_err := GetTeamNameFromKey(next)
+		if tnn_err != nil && tns_err != nil {
+			return result, errors.New(fmt.Sprintf("Не могу определить комманду из ключа %v или %v", start, next))
+		}
+		if team_name != tn_next && team_name != "" && tn_next != "" {
+			return result, errors.New(fmt.Sprintf("Для шага %v -> %v разные комманды.", start, next))
+		}
 
-				for ir, row := range sheet.Rows {
-					if row != nil && ir >= skip_row {
-						key := row.Cells[skip_cell].Value
-						description := row.Cells[skip_cell + 1].Value
-						next_key_raw := row.Cells[skip_cell + 2].Value
-						if key != "" && description != "" {
-							qs.AddKey(key, description, next_key_raw)
-						}
-
-					}
-				}
-			}
+		if tkeys, ok := teams[team_name]; ok {
+			teams[team_name] = append(tkeys, start)
+		}else {
+			teams[team_name] = []string{start}
 		}
 	}
-	return nil
+
+	for k, v := range teams {
+		result[k] = strings.Join(v, " > ")
+	}
+	return result, nil
 }
 
-var keys_cache []Key
-
-func get_keys_info(err_text string, qs *QuestStorage) map[string]interface{} {
-	var keys []Key
+func GetKeysErrorInfo(err_text string, qs *QuestStorage) map[string]interface{} {
 	var e error
 	result := map[string]interface{}{}
-	if err_text == "" {
-		keys, e = qs.GetAllKeys()
-	} else {
-		keys = keys_cache
-	}
+
+	keys, e := qs.GetAllKeys()
+
 	if e != nil || err_text != "" {
 		result["is_error"] = true
 		if e != nil {
@@ -81,6 +83,15 @@ func get_keys_info(err_text string, qs *QuestStorage) map[string]interface{} {
 	return result
 }
 
+func GetKeysTeamsInfo(teams_info map[string]string, qs *QuestStorage) map[string]interface{} {
+	result := map[string]interface{}{}
+	keys, _ := qs.GetAllKeys()
+	result["keys"] = keys
+	result["is_team_info"] = true
+	result["team_info"] = teams_info
+	return result
+}
+
 func send_messages_to_peoples(people []TeamMember, ntf *ntf.Notifier, text string) {
 	go func() {
 		for _, user := range people {
@@ -89,32 +100,9 @@ func send_messages_to_peoples(people []TeamMember, ntf *ntf.Notifier, text strin
 	}()
 }
 
-func nonJsonLogger() martini.Handler {
-	return func(res http.ResponseWriter, req *http.Request, c martini.Context, log *log.Logger) {
-		//log.Printf("METHDO: %v, HEADERS: %+v", req.Method, req.Header)
-		if req.Method == "GET" || req.Header.Get("Content-Type") != "application/json" {
-			start := time.Now()
-			addr := req.Header.Get("X-Real-IP")
-			if addr == "" {
-				addr = req.Header.Get("X-Forwarded-For")
-				if addr == "" {
-					addr = req.RemoteAddr
-				}
-			}
-
-			log.Printf("Started %s %s for %s", req.Method, req.URL.Path, addr)
-
-			rw := res.(martini.ResponseWriter)
-			c.Next()
-			log.Printf("Completed %v %s in %v\n", rw.Status(), http.StatusText(rw.Status()), time.Since(start))
-		}
-	}
-}
-
 func Run(config c.QuestConfig, qs *QuestStorage, ntf *ntf.Notifier) {
-
 	m := martini.New()
-	m.Use(nonJsonLogger())
+	m.Use(w.NonJsonLogger())
 	m.Use(martini.Recovery())
 	m.Use(render.Renderer(render.Options{
 		Layout: "quests/layout",
@@ -145,22 +133,27 @@ func Run(config c.QuestConfig, qs *QuestStorage, ntf *ntf.Notifier) {
 	})
 
 	r.Get("/new_keys", func(render render.Render) {
-		render.HTML(200, "quests/new_keys", get_keys_info("", qs))
+		render.HTML(200, "quests/new_keys", GetKeysErrorInfo("", qs))
 	})
 
 	r.Post("/add_key", func(user auth.User, render render.Render, request *http.Request) {
-		start_key := request.FormValue("start-key")
-		next_key := request.FormValue("next-key")
+		start_key := strings.TrimSpace(request.FormValue("start-key"))
+		next_key := strings.TrimSpace(request.FormValue("next-key"))
 		description := request.FormValue("description")
 
 		log.Printf("QUESTS WEB add key %s -> %s -> %s", start_key, description, next_key)
 		if start_key != "" && description != "" {
 			key, err := qs.AddKey(start_key, description, next_key)
-			log.Printf("QW is error? %v key: %v", err, key)
-			render.Redirect("/new_keys")
+			if key != nil &&err != nil {
+				render.HTML(200, "quests/new_keys", GetKeysErrorInfo("Такой ключ уже существует. Используйте изменение ключа если хотите его изменить.", qs))
+				return
+			}
 		} else {
-			render.HTML(200, "quests/new_keys", get_keys_info("Невалидные значения ключа или ответа", qs))
+
+			render.HTML(200, "quests/new_keys", GetKeysErrorInfo("Невалидные значения ключа или ответа", qs))
+			return
 		}
+		render.Redirect("/new_keys")
 	})
 
 	r.Post("/delete_key/:key", func(params martini.Params, render render.Render) {
@@ -173,8 +166,8 @@ func Run(config c.QuestConfig, qs *QuestStorage, ntf *ntf.Notifier) {
 	r.Post("/update_key/:key", func(params martini.Params, render render.Render, request *http.Request) {
 		key_id := params["key"]
 
-		start_key := request.FormValue("start-key")
-		next_key := request.FormValue("next-key")
+		start_key := strings.TrimSpace(request.FormValue("start-key"))
+		next_key := strings.TrimSpace(request.FormValue("next-key"))
 		description := request.FormValue("description")
 
 		err := qs.UpdateKey(key_id, start_key, description, next_key)
@@ -183,7 +176,7 @@ func Run(config c.QuestConfig, qs *QuestStorage, ntf *ntf.Notifier) {
 	})
 
 	r.Get("/delete_key_all", func(render render.Render) {
-		qs.Keys.RemoveAll(bson.M{})
+		qs.Steps.RemoveAll(bson.M{})
 		render.Redirect("/new_keys")
 	})
 
@@ -192,33 +185,50 @@ func Run(config c.QuestConfig, qs *QuestStorage, ntf *ntf.Notifier) {
 	r.Post("/load/up", func(render render.Render, request *http.Request) {
 		file, header, err := request.FormFile("file")
 
-		log.Printf("Form file information: file: %+v \nheader:%v, %v\nerr:%v", file, header.Filename, header.Header, err)
+		log.Printf("QS: Form file information: file: %+v \nheader:%v, %v\nerr:%v", file, header.Filename, header.Header, err)
 
 		if err != nil {
-			render.HTML(200, "quests/new_keys", get_keys_info(fmt.Sprintf("Ошибка загрузки файлика: %v", err), qs))
+			render.HTML(200, "quests/new_keys", GetKeysErrorInfo(fmt.Sprintf("Ошибка загрузки файлика: %v", err), qs))
 			return
 		}
 		defer file.Close()
 
 		data, err := ioutil.ReadAll(file)
 		if err != nil {
-			render.HTML(200, "quests/new_keys", get_keys_info(fmt.Sprintf("Ошибка загрузки файлика: %v", err), qs))
+			render.HTML(200, "quests/new_keys", GetKeysErrorInfo(fmt.Sprintf("Ошибка загрузки файлика: %v", err), qs))
 			return
 		}
 
 		if xlsFileReg.MatchString(header.Filename) {
 			xlFile, err := xlsx.OpenBinary(data)
-			log.Printf("file: %+v, err: %v", xlFile, err)
+
 			if err != nil || xlFile == nil {
-				render.HTML(200, "quests/new_keys", get_keys_info(fmt.Sprintf("Ошибка обработки файлика: %v", err), qs))
+				render.HTML(200, "quests/new_keys", GetKeysErrorInfo(fmt.Sprintf("Ошибка обработки файлика: %v", err), qs))
 				return
 			}
-			skip_rows, _ := strconv.Atoi(request.FormValue("skip-rows"))
-			skip_cols, _ := strconv.Atoi(request.FormValue("skip-cols"))
-
-			ParseExportXlsx(xlFile, qs, skip_rows, skip_cols)
+			skip_rows, errsr := strconv.Atoi(request.FormValue("skip-rows"))
+			skip_cols, errsc := strconv.Atoi(request.FormValue("skip-cols"))
+			if errsr != nil || errsc != nil {
+				render.HTML(200, "quests/new_keys", GetKeysErrorInfo("Не могу распознать количества столбцов и строк пропускаемых :(", qs))
+				return
+			}
+			log.Printf("QS: Will process file: %+v, err: %v \n with skipped rows: %v, cols: %v", xlFile, err, skip_rows, skip_cols)
+			parse_res, errp := w.ParseExportXlsx(xlFile, skip_rows, skip_cols)
+			if errp != nil {
+				render.HTML(200, "quests/new_keys", GetKeysErrorInfo("Ошибка в парсинге файла:(", qs))
+				return
+			}
+			res, val_err := ValidateKeys(parse_res)
+			if val_err != nil {
+				render.HTML(200, "quests/new_keys", GetKeysErrorInfo(val_err.Error(), qs))
+				return
+			}
+			for _, prel := range parse_res {
+				qs.AddKey(prel[0], prel[1], prel[2])
+			}
+			render.HTML(200, "quests/new_keys", GetKeysTeamsInfo(res, qs))
 		} else {
-			render.HTML(200, "quests/new_keys", get_keys_info("Файл имеет не то расширение :(", qs))
+			render.HTML(200, "quests/new_keys", GetKeysErrorInfo("Файл имеет не то расширение :(", qs))
 		}
 
 		render.Redirect("/new_keys")
@@ -250,7 +260,7 @@ func Run(config c.QuestConfig, qs *QuestStorage, ntf *ntf.Notifier) {
 				type TeamInfo struct {
 					FoundedKeys []string
 					Members     []TeamMember
-					AllKeys     []Key
+					AllKeys     []Step
 				}
 
 				collocutor.Name = team.Name
@@ -421,6 +431,39 @@ func Run(config c.QuestConfig, qs *QuestStorage, ntf *ntf.Notifier) {
 			"next_":time.Now().Unix(),
 		})
 
+	})
+
+	r.Get("/manage", func(render render.Render, req *http.Request) {
+		render.HTML(200, "quests/manage", map[string]interface{}{})
+	})
+	r.Get("/delete_chat/:between", func(params martini.Params, render render.Render, req *http.Request) {
+		between := params["between"]
+		qs.Messages.RemoveAll(bson.M{"$or":[]bson.M{bson.M{"from":between}, bson.M{"to":between}}})
+		render.Redirect(fmt.Sprintf("/chat?with=%v", between))
+	})
+	r.Post("/delete_all", func(render render.Render, req *http.Request) {
+		//1. Steps or keys:
+		si, _ := qs.Steps.RemoveAll(bson.M{})
+		//2 Peoples
+		pi, _ := qs.Peoples.UpdateAll(bson.M{"is_passerby":false, "team_name":bson.M{"$exists":true}, "team_sid":bson.M{"$exists":true}}, bson.M{"$set":bson.M{"is_passerby":true}, "$unset":bson.M{"team_name":"", "team_sid":""}})
+		//3 teams and messages
+		teams := []Team{}
+		qs.Teams.Find(bson.M{}).All(&teams)
+		tc := 0
+		for _, team := range teams {
+			qs.Messages.RemoveAll(bson.M{"$or":[]bson.M{bson.M{"from":team.Name}, bson.M{"to":team.Name}}})
+			qs.Teams.RemoveId(team.ID)
+			tc += 1
+		}
+		render.JSON(200, map[string]interface{}{
+			"ok":true,
+			"steps_removed":si.Removed,
+			//"steps_removed":0,
+			"peoples_updated":pi.Updated,
+			//"peoples_updated":0,
+			"teams_removed":tc,
+			//"teams_removed":0,
+		})
 	})
 
 	log.Printf("Will start web server for quest at: %v", config.WebPort)

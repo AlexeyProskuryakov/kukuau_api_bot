@@ -14,6 +14,7 @@ import (
 	"strings"
 	"errors"
 	"msngr/utils"
+	"msngr/db"
 )
 
 const (
@@ -60,14 +61,14 @@ func (qimp QuestInfoMessageProcessor) ProcessMessage(in *s.InPkg) *s.MessageResu
 	return &s.MessageResult{Body:qimp.Information, Type:"chat"}
 }
 
-type QuestMessagePersistProcessor struct {
+type QuestMessageProcessor struct {
 	c.ConfigStorage
 	Storage *QuestStorage
 }
 
-var key_reg = regexp.MustCompile("^\\#[\\w\\dа-яА-Я]+\\-?(?P<team>[\\w\\da-zа-я]+)?")
+var marker_reg = regexp.MustCompile("^\\#[\\w\\dа-яА-Я]+\\-?(?P<team>[\\w\\da-zа-я]+)?")
 
-func ValidateKeyBySequent(team *Team, key_info *Key, qs *QuestStorage) (string, error, bool) {
+func ValidateKeyBySequent(team *Team, key_info *Step, qs *QuestStorage) (string, error, bool) {
 	//return description or some text for user or "" if error
 	previous_key, _ := qs.GetKeyByNextKey(key_info.StartKey)
 	if previous_key != nil {
@@ -92,7 +93,7 @@ func ValidateKeyBySequent(team *Team, key_info *Key, qs *QuestStorage) (string, 
 }
 
 func GetTeamNameFromKey(key string) (string, error) {
-	found := key_reg.FindStringSubmatch(key)
+	found := marker_reg.FindStringSubmatch(key)
 	if len(found) == 2 {
 		return found[1], nil
 	} else {
@@ -100,16 +101,16 @@ func GetTeamNameFromKey(key string) (string, error) {
 	}
 }
 
-func (qmpp QuestMessagePersistProcessor) ProcessMessage(in *s.InPkg) *s.MessageResult {
+func (qmpp QuestMessageProcessor) ProcessMessage(in *s.InPkg) *s.MessageResult {
 	if in.Message.Body != nil {
 		pkey := in.Message.Body
 		key := *pkey
 		log.Printf("Q: Processing message %v from %v [%+v]", key, in.From, in.UserData)
 		key = strings.TrimSpace(key)
-		if key_reg.MatchString(key) {
+		if marker_reg.MatchString(key) {
 			key = strings.ToLower(key)
 			log.Printf("Q: Here is key: %v", key)
-			key_info, err := qmpp.Storage.GetKey(key)
+			key_info, err := qmpp.Storage.GetKeyByStartKey(key)
 			if err != nil {
 				log.Printf("QUEST key [%v] is ERR! %v", err)
 				return DB_ERROR_RESULT
@@ -152,10 +153,10 @@ func (qmpp QuestMessagePersistProcessor) ProcessMessage(in *s.InPkg) *s.MessageR
 					return BAD_KEY_RESULT
 				}
 			} else {
+				log.Printf("Q:Member is: %+v", member)
 				if prev_key == nil {
 					log.Printf("Q:will change team at member [%v]  %v -> %v", member.Name, member.TeamName, team_name)
-					qmpp.Storage.SetTeamForTeamMember(team, member)
-					member, err = qmpp.Storage.AddTeamMember(in.From, in.UserData.Name, in.UserData.Phone, team)
+					qmpp.Storage.AddTeamMember(in.From, in.UserData.Name, in.UserData.Phone, team)
 				} else if !member.Passersby && member.TeamName != "" && member.TeamSID != "" && member.TeamName != team_name {
 					return &s.MessageResult{Type:"chat", Body:WRONG_TEAM_MEMBER(team_name, member.TeamName)}
 				} else if member.Passersby && prev_key != nil {
@@ -209,7 +210,7 @@ func (qmpp QuestMessagePersistProcessor) ProcessMessage(in *s.InPkg) *s.MessageR
 	return &s.MessageResult{Type:"chat", Body:"Ваше сообщение доставлено. Скоро вам ответят.", }
 }
 
-func FormQuestBotContext(conf c.Configuration, qname string, cs c.ConfigStorage, qs *QuestStorage) *m.BotContext {
+func FormQuestBotContext(conf c.Configuration, qname string, cs c.ConfigStorage, qs *QuestStorage, db *db.MainDb) *m.BotContext {
 	result := m.BotContext{}
 	qconf, ok := conf.Quests[qname]
 	if !ok {
@@ -222,11 +223,11 @@ func FormQuestBotContext(conf c.Configuration, qname string, cs c.ConfigStorage,
 
 	result.Message_commands = map[string]s.MessageCommandProcessor{
 		"information":&QuestInfoMessageProcessor{Information:qconf.Info},
-		"":QuestMessagePersistProcessor{Storage:qs, ConfigStorage:cs},
+		"":QuestMessageProcessor{Storage:qs, ConfigStorage:cs},
 	}
 
 	result.CommandsStorage = cs
-	notifier := msngr.NewNotifier(conf.Main.CallbackAddr, qconf.Key)
+	notifier := msngr.NewNotifier(conf.Main.CallbackAddr, qconf.Key, db)
 	go Run(qconf, qs, notifier)
 
 	return &result

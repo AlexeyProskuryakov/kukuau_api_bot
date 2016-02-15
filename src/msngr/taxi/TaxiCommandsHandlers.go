@@ -54,6 +54,7 @@ func FormTaxiBotContext(im *ExternalApiMixin, db_handler *d.MainDb, tc c.TaxiCon
 		return detail, ok
 	}
 	context.Commands = GetCommands(tc.DictUrl)
+	//context.Commands = GetCommands(fmt.Sprintf("http://<host>:%v/taxi/%v/streets")tc.DictUrl)
 	context.Commands = EnsureAvailableCommands(context.Commands, tc.AvailableCommands)
 
 	context.Name = tc.Name

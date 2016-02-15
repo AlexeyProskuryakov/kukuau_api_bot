@@ -22,4 +22,8 @@ taxi_academ_bot.sh
 src/github.com/
 src/gopkg.in/
 
+src/9fans.net/
+src/golang.org
+src/start_demo_bot
+
 install.sh

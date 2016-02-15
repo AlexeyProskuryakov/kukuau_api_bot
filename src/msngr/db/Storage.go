@@ -51,9 +51,9 @@ type UserWrapper struct {
 	States     map[string]string `bson:"states"`
 	UserId     string `bson:"user_id"`
 	UserName   string `bson:"user_name"`
-	Password   string
-	Phone      string
-	Email      string
+	Password   string `bson:"password"`
+	Phone      string `bson:"phone"`
+	Email      string `bson:"email"`
 	LastUpdate time.Time `bson:"last_update"`
 	Role       string `bson:"role"`
 }
@@ -70,14 +70,17 @@ type ErrorWrapper struct {
 }
 
 type MessageWrapper struct {
-	ID          bson.ObjectId `bson:"_id,omitempty"`
-	SID         string
-	From        string `bson:"from"`
-	To          string `bson:"to"`
-	Body        string `bson:"body"`
-	TimeStamp   int64 `bson:"time_stamp"`
-	NotAnswered int `bson:"not_answered"`
-	AnsweredBy  string `bson:"answered_by"`
+	ID               bson.ObjectId `bson:"_id,omitempty"`
+	SID              string
+	From             string `bson:"from"`
+	Body             string `bson:"body"`
+	To               string `bson:"to"`
+	Time             time.Time `bson:"time"`
+	TimeStamp        int64 `bson:"time_stamp"`
+	NotAnswered      int `bson:"not_answered"`
+	MessageID        string `bson:"message_id"`
+	MessageStatus    string `bson:"message_status"`
+	MessageCondition string `bson:"message_condition"`
 }
 
 type messageHandler struct {
@@ -222,6 +225,9 @@ func (odbh *MainDb) ensureIndexes() {
 	users_collection.EnsureIndex(mgo.Index{
 		Key:        []string{"role"},
 	})
+	users_collection.EnsureIndex(mgo.Index{
+		Key:        []string{"last_marker"},
+	})
 
 	error_collection := odbh.Session.DB(odbh.DbName).C("errors")
 
@@ -250,6 +256,13 @@ func (odbh *MainDb) ensureIndexes() {
 	message_collection.EnsureIndex(mgo.Index{
 		Key:[]string{"time_stamp"},
 		Unique:false,
+	})
+	message_collection.EnsureIndex(mgo.Index{
+		Key:[]string{"message_id"},
+		Unique:true,
+	})
+	message_collection.EnsureIndex(mgo.Index{
+		Key:[]string{"message_condition"},
 	})
 
 	odbh.Users.Collection = users_collection
@@ -449,13 +462,21 @@ func (uh *userHandler) AddUser(user_id, name, phone, email string) error {
 	}
 	tmp, err := uh.GetUser(bson.M{"user_id": user_id, "phone": phone})
 	if tmp == nil {
-		err = uh.Collection.Insert(&UserWrapper{UserId: user_id, Phone: phone, LastUpdate: time.Now()})
+		err = uh.Collection.Insert(&UserWrapper{UserId: user_id, UserName:name, Email:email, Phone: phone, LastUpdate: time.Now()})
 		return err
 	}
-	return nil
+	return errors.New(fmt.Sprintf("Duplicate user! [%v] %v {%v}", user_id, name, phone))
 }
 
-func (uh *userHandler) SetUserMultiplyState(user_id, state_key, state_value string) error {
+func (uh userHandler) AddUserObject(uw UserWrapper) error {
+	if !uh.parent.Check() {
+		return errors.New("БД не доступна")
+	}
+	err := uh.Collection.Insert(uw)
+	return err
+}
+
+func (uh *userHandler) SetUserState(user_id, state_key, state_value string) error {
 	/**
 	Выставление сосотяние по определенному аспекту. к примеру для квестов. Или для еще какой хуйни, посему требуется ключ да значение.
 	Отличается от просто SetUserState тем что там выставляется состояние глобальное
@@ -533,7 +554,24 @@ func (uh *userHandler) GetUserById(user_id string) (*UserWrapper, error) {
 	}
 	return &result, err
 }
+func (uh *userHandler) UpdateUserData(user_id, name, phone, email string) error {
+	if !uh.parent.Check() {
+		return errors.New("БД не доступна")
+	}
+	to_upd := bson.M{}
+	if name != "" {
+		to_upd["user_name"] = name
+	}
+	if phone != "" {
+		to_upd["phone"] = phone
+	}
+	if email != "" {
+		to_upd["email"] = email
+	}
 
+	err := uh.Collection.Update(bson.M{"user_id":user_id}, bson.M{"$set":to_upd})
+	return err
+}
 func (uh *userHandler) Count() int {
 	r, _ := uh.Collection.Count()
 	return r
@@ -544,7 +582,7 @@ func (uh *userHandler) GetBy(req bson.M) ([]UserWrapper, error) {
 		return nil, errors.New("БД не доступна")
 	}
 	result := []UserWrapper{}
-	err := uh.Collection.Find(req).Sort("last_update").One(&result)
+	err := uh.Collection.Find(req).Sort("last_update").All(&result)
 	if err != nil && err != mgo.ErrNotFound {
 		return nil, err
 	}else if err == mgo.ErrNotFound {
@@ -573,14 +611,20 @@ func (eh *errorHandler) GetBy(req bson.M) (*[]ErrorWrapper, error) {
 	return &result, err
 }
 
-//MESSAGES
-func (mh *messageHandler) StoreMessage(from, to, body string) error {
+func (mh *messageHandler) StoreMessage(from, to, body string, message_id string) error {
+	//log.Printf("DB: sm :%v -> %v [%v] {%v}", from, to, body, message_id)
 	if !mh.parent.Check() {
 		return errors.New("БД не доступна")
 	}
-	result := MessageWrapper{From:from, To: to, Body:body, TimeStamp:time.Now().Unix(), NotAnswered:1}
-	err := mh.Collection.Insert(&result)
-	return err
+	found, err := mh.GetMessageByMessageId(message_id)
+	result := MessageWrapper{From:from, To:to, Body:body, TimeStamp:time.Now().Unix(), Time:time.Now(), NotAnswered:1, MessageID:message_id, MessageStatus:"sended"}
+	if found == nil&&err == nil {
+		err := mh.Collection.Insert(&result)
+		log.Printf("DB: sm OK! %v", result)
+		return err
+	}
+	//log.Printf("DB: sm DUPLICATE ;(")
+	return errors.New(fmt.Sprintf("I have duplicate!%+v", found))
 }
 
 func (mh *messageHandler) SetMessagesAnswered(from, by string) error {
@@ -597,8 +641,22 @@ func (mh *messageHandler) SetMessagesAnswered(from, by string) error {
 func (mh *messageHandler) GetMessages(query bson.M) ([]MessageWrapper, error) {
 	result := []MessageWrapper{}
 	if !mh.parent.Check() {
-		return result,errors.New("БД не доступна")
+		return result, errors.New("БД не доступна")
 	}
 	err := mh.Collection.Find(query).Sort("-time_stamp").All(&result)
 	return result, err
+}
+
+func (mh *messageHandler) GetMessageByMessageId(message_id string) (*MessageWrapper, error) {
+	result := MessageWrapper{}
+	err := mh.Collection.Find(bson.M{"message_id":message_id}).One(&result)
+	if err == mgo.ErrNotFound {
+		return nil, nil
+	}else if err != nil {
+		return nil, err
+	}
+	return &result, nil
+}
+func (mh *messageHandler) UpdateMessageStatus(message_id, status, condition string) error {
+	return mh.Collection.Update(bson.M{"message_id":message_id}, bson.M{"$set":bson.M{"message_status":status, "message_condition":condition}})
 }

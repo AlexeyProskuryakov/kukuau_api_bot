@@ -7,16 +7,19 @@ import (
 	"log"
 	"net/http"
 	"errors"
+	"strings"
+
 	s "msngr/structs"
 	u "msngr/utils"
-	//tm "msngr/text_messages"
-	"strings"
 	"msngr/configuration"
+	db "msngr/db"
+
 )
 
 var DEBUG bool
 var TEST bool
 //var textProvider = tm.NewTextMessageSupplier()
+
 
 type BotContext struct {
 	Name             string
@@ -41,7 +44,7 @@ func (bc BotContext) String() string {
 	return fmt.Sprintf("\nBot context for %v\nChecked?: %v (%v)\nRequestCommands: %+v\nMessageCommands: %+v\nAvailable commands: %+v\nSettings: %+v\n", bc.Name, ok, check, bc.Request_commands, bc.Message_commands, available_cmds, bc.Settings)
 }
 
-func getInPackage(r *http.Request) (*s.InPkg, error) {
+func FormInPackage(r *http.Request) (*s.InPkg, error) {
 	var in s.InPkg
 	if !strings.Contains(r.Header.Get("Content-Type"), "application/json") {
 		return nil, errors.New("No header `Content-Type` or his value is not `application/json`")
@@ -53,6 +56,7 @@ func getInPackage(r *http.Request) (*s.InPkg, error) {
 	if DEBUG {
 		log.Printf("BOT: RECEIVED: \n%s\n", string(body))
 	}
+
 	err = json.Unmarshal(body, &in)
 	if err != nil {
 		log.Printf("BOT: error at unmarshal: %q \n %s", err, body)
@@ -60,7 +64,7 @@ func getInPackage(r *http.Request) (*s.InPkg, error) {
 	return &in, err
 }
 
-func setOutPackage(w http.ResponseWriter, out *s.OutPkg, isError bool, isDeferred bool) {
+func PutOutPackage(w http.ResponseWriter, out *s.OutPkg, isError bool, isDeferred bool) {
 	jsoned_out, err := json.Marshal(out)
 	if err != nil {
 		log.Println("set out package: ", jsoned_out, err)
@@ -128,12 +132,135 @@ func process_message(commandProcessor s.MessageCommandProcessor, buff *s.OutPkg,
 	return buff, messageResult.IsDeferred, messageResult.Error
 }
 
+const (
+	ERR_BAD_FORMAT = "bad-format"
+
+	ERR_BAD_REQUEST = "bad-request"
+
+	ERR_CONFLICT = "conflict"
+
+	ERR_FEATURE_NOT_IMPLEMENTED = "feature-not-implemented"
+
+	ERR_FORBIDDEN = "forbidden"
+	ERR_GONE = "gone"
+	ERR_INTERNAL_SERVER_ERROR = "internal-server-error"
+
+	ERR_ITEM_NOT_FOUND = "item-not-found"
+
+	ERR_JID_MALFORMED = "jid-malformed"
+
+	ERR_NOT_ACCEPTABLE = "not-acceptable"
+
+	ERR_NOT_ALLOWED = "not-allowed"
+
+	ERR_NOT_AUTHORIZED = "not-authorized"
+
+	ERR_PAYMENT_REQUIRED = "payment-required"
+
+	ERR_RECIPIENT_UNAVAILABLE = "recipient-unavailabled"
+
+	ERR_REDIRECT = "redirect"
+
+	ERR_REGISTRATION_REQUIRED = "registration-required"
+
+	ERR_REMOTE_SERVER_NOT_FOUND = "remote-server-not-found"
+
+	ERR_REMOTE_SERVER_TIMEOUT = "remote-server-timeout"
+
+	ERR_RESOURCE_CONSTRAINT = "resource-constraint"
+
+	ERR_SERVICE_UNAVAILABLE = "service-unavailable"
+
+	ERR_SUBSCRIPTION_REQUIRED = "subscription-required"
+
+	ERR_UNEXPECTED_REQUEST = "unexpected-request"
+
+	ERR_UNEXPECTED_REQUEST_CANCEL = "unexpected-request_cancel"
+)
+
+func GetErrorName(code, condition string) {
+
+}
+
+var ERRORS_MAP = map[string]func() (int, string){
+	ERR_BAD_FORMAT: func() (int, string) {
+		return 406, "modify"
+	},
+	ERR_BAD_REQUEST: func() (int, string) {
+		return 400, "modify"
+	},
+	ERR_CONFLICT: func() (int, string) {
+		return 409, "cancel_conflict"
+	},
+	ERR_FEATURE_NOT_IMPLEMENTED: func() (int, string) {
+		return 501, "cancel"
+	},
+	ERR_FORBIDDEN: func() (int, string) {
+		return 403, "auth_forbidden"
+	},
+	ERR_GONE: func() (int, string) {
+		return 302, "modify_gone"
+	},
+	ERR_INTERNAL_SERVER_ERROR: func() (int, string) {
+		return 500, "wait"
+	},
+	ERR_ITEM_NOT_FOUND: func() (int, string) {
+		return 404, "cancel"
+	},
+
+	ERR_JID_MALFORMED: func() (int, string) {
+		return 400, "modify"
+	},
+	ERR_NOT_ACCEPTABLE: func() (int, string) {
+		return 406, "modify"
+	},
+	ERR_NOT_ALLOWED: func() (int, string) {
+		return 405, "cancel"
+	},
+	ERR_NOT_AUTHORIZED: func() (int, string) {
+		return 401, "auth"
+	},
+	ERR_PAYMENT_REQUIRED: func() (int, string) {
+		return 402, "auth"
+	},
+	ERR_RECIPIENT_UNAVAILABLE: func() (int, string) {
+		return 404, "wait"
+	},
+	ERR_REDIRECT: func() (int, string) {
+		return 302, "modify_redirect"
+	},
+	ERR_REGISTRATION_REQUIRED: func() (int, string) {
+		return 407, "auth"
+	},
+	ERR_REMOTE_SERVER_NOT_FOUND: func() (int, string) {
+		return 404, "cancel"
+	},
+	ERR_REMOTE_SERVER_TIMEOUT: func() (int, string) {
+		return 504, "wait"
+	},
+	ERR_RESOURCE_CONSTRAINT: func() (int, string) {
+		return 500, "wait"
+	},
+	ERR_SERVICE_UNAVAILABLE: func() (int, string) {
+		return 503, "cancel"
+	},
+	ERR_SUBSCRIPTION_REQUIRED: func() (int, string) {
+		return 407, "auth"
+	},
+	ERR_UNEXPECTED_REQUEST: func() (int, string) {
+		return 400, "wait"
+	},
+	ERR_UNEXPECTED_REQUEST_CANCEL:func() (int, string) {
+		return 401, "cancel"
+	},
+}
+
 func process_message_pkg(buff *s.OutPkg, in *s.InPkg, context *BotContext) (*s.OutPkg, bool, error) {
 	var err error
 	var isDeferred bool
 
 	if in.Message.Type == "error" {
-		log.Printf("error because type of message is error:\n %+v", in.Message)
+		log.Printf("error because type of message is error:\n %+v", in.Message.Error)
 		return buff, false, errors.New(fmt.Sprintf("Error because type of message id: %+v is error", in.Message.ID))
 	}
 
@@ -157,7 +284,7 @@ func process_message_pkg(buff *s.OutPkg, in *s.InPkg, context *BotContext) (*s.O
 
 type controllerHandler func(w http.ResponseWriter, r *http.Request)
 
-func FormBotController(context *BotContext) controllerHandler {
+func FormBotController(context *BotContext, db *db.MainDb) controllerHandler {
 
 	return func(w http.ResponseWriter, r *http.Request) {
 		if r.Method != "POST" {
@@ -174,18 +301,29 @@ func FormBotController(context *BotContext) controllerHandler {
 		if check != nil {
 			if detail, ok := check(); !ok {
 				out.Message = &s.OutMessage{Type: "error", Thread: "0", ID: u.GenId(), Body: fmt.Sprintln(detail)}
-				setOutPackage(w, out, true, false)
+				PutOutPackage(w, out, true, false)
 				return
 			}
 		}
 
-		in, global_error = getInPackage(r)
+		in, global_error = FormInPackage(r)
 		if in != nil {
 			out.To = in.From
 			if in.Request != nil {
 				out, request_error = process_request_pkg(out, in, context)
 			}
 			if in.Message != nil {
+				if in.Message.Error != nil {
+					if val, ok := ERRORS_MAP[in.Message.Error.Condition]; ok {
+						_, err_type := val()
+						log.Printf("BOT: Here is error %v %v. For message id %v", in.Message.Error.Code, err_type, in.Message.ID)
+						db.Messages.UpdateMessageStatus(in.Message.ID, err_type, in.Message.Error.Condition)
+					} else {
+						log.Printf("BOT: Error not in my errors map %v", in.Message.Error.Condition)
+						db.Messages.UpdateMessageStatus(in.Message.ID, in.Message.Error.Type, in.Message.Error.Condition)
+					}
+					return
+				}
 				if in.Message.Commands == nil {
 					if non_commands_processor, ok := context.Message_commands[""]; ok {
 						out, isDeferred, message_error = process_message(non_commands_processor, out, in)
@@ -195,7 +333,7 @@ func FormBotController(context *BotContext) controllerHandler {
 						//setOutPackage(w, out, false, false)
 						//return
 					}
-				} else{
+				} else {
 					out, isDeferred, message_error = process_message_pkg(out, in, context)
 				}
 			}
@@ -223,7 +361,8 @@ func FormBotController(context *BotContext) controllerHandler {
 			isError = true
 		}
 
-		setOutPackage(w, out, isError, isDeferred)
+		PutOutPackage(w, out, isError, isDeferred)
 	}
 
 }
+

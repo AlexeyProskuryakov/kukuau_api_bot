@@ -7,7 +7,7 @@ import (
 	"log"
 	"os"
 
-//u "msngr/utils"
+	u "msngr/utils"
 	"path"
 )
 
@@ -134,6 +134,50 @@ type Configuration struct {
 			WorkUrl     string `json:"work_url"`
 		} `json:"ru_post"`
 }
+func (conf *Configuration) SetLogFile(fn string) {
+	f, err := os.OpenFile(fn, os.O_RDWR | os.O_CREATE | os.O_TRUNC, 0666)
+	if err != nil {
+		log.Fatalf("error opening log file: %v", err)
+	}
+	log.SetOutput(f)
+	log.Println("Logging file is setted to %v", fn)
+}
+
+func UnmarshallConfig(cdata []byte)Configuration{
+	log.Println("config data: ", string(cdata))
+	conf := Configuration{}
+	err := json.Unmarshal(cdata, &conf)
+	if err != nil {
+		log.Printf("error decoding configuration file", err)
+		os.Exit(-1)
+	}
+
+	if conf.Main.LoggingFile != "" {
+		f, err := os.OpenFile(conf.Main.LoggingFile, os.O_RDWR | os.O_CREATE | os.O_TRUNC, 0666)
+		if err != nil {
+			log.Fatalf("error opening log file: %v", err)
+		}
+		log.SetOutput(f)
+		log.Println("Logging file is setted to %v", conf.Main.LoggingFile)
+	}
+	return conf
+}
+
+func ReadConfigInRecursive() Configuration{
+	log.Printf("Path sep: %+v", os.PathSeparator)
+	fn := u.FoundFile("config.json")
+	if fn == nil {
+		log.Printf("can not find config.json file :(")
+		os.Exit(-1)
+	}
+	cdata, err := ioutil.ReadFile(*fn)
+	if err != nil {
+		log.Printf("error reading config %v", err)
+		os.Exit(-1)
+	}
+	return UnmarshallConfig(cdata)
+}
+
 
 func ReadConfig() Configuration {
 	//log.Printf("Path sep: %s", RuneToAscii(os.PathSeparator))
@@ -150,26 +194,8 @@ func ReadConfig() Configuration {
 	fn := path.Join(dir, "config.json")
 	cdata, err := ioutil.ReadFile(fn)
 	if err != nil {
-		log.Printf("error reading config")
+		log.Printf("error reading config %v", err)
 		os.Exit(-1)
 	}
-	log.Println("config data: ", string(cdata))
-	conf := Configuration{}
-	err = json.Unmarshal(cdata, &conf)
-	if err != nil {
-		log.Printf("error decoding configuration file", err)
-		os.Exit(-1)
-	}
-
-	if conf.Main.LoggingFile != "" {
-		f, err := os.OpenFile(conf.Main.LoggingFile, os.O_RDWR | os.O_CREATE | os.O_TRUNC, 0666)
-		if err != nil {
-			log.Fatalf("error opening log file: %v", err)
-		}
-
-		log.SetOutput(f)
-		log.Println("Logging file is setted here...")
-	}
-
-	return conf
+	return UnmarshallConfig(cdata)
 }

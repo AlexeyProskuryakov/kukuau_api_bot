@@ -4,4 +4,4 @@ bzip2 -cd | tar x
 java -jar photon-0.2.5.jar -nominatim-import -host localhost -port 5432 -database nominatim -user postgres -password 123 -languages ru
 
 java -jar photon-0.2.5.jar -host localhost -port 5432 -database nominatim -user postgres -password 123 -languages ru
-http://localhost:9200/autocomplete/_analyze?analyzer=autocomplete_analyzer&text=Ленина&pretty=true
+#http://localhost:9200/autocomplete/_analyze?analyzer=autocomplete_analyzer&text=Ленина&pretty=true

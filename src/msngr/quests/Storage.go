@@ -7,6 +7,8 @@ import (
 
 	"time"
 	"sort"
+	"errors"
+	"log"
 )
 
 type Message struct {
@@ -19,10 +21,9 @@ type Message struct {
 	TimeStamp   int64 `bson:"time_stamp"`
 	NotAnswered int `bson:"not_answered"`
 	IsKey       bool `bson:"is_key"`
-	AnswerOf    string `bson:"answer_of,omitempty"`
-	AnsweredBy  string `bson:"answered_by,omitempty"`
 }
-type Key struct {
+
+type Step struct {
 	ID          bson.ObjectId `bson:"_id,omitempty"`
 	SID         string
 	Founded     bool `bson:"is_found"`
@@ -57,14 +58,14 @@ type Team struct {
 
 type QuestStorage struct {
 	db.DbHelper
-	Keys     *mgo.Collection
+	Steps    *mgo.Collection
 	Messages *mgo.Collection
 	Teams    *mgo.Collection
 	Peoples  *mgo.Collection
 }
 
 func (qks *QuestStorage) ensureIndexes() {
-	collection := qks.Session.DB(qks.DbName).C("quest_keys")
+	collection := qks.Session.DB(qks.DbName).C("quest_steps")
 	collection.EnsureIndex(mgo.Index{
 		Key:        []string{"start_key"},
 		Unique:    true,
@@ -75,7 +76,7 @@ func (qks *QuestStorage) ensureIndexes() {
 	collection.EnsureIndex(mgo.Index{
 		Key:        []string{"next_key"},
 	})
-	qks.Keys = collection
+	qks.Steps = collection
 
 	message_collection := qks.Session.DB(qks.DbName).C("quest_messages")
 	message_collection.EnsureIndex(mgo.Index{
@@ -132,36 +133,36 @@ func NewQuestStorage(conn, dbname string) *QuestStorage {
 }
 
 //KEYS
-func (qks *QuestStorage) AddKey(start_key, description, next_key string) (*Key, error) {
-	kw := Key{}
-	err := qks.Keys.Find(bson.M{"start_key":start_key}).One(&kw)
+func (qks *QuestStorage) AddKey(start_key, description, next_key string) (*Step, error) {
+	kw := Step{}
+	err := qks.Steps.Find(bson.M{"start_key":start_key}).One(&kw)
 	if err == mgo.ErrNotFound {
-		kw = Key{StartKey:start_key, Description:description, NextKey:next_key}
+		kw = Step{StartKey:start_key, Description:description, NextKey:next_key}
 		if team_name, err := GetTeamNameFromKey(start_key); team_name != "" && err == nil {
 			kw.ForTeam = team_name
 		}
-		err = qks.Keys.Insert(kw)
+		err = qks.Steps.Insert(kw)
 		return &kw, err
 	} else if err != nil {
 		return nil, err
 	} else {
-		return &kw, nil
+		return &kw, errors.New("Key already exist!")
 	}
 }
 
 func (qks *QuestStorage) DeleteKey(key_id string) error {
-	err := qks.Keys.RemoveId(bson.ObjectIdHex(key_id))
+	err := qks.Steps.RemoveId(bson.ObjectIdHex(key_id))
 	return err
 }
 
 func (qks *QuestStorage) UpdateKey(key_id, start_key, description, next_key string) error {
-	err := qks.Keys.UpdateId(bson.ObjectIdHex(key_id), bson.M{"$set":bson.M{"description":description, "start_key":start_key, "next_key":next_key}})
+	err := qks.Steps.UpdateId(bson.ObjectIdHex(key_id), bson.M{"$set":bson.M{"description":description, "start_key":start_key, "next_key":next_key}})
 	return err
 }
 
-func (qs *QuestStorage) GetKeys(query bson.M) ([]Key, error) {
-	result := []Key{}
-	err := qs.Keys.Find(query).All(&result)
+func (qs *QuestStorage) GetKeys(query bson.M) ([]Step, error) {
+	result := []Step{}
+	err := qs.Steps.Find(query).All(&result)
 	if err != nil && err != mgo.ErrNotFound {
 		return result, err
 	}
@@ -171,19 +172,23 @@ func (qs *QuestStorage) GetKeys(query bson.M) ([]Key, error) {
 	return result, nil
 }
 
-func (qs *QuestStorage) GetKey(key string) (*Key, error) {
-	result := Key{}
-	err := qs.Keys.Find(bson.M{"start_key":key}).One(&result)
+func (qs *QuestStorage) GetKeyByStartKey(start_key string) (*Step, error) {
+	result := Step{}
+	err := qs.Steps.Find(bson.M{"start_key":start_key}).One(&result)
+
 	if err != nil && err != mgo.ErrNotFound {
+		log.Printf("QS: Error %v", err)
 		return nil, err
 	} else if err == mgo.ErrNotFound {
+		log.Printf("QS: Not found key")
 		return nil, nil
 	}
+
 	return &result, nil
 }
 
 func (qs *QuestStorage) SetKeyFounded(key, by string) error {
-	err := qs.Keys.Update(bson.M{"start_key":key}, bson.M{"$set":bson.M{"found_by":by, "is_found":true}})
+	err := qs.Steps.Update(bson.M{"start_key":key}, bson.M{"$set":bson.M{"found_by":by, "is_found":true}})
 	if err != nil {
 		return err
 	}
@@ -191,9 +196,9 @@ func (qs *QuestStorage) SetKeyFounded(key, by string) error {
 	return err
 }
 
-func (qs *QuestStorage) GetKeyByNextKey(next_key string) (*Key, error) {
-	result := Key{}
-	err := qs.Keys.Find(bson.M{"next_key":next_key}).One(&result)
+func (qs *QuestStorage) GetKeyByNextKey(next_key string) (*Step, error) {
+	result := Step{}
+	err := qs.Steps.Find(bson.M{"next_key":next_key}).One(&result)
 	if err != nil && err != mgo.ErrNotFound {
 		return nil, err
 	} else if err == mgo.ErrNotFound {
@@ -202,9 +207,9 @@ func (qs *QuestStorage) GetKeyByNextKey(next_key string) (*Key, error) {
 	return &result, nil
 }
 
-func (qks *QuestStorage) GetAllKeys() ([]Key, error) {
-	result := []Key{}
-	err := qks.Keys.Find(bson.M{}).All(&result)
+func (qks *QuestStorage) GetAllKeys() ([]Step, error) {
+	result := []Step{}
+	err := qks.Steps.Find(bson.M{}).All(&result)
 	for i, key := range result {
 		result[i].SID = key.ID.Hex()
 	}
@@ -253,9 +258,6 @@ func (qs *QuestStorage) AddTeamMember(user_id, m_name, phone string, team *Team)
 		err = qs.Peoples.UpdateId(tm.ID, bson.M{"$set":bson.M{"is_passerby":false, "team_name":team.Name, "team_sid":team.SID}})
 	}
 	return &tm, err
-}
-func (qs *QuestStorage) SetTeamForTeamMember(new_tn *Team, user_id *TeamMember) error {
-	return qs.Peoples.Update(bson.M{"user_id":user_id.UserId}, bson.M{"$set":bson.M{"team_name":new_tn.Name, "team_sid":new_tn.SID}})
 }
 func (qs *QuestStorage) GetMembersOfTeam(team_name string) ([]TeamMember, error) {
 	res := []TeamMember{}
@@ -350,6 +352,14 @@ func (qs *QuestStorage) SetMessagesAnswered(from, by string) error {
 
 func (qs *QuestStorage) GetMessages(query bson.M) ([]Message, error) {
 	messages := []Message{}
+	query["is_key"] = false
+	err := qs.Messages.Find(query).Sort("-time").Limit(25).All(&messages)
+	return messages, err
+}
+
+func (qs *QuestStorage) GetMessagesKeys(query bson.M) ([]Message, error) {
+	messages := []Message{}
+	query["is_key"] = true
 	err := qs.Messages.Find(query).Sort("-time").Limit(25).All(&messages)
 	return messages, err
 }
@@ -362,18 +372,12 @@ type Contact struct {
 	Phone            string
 	IsPassersby      bool
 	IsTeam           bool
+	Time             int64 `bson:"time"`
 }
 
 //CONTACTS
 type ByContactsTeam []Contact
 
-// We implement `sort.Interface` - `Len`, `Less`, and
-// `Swap` - on our type so we can use the `sort` package's
-// generic `Sort` function. `Len` and `Swap`
-// will usually be similar across types and `Less` will
-// hold the actual custom sorting logic. In our case we
-// want to sort in order of increasing string length, so
-// we use `len(s[i])` and `len(s[j])` here.
 func (s ByContactsTeam) Len() int {
 	return len(s)
 }
@@ -381,8 +385,8 @@ func (s ByContactsTeam) Swap(i, j int) {
 	s[i], s[j] = s[j], s[i]
 }
 func (s ByContactsTeam) Less(i, j int) bool {
-	if s[i].IsTeam && !s[j].IsTeam {
-		return true
+	if (s[i].IsTeam && s[j].IsTeam) || (!s[i].IsTeam && !s[j].IsTeam) {
+		return s[i].Time > s[j].Time
 	}
 	return false
 }
@@ -390,7 +394,8 @@ func (s ByContactsTeam) Less(i, j int) bool {
 func (qs *QuestStorage) GetContacts(teams []Team) ([]Contact, error) {
 	resp := []Contact{}
 	err := qs.Messages.Pipe([]bson.M{
-		bson.M{"$group": bson.M{"_id":"$from", "not_answered_count":bson.M{"$sum":"$not_answered"}, "name":bson.M{"$first":"$from"}}}}).All(&resp)
+		bson.M{"$match":bson.M{"is_key":false}},
+		bson.M{"$group": bson.M{"_id":"$from", "not_answered_count":bson.M{"$sum":"$not_answered"}, "name":bson.M{"$first":"$from"}, "time":bson.M{"$max":"$time_stamp"}}}}).All(&resp)
 	if err != nil {
 		return resp, err
 	}
@@ -424,7 +429,7 @@ func (qs *QuestStorage) GetContacts(teams []Team) ([]Contact, error) {
 func (qs QuestStorage) GetContactsAfter(after int64) ([]Contact, error) {
 	resp := []Contact{}
 	err := qs.Messages.Pipe([]bson.M{
-		bson.M{"$match":bson.M{"time_stamp":bson.M{"$gt":after}, "from":bson.M{"$ne":ME}, "to":bson.M{"$ne":ALL}}},
+		bson.M{"$match":bson.M{"time_stamp":bson.M{"$gt":after}, "from":bson.M{"$ne":ME}, "to":bson.M{"$ne":ALL}, "is_key":false}},
 		bson.M{"$group": bson.M{"_id":"$from", "not_answered_count":bson.M{"$sum":"$not_answered"}, "name":bson.M{"$first":"$from"}}}}).All(&resp)
 	if err != nil {
 		return resp, err

@@ -11,7 +11,6 @@ import (
 	"time"
 	t "msngr/taxi"
 	"fmt"
-	"msngr"
 	"net/url"
 	"net"
 )
@@ -97,17 +96,11 @@ func _initInfinity(config t.TaxiAPIConfig) *infinity {
 
 func GetInfinityAPI(tc t.TaxiAPIConfig) t.TaxiInterface {
 	instance := _initInfinity(tc)
-	if msngr.DEBUG {
-		log.Printf("Getting INFINITY API %+v", instance)
-	}
 	return instance
 }
 
 func GetInfinityAddressSupplier(tc t.TaxiAPIConfig) t.AddressSupplier {
 	instance := _initInfinity(tc)
-	if msngr.DEBUG {
-		log.Printf("Getting INFINITY Address supplier %+v", instance)
-	}
 	return instance
 }
 

@@ -1,3 +1,4 @@
+
 <div id="left-bar" class="col-md-2">
     {{$with := .with}}
     {{$all := "all"}}
@@ -17,7 +18,7 @@
         " href="/chat?with={{$all_tm}}">Написать всем участникам квестов</a>
     </div>
     <hr>
-    <div class="row" id="contacts">
+    <div class="row" id="team-contacts">
         {{range $contact := .contacts}}
         <div class="contact" id="{{$contact.ID}}">
             <a id="a-{{$contact.ID}}" class="bg-success a-contact
@@ -26,10 +27,32 @@
             {{end}}
             " href="/chat?with={{$contact.ID}}">
                 {{if $contact.IsTeam}}
-                Комманда [{{$contact.Name}}]
+
+                Комманда {{$contact.Name}}
+            <span class="small" id="s-{{$contact.ID}}">
+                {{if $contact.NewMessagesCount}}
+                ( {{$contact.NewMessagesCount}} )
+                {{end}}
+                {{end}}
+            </span>
+            </a>
+        </div>
+        {{end}}
+        </div>
+        <hr>
+    <div class="row" id="man-contacts">
+        {{range $contact := .contacts}}
+        <div class="contact" id="{{$contact.ID}}">
+            <a id="a-{{$contact.ID}}" class="bg-success a-contact
+            {{if eq_s $with $contact.ID}}
+            c-active
+            {{end}}
+            " href="/chat?with={{$contact.ID}}">
+                {{if $contact.IsTeam}}
+
                 {{else}}
                 {{$contact.Name}}
-                {{end}}
+
 
 
             <span class="small" id="s-{{$contact.ID}}">
@@ -37,9 +60,11 @@
                 ( {{$contact.NewMessagesCount}} )
                 {{end}}
             </span>
+                {{end}}
             </a>
         </div>
         {{end}}
+
     </div>
     <hr>
 
@@ -79,11 +104,11 @@
         <div class="chat-input">
             <form id="chat-form" method="post" action="/send_message">
                 <div class="form-group form-inline">
-                    <label class="control-label">Message:</label>
-                    <textarea class="form-control" placeholder="..." name="chat-form-message" id="chat-form-message"
-                              rows="2" autofocus></textarea>
+                    <label class="control-label"></label>
+                    <textarea class="form-control form-inline" placeholder="..." name="chat-form-message" id="chat-form-message"
+                              rows="4" autofocus></textarea>
 
-                    <button type="submit" class="btn btn-default">
+                    <button type="submit" class="btn btn-default btn-lg">
                         <span class="glyphicon glyphicon-send" aria-hidden="true"></span>
                     </button>
                 </div>
@@ -149,7 +174,16 @@
 
     </div>
     {{end}}
+<div class="row">
+            {{if .messages}}
+            <a href="/delete_chat/{{$with}}" class="btn btn-sm btn-danger">
+                Удалить переписку
+            </a>
+            <span class="bg-success bg-small" id="removed" style="display: none"></span>
+            {{end}}
 
 </div>
+</div>
+
 <script src="script.js"></script>
 
