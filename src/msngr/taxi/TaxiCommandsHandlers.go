@@ -47,7 +47,7 @@ func FormTaxiBotContext(im *ExternalApiMixin, db_handler *d.MainDb, tc c.TaxiCon
 	context.Check = func() (detail string, ok bool) {
 		ok = im.API.IsConnected()
 		if !ok {
-			detail = "Ошибка в подключении к сервису. Попробуйте позже."
+			detail = "Ошибка в подключении к сервису такси. Попробуйте позже."
 		} else {
 			return "", db_handler.Check()
 		}
@@ -465,8 +465,11 @@ func _form_order(fields []s.InField, ah AddressHandler) (*NewOrderInfo, error) {
 		}
 		del_id_street_, err_from := ah.GetExternalInfo(from_key, from_name)
 		dest_id_street_, err_to := ah.GetExternalInfo(to_key, to_name)
-		if err_from != nil  || err_to != nil{
-			return nil, errors.New("Не могу распознать улицу или система такси не отвечает")
+		if err_from != nil {
+			return nil, err_from
+		}
+		if err_to != nil {
+			return nil, err_to
 		}
 		deliv = *del_id_street_
 		dest = *dest_id_street_
@@ -608,7 +611,6 @@ func (nop *TaxiNewOrderProcessor) ProcessMessage(in *s.InPkg) *s.MessageResult {
 				not_send_price = _nsp
 			}
 		}
-
 		if not_send_price {
 			text = "Ваш заказ создан!"
 		} else {
@@ -618,12 +620,10 @@ func (nop *TaxiNewOrderProcessor) ProcessMessage(in *s.InPkg) *s.MessageResult {
 			}
 			//retrieving markup information
 			var markup_text string
-			//log.Printf("TCH NOP: %v", len(new_order.Markups))
 			if len(new_order.Markups) == 1 {
 				markups := nop.API.Markups()
 				for _, mkrp := range markups {
 					markup_id, _ := strconv.ParseInt(new_order.Markups[0], 10, 64)
-					//log.Printf("mrkp.id: %v, markup id: %v", mkrp.ID, markup_id)
 					if mkrp.ID == markup_id {
 						markup_text = mkrp.Name
 						break

@@ -74,7 +74,7 @@ func PutOutPackage(w http.ResponseWriter, out *s.OutPkg, isError bool, isDeferre
 		log.Printf("BOT RESPONSED: \n%s\n", string(jsoned_out))
 	}
 	if isError {
-		w.WriteHeader(http.StatusBadRequest)
+		w.WriteHeader(http.StatusInternalServerError)
 	} else if isDeferred {
 		w.WriteHeader(http.StatusNoContent)
 		return
@@ -300,7 +300,7 @@ func FormBotController(context *BotContext, db *db.MainDb) controllerHandler {
 		check := context.Check
 		if check != nil {
 			if detail, ok := check(); !ok {
-				out.Message = &s.OutMessage{Type: "error", Thread: "0", ID: u.GenId(), Body: fmt.Sprintln(detail)}
+				out.Message = &s.OutMessage{Type: "chat", Thread: "0", ID: u.GenId(), Body: fmt.Sprintln(detail)}
 				PutOutPackage(w, out, true, false)
 				return
 			}

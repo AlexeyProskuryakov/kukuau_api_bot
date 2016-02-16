@@ -142,7 +142,7 @@
           "password": "789kukuau987",
           "connection_strings": [
             "http://212.20.48.191:8080/WebAPITaxi/",
-            "http://109.202.17.249:8080/WebAPITaxi"
+            "http://109.202.17.249:8080/WebAPITaxi/"
           ],
           "host": "212.20.48.191:8080"
         },

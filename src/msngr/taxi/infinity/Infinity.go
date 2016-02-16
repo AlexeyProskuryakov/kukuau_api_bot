@@ -39,28 +39,28 @@ type infinity struct {
 	LoginTime     time.Time
 	Cookie        *http.Cookie
 	LoginResponse struct {
-			      Success   bool  `json:"success"`
-			      IDClient  int64 `json:"idClient"`
-			      Params    struct {
-						ProtocolVersion            int    `json:"ProtocolVersion"`
-						RefreshOrdersSeconds       int    `json:"RefreshOrdersSeconds"`
-						LoginRegEx                 string `json:"LoginRegEx"`
-						MyPhoneRegEx               string `json:"MyPhoneRegEx"`
-						OurPhoneDisplay            string `json:"OurPhoneDisplay"`
-						OurPhoneNumber             string `json:"OurPhoneNumber"`
-						DefaultInfinityServiceID   int64  `json:"DefaultInfinityServiceID"`
-						DefaultInfinityServiceName string `json:"DefaultInfinityServiceName"`
-						DefaultRegionID            int64  `json:"DefaultRegionID"`
-						DefaultRegionName          string `json:"DefaultRegionName"`
-						DefaultDistrictID          string `json:"DefaultDistrictID"` // Can be null, so used as string here.
-						DefaultDistrictName        string `json:"DefaultDistrictName"`
-						DefaultCityID              int64  `json:"DefaultCityID"`
-						DefaultCityName            string `json:"DefaultCityName"`
-						DefaultPlaceID             string `json:"DefaultPlaceID"`    // Can be null, so used as string here.
-						DefaultPlaceName           string `json:"DefaultPlaceName"`
-					} `json:"params"`
-			      SessionID string `json:"sessionid"`
-		      }
+					  Success   bool  `json:"success"`
+					  IDClient  int64 `json:"idClient"`
+					  Params    struct {
+									ProtocolVersion            int    `json:"ProtocolVersion"`
+									RefreshOrdersSeconds       int    `json:"RefreshOrdersSeconds"`
+									LoginRegEx                 string `json:"LoginRegEx"`
+									MyPhoneRegEx               string `json:"MyPhoneRegEx"`
+									OurPhoneDisplay            string `json:"OurPhoneDisplay"`
+									OurPhoneNumber             string `json:"OurPhoneNumber"`
+									DefaultInfinityServiceID   int64  `json:"DefaultInfinityServiceID"`
+									DefaultInfinityServiceName string `json:"DefaultInfinityServiceName"`
+									DefaultRegionID            int64  `json:"DefaultRegionID"`
+									DefaultRegionName          string `json:"DefaultRegionName"`
+									DefaultDistrictID          string `json:"DefaultDistrictID"` // Can be null, so used as string here.
+									DefaultDistrictName        string `json:"DefaultDistrictName"`
+									DefaultCityID              int64  `json:"DefaultCityID"`
+									DefaultCityName            string `json:"DefaultCityName"`
+									DefaultPlaceID             string `json:"DefaultPlaceID"`    // Can be null, so used as string here.
+									DefaultPlaceName           string `json:"DefaultPlaceName"`
+								} `json:"params"`
+					  SessionID string `json:"sessionid"`
+				  }
 	Services      []InfinityServices `json:"InfinityServices"`
 	Config        t.TaxiAPIConfig
 }
@@ -84,9 +84,12 @@ func _initInfinity(config t.TaxiAPIConfig) *infinity {
 
 	if !logon {
 		go func() {
-			res := result.ReLogin()
-			if !res {
-				log.Printf("can not connect to infinity %+v :(", result.ConnStrings)
+			for {
+				res := result.ReLogin()
+				if !res {
+					log.Printf("Can not connect to infinity %+v :(\nWill try next after 5 minutes", result.ConnStrings)
+				}
+				time.Sleep(5 * time.Minute)
 			}
 		}()
 	}
@@ -96,11 +99,13 @@ func _initInfinity(config t.TaxiAPIConfig) *infinity {
 
 func GetInfinityAPI(tc t.TaxiAPIConfig) t.TaxiInterface {
 	instance := _initInfinity(tc)
+	log.Printf("IAPI conn strings: %+v", instance.ConnStrings)
 	return instance
 }
 
 func GetInfinityAddressSupplier(tc t.TaxiAPIConfig) t.AddressSupplier {
 	instance := _initInfinity(tc)
+	log.Printf("IAdrSupp conn strings: %+v", instance.ConnStrings)
 	return instance
 }
 
@@ -116,7 +121,7 @@ func (p *infinity) Login(login, password string) bool {
 	}
 	err = json.Unmarshal(body, &p.LoginResponse)
 	if err != nil {
-		log.Printf("error at unmarshalling json:%q \nerror: %v", string(body), err)
+		log.Printf("INF error at unmarshalling json at LOGIN:%q \nerror: %v", string(body), err)
 		return false
 	}
 	log.Printf("[login] self: %+q\n", p)
@@ -181,6 +186,7 @@ func (p *infinity) _request(conn_suffix string, url_values map[string]string) ([
 			req.AddCookie(p.Cookie)
 		}
 		client := &http.Client{Timeout:15 * time.Second}
+		log.Printf("INF >>>\n%+v", req)
 		res, err := client.Do(req)
 		if err != nil {
 			log.Printf("Error at send request to infinity: %v", err)
@@ -202,6 +208,7 @@ func (p *infinity) _request(conn_suffix string, url_values map[string]string) ([
 		body, err := ioutil.ReadAll(res.Body)
 		if err != nil {
 			log.Printf("error at reading from response %v", err)
+			return body, err
 		}
 		return body, nil
 	}

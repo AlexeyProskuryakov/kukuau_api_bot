@@ -231,10 +231,8 @@ func (oh *OwnAddressHandler) form_own_autocomplete_result(query elastic.Query, s
 	var oae OsmAutocompleteEntity
 	name_city_set := s.NewSet()
 	for _, osm_hit := range s_result.Each(reflect.TypeOf(oae)) {
-		log.Printf("OWN RAw hit: %+v", osm_hit)
 		if entity, ok := osm_hit.(OsmAutocompleteEntity); ok {
 			street_name, street_type := GetStreetNameAndShortName(entity.Name)
-			log.Printf("OWN GEO HIT:%+v\nAS: Street name: %v, type: %v", entity, street_name, street_type)
 			entity_hash := fmt.Sprintf("%v%v%v", street_name, street_type, entity.City)
 			if !name_city_set.Contains(entity_hash) && street_type != "" {
 				addr := t.AddressF{
@@ -295,16 +293,11 @@ func (oh *OwnAddressHandler) get_weight(a_addr t.AddressF, q string) float64 {
 		an_len := float64(len([]rune(adr_name)))
 		var koef float64
 		if strings.HasPrefix(adr_name, q) {
-			//100 +
 			koef = (q_len / math.Abs(an_len-q_len)) + 1.0
-			log.Printf("prefix %v", koef)
 		} else if strings.HasSuffix(a_addr.Name, q) {
 			koef = q_len/ an_len + 1.0
-			log.Printf("suffix %v", koef)
-			//10
 		} else if strings.Contains(adr_name, q) {
 			koef = (an_len - q_len) / (an_len + q_len)
-			log.Printf("contains %v", koef)
 		} else {
 			return 0.0
 		}
@@ -415,7 +408,7 @@ func (oh *OwnAddressHandler) GetExternalInfo(key, name string) (*t.AddressF, err
 
 			rows := oh.ExternalAddressSupplier.AddressesAutocomplete(_name).Rows
 			if rows == nil {
-				return nil, errors.New("GetStreetId: no results at external")
+				return nil, errors.New(fmt.Sprintf("Система такси не знает местонахождение [%v]", _name))
 			}
 			ext_rows := *rows
 
@@ -429,7 +422,8 @@ func (oh *OwnAddressHandler) GetExternalInfo(key, name string) (*t.AddressF, err
 			}
 		}
 	}
-	return nil, errors.New(fmt.Sprintf("No any results for [%v] address in external source", key))
+	return nil, errors.New(fmt.Sprintf("Не найденно ничего похожее на %v (%v)", name,key))
+
 }
 
 func clear_address_string(element string) (string) {

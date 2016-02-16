@@ -6,7 +6,7 @@ import (
 	"net/http"
 	"errors"
 	m "msngr"
-	s "msngr/structs"
+//	s "msngr/structs"
 //tm "msngr/text_messages"
 	d "msngr/db"
 	c "msngr/configuration"
@@ -36,7 +36,7 @@ func GetTaxiAPIInstruments(params c.TaxiApiParams) (t.TaxiInterface, t.AddressSu
 	return nil, nil, errors.New("Not imply name of api")
 }
 
-func get_address_instruments(c c.Configuration, taxi_name string, external_supplier t.AddressSupplier) (t.AddressHandler, t.AddressSupplier) {
+func GetAddressInstruments(c c.Configuration, taxi_name string, external_supplier t.AddressSupplier) (t.AddressHandler, t.AddressSupplier) {
 	if c.Taxis[taxi_name].Api.Name == sedi.SEDI {
 		log.Printf("[ADDRESSES ENGINE] For %v Will use SEDI address supplier no any address handler", taxi_name)
 		return nil, external_supplier
@@ -73,35 +73,28 @@ func StartBot(db *d.MainDb, result chan string) c.Configuration {
 		carsCache := t.NewCarsCache(external_api)
 		notifier := n.NewNotifier(conf.Main.CallbackAddr, taxi_conf.Key, db)
 
-		address_handler, address_supplier := get_address_instruments(conf, taxi_name, external_address_supplier)
+		address_handler, address_supplier := GetAddressInstruments(conf, taxi_name, external_address_supplier)
 
 		botContext := t.FormTaxiBotContext(&apiMixin, db, taxi_conf, address_handler, carsCache)
-		log.Printf("Was create bot context: %+v\n", botContext)
-		taxiContext := t.TaxiContext{API: external_api, DataBase: db, Cars: carsCache, Notifier: notifier}
 		controller := m.FormBotController(botContext, db)
 
+		log.Printf("Was create bot context: %+v\n", botContext)
 		http.HandleFunc(fmt.Sprintf("/taxi/%v", taxi_conf.Name), controller)
 
-		s.StartAfter(botContext.Check, func() {
+		go func() {
+			taxiContext := t.TaxiContext{API: external_api, DataBase: db, Cars: carsCache, Notifier: notifier}
 			log.Printf("Will start order watcher for [%v]", botContext.Name)
 			t.TaxiOrderWatch(&taxiContext, botContext)
-		})
+		}()
 
 		http.HandleFunc(fmt.Sprintf("/taxi/%v/streets", taxi_conf.Name), func(w http.ResponseWriter, r *http.Request) {
 			geo.StreetsSearchController(w, r, address_supplier)
 		})
-
-		http.HandleFunc(fmt.Sprintf("/taxi/%v/streets/ext", taxi_conf.Name), func(w http.ResponseWriter, r *http.Request) {
-			geo.StreetsSearchController(w, r, external_address_supplier)
-		})
-
 		if m.TEST {
 			http.HandleFunc(fmt.Sprintf("/taxi/%v/streets/ext", taxi_conf.Name), func(w http.ResponseWriter, r *http.Request) {
 				geo.StreetsSearchController(w, r, external_address_supplier)
 			})
-
 		}
-
 
 		result <- fmt.Sprintf("taxi_%v", taxi_name)
 	}
