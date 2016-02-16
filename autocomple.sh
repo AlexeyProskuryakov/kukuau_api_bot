@@ -18,9 +18,9 @@ curl -XPOST "http://localhost:9200/autocomplete" -d '{
             "title_ngram": {
                 "type": "nGram",
                 "min_gram": 3,
-                "max_gram": 7
+                "max_gram": 15
             }
-          }
+         }
       }
     }
   },

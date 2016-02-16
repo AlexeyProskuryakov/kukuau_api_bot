@@ -211,7 +211,7 @@
         }
       }
     },
-    "fake_infinity": {
+    "fake": {
       "name": "fake_infinity",
       "dict_url": "http://localhost:9191/taxi/fake/streets",
       "key": "Kuku demo_taxi_key",

@@ -94,6 +94,15 @@ func StartBot(db *d.MainDb, result chan string) c.Configuration {
 		http.HandleFunc(fmt.Sprintf("/taxi/%v/streets/ext", taxi_conf.Name), func(w http.ResponseWriter, r *http.Request) {
 			geo.StreetsSearchController(w, r, external_address_supplier)
 		})
+
+		if m.TEST {
+			http.HandleFunc(fmt.Sprintf("/taxi/%v/streets/ext", taxi_conf.Name), func(w http.ResponseWriter, r *http.Request) {
+				geo.StreetsSearchController(w, r, external_address_supplier)
+			})
+
+		}
+
+
 		result <- fmt.Sprintf("taxi_%v", taxi_name)
 	}
 
@@ -129,10 +138,10 @@ func StartBot(db *d.MainDb, result chan string) c.Configuration {
 		Addr: server_address,
 	}
 
-	if conf.Console.WebPort != "" && conf.Console.Key != ""  {
+	if conf.Console.WebPort != "" && conf.Console.Key != "" {
 		log.Printf("Will handling requests from /console")
-		bc := cnsl.FormConsoleBotContext(conf, db,cs)
-		cc := m.FormBotController(bc,db)
+		bc := cnsl.FormConsoleBotContext(conf, db, cs)
+		cc := m.FormBotController(bc, db)
 		http.HandleFunc("/console", cc)
 		result <- "console"
 	}

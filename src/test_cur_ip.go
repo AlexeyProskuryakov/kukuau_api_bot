@@ -54,3 +54,5 @@ func externalIP() (string, error) {
 	return "", errors.New("are you connected to the network?")
 }
 
+
+

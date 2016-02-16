@@ -466,7 +466,7 @@ func _form_order(fields []s.InField, ah AddressHandler) (*NewOrderInfo, error) {
 		del_id_street_, err_from := ah.GetExternalInfo(from_key, from_name)
 		dest_id_street_, err_to := ah.GetExternalInfo(to_key, to_name)
 		if err_from != nil  || err_to != nil{
-			return nil, errors.New("Не могу распознать внутренни улицу или система такси не отвечает")
+			return nil, errors.New("Не могу распознать улицу или система такси не отвечает")
 		}
 		deliv = *del_id_street_
 		dest = *dest_id_street_

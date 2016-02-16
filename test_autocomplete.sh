@@ -1,4 +1,6 @@
-{
+#!/usr/bin/env bash
+curl -XGET "http://localhost:9200/photon/_search" -d '{
+  {
   "filtered": {
     "query": {
       "function_score": {
@@ -10,7 +12,7 @@
                   {
                     "match": {
                         "collector.default": {
-                        "query": "q"  ,
+                        "query": "россий"  ,
                         "type": "boolean",
                         "analyzer": "search_ngram",
                         "fuzziness": 1,
@@ -22,7 +24,7 @@
                   {
                     "match": {
                       "collector.ru.ngrams": {
-                        "query": "q",
+                        "query": "россий",
                         "type": "boolean",
                         "analyzer": "search_ngram",
                         "fuzziness": 1,
@@ -39,7 +41,7 @@
               {
                 "match": {
                   "name.ru.raw": {
-                    "query": "q",
+                    "query": "россий",
                     "type": "boolean",
                     "analyzer": "search_raw",
                     "boost": 200.0
@@ -49,7 +51,7 @@
               {
                 "match": {
                   "collector.ru.raw": {
-                    "query": "q",
+                    "query": "россий",
                     "type": "boolean",
                     "analyzer": "search_raw",
                     "boost": 100.0
@@ -86,3 +88,7 @@
     }
   }
 }
+}'
+#GOPATH=`pwd`
+#go get gopkg.in/olivere/elastic.v2
+#go run src/ensure_elastic_autocomplete_index.go
