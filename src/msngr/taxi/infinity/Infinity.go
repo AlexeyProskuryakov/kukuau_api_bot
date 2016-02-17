@@ -232,11 +232,12 @@ func (p *infinity) GetCarsInfo() []t.CarInfo {
 	var tmp []InfinityCarsInfo
 	body, err := p._request("GetViewData", map[string]string{"params": "[{\"viewName\":\"Taxi.Cars.InfoEx\"}]"})
 	if err != nil {
+		log.Printf("INF GCI error at send req to infinity %v", err)
 		return []t.CarInfo{}
 	}
 	err = json.Unmarshal(body, &tmp)
 	if err != nil {
-		log.Printf("error at unmarshal json from infinity %v", string(body))
+		log.Printf("INF GCI error at unmarshal json from infinity %v %v", string(body), err)
 		return []t.CarInfo{}
 	}
 	return tmp[0].Rows
@@ -274,7 +275,7 @@ func (p *infinity) CalcOrderCost(order t.NewOrderInfo) (int, string) {
 	order.IdService = p.Config.GetIdService()
 	param, err := json.Marshal(order)
 	if err != nil {
-		log.Printf("error at marshal json from infinity %v", order)
+		log.Printf("INF COC error at marshal json from infinity %+v %v", order, err)
 		return -1, ""
 	}
 	body, err := p._request("RemoteCall", map[string]string{"params": string(param), "method": "Taxi.WebAPI.CalcOrderCost"})
@@ -284,7 +285,7 @@ func (p *infinity) CalcOrderCost(order t.NewOrderInfo) (int, string) {
 	var tmp t.Answer
 	err = json.Unmarshal(body, &tmp)
 	if err != nil {
-		log.Printf("error at unmarshal json from infinity %v", string(body))
+		log.Printf("INFO COC error at unmarshal json from infinity %v %v", string(body), err)
 		return -1, ""
 	}
 	return tmp.Content.Cost, tmp.Content.Details
@@ -361,7 +362,7 @@ func (p *infinity) ChangeName(name string) (bool, string) {
 func (p *infinity) WriteDispatcher(message string) (bool, string /*, string*/) {
 	tmp, err := json.Marshal(message)
 	if err != nil {
-		log.Printf("INF WD error at marshal json to infinity %v", string(message))
+		log.Printf("INF WD error at marshal json to infinity %v %v", string(message), err)
 		return false, fmt.Sprint(err)
 	}
 	params := map[string]string{"params": string(tmp), "method": "Taxi.WebAPI.Client.SendMessage"}
@@ -370,7 +371,7 @@ func (p *infinity) WriteDispatcher(message string) (bool, string /*, string*/) {
 	var temp t.Answer
 	err = json.Unmarshal(body, &temp)
 	if err != nil {
-		log.Printf("INF WD error at unmarshal json from infinity %v", string(body))
+		log.Printf("INF WD error at unmarshal json from infinity %v %v", string(body), err)
 		return false, fmt.Sprint(err)
 	}
 	return temp.IsSuccess, temp.Message
@@ -379,7 +380,7 @@ func (p *infinity) WriteDispatcher(message string) (bool, string /*, string*/) {
 func (p *infinity) CallbackRequest(phone string) (bool, string) {
 	tmp, err := json.Marshal(phone)
 	if err != nil {
-		log.Printf("INF CBKR error at marshal json to infinity %v", string(phone))
+		log.Printf("INF CBKR error at marshal json to infinity %v %v", string(phone), err)
 		return false, fmt.Sprint(err)
 	}
 	//	log.Printf("Callback request (jsoned) %s", tmp)
@@ -387,7 +388,7 @@ func (p *infinity) CallbackRequest(phone string) (bool, string) {
 	var temp t.Answer
 	err = json.Unmarshal(body, &temp)
 	if err != nil {
-		log.Printf("INF CBKR error at unmarshal json from infinity %v", string(body))
+		log.Printf("INF CBKR error at unmarshal json from infinity %v %v", string(body), err)
 		return false, fmt.Sprint(err)
 	}
 	return temp.IsSuccess, temp.Message
@@ -413,7 +414,7 @@ func (p *infinity) ClearHistory() (bool, string) {
 func (p *infinity) CancelOrder(order int64) (bool, string, error) {
 	tmp, err := json.Marshal(order)
 	if err != nil {
-		log.Printf("INF CO error at marshal json to infinity %v", string(order))
+		log.Printf("INF CO error at marshal json to infinity %v %v", string(order), err)
 		return false, fmt.Sprint(err), err
 	}
 
@@ -424,7 +425,7 @@ func (p *infinity) CancelOrder(order int64) (bool, string, error) {
 	var temp t.Answer
 	err = json.Unmarshal(body, &temp)
 	if err != nil {
-		log.Printf("INF CO error at unmarshal json from infinity %v", string(body))
+		log.Printf("INF CO error at unmarshal json from infinity %v %v", string(body), err)
 		return false, fmt.Sprint(err), err
 	}
 	return temp.IsSuccess, temp.Message, nil
@@ -441,7 +442,7 @@ func (p *infinity) CancelOrder(order int64) (bool, string, error) {
 func (p *infinity) Feedback(inf t.Feedback) (bool, string) {
 	tmp, err := json.Marshal(inf)
 	if err != nil {
-		log.Printf("INF FDBK error at marshal json to infinity %v", inf)
+		log.Printf("INF FDBK error at marshal json to infinity %v %v", inf, err)
 		return false, fmt.Sprint(err)
 	}
 
@@ -452,7 +453,7 @@ func (p *infinity) Feedback(inf t.Feedback) (bool, string) {
 	var temp t.Answer
 	err = json.Unmarshal(body, &temp)
 	if err != nil {
-		log.Printf("INF FDBK error at unmarshal json from infinity %v", string(body))
+		log.Printf("INF FDBK error at unmarshal json from infinity %v %v", string(body), err)
 		return false, fmt.Sprint(err)
 	}
 	return temp.IsSuccess, temp.Message
@@ -465,7 +466,7 @@ func (p *infinity) Feedback(inf t.Feedback) (bool, string) {
 func (p *infinity) WhereIt(ID int64) (bool, string) {
 	tmp, err := json.Marshal(ID)
 	if err != nil {
-		log.Printf("INF WHEREIT error at marshal json to infinity %v", string(ID))
+		log.Printf("INF WHEREIT error at marshal json to infinity %v %v", ID, err)
 		return false, fmt.Sprint(err)
 	}
 	body, err := p._request("RemoteCall", map[string]string{"params": string(tmp), "method": "Taxi.WebAPI.Client.WhereIT"})
@@ -475,7 +476,7 @@ func (p *infinity) WhereIt(ID int64) (bool, string) {
 	var temp t.Answer
 	err = json.Unmarshal(body, &temp)
 	if err != nil {
-		log.Printf("INF WHEREIT error at unmarshal json from infinity %v", string(body))
+		log.Printf("INF WHEREIT error at unmarshal json from infinity %v %v", string(body), err)
 		return false, fmt.Sprint(err)
 	}
 	return temp.IsSuccess, temp.Message
@@ -592,14 +593,14 @@ type Orders struct {
 func (p *infinity) Orders() []t.Order {
 	body, err := p._request("GetViewData", map[string]string{"params": "[{\"viewName\": \"Taxi.Orders\"}]"})
 	if err != nil {
-		log.Print("INF ORDRS error at connection to inf at orders")
+		log.Print("INF ORDRS error at connection to inf at orders %v", err)
 		p.ReLogin()
 		return []t.Order{}
 	}
 	temp := []Orders{}
 	err = json.Unmarshal(body, &temp)
 	if err != nil {
-		log.Printf("INF ORDRS error at unmarshal json from infinity %s", string(body))
+		log.Printf("INF ORDRS error at unmarshal json from infinity %s %v", string(body), err)
 		p.ReLogin()
 		return []t.Order{}
 	}
@@ -648,7 +649,7 @@ func (p *infinity) Markups() []t.Markup {
 
 	body, err := p._request("GetViewData", map[string]string{"params": "[{\"viewName\": \"Taxi.Markups\"}]"})
 	if err != nil {
-		log.Print("INF MRKPS error at connection to inf at markups %( ")
+		log.Print("INF MRKPS error at connection to inf at markups %( %v", err)
 		return []t.Markup{}
 	}
 
@@ -685,7 +686,7 @@ func (p *infinity) Markups() []t.Markup {
 func (p *infinity) AddressesAutocomplete(text string) t.AddressPackage {
 	body, err := p._request("GetViewData", map[string]string{"params": "[{\"viewName\": \"Taxi.Addresses.Search\", \"params\": [{\"n\": \"SearchText\", \"v\": \"" + text + "\"}]}]"})
 	if err != nil {
-		log.Printf("INF AA error at connection to inf %( ")
+		log.Printf("INF AA error at connection to inf %v ( ", err)
 		return t.AddressPackage{}
 	}
 	var temp []t.AddressPackage
