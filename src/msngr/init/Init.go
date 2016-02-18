@@ -5,9 +5,8 @@ import (
 	"log"
 	"net/http"
 	"errors"
+
 	m "msngr"
-//	s "msngr/structs"
-//tm "msngr/text_messages"
 	d "msngr/db"
 	c "msngr/configuration"
 	i "msngr/taxi/infinity"
@@ -17,8 +16,8 @@ import (
 	sh "msngr/shop"
 	q "msngr/quests"
 	t "msngr/taxi"
-	"msngr/taxi/geo"
 	sedi "msngr/taxi/sedi"
+	geo "msngr/taxi/geo"
 )
 
 func GetTaxiAPIInstruments(params c.TaxiApiParams) (t.TaxiInterface, t.AddressSupplier, error) {

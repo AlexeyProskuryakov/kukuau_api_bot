@@ -178,6 +178,21 @@ func ReadConfigInRecursive() Configuration{
 	return UnmarshallConfig(cdata)
 }
 
+func ReadTestConfigInRecursive() Configuration{
+	log.Printf("Path sep: %+v", os.PathSeparator)
+	fn := u.FoundFile("config.test.json")
+	if fn == nil {
+		log.Printf("can not find config.json file :(")
+		os.Exit(-1)
+	}
+	cdata, err := ioutil.ReadFile(*fn)
+	if err != nil {
+		log.Printf("error reading config %v", err)
+		os.Exit(-1)
+	}
+	return UnmarshallConfig(cdata)
+}
+
 
 func ReadConfig() Configuration {
 	//log.Printf("Path sep: %s", RuneToAscii(os.PathSeparator))

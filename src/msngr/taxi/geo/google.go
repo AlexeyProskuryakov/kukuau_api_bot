@@ -17,7 +17,13 @@ import (
 )
 
 var NOT_IMPLY_TYPES = []string{"country"}
-const GOOGLE_API_URL = "https://maps.googleapis.com/maps/api"
+
+const (
+
+	GOOGLE_API_URL = "https://maps.googleapis.com/maps/api"
+	ERROR_EXTERNAL_MESSAGE = "служба такси не доступна."
+)
+
 
 
 type GoogleTerm struct {
@@ -177,12 +183,12 @@ func (ah *GoogleAddressHandler) GetExternalInfo(key, name string) (*t.AddressF, 
 	}
 	log.Printf("GOOGLE query: [%v]\nGoogle set: %+v", query, google_set)
 	if !ah.ExternalAddressSupplier.IsConnected() {
-		return nil, errors.New("GetStreetId: External service is not avaliable")
+		return nil, errors.New(ERROR_EXTERNAL_MESSAGE)
 	}
 
 	rows := ah.ExternalAddressSupplier.AddressesAutocomplete(query).Rows
 	if rows == nil {
-		return nil, errors.New("GetStreetId: no results at external")
+		return nil, errors.New(ERROR_EXTERNAL_MESSAGE)
 	}
 	ext_rows := *rows
 

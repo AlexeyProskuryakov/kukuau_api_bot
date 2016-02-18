@@ -1,0 +1,117 @@
+{
+  "main": {
+    "port": 9191,
+    "callback_addr": "http://localhost:9876/notify",
+    "log_file": "result.log",
+    "test_log_file": "test_result.log",
+    "google_key": "AIzaSyBkmvXK-SqfQcyj2XlXgTx-r_B18TJb-vY",
+    "elastic_conn": "",
+    "database": {
+      "name": "bot",
+      "connection_string": "localhost:27017"
+    }
+  },
+  "taxis": {
+    "fake": {
+      "name": "fake",
+      "dict_url": "http://localhost:9191/taxi/fake/streets",
+      "key": "Kuku demo_taxi_key",
+      "information": {
+        "phone": "123-45-67",
+        "text": "Такси ! Самое лучшее такси в академгородке!"
+      },
+      "available_commands": {
+        "created_order": [
+          "where_it",
+          "callback_request",
+          "car_position"
+        ]
+      },
+      "api": {
+        "geo_orbit": {
+          "lat": 54.8580438,
+          "lon": 83.1100316,
+          "radius": 50000
+        },
+        "name": "fake",
+        "data": {
+          "id_service": 5000181745,
+          "login": "kukuautest",
+          "password": "789kukuau987",
+          "connection_strings": [
+            "http://212.20.48.191:8080/WebAPITaxi/",
+            "http://109.202.17.249:8080/WebAPITaxi"
+          ],
+          "host": "212.20.48.191:8080"
+        },
+        "not_send_price": true,
+        "markups": [
+          "5059339030"
+        ],
+        "fake": {
+          "sended_states": [
+            2,
+            4,
+            5,
+            6,
+            7,
+            8,
+            9
+          ],
+          "sleep_time": 1
+        },
+        "transformations": [
+          {
+            "field": "phone",
+            "regex_code": "\\+?7([\\d]{10})",
+            "to": "8$1"
+          }
+        ]
+      }
+    },
+     "caravan": {
+      "name": "caravan",
+      "dict_url": "http://localhost:9191/taxi/caravan/streets",
+      "key": "Kuku caravan_taxi_key",
+      "information": {
+        "phone": "123-45-67",
+        "text": "Такси Караван! Самое лучшее такси в Бердске!"
+      },
+      "api": {
+        "geo_orbit": {
+          "lat": 54.760457,
+          "lon": 83.103499,
+          "radius": 50000
+        },
+        "name": "infinity",
+        "data": {
+          "login": "kukuau",
+          "password": "89831395746",
+          "connection_strings": [
+            "http://212.164.216.216:8080/WebAPITaxi/"
+          ],
+          "id_service": 5000360106
+        },
+        "not_send_price": false
+      },
+      "markups":[
+        "5005378429"
+      ]
+    }
+  },
+  "console": {
+    "web_port": ":9595",
+    "key": "main key",
+    "information": "Привет! Это мы Кличим Чат или Клиент Чат или просто Кличат! Пиши сообщения и Саша тебе ответит:)"
+  },
+  "quests": {
+    "quest_time": {
+      "accept_phrase": "Ура! Теперь вы учавствуете в квесте! Ищите ближайший мусорный бак и в нем будет нужный вам код!",
+      "reject_phrase": "Вы и так уже учавствуете...",
+      "error_phrase": "Что-то пошло не так.",
+      "information": "Квесты - хуесты. Ищешь в помойках коды получаешь деньги!",
+      "web_port": ":9696",
+      "key": "Kuku demo_quest_key"
+    }
+  }
+}

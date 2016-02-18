@@ -297,14 +297,14 @@ func FormBotController(context *BotContext, db *db.MainDb) controllerHandler {
 		var isError, isDeferred bool
 		var global_error, request_error, message_error error
 
-		check := context.Check
-		if check != nil {
-			if detail, ok := check(); !ok {
-				out.Message = &s.OutMessage{Type: "chat", Thread: "0", ID: u.GenId(), Body: fmt.Sprintln(detail)}
-				PutOutPackage(w, out, true, false)
-				return
-			}
-		}
+		//check := context.Check
+		//if check != nil {
+		//	if detail, ok := check(); !ok {
+		//		out.Message = &s.OutMessage{Type: "chat", Thread: "0", ID: u.GenId(), Body: fmt.Sprintln(detail)}
+		//		PutOutPackage(w, out, true, false)
+		//		return
+		//	}
+		//}
 
 		in, global_error = FormInPackage(r)
 		if in != nil {
@@ -329,9 +329,6 @@ func FormBotController(context *BotContext, db *db.MainDb) controllerHandler {
 						out, isDeferred, message_error = process_message(non_commands_processor, out, in)
 					} else {
 						log.Printf("warn will sended message without commands: %v\n from %v (userdata: %v)", in.Message, in.From, in.UserData)
-						//out.Message = &s.OutMessage{Type: "chat", Thread: in.Message.Thread, ID: u.GenId(), Body: textProvider.GenerateMessage()}
-						//setOutPackage(w, out, false, false)
-						//return
 					}
 				} else {
 					out, isDeferred, message_error = process_message_pkg(out, in, context)

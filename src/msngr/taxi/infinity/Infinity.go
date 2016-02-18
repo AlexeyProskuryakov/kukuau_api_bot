@@ -18,6 +18,8 @@ import (
 const (
 	TRY_COUNT = 10
 	INFINITY = "infinity"
+
+	CONNECTION_ERROR = "Система обработки заказов такси не отвечает, попробуйте позже."
 )
 
 type InfinityService struct {
@@ -34,35 +36,36 @@ type InfinityCarsInfo struct {
 }
 
 // infinity - Структура для работы с API infinity.
-type infinity struct {
+type InfinityAPI struct {
 	ConnStrings   []string // Строка подключения к infinity API// default: http://109.202.25.248:8080/WebAPITaxi/
 	LoginTime     time.Time
 	Cookie        *http.Cookie
 	LoginResponse struct {
-					  Success   bool  `json:"success"`
-					  IDClient  int64 `json:"idClient"`
-					  Params    struct {
-									ProtocolVersion            int    `json:"ProtocolVersion"`
-									RefreshOrdersSeconds       int    `json:"RefreshOrdersSeconds"`
-									LoginRegEx                 string `json:"LoginRegEx"`
-									MyPhoneRegEx               string `json:"MyPhoneRegEx"`
-									OurPhoneDisplay            string `json:"OurPhoneDisplay"`
-									OurPhoneNumber             string `json:"OurPhoneNumber"`
-									DefaultInfinityServiceID   int64  `json:"DefaultInfinityServiceID"`
-									DefaultInfinityServiceName string `json:"DefaultInfinityServiceName"`
-									DefaultRegionID            int64  `json:"DefaultRegionID"`
-									DefaultRegionName          string `json:"DefaultRegionName"`
-									DefaultDistrictID          string `json:"DefaultDistrictID"` // Can be null, so used as string here.
-									DefaultDistrictName        string `json:"DefaultDistrictName"`
-									DefaultCityID              int64  `json:"DefaultCityID"`
-									DefaultCityName            string `json:"DefaultCityName"`
-									DefaultPlaceID             string `json:"DefaultPlaceID"`    // Can be null, so used as string here.
-									DefaultPlaceName           string `json:"DefaultPlaceName"`
-								} `json:"params"`
-					  SessionID string `json:"sessionid"`
-				  }
+			      Success   bool  `json:"success"`
+			      IDClient  int64 `json:"idClient"`
+			      Params    struct {
+						ProtocolVersion            int    `json:"ProtocolVersion"`
+						RefreshOrdersSeconds       int    `json:"RefreshOrdersSeconds"`
+						LoginRegEx                 string `json:"LoginRegEx"`
+						MyPhoneRegEx               string `json:"MyPhoneRegEx"`
+						OurPhoneDisplay            string `json:"OurPhoneDisplay"`
+						OurPhoneNumber             string `json:"OurPhoneNumber"`
+						DefaultInfinityServiceID   int64  `json:"DefaultInfinityServiceID"`
+						DefaultInfinityServiceName string `json:"DefaultInfinityServiceName"`
+						DefaultRegionID            int64  `json:"DefaultRegionID"`
+						DefaultRegionName          string `json:"DefaultRegionName"`
+						DefaultDistrictID          string `json:"DefaultDistrictID"` // Can be null, so used as string here.
+						DefaultDistrictName        string `json:"DefaultDistrictName"`
+						DefaultCityID              int64  `json:"DefaultCityID"`
+						DefaultCityName            string `json:"DefaultCityName"`
+						DefaultPlaceID             string `json:"DefaultPlaceID"`    // Can be null, so used as string here.
+						DefaultPlaceName           string `json:"DefaultPlaceName"`
+					} `json:"params"`
+			      SessionID string `json:"sessionid"`
+		      }
 	Services      []InfinityServices `json:"InfinityServices"`
 	Config        t.TaxiAPIConfig
+	TryingsCount  int
 }
 
 func get_domain(conn_string string) string {
@@ -71,12 +74,12 @@ func get_domain(conn_string string) string {
 	return host
 }
 
-func (i infinity) String() string {
+func (i InfinityAPI) String() string {
 	return fmt.Sprintf("\nInfinity API processing.\nConnection strings:%+v\nLogon?:%v, time:%v client id:%v\nid_service: %v", i.ConnStrings, i.LoginResponse.Success, i.LoginTime, i.LoginResponse.IDClient, i.Config.GetIdService())
 }
 
-func _initInfinity(config t.TaxiAPIConfig) *infinity {
-	result := &infinity{}
+func _initInfinity(config t.TaxiAPIConfig) *InfinityAPI {
+	result := &InfinityAPI{}
 	result.ConnStrings = config.GetConnectionStrings()
 	result.Config = config
 
@@ -103,6 +106,12 @@ func GetInfinityAPI(tc t.TaxiAPIConfig) t.TaxiInterface {
 	return instance
 }
 
+func GetTestInfAPI(tc t.TaxiAPIConfig) interface{} {
+	instance := _initInfinity(tc)
+	log.Printf("IAPI TEST conn strings: %+v", instance.ConnStrings)
+	return instance
+}
+
 func GetInfinityAddressSupplier(tc t.TaxiAPIConfig) t.AddressSupplier {
 	instance := _initInfinity(tc)
 	log.Printf("IAdrSupp conn strings: %+v", instance.ConnStrings)
@@ -112,11 +121,10 @@ func GetInfinityAddressSupplier(tc t.TaxiAPIConfig) t.AddressSupplier {
 // Login - Авторизация в сервисе infinity. Входные параметры: login:string; password:string.
 // Возвращает true, если авторизация прошла успешно, false иначе.
 // Устанавливает время авторизации в infinity.LoginTime при успешной авторизации.
-func (p *infinity) Login(login, password string) bool {
+func (p *InfinityAPI) Login(login, password string) bool {
 	p.LoginResponse.Success = false
 	body, err := p._request("Login", map[string]string{"l":login, "p":password, "app":"CxTaxiClient"})
 	if err != nil {
-		log.Printf("error at requst to infinity %v", err)
 		return false
 	}
 	err = json.Unmarshal(body, &p.LoginResponse)
@@ -140,11 +148,11 @@ func (p *infinity) Login(login, password string) bool {
 	return false
 }
 
-func (p *infinity) IsConnected() bool {
+func (p *InfinityAPI) IsConnected() bool {
 	return p.LoginResponse.Success
 }
 
-func (p *infinity) ReLogin() bool {
+func (p *InfinityAPI) ReLogin() bool {
 	if p.Config.GetLogin() == "" && p.Config.GetPassword() == "" {
 		panic(errors.New("ReLogin before login! I don't know login and password :( "))
 	}
@@ -155,7 +163,7 @@ func (p *infinity) ReLogin() bool {
 		if result {
 			return result
 		} else {
-			log.Printf("Infinity: ReLogin is fail trying next after %+v", sleep_time)
+			log.Printf("INF: ReLogin is fail trying next after %+v", sleep_time)
 			time.Sleep(sleep_time * time.Millisecond)
 			sleep_time = time.Duration(float32(sleep_time) * 1.4)
 		}
@@ -168,11 +176,12 @@ func (p *infinity) ReLogin() bool {
 // Условие: пользователь должен быть авторизован.
 //
 
-func (p *infinity) _request(conn_suffix string, url_values map[string]string) ([]byte, error) {
+func (p *InfinityAPI) _request(conn_suffix string, url_values map[string]string) ([]byte, error) {
 	for i, connString := range p.ConnStrings {
 		req, err := http.NewRequest("GET", connString + conn_suffix, nil)
 		if err != nil {
 			log.Printf("error at forming request %v, %#v\n error: %v", conn_suffix, url_values, err)
+			return nil, errors.New(CONNECTION_ERROR)
 		}
 		req.Header.Add("ContentType", "text/html;charset=UTF-8")
 		values := req.URL.Query()
@@ -186,10 +195,10 @@ func (p *infinity) _request(conn_suffix string, url_values map[string]string) ([
 			req.AddCookie(p.Cookie)
 		}
 		client := &http.Client{Timeout:15 * time.Second}
-		log.Printf("INF >>>\n%+v", req)
+		//log.Printf("INF >>>\n%+v", req)
 		res, err := client.Do(req)
 		if err != nil {
-			log.Printf("Error at send request to infinity: %v", err)
+			log.Printf("INF Error at send request: %v", err)
 			continue
 		}
 		defer func() {
@@ -198,26 +207,31 @@ func (p *infinity) _request(conn_suffix string, url_values map[string]string) ([
 			//paste to head
 			p.ConnStrings = append(p.ConnStrings[:0], append([]string{connString}, p.ConnStrings[0:]...)...)
 		}()
-		if res != nil && res.Status == "403 Forbidden" {
+		if res != nil && res.StatusCode != 200 {
 			log.Println("INF response is: ", res, "; error is:", err, ". I will ReLogin and will retrieve data again after 3s.")
 			time.Sleep(3 * time.Second)
 			p.ReLogin()
+			if p.TryingsCount >= TRY_COUNT {
+				return nil, errors.New(CONNECTION_ERROR)
+			}
+			p.TryingsCount += 1
 			return p._request(conn_suffix, url_values)
 		}
 		defer res.Body.Close()
 		body, err := ioutil.ReadAll(res.Body)
 		if err != nil {
 			log.Printf("error at reading from response %v", err)
-			return body, err
+			return body, errors.New(CONNECTION_ERROR)
 		}
+		p.TryingsCount = 0
 		return body, nil
 	}
-	return nil, errors.New("Не могу подключится к АПИ такси :(")
+	return nil, errors.New(CONNECTION_ERROR)
 
 }
 
 // GetServices возвращает информацию об услугах доступных для заказа (filterField is set to true!)
-func (p *infinity) GetServices() []InfinityService {
+func (p *InfinityAPI) GetServices() []InfinityService {
 	var tmp []InfinityServices
 	body, err := p._request("GetViewData", map[string]string{"params": "[{\"viewName\":\"Taxi.Services\",\"filterField\":{\"n\":\"AvailableToClients\",\"v\":true}}]"})
 	err = json.Unmarshal(body, &tmp)
@@ -228,7 +242,7 @@ func (p *infinity) GetServices() []InfinityService {
 }
 
 // GetCarsInfo возвращает информацию о машинах
-func (p *infinity) GetCarsInfo() []t.CarInfo {
+func (p *InfinityAPI) GetCarsInfo() []t.CarInfo {
 	var tmp []InfinityCarsInfo
 	body, err := p._request("GetViewData", map[string]string{"params": "[{\"viewName\":\"Taxi.Cars.InfoEx\"}]"})
 	if err != nil {
@@ -243,7 +257,7 @@ func (p *infinity) GetCarsInfo() []t.CarInfo {
 	return tmp[0].Rows
 }
 
-func (p *infinity) NewOrder(order t.NewOrderInfo) t.Answer {
+func (p *InfinityAPI) NewOrder(order t.NewOrderInfo) t.Answer {
 	//because sedi use Id address and id from street autocomplete was equal idadress not idstreet
 	order.Delivery.IdAddress = ""
 	order.Destinations[0].IdAddress = ""
@@ -268,7 +282,7 @@ func (p *infinity) NewOrder(order t.NewOrderInfo) t.Answer {
 	return ans
 }
 
-func (p *infinity) CalcOrderCost(order t.NewOrderInfo) (int, string) {
+func (p *InfinityAPI) CalcOrderCost(order t.NewOrderInfo) (int, string) {
 	//	order.Delivery.IdStreet = strconv.ParseInt(order.Delivery.IdAddress, 10, 64)
 	//	order.Destinations[0].IdStreet = strconv.ParseInt(order.Destinations[0].IdAddress, 10, 64)
 
@@ -301,7 +315,7 @@ type PrivateParams struct {
 //Taxi.WebAPI.Client.GetPrivateParams (Получение параметров клиента)
 //Контент:
 //Параметры личного кабинета клиента в виде JSON объекта: { "name" : <Имя клиента>, "login" : <Логин клиента> }
-func (p *infinity) GetPrivateParams() (bool, string, string) {
+func (p *InfinityAPI) GetPrivateParams() (bool, string, string) {
 	body, err := p._request("RemoteCall", map[string]string{"method": "Taxi.WebAPI.Client.GetPrivateParams"})
 	var temp t.Answer
 	err = json.Unmarshal(body, &temp)
@@ -318,7 +332,7 @@ func (p *infinity) GetPrivateParams() (bool, string, string) {
 //Taxi.WebAPI.Client.ChangePassword (Изменение пароля) Изменяет пароль клиента.
 //Параметры:
 //Новый пароль (строка)
-func (p *infinity) ChangePassword(password string) (bool, string) {
+func (p *InfinityAPI) ChangePassword(password string) (bool, string) {
 	tmp, err := json.Marshal(password)
 	if err != nil {
 		log.Printf("error at marshal json to infinity %v", string(password))
@@ -337,7 +351,7 @@ func (p *infinity) ChangePassword(password string) (bool, string) {
 //Taxi.WebAPI.Client.ChangeName (Изменение имени клиента) Изменяет имя клиента в системе.
 //Параметры:
 //Новое имя клиента (строка)
-func (p *infinity) ChangeName(name string) (bool, string) {
+func (p *InfinityAPI) ChangeName(name string) (bool, string) {
 
 	tmp, err := json.Marshal(name)
 	if err != nil {
@@ -359,7 +373,7 @@ func (p *infinity) ChangeName(name string) (bool, string) {
 //Taxi.WebAPI.Client.SendMessage (Отправка сообщения оператору) Отправляет операторам системы уведомление с сообщением данного клиента
 //Параметры:
 //Текст сообщения (строка)
-func (p *infinity) WriteDispatcher(message string) (bool, string /*, string*/) {
+func (p *InfinityAPI) WriteDispatcher(message string) (bool, string /*, string*/) {
 	tmp, err := json.Marshal(message)
 	if err != nil {
 		log.Printf("INF WD error at marshal json to infinity %v %v", string(message), err)
@@ -372,12 +386,12 @@ func (p *infinity) WriteDispatcher(message string) (bool, string /*, string*/) {
 	err = json.Unmarshal(body, &temp)
 	if err != nil {
 		log.Printf("INF WD error at unmarshal json from infinity %v %v", string(body), err)
-		return false, fmt.Sprint(err)
+		return false, CONNECTION_ERROR
 	}
 	return temp.IsSuccess, temp.Message
 }
 
-func (p *infinity) CallbackRequest(phone string) (bool, string) {
+func (p *InfinityAPI) CallbackRequest(phone string) (bool, string) {
 	tmp, err := json.Marshal(phone)
 	if err != nil {
 		log.Printf("INF CBKR error at marshal json to infinity %v %v", string(phone), err)
@@ -389,14 +403,14 @@ func (p *infinity) CallbackRequest(phone string) (bool, string) {
 	err = json.Unmarshal(body, &temp)
 	if err != nil {
 		log.Printf("INF CBKR error at unmarshal json from infinity %v %v", string(body), err)
-		return false, fmt.Sprint(err)
+		return false, CONNECTION_ERROR
 	}
 	return temp.IsSuccess, temp.Message
 }
 
 //Taxi.WebAPI.Client.ClearHistory (Очистка истории заказов клиента)
 //Отмечает закрытые заказы клиента как не видимые для личного кабинета (т.е. сама информация о заказе не удаляется)
-func (p *infinity) ClearHistory() (bool, string) {
+func (p *InfinityAPI) ClearHistory() (bool, string) {
 	body, err := p._request("RemoteCall", map[string]string{"method": "Taxi.WebAPI.Client.ClearHistory"})
 
 	var temp t.Answer
@@ -411,7 +425,7 @@ func (p *infinity) ClearHistory() (bool, string) {
 //Taxi.WebAPI.Client.CancelOrder (Отказ от заказа) Устанавливает для указанного заказа состояние «Отменен»
 //Параметры:
 //Идентификатор заказа (Int64)
-func (p *infinity) CancelOrder(order int64) (bool, string, error) {
+func (p *InfinityAPI) CancelOrder(order int64) (bool, string, error) {
 	tmp, err := json.Marshal(order)
 	if err != nil {
 		log.Printf("INF CO error at marshal json to infinity %v %v", string(order), err)
@@ -426,7 +440,7 @@ func (p *infinity) CancelOrder(order int64) (bool, string, error) {
 	err = json.Unmarshal(body, &temp)
 	if err != nil {
 		log.Printf("INF CO error at unmarshal json from infinity %v %v", string(body), err)
-		return false, fmt.Sprint(err), err
+		return false, CONNECTION_ERROR, err
 	}
 	return temp.IsSuccess, temp.Message, nil
 }
@@ -439,7 +453,7 @@ func (p *infinity) CancelOrder(order int64) (bool, string, error) {
 //"rating" : <Оценка (число)>,
 //"notes" : <Текст отзыва>
 //}
-func (p *infinity) Feedback(inf t.Feedback) (bool, string) {
+func (p *InfinityAPI) Feedback(inf t.Feedback) (bool, string) {
 	tmp, err := json.Marshal(inf)
 	if err != nil {
 		log.Printf("INF FDBK error at marshal json to infinity %v %v", inf, err)
@@ -454,7 +468,7 @@ func (p *infinity) Feedback(inf t.Feedback) (bool, string) {
 	err = json.Unmarshal(body, &temp)
 	if err != nil {
 		log.Printf("INF FDBK error at unmarshal json from infinity %v %v", string(body), err)
-		return false, fmt.Sprint(err)
+		return false, CONNECTION_ERROR
 	}
 	return temp.IsSuccess, temp.Message
 }
@@ -463,7 +477,7 @@ func (p *infinity) Feedback(inf t.Feedback) (bool, string) {
 //Отправляет операторам системы уведомление «Клиент не видит машину»
 //Параметры:
 //Идентификатор заказа (Int64)
-func (p *infinity) WhereIt(ID int64) (bool, string) {
+func (p *InfinityAPI) WhereIt(ID int64) (bool, string) {
 	tmp, err := json.Marshal(ID)
 	if err != nil {
 		log.Printf("INF WHEREIT error at marshal json to infinity %v %v", ID, err)
@@ -477,7 +491,7 @@ func (p *infinity) WhereIt(ID int64) (bool, string) {
 	err = json.Unmarshal(body, &temp)
 	if err != nil {
 		log.Printf("INF WHEREIT error at unmarshal json from infinity %v %v", string(body), err)
-		return false, fmt.Sprint(err)
+		return false, CONNECTION_ERROR
 	}
 	return temp.IsSuccess, temp.Message
 }
@@ -497,7 +511,7 @@ type phonesEdit struct {
 	Contact string `json:"contact"`
 }
 
-func (p *infinity) PhonesEdit(phone phonesEdit) (bool, string) {
+func (p *InfinityAPI) PhonesEdit(phone phonesEdit) (bool, string) {
 	tmp, err := json.Marshal(phone)
 	if err != nil {
 		log.Printf("error at marshal json to infinity %+v", phone)
@@ -508,7 +522,7 @@ func (p *infinity) PhonesEdit(phone phonesEdit) (bool, string) {
 	err = json.Unmarshal(body, &temp)
 	if err != nil {
 		log.Printf("error at unmarshal json from infinity %v", string(body))
-		return false, fmt.Sprint(err)
+		return false, CONNECTION_ERROR
 	}
 	return temp.IsSuccess, temp.Message
 }
@@ -516,7 +530,7 @@ func (p *infinity) PhonesEdit(phone phonesEdit) (bool, string) {
 //Taxi.WebAPI.Client.Phones.Remove (Удаление телефона клиента) Удаляет указанный телефон клиента.
 //Параметры:
 //Идентификатор телефона клиента (Int64)
-func (p *infinity) PhonesRemove(phone int64) (bool, string) {
+func (p *InfinityAPI) PhonesRemove(phone int64) (bool, string) {
 	tmp, err := json.Marshal(phone)
 	if err != nil {
 		log.Printf("error at marshal json to infinity %v", string(phone))
@@ -554,7 +568,7 @@ type favorite struct {
 
 //Параметры idRegion, idDistrict, idCity, idStreet, house, building, fraction используются для создания нового
 //описания адреса и не анализируются при указании параметра idAddress.
-func (p *infinity) AddressesEdit(f favorite) (bool, string) {
+func (p *InfinityAPI) AddressesEdit(f favorite) (bool, string) {
 
 	tmp, err := json.Marshal(f)
 	if err != nil {
@@ -573,7 +587,7 @@ func (p *infinity) AddressesEdit(f favorite) (bool, string) {
 	return temp.IsSuccess, temp.Message
 }
 
-func (p *infinity) AddressesRemove(id int64) (bool, string) {
+func (p *InfinityAPI) AddressesRemove(id int64) (bool, string) {
 	body, err := p._request("RemoteCall", map[string]string{"params": string(id), "method": "Taxi.WebAPI.Client.Addresses.Remove"})
 	var temp t.Answer
 	err = json.Unmarshal(body, &temp)
@@ -590,7 +604,7 @@ type Orders struct {
 }
 
 //Taxi.t.Orders (Заказы: активные и предварительные)
-func (p *infinity) Orders() []t.Order {
+func (p *InfinityAPI) Orders() []t.Order {
 	body, err := p._request("GetViewData", map[string]string{"params": "[{\"viewName\": \"Taxi.Orders\"}]"})
 	if err != nil {
 		log.Print("INF ORDRS error at connection to inf at orders %v", err)
@@ -617,7 +631,7 @@ func (p *infinity) Orders() []t.Order {
 	return result
 }
 
-func (p *infinity) OrdersClosedByDates() []t.Order {
+func (p *InfinityAPI) OrdersClosedByDates() []t.Order {
 	body, err := p._request("GetViewData", map[string]string{"params": "[{\"viewName\": \"Taxi.Orders.Closed.ByDates\"}]"})
 	temp := []Orders{}
 	err = json.Unmarshal(body, &temp)
@@ -628,7 +642,7 @@ func (p *infinity) OrdersClosedByDates() []t.Order {
 	return temp[0].Rows
 }
 
-func (p *infinity) OrdersClosedlastN() []t.Order {
+func (p *InfinityAPI) OrdersClosedlastN() []t.Order {
 	body, err := p._request("GetViewData", map[string]string{"params": "[{\"viewName\": \"Taxi.Orders.Closed.LastN\"}]"})
 
 	var temp []t.Order
@@ -641,7 +655,7 @@ func (p *infinity) OrdersClosedlastN() []t.Order {
 }
 
 //Taxi.Markups (Список доступных наценок)
-func (p *infinity) Markups() []t.Markup {
+func (p *InfinityAPI) Markups() []t.Markup {
 	type MarkupsResult struct {
 		Rows []t.Markup `json:"rows"`
 	}
@@ -683,7 +697,7 @@ func (p *infinity) Markups() []t.Markup {
 //Тип адреса/быстрого адреса в виде строки
 
 
-func (p *infinity) AddressesAutocomplete(text string) t.AddressPackage {
+func (p *InfinityAPI) AddressesAutocomplete(text string) t.AddressPackage {
 	body, err := p._request("GetViewData", map[string]string{"params": "[{\"viewName\": \"Taxi.Addresses.Search\", \"params\": [{\"n\": \"SearchText\", \"v\": \"" + text + "\"}]}]"})
 	if err != nil {
 		log.Printf("INF AA error at connection to inf %v ( ", err)
@@ -700,7 +714,7 @@ func (p *infinity) AddressesAutocomplete(text string) t.AddressPackage {
 }
 
 //Taxi.ClientAddresses (Адреса клиента)
-func (p *infinity) ClientAddresses() t.AddressPackage {
+func (p *InfinityAPI) ClientAddresses() t.AddressPackage {
 	body, err := p._request("GetViewData", map[string]string{"params": "[{\"viewName\": \"Taxi.ClientAddresses\"}]"})
 	var temp []t.AddressPackage
 	err = json.Unmarshal(body, &temp)

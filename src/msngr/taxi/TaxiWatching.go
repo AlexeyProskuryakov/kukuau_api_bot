@@ -18,6 +18,11 @@ const (
 	good_passage = "Приятной Вам поездки!"
 	nominated = "Вам назначен: "
 	order_canceled = "Ваш заказ отменен!"
+
+	REFRESH_TIME = 3 * time.Second
+
+	CHANGE_STATE = "state"
+	CHANGE_CAR = "car"
 )
 
 func FormNotification(context *TaxiContext, ow *d.OrderWrapper, previous_state int, car_info CarInfo, deliv_time time.Time) *s.OutPkg {
@@ -185,11 +190,6 @@ func process_car_state(taxiContext *TaxiContext, botContext *m.BotContext, api_o
 	taxiContext.Notifier.Notify(result)
 }
 
-const (
-	CHANGE_STATE = "state"
-	CHANGE_CAR = "car"
-)
-
 func get_changes(api_order Order, db_order *d.OrderWrapper) []string {
 	var buff []string
 	if result, ok := db_order.OrderData.Get("IDCar").(int64); ok && result != api_order.IDCar {
@@ -207,7 +207,6 @@ var PreviousStates = make(map[int64]int)
 func TaxiOrderWatch(taxiContext *TaxiContext, botContext *m.BotContext) {
 	for {
 		api_orders := taxiContext.API.Orders()
-		//		log.Printf("result of orders request: %v", len(api_orders))
 		for _, api_order := range api_orders {
 			db_order, err := taxiContext.DataBase.Orders.GetById(api_order.ID, botContext.Name)
 			if err != nil {
@@ -228,7 +227,7 @@ func TaxiOrderWatch(taxiContext *TaxiContext, botContext *m.BotContext) {
 			}
 			PreviousStates[api_order.ID] = api_order.State
 		}
-		time.Sleep(1 * time.Second)
+		time.Sleep(REFRESH_TIME)
 	}
 }
 

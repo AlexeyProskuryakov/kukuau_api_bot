@@ -274,7 +274,11 @@ func (cp *TaxiCarPositionMessageProcessor) ProcessMessage(in *s.InPkg) *s.Messag
 			return &s.MessageResult{Body:fmt.Sprintf("Не понятен идентификатор автомобиля у вашего заказа :( %#v, %T", car_id_, car_id_)}
 		}
 		car_info := cp.Cars.GetCarInfo(car_id)
-		return &s.MessageResult{Body:fmt.Sprintf("Lat:%v;Lon:%v", car_info.Lat, car_info.Lon)}
+		if car_info != nil {
+			return &s.MessageResult{Body:fmt.Sprintf("Lat:%v;Lon:%v", car_info.Lat, car_info.Lon)}
+		}else{
+			return s.ErrorMessageResult(errors.New("Неизвестный автомобиль."), cp.context.Commands[CMDS_CREATED_ORDER])
+		}
 
 	}
 	commands, err := FormCommands(in.From, cp.MainDb, cp.context)
@@ -322,7 +326,7 @@ func (smp *TaxiWriteDispatcherMessageProcessor) ProcessMessage(in *s.InPkg) *s.M
 	if ok {
 		text = result
 	} else {
-		text = fmt.Sprintf("Спасибо за ваш отзыв! Но сообщение доставленно с ошибкой\n%s\nопробуйте снова", result)
+		text = fmt.Sprintf("Спасибо за ваш отзыв! Но сообщение доставленно с ошибкой.\n%s", result)
 	}
 	return &s.MessageResult{Body:text, Type:"chat"}
 }
@@ -334,14 +338,14 @@ type TaxiCallbackRequestMessageProcessor struct {
 func (crmp *TaxiCallbackRequestMessageProcessor) ProcessMessage(in *s.InPkg) *s.MessageResult {
 	phone, err := _get_phone(in)
 	if err != nil {
-		return &s.MessageResult{Body:"Ошибка! Не предоставлен номер телефона", Type:"chat"}
+		return &s.MessageResult{Body:"Ошибка! Не предоставлен номер телефона.", Type:"chat"}
 	}
 	ok, result := crmp.API.CallbackRequest(*phone)
 	var text string
 	if ok {
 		text = fmt.Sprintf("Ожидайте звонка оператора\n%s", result)
 	}else {
-		text = fmt.Sprintf("Ошибка при отправке запроса на обратный звонок\n%s", result)
+		text = fmt.Sprintf("Ошибка при отправке запроса на обратный звонок.\n%s", result)
 	}
 	return &s.MessageResult{Body:text, Type:"chat"}
 }
@@ -574,7 +578,7 @@ func (nop *TaxiNewOrderProcessor) ProcessMessage(in *s.InPkg) *s.MessageResult {
 				}
 			}else {
 				return s.ErrorMessageResult(
-					errors.New(fmt.Sprintf("Не могу определить адрес, потому что... %v", err.Error())),
+					errors.New(fmt.Sprintf("Не могу определить адрес, потому что %v", err.Error())),
 					nop.context.Commands[CMDS_NOT_CREATED_ORDER])
 			}
 		}
