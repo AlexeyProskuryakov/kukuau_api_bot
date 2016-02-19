@@ -18,6 +18,7 @@ import (
 )
 
 var CC_REGEXP = regexp.MustCompile("(ул(ица|\\.| )|пр(\\.|оспект|\\-кт|оезд)|пер(\\.|еулок| )|г(ород|\\.|ор\\.| )|обл(асть|\\.| )|р(айон|\\-н )|^с |бульвар|пл(\\.|ощадь)|\\(.*\\))")
+var SPLIT_REGEXP = regexp.MustCompile("\\s+")
 
 func StreetsSearchController(w http.ResponseWriter, r *http.Request, i t.AddressSupplier) {
 	w.Header().Set("Content-type", "application/json")

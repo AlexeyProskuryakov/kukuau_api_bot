@@ -83,9 +83,9 @@ func (oh *OwnAddressHandler) IsConnected() bool {
 	return false
 }
 
-func (oh *OwnAddressHandler) Connect(){
+func (oh *OwnAddressHandler) Connect() {
 	client, err := elastic.NewClient(elastic.SetURL(oh.connect_string))
-	if err != nil{
+	if err != nil {
 		log.Printf("OWN can not connect to elastic index")
 		return
 	}
@@ -195,39 +195,6 @@ func (s ByWeights) Less(i, j int) bool {
 	return false
 }
 
-
-func (oh *OwnAddressHandler) form_own_photon_result(query elastic.Query, sort_by elastic.Sorter) []t.AddressF {
-	rows := []t.AddressF{}
-	s_result, err := oh.client.Search().Index("photon").Query(query).Size(100).SortBy(sort_by).Pretty(true).Do()
-	if err != nil {
-		log.Printf("error in own address handler search at search in elastic: \n%v", err)
-		return rows
-	}
-	log.Printf("OWN Found %v in index", s_result.TotalHits())
-
-	var pe PhotonEntity
-	name_city_set := s.NewSet()
-	for _, osm_hit := range s_result.Each(reflect.TypeOf(pe)) {
-		if entity, ok := osm_hit.(PhotonEntity); ok {
-			street_name, street_type := GetStreetNameAndShortName(entity.Name.GetAny())
-			entity_hash := fmt.Sprintf("%v%v%v", street_name, street_type, entity.City.GetAny())
-			if !name_city_set.Contains(entity_hash) && street_type != "" {
-				addr := t.AddressF{
-					Name:street_name,
-					ShortName:street_type,
-					OSM_ID:entity.OSM_ID,
-					City:entity.City.GetAny(),
-				}
-				rows = append(rows, addr)
-				name_city_set.Add(entity_hash)
-			}
-		}
-	}
-	city_sort := ByCitySizeWithCityCounts(rows, oh.city_handler)
-	sort.Sort(city_sort)
-	return city_sort.data
-}
-
 func (oh *OwnAddressHandler) form_own_autocomplete_result(query elastic.Query, sort_by elastic.Sorter) []t.AddressF {
 	rows := []t.AddressF{}
 	s_result, err := oh.client.Search().Index("autocomplete").Query(query).Size(1000).SortBy(sort_by).Pretty(true).Do()
@@ -258,38 +225,90 @@ func (oh *OwnAddressHandler) form_own_autocomplete_result(query elastic.Query, s
 	return rows
 }
 
-func (oh *OwnAddressHandler) photon_rows(q string) []t.AddressF {
-	sort := elastic.NewGeoDistanceSort("coordinate").Order(true).Point(oh.orbit.Lat, oh.orbit.Lon).Unit("km").SortMode("min").Asc()
-	filter := elastic.NewGeoDistanceFilter("coordinate").Distance("75km").Lat(oh.orbit.Lat).Lon(oh.orbit.Lon)
-	query := elastic.NewBoolQuery().Must(elastic.NewTermQuery("osm_key", "highway"), elastic.NewBoolQuery().Should(
-		elastic.NewMatchQuery("collector.default", q).Fuzziness("1").PrefixLength(2).MinimumShouldMatch("100%"),
-		elastic.NewMatchQuery("collector.ru.ngrams", q).Fuzziness("1").PrefixLength(2).MinimumShouldMatch("100%"),
-	).MinimumShouldMatch("1")).Should(
-		elastic.NewMatchQuery("name.ru.raw", q).Type("boolean").Analyzer("search_raw").Boost(200),
-	)
+func _get_address_slice(s s.Set, info map[string]t.AddressF) []t.AddressF {
+	result := []t.AddressF{}
+	iter_chan := s.Iter()
+	for el := range iter_chan {
+		a_h := el.(string)
+		if address, ok := info[a_h]; ok {
+			result = append(result, address)
+		}
+	}
+	return result
+}
 
-	script_funct := elastic.NewScriptFunction("").Lang("groovy").Script("general-score")
-	fsq := elastic.NewFunctionScoreQuery().AddScoreFunc(script_funct).ScoreMode("multiply").BoostMode("multiply").Query(query)
+func _addr_hash(el t.AddressF) string {
+	return fmt.Sprintf("%v%v%v", el.Name, el.ShortName, el.City)
+}
 
-	main_filtered := elastic.NewFilteredQuery(fsq)
-	main_filtered.Filter(filter)
-	rows := oh.form_own_photon_result(main_filtered, sort)
-	return rows
+func _get_address_set(sl []t.AddressF, info map[string]t.AddressF) s.Set {
+	result := s.NewSet()
+	for _, el := range sl {
+		ah := _addr_hash(el)
+		info[ah] = el
+		result.Add(ah)
+	}
+	return result
+}
+
+func _sort_addresses(sl []t.AddressF, weights map[int64]float64) []t.AddressF {
+	result_sort := ByWeightsOnOSM(sl, weights)
+	sort.Sort(result_sort)
+
+	sorted_result := result_sort.data
+	if len(sorted_result) > 20 {
+		return sorted_result[:20]
+	}
+	return sorted_result
 }
 
 func (oh *OwnAddressHandler) autocomplete_rows(q string) []t.AddressF {
-	t_query := elastic.NewTermQuery("name", q)
-	filter := elastic.NewGeoDistanceFilter("location").Distance("75km").Lat(oh.orbit.Lat).Lon(oh.orbit.Lon)
-	query := elastic.NewFilteredQuery(t_query).Filter(filter)
-	q_sort := elastic.NewGeoDistanceSort("location").Order(true).Point(oh.orbit.Lat, oh.orbit.Lon).Unit("km").SortMode("min").Asc()
-	result := oh.form_own_autocomplete_result(query, q_sort)
+	result_sets := map[string]s.Set{}
 	weghts := map[int64]float64{}
-	for _, addr := range result {
-		weghts[addr.OSM_ID] = oh.get_weight(addr, q)
+	info := map[string]t.AddressF{}
+	all_found_addresses := []t.AddressF{}
+
+	q_words := SPLIT_REGEXP.Split(q, -1)
+
+	for _, word := range q_words {
+		t_query := elastic.NewTermQuery("name", word)
+		filter := elastic.NewGeoDistanceFilter("location").Distance("75km").Lat(oh.orbit.Lat).Lon(oh.orbit.Lon)
+		query := elastic.NewFilteredQuery(t_query).Filter(filter)
+		q_sort := elastic.NewGeoDistanceSort("location").Order(true).Point(oh.orbit.Lat, oh.orbit.Lon).Unit("km").SortMode("min").Asc()
+		q_result := oh.form_own_autocomplete_result(query, q_sort)
+
+		result_sets[word] = _get_address_set(q_result, info)
+		all_found_addresses = append(all_found_addresses, q_result...)
 	}
-	s := ByWeightsOnOSM(result, weghts)
-	sort.Sort(s)
-	return s.data
+	for _, word := range q_words {
+		for _, addr := range all_found_addresses {
+			new_weight := oh.get_weight(addr, word)
+			if weight, ok := weghts[addr.OSM_ID]; ok {
+				new_weight += weight
+			}
+			weghts[addr.OSM_ID] = new_weight
+		}
+	}
+	result := []t.AddressF{}
+	if len(result_sets) == 1 {
+		if set, ok := result_sets[q]; ok {
+			result = _get_address_slice(set, info)
+		}
+	} else {
+		intersect := s.NewSet()
+		for _, set := range result_sets {
+			if set.Cardinality() == 0 {
+				continue
+			}
+			if intersect.Cardinality() == 0 {
+				intersect = set
+			}
+			intersect = set.Intersect(intersect)
+		}
+		result = _get_address_slice(intersect, info)
+	}
+
+	return _sort_addresses(result, weghts)
 }
 
 
@@ -302,10 +321,12 @@ func (oh *OwnAddressHandler) get_weight(a_addr t.AddressF, q string) float64 {
 		an_len := float64(len([]rune(adr_name)))
 		var koef float64
 		if strings.HasPrefix(adr_name, q) {
-			koef = (q_len / math.Abs(an_len-q_len)) + 1.0
-		} else if strings.HasSuffix(a_addr.Name, q) {
-			koef = q_len/ an_len + 1.0
-		} else if strings.Contains(adr_name, q) {
+			if strings.EqualFold(adr_name, q){
+				koef = q_len
+			} else{
+				koef = (q_len / math.Abs(an_len - q_len)) + 1.0
+			}
+		}  else if strings.Contains(adr_name, q) {
 			koef = (an_len - q_len) / (an_len + q_len)
 		} else {
 			return 0.0
@@ -320,7 +341,7 @@ func (oh *OwnAddressHandler) GetBest(q string, a []t.AddressF, b []t.AddressF) [
 	interest := []t.AddressF{}
 	set := s.NewSet()
 	for _, addr := range a {
-		hash_ := fmt.Sprintf("%v%v%v", addr.Name, addr.ShortName, addr.City)
+		hash_ := _addr_hash(addr)
 		if !set.Contains(hash_) {
 			set.Add(hash_)
 			addr_weight := oh.get_weight(addr, q)
@@ -331,7 +352,7 @@ func (oh *OwnAddressHandler) GetBest(q string, a []t.AddressF, b []t.AddressF) [
 		}
 	}
 	for _, addr := range b {
-		hash_ := fmt.Sprintf("%v%v%v", addr.Name, addr.ShortName, addr.City)
+		hash_ := _addr_hash(addr)
 		if !set.Contains(hash_) {
 			set.Add(hash_)
 			addr_weight := oh.get_weight(addr, q)
@@ -345,16 +366,16 @@ func (oh *OwnAddressHandler) GetBest(q string, a []t.AddressF, b []t.AddressF) [
 	weight_sort := ByWeightsOnOSM(interest, addr_weights)
 	sort.Sort(weight_sort)
 	result := weight_sort.data[:]
-	if len(result)>20{
+	if len(result) > 20 {
 		return result[:20]
 	}
 	return result
 }
 
 func (oh *OwnAddressHandler) AddressesAutocomplete(q string) t.AddressPackage {
-//	p_rows := oh.photon_rows(q)
+	//	p_rows := oh.photon_rows(q)
 	a_rows := oh.autocomplete_rows(q)
-//	rows := oh.GetBest(q, p_rows, a_rows)
+	//	rows := oh.GetBest(q, p_rows, a_rows)
 	result := t.AddressPackage{Rows:&a_rows}
 	return result
 }
@@ -431,7 +452,7 @@ func (oh *OwnAddressHandler) GetExternalInfo(key, name string) (*t.AddressF, err
 			}
 		}
 	}
-	return nil, errors.New(fmt.Sprintf("Не найденно ничего похожее на %v (%v)", name,key))
+	return nil, errors.New(fmt.Sprintf("Не найденно ничего похожее на %v (%v)", name, key))
 
 }
 
