@@ -146,3 +146,7 @@ func (p *FakeTaxiAPI) WhereIt(order_id int64) (bool, string) {
 func (p *FakeTaxiAPI) Markups() []Markup {
 	return []Markup{Markup{Name:"Животное", Value:100500, ID:1234567890}}
 }
+
+func (p *FakeTaxiAPI) Connect(){
+
+}

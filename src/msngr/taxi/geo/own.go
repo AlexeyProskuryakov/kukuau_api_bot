@@ -59,7 +59,7 @@ func NewOwnAddressHandler(conn_str string, orbit c.TaxiGeoOrbit, external t.Addr
 	}
 	client, err := elastic.NewClient(elastic.SetURL(conn_str))
 	if err != nil {
-		log.Printf("Error at connect to elastic")
+		log.Printf("OWN can not connect to elastic index")
 		return nil
 	}
 	result := OwnAddressHandler{
@@ -81,6 +81,15 @@ func (oh *OwnAddressHandler) IsConnected() bool {
 		return true
 	}
 	return false
+}
+
+func (oh *OwnAddressHandler) Connect(){
+	client, err := elastic.NewClient(elastic.SetURL(oh.connect_string))
+	if err != nil{
+		log.Printf("OWN can not connect to elastic index")
+		return
+	}
+	oh.client = client
 }
 
 type OsmAutocompleteEntity struct {

@@ -20,9 +20,10 @@ import (
 )
 
 const (
-	timeFormat = "2006-01-02 15:04:05"
 	car_info_update_time = 5.0
 )
+
+var CONNECTION_ERROR = s.ErrorMessageResult(errors.New("Система обработки заказов такси не отвечает, попробуйте позже."), nil)
 
 type CarInfoProvider struct {
 	Cache      *CarsCache
@@ -259,6 +260,10 @@ type TaxiCarPositionMessageProcessor struct {
 }
 
 func (cp *TaxiCarPositionMessageProcessor) ProcessMessage(in *s.InPkg) *s.MessageResult {
+	if !cp.API.IsConnected(){
+		cp.API.Connect()
+		return CONNECTION_ERROR
+	}
 	order_wrapper, err := cp.Orders.GetByOwner(in.From, cp.context.Name, true)
 	if err != nil {
 		return s.ErrorMessageResult(err, cp.context.Commands[CMDS_NOT_CREATED_ORDER])
@@ -281,7 +286,7 @@ func (cp *TaxiCarPositionMessageProcessor) ProcessMessage(in *s.InPkg) *s.Messag
 		}
 
 	}
-	commands, err := FormCommands(in.From, cp.MainDb, cp.context)
+	commands, err := form_commands(in.From, cp.MainDb, cp.context)
 	if err != nil {
 		return s.ErrorMessageResult(err, cp.context.Commands[CMDS_NOT_CREATED_ORDER])
 	}
@@ -306,6 +311,10 @@ func get_text(in s.InCommand) (s string, err error) {
 }
 
 func (smp *TaxiWriteDispatcherMessageProcessor) ProcessMessage(in *s.InPkg) *s.MessageResult {
+	if !smp.API.IsConnected(){
+		smp.API.Connect()
+		return CONNECTION_ERROR
+	}
 	var message string
 	var err error
 	cmds := in.Message.Commands
@@ -336,6 +345,10 @@ type TaxiCallbackRequestMessageProcessor struct {
 }
 
 func (crmp *TaxiCallbackRequestMessageProcessor) ProcessMessage(in *s.InPkg) *s.MessageResult {
+	if !crmp.API.IsConnected(){
+		crmp.API.Connect()
+		return CONNECTION_ERROR
+	}
 	phone, err := _get_phone(in)
 	if err != nil {
 		return &s.MessageResult{Body:"Ошибка! Не предоставлен номер телефона.", Type:"chat"}
@@ -357,6 +370,10 @@ type TaxiWhereItMessageProcessor struct {
 }
 
 func (twmp *TaxiWhereItMessageProcessor) ProcessMessage(in *s.InPkg) *s.MessageResult {
+	if !twmp.API.IsConnected(){
+		twmp.API.Connect()
+		return CONNECTION_ERROR
+	}
 	order_wrapper, err := twmp.Orders.GetByOwner(in.From, twmp.context.Name, true)
 	if err != nil {
 		return s.ErrorMessageResult(err, twmp.context.Commands[CMDS_NOT_CREATED_ORDER])
@@ -390,7 +407,7 @@ func form_commands_for_current_order(order_wrapper *d.OrderWrapper, commands map
 	return commands[CMDS_NOT_CREATED_ORDER]
 }
 
-func FormCommands(username string, db d.MainDb, context *m.BotContext) (*[]s.OutCommand, error) {
+func form_commands(username string, db d.MainDb, context *m.BotContext) (*[]s.OutCommand, error) {
 	order_wrapper, err := db.Orders.GetByOwnerLast(username, context.Name)
 	if err != nil && err != mgo.ErrNotFound {
 		return nil, err
@@ -404,13 +421,12 @@ type TaxiCommandsProcessor struct {
 	d.MainDb
 	context *m.BotContext
 }
-
 func (cp *TaxiCommandsProcessor) ProcessRequest(in *s.InPkg) *s.RequestResult {
 	if in.UserData != nil {
 		cp.Users.AddUser(in.From, in.UserData.Name, in.UserData.Phone, in.UserData.Email)
 	}
 
-	result, err := FormCommands(in.From, cp.MainDb, cp.context)
+	result, err := form_commands(in.From, cp.MainDb, cp.context)
 	if err != nil {
 		return s.ExceptionRequestResult(err, cp.context.Commands[CMDS_NOT_CREATED_ORDER])
 	}
@@ -420,7 +436,6 @@ func (cp *TaxiCommandsProcessor) ProcessRequest(in *s.InPkg) *s.RequestResult {
 type TaxiInformationProcessor struct {
 	information *string
 }
-
 func (ih *TaxiInformationProcessor) ProcessMessage(in *s.InPkg) *s.MessageResult {
 	var info_text string
 	if ih.information == nil {
@@ -438,7 +453,6 @@ type AddressNotHere struct {
 	From string
 	To   string
 }
-
 func (a *AddressNotHere) Error() string {
 	return fmt.Sprintf("Адрес \n %+v --> %+v \n не поддерживается этим такси.", a.From, a.To)
 }
@@ -552,6 +566,11 @@ func ApplyTransforms(order *NewOrderInfo, transofrmations []c.Transformation) *N
 	return order
 }
 func (nop *TaxiNewOrderProcessor) ProcessMessage(in *s.InPkg) *s.MessageResult {
+	log.Printf("check connect")
+	if !nop.API.IsConnected(){
+		nop.API.Connect()
+		return CONNECTION_ERROR
+	}
 	order_wrapper, err := nop.Orders.GetByOwnerLast(in.From, nop.context.Name)
 	if err != nil {
 		return s.ErrorMessageResult(err, nop.context.Commands[CMDS_NOT_CREATED_ORDER])
@@ -568,6 +587,7 @@ func (nop *TaxiNewOrderProcessor) ProcessMessage(in *s.InPkg) *s.MessageResult {
 				phone = &(uwrpr.Phone)
 			}
 		}
+		log.Printf("forming order")
 		new_order, err := _form_order(commands[0].Form.Fields, nop.AddressHandler)
 		if err != nil {
 			if _, ok := err.(*AddressNotHere); ok {
@@ -591,7 +611,7 @@ func (nop *TaxiNewOrderProcessor) ProcessMessage(in *s.InPkg) *s.MessageResult {
 		}
 
 		new_order = ApplyTransforms(new_order, nop.Config.Api.Transformations)
-
+		log.Printf("sending order")
 		ans := nop.API.NewOrder(*new_order)
 		if !ans.IsSuccess {
 			nop.Errors.StoreError(in.From, ans.Message)
@@ -618,6 +638,7 @@ func (nop *TaxiNewOrderProcessor) ProcessMessage(in *s.InPkg) *s.MessageResult {
 		if not_send_price {
 			text = "Ваш заказ создан!"
 		} else {
+			log.Printf("calculate price")
 			cost, _ := nop.API.CalcOrderCost(*new_order)
 			if cost == 0 {
 				log.Printf("Order %v, %v with ZERO cost", nop.context.Name, new_order)
@@ -650,6 +671,10 @@ type TaxiCancelOrderProcessor struct {
 }
 
 func (cop *TaxiCancelOrderProcessor) ProcessMessage(in *s.InPkg) *s.MessageResult {
+	if !cop.API.IsConnected(){
+		cop.API.Connect()
+		return CONNECTION_ERROR
+	}
 	order_wrapper, err := cop.Orders.GetByOwnerLast(in.From, cop.context.Name)
 	if err != nil {
 		return s.ErrorMessageResult(err, cop.context.Commands[CMDS_NOT_CREATED_ORDER])
@@ -670,7 +695,7 @@ func (cop *TaxiCancelOrderProcessor) ProcessMessage(in *s.InPkg) *s.MessageResul
 		return &s.MessageResult{Body:fmt.Sprintf("Проблемы с отменой заказа %v\nЗвони скорее: %+v ", message, cop.alert_phone), Commands: cop.context.Commands[CMDS_NOT_CREATED_ORDER], Type:"chat"}
 	}
 
-	commands, err := FormCommands(in.From, cop.MainDb, cop.context)
+	commands, err := form_commands(in.From, cop.MainDb, cop.context)
 	if err != nil {
 		return s.ErrorMessageResult(err, cop.context.Commands[CMDS_NOT_CREATED_ORDER])
 	}
@@ -685,6 +710,11 @@ type TaxiCalculatePriceProcessor struct {
 }
 
 func (cpp *TaxiCalculatePriceProcessor) ProcessMessage(in *s.InPkg) *s.MessageResult {
+	if !cpp.API.IsConnected(){
+		cpp.API.Connect()
+		return CONNECTION_ERROR
+	}
+
 	commands := *in.Message.Commands
 	order, err := _form_order(commands[0].Form.Fields, cpp.AddressHandler)
 	if err != nil {
@@ -713,6 +743,11 @@ func _get_feedback(fields []s.InField) (fdb string, rate int) {
 }
 
 func (fp *TaxiFeedbackProcessor) ProcessMessage(in *s.InPkg) *s.MessageResult {
+	if !fp.API.IsConnected(){
+		fp.API.Connect()
+		return CONNECTION_ERROR
+	}
+
 	commands := *in.Message.Commands
 	fdbk, rate := _get_feedback(commands[0].Form.Fields)
 	phone, err := _get_phone(in)
@@ -733,7 +768,7 @@ func (fp *TaxiFeedbackProcessor) ProcessMessage(in *s.InPkg) *s.MessageResult {
 	if order_id != nil {
 		f := Feedback{IdOrder: *order_id, Rating: rate, FeedBackText: fdbk, Phone:*phone}
 		fp.API.Feedback(f)
-		result_commands, err := FormCommands(in.From, fp.MainDb, fp.context)
+		result_commands, err := form_commands(in.From, fp.MainDb, fp.context)
 		if err != nil {
 			return s.ErrorMessageResult(err, fp.context.Commands[CMDS_NOT_CREATED_ORDER])
 		}

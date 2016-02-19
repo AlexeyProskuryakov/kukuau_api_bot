@@ -20,14 +20,25 @@ import (
 	geo "msngr/taxi/geo"
 )
 
-func GetTaxiAPIInstruments(params c.TaxiApiParams) (t.TaxiInterface, t.AddressSupplier, error) {
-
+func GetTaxiAPI(params c.TaxiApiParams, for_name string) (t.TaxiInterface, error) {
 	switch api_name := params.Name; api_name {
 	case i.INFINITY:
-		return i.GetInfinityAPI(params), i.GetInfinityAddressSupplier(params), nil
+		return i.GetInfinityAPI(params, for_name), nil
 	case t.FAKE:
-		return t.GetFakeAPI(params), i.GetInfinityAddressSupplier(params), nil
+		return t.GetFakeAPI(params), nil
+	case sedi.SEDI:
+		sedi_api := sedi.NewSediAPI(params)
+		return sedi_api, nil
+	}
+	return nil, errors.New("Not imply name of api")
+}
 
+func GetTaxiAPIInstruments(params c.TaxiApiParams, for_name string) (t.TaxiInterface, t.AddressSupplier, error) {
+	switch api_name := params.Name; api_name {
+	case i.INFINITY:
+		return i.GetInfinityAPI(params, for_name), i.GetInfinityAddressSupplier(params, for_name), nil
+	case t.FAKE:
+		return t.GetFakeAPI(params), i.GetInfinityAddressSupplier(params, for_name), nil
 	case sedi.SEDI:
 		sedi_api := sedi.NewSediAPI(params)
 		return sedi_api, sedi_api, nil
@@ -60,7 +71,7 @@ func StartBot(db *d.MainDb, result chan string) c.Configuration {
 
 	for taxi_name, taxi_conf := range conf.Taxis {
 		log.Printf("taxi api configuration for %+v:\n%v", taxi_conf.Name, taxi_conf.Api)
-		external_api, external_address_supplier, err := GetTaxiAPIInstruments(taxi_conf.Api)
+		external_api, external_address_supplier, err := GetTaxiAPIInstruments(taxi_conf.Api, taxi_name)
 
 		if err != nil {
 			log.Printf("Skip this taxi api [%+v]\nBecause: %v", taxi_conf.Api, err)
@@ -81,7 +92,12 @@ func StartBot(db *d.MainDb, result chan string) c.Configuration {
 		http.HandleFunc(fmt.Sprintf("/taxi/%v", taxi_conf.Name), controller)
 
 		go func() {
-			taxiContext := t.TaxiContext{API: external_api, DataBase: db, Cars: carsCache, Notifier: notifier}
+			api, err := GetTaxiAPI(taxi_conf.Api, taxi_name + "_watch")
+			if err != nil {
+				log.Printf("Error at get api: %v for %v, will not use order watching", err, taxi_name)
+			}
+			cc := t.NewCarsCache(api)
+			taxiContext := t.TaxiContext{API: api, DataBase: db, Cars: cc, Notifier: notifier}
 			log.Printf("Will start order watcher for [%v]", botContext.Name)
 			t.TaxiOrderWatch(&taxiContext, botContext)
 		}()

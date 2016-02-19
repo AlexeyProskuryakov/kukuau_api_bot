@@ -87,17 +87,14 @@ type messageHandler struct {
 	Collection *mgo.Collection
 	parent     *MainDb
 }
-
 type orderHandler struct {
 	Collection *mgo.Collection
 	parent     *MainDb
 }
-
 type userHandler struct {
 	Collection *mgo.Collection
 	parent     *MainDb
 }
-
 type errorHandler struct {
 	Collection *mgo.Collection
 	parent     *MainDb

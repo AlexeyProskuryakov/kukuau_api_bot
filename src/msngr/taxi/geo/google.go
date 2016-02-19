@@ -1,7 +1,6 @@
 package geo
 
 import (
-
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -13,18 +12,14 @@ import (
 	c "msngr/configuration"
 	s "msngr/taxi/set"
 	"msngr/utils"
-
 )
 
 var NOT_IMPLY_TYPES = []string{"country"}
 
 const (
-
 	GOOGLE_API_URL = "https://maps.googleapis.com/maps/api"
 	ERROR_EXTERNAL_MESSAGE = "служба такси не доступна."
 )
-
-
 
 type GoogleTerm struct {
 	Offset int16 `json:"offset"`
@@ -78,14 +73,14 @@ type GoogleAddressComponent struct {
 }
 type GoogleDetailPlaceResult struct {
 	Result struct {
-			   AddressComponents []GoogleAddressComponent `json:"address_components"`
-			   Geometry          struct {
-									 Location GooglePoint `json:"location"`
-								 } `json:"geometry"`
-			   FormattedAddress  string `json:"formatted_address"`
-			   PlaceId           string `json:"place_id"`
-			   Name              string `json:"name"`
-		   }`json:"result"`
+		       AddressComponents []GoogleAddressComponent `json:"address_components"`
+		       Geometry          struct {
+						 Location GooglePoint `json:"location"`
+					 } `json:"geometry"`
+		       FormattedAddress  string `json:"formatted_address"`
+		       PlaceId           string `json:"place_id"`
+		       Name              string `json:"name"`
+	       }`json:"result"`
 	Status string `json:"status"`
 }
 type GooglePoint struct {
@@ -107,7 +102,7 @@ type GoogleAddressHandler struct {
 }
 
 func NewGoogleAddressHandler(key string, orbit c.TaxiGeoOrbit, external t.AddressSupplier) *GoogleAddressHandler {
-	if key == ""{
+	if key == "" {
 		return nil
 	}
 	result := GoogleAddressHandler{key:key, orbit:orbit}
@@ -204,7 +199,7 @@ func (ah *GoogleAddressHandler) GetExternalInfo(key, name string) (*t.AddressF, 
 		}
 	}
 
-	return nil, errors.New(fmt.Sprintf("No any results for [%v] address in external source", query))
+	return nil, errors.New(fmt.Sprintf("нет адреса [%v] в системе такси.", query))
 }
 
 func (ah *GoogleAddressHandler) AddressesAutocomplete(q string) t.AddressPackage {
@@ -224,9 +219,13 @@ func (ah *GoogleAddressHandler) AddressesAutocomplete(q string) t.AddressPackage
 		"key":ah.key,
 	}
 	body, err := u.GET(url, &params)
+	if err != nil {
+		log.Printf("GOOGLE ERROR! Can not get addres from %v [%+v]\n because %v", url, params, err)
+		return result
+	}
 	err = json.Unmarshal(*body, &address_result)
 	if err != nil {
-		log.Printf("ERROR! Google Adress Supplier unmarshal error [%+v]", string(*body))
+		log.Printf("GOOGLE ERROR! Google Adress Supplier unmarshal error [%+v]", string(*body))
 		return result
 	}
 
@@ -238,6 +237,8 @@ func (ah *GoogleAddressHandler) IsConnected() bool {
 	return true
 }
 
+func (ah *GoogleAddressHandler) Connect()  {
+}
 
 
 func _process_address_components(components []GoogleAddressComponent) (string, s.Set) {
