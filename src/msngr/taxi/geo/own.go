@@ -13,12 +13,9 @@ import (
 
 	t "msngr/taxi"
 	s "msngr/taxi/set"
-	u "msngr/utils"
 	c "msngr/configuration"
 )
-/*
-Open street map and elastic search handler
-*/
+
 type OwnAddressHandler struct {
 	t.AddressSupplier
 	t.AddressHandler
@@ -43,6 +40,9 @@ func CountsOfCities(index string, client *elastic.Client) map[string]int {
 	}
 	for _, hit := range result.Each(reflect.TypeOf(eet)) {
 		if entity, ok := hit.(OsmAutocompleteEntity); ok {
+			if strings.TrimSpace(entity.City) == "" {
+				cities[entity.City] = 0
+			}
 			if val, ok := cities[entity.City]; ok {
 				cities[entity.City] = val + 1
 			}else {
@@ -262,13 +262,22 @@ func _sort_addresses(sl []t.AddressF, weights map[int64]float64) []t.AddressF {
 	return sorted_result
 }
 
+
+func _correct_io(in string) string {
+	if IO_REGEXP.MatchString(in) {
+		return IO_REGEXP.ReplaceAllString(in, "е")
+	}
+	return in
+}
+
 func (oh *OwnAddressHandler) autocomplete_rows(q string) []t.AddressF {
 	result_sets := map[string]s.Set{}
 	weghts := map[int64]float64{}
 	info := map[string]t.AddressF{}
 	all_found_addresses := []t.AddressF{}
 
-	q_words := SPLIT_REGEXP.Split(q, -1)
+	query := _correct_io(q)
+	q_words := SPLIT_REGEXP.Split(query, -1)
 
 	for _, word := range q_words {
 		t_query := elastic.NewTermQuery("name", word)
@@ -291,39 +300,33 @@ func (oh *OwnAddressHandler) autocomplete_rows(q string) []t.AddressF {
 	}
 	result := []t.AddressF{}
 	if len(result_sets) == 1 {
-		if set, ok := result_sets[q]; ok {
+		if set, ok := result_sets[query]; ok {
 			result = _get_address_slice(set, info)
 		}
 	} else {
 		intersect := s.NewSet()
 		for _, set := range result_sets {
-			if set.Cardinality() == 0 {
-				continue
-			}
-			if intersect.Cardinality() == 0 {
-				intersect = set
-			}
+			if set.Cardinality() == 0 {continue}
+			if intersect.Cardinality() == 0 {intersect = set}
 			intersect = set.Intersect(intersect)
 		}
 		result = _get_address_slice(intersect, info)
 	}
-
 	return _sort_addresses(result, weghts)
 }
-
 
 func (oh *OwnAddressHandler) get_weight(a_addr t.AddressF, q string) float64 {
 	if w, ok := oh.city_handler.GetWeight(a_addr.City); ok {
 		addr_weight := float64(w)
 		q = strings.TrimSpace(strings.ToLower(q))
-		adr_name := strings.TrimSpace(strings.ToLower(a_addr.Name))
+		adr_name := strings.TrimSpace(strings.ToLower(_correct_io(a_addr.Name)))
 		q_len := float64(len([]rune(q)))
 		an_len := float64(len([]rune(adr_name)))
 		var koef float64
 		if strings.HasPrefix(adr_name, q) {
-			if strings.EqualFold(adr_name, q){
+			if strings.EqualFold(adr_name, q) {
 				koef = q_len
-			} else{
+			} else {
 				koef = (q_len / math.Abs(an_len - q_len)) + 1.0
 			}
 		}  else if strings.Contains(adr_name, q) {
@@ -336,46 +339,10 @@ func (oh *OwnAddressHandler) get_weight(a_addr t.AddressF, q string) float64 {
 	return 0.0
 }
 
-func (oh *OwnAddressHandler) GetBest(q string, a []t.AddressF, b []t.AddressF) []t.AddressF {
-	addr_weights := map[int64]float64{}
-	interest := []t.AddressF{}
-	set := s.NewSet()
-	for _, addr := range a {
-		hash_ := _addr_hash(addr)
-		if !set.Contains(hash_) {
-			set.Add(hash_)
-			addr_weight := oh.get_weight(addr, q)
-			if addr_weight != 0.0 {
-				addr_weights[addr.OSM_ID] = addr_weight
-				interest = append(interest, addr)
-			}
-		}
-	}
-	for _, addr := range b {
-		hash_ := _addr_hash(addr)
-		if !set.Contains(hash_) {
-			set.Add(hash_)
-			addr_weight := oh.get_weight(addr, q)
-			if addr_weight != 0.0 {
-				addr_weights[addr.OSM_ID] = addr_weight
-				interest = append(interest, addr)
-			}
-		}
-	}
-
-	weight_sort := ByWeightsOnOSM(interest, addr_weights)
-	sort.Sort(weight_sort)
-	result := weight_sort.data[:]
-	if len(result) > 20 {
-		return result[:20]
-	}
-	return result
-}
 
 func (oh *OwnAddressHandler) AddressesAutocomplete(q string) t.AddressPackage {
-	//	p_rows := oh.photon_rows(q)
+
 	a_rows := oh.autocomplete_rows(q)
-	//	rows := oh.GetBest(q, p_rows, a_rows)
 	result := t.AddressPackage{Rows:&a_rows}
 	return result
 }
@@ -430,15 +397,31 @@ func (oh *OwnAddressHandler) GetExternalInfo(key, name string) (*t.AddressF, err
 	for _, osm_hit := range s_result.Each(reflect.TypeOf(ogcr)) {
 		if entity, ok := osm_hit.(OwnGeoCodeResult); ok {
 			local_set := s.NewSet()
-			_name := clear_address_string(u.FirstOf(entity.Name.Ru, entity.Name.Default).(string))
+			_name := clear_address_string(entity.Name.GetAny())
 			add_to_set(local_set, _name)
-			add_to_set(local_set, clear_address_string(u.FirstOf(entity.City.Ru, entity.City.Default).(string)))
+			add_to_set(local_set, clear_address_string(entity.City.GetAny()))
 
 			log.Printf("OWN Query to external: |%v| \nlocal set: %+v", _name, local_set)
 
 			rows := oh.ExternalAddressSupplier.AddressesAutocomplete(_name).Rows
+			if IO_REGEXP.MatchString(_name) {
+				rows_io := oh.ExternalAddressSupplier.AddressesAutocomplete(_correct_io(_name)).Rows
+				if rows_io != nil {
+					if rows == nil {
+						rows = rows_io
+					} else {
+						e_rows_io := *rows_io
+						e_rows := *rows
+						e_rows = append(e_rows, e_rows_io...)
+						rows = &e_rows
+					}
+					local_set.Remove(_name)
+					local_set.Add(_correct_io(_name))
+				}
+			}
+
 			if rows == nil {
-				return nil, errors.New(fmt.Sprintf("Система такси не знает местонахождение [%v]", _name))
+				return nil, errors.New(fmt.Sprintf("система такси не знает местонахождение %v", _name))
 			}
 			ext_rows := *rows
 
@@ -452,7 +435,7 @@ func (oh *OwnAddressHandler) GetExternalInfo(key, name string) (*t.AddressF, err
 			}
 		}
 	}
-	return nil, errors.New(fmt.Sprintf("Не найденно ничего похожее на %v (%v)", name, key))
+	return nil, errors.New(fmt.Sprintf("не найдено ничего похожее на %v", name))
 
 }
 

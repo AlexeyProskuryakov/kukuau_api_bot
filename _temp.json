@@ -1,92 +1,84 @@
 {
-  "filtered": {
-    "query": {
-      "function_score": {
-        "query": {
-          "bool": {
-            "must": {
-              "bool": {
-                "should": [
-                  {
-                    "match": {
-                        "collector.default": {
-                        "query": "q"  ,
-                        "type": "boolean",
-                        "analyzer": "search_ngram",
-                        "fuzziness": 1,
-                        "prefix_length": 2,
-                        "minimum_should_match": "80%"
-                      }
-                    }
-                  },
-                  {
-                    "match": {
-                      "collector.ru.ngrams": {
-                        "query": "q",
-                        "type": "boolean",
-                        "analyzer": "search_ngram",
-                        "fuzziness": 1,
-                        "prefix_length": 2,
-                        "minimum_should_match": "100%"
-                      }
-                    }
-                  }
-                ],
-                "minimum_should_match": "1"
-              }
-            },
-            "should": [
-              {
-                "match": {
-                  "name.ru.raw": {
-                    "query": "q",
-                    "type": "boolean",
-                    "analyzer": "search_raw",
-                    "boost": 200.0
-                  }
-                }
-              },
-              {
-                "match": {
-                  "collector.ru.raw": {
-                    "query": "q",
-                    "type": "boolean",
-                    "analyzer": "search_raw",
-                    "boost": 100.0
-                  }
-                }
-              }
+  "settings": {
+    "index": {
+      "analysis": {
+        "char_filter": {
+          "e_map": {
+            "type": "mapping",
+            "mappings": [
+              "ё=>е"
             ]
           }
         },
-        "functions": [
-          {
-            "script_score": {
-              "script": "general-score",
-              "lang": "groovy"
-            }
+        "analyzer": {
+          "autocomplete_analyzer": {
+            "type": "custom",
+            "tokenizer": [
+              "lowercase",
+              "nGram"
+            ],
+            "filter": [
+              "lowercase",
+              "worddelimiter",
+              "app_ngram",
+              "snowball"
+            ],
+            "char_filter": [
+              "e_map"
+            ]
+          },
+          "autocomplete_search_analyzer": {
+            "type": "custom",
+            "tokenizer": "standart",
+            "filter": [
+              "lowercase",
+              "worddelimiter",
+              "app_ngram",
+              "snowball"
+            ]
           }
-        ],
-        "score_mode": "multiply",
-        "boost_mode": "multiply"
+        },
+        "tokenizer": {
+          "nGram": {
+            "type": "nGram",
+            "min_gram": 2,
+            "max_gram": 15
+          }
+        },
+        "filter": {
+          "app_ngram": {
+            "type": "nGram",
+            "min_gram": 2,
+            "max_gram": 15
+          },
+          "worddelimeter": {
+            "type": "word_delimeter"
+          },
+          "snowball": {
+            "type": "snowball",
+            "language": "Russian"
+          }
+        }
       }
-    },
-    "filter": {
-      "or": {
-        "filters": [
-          {
-            "query": {
-              "match": {
-                "osm_key": "highway"
-              }
-            }
-          }
-        ]
+    }
+  },
+  "mappings": {
+    "name": {
+      "_all": {
+        "enabled": false
+      },
+      "properties": {
+        "name": {
+          "type": "string",
+          "analyzer": "autocomplete_analyzer"
+        },
+        "osm_id": {
+          "type": "long"
+        },
+        "location": {
+          "type": "geo_point"
+        }
       }
     }
   }
 }
-
-
-"http://212.20.48.191:8080/WebAPITaxi/",
-            "http://109.202.17.249:8080/WebAPITaxi"
