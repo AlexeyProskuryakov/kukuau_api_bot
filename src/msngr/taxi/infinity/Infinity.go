@@ -207,7 +207,7 @@ func (p *InfinityAPI) _request(conn_suffix string, url_values map[string]string)
 			login_result := p.Login()
 			if !login_result {
 				log.Printf("INF can not login now, will trying")
-				go p.WaitForReLogin()
+				p.Connect()
 				return nil, errors.New(CONNECTION_ERROR)
 			}else {
 				return p._request(conn_suffix, url_values)
