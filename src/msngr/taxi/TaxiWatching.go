@@ -17,7 +17,7 @@ const (
 	car_set_out = "Машина выехала"
 	good_passage = "Приятной Вам поездки!"
 	nominated = "Вам назначен: "
-	order_canceled = "Ваш заказ отменен!"
+	order_canceled = "Ваш заказ отменен."
 
 	REFRESH_TIME = 3 * time.Second
 
@@ -50,7 +50,7 @@ func FormNotification(context *TaxiContext, ow *d.OrderWrapper, previous_state i
 		} else {
 			text = fmt.Sprintf("%v %v", car_arrived, good_passage)
 		}
-
+		//todo. Отсавьте Ваш отзыв о поездке выбрав соответствующий пункт меню.
 	case ORDER_PAYED:
 		text = "Заказ выполнен! Спасибо что воспользовались услугами нашей компании."
 		context.DataBase.Orders.SetActive(ow.OrderId, ow.Source, false)

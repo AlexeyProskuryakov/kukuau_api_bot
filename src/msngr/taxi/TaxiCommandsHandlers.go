@@ -439,7 +439,7 @@ type TaxiInformationProcessor struct {
 func (ih *TaxiInformationProcessor) ProcessMessage(in *s.InPkg) *s.MessageResult {
 	var info_text string
 	if ih.information == nil {
-		info_text = "Срочный заказ такси. Быстрая подача. Оплата наличными или картой. "
+		info_text = "Срочный заказ такси. Быстрая подача. Оплата наличными или картой. Нажмите кнопку меню чтобы создать заказ. Для офрмления заказа нажмите кнопк меню расположенную в нижнем левом углу."
 	} else {
 		info_text = *ih.information
 	}
@@ -636,7 +636,7 @@ func (nop *TaxiNewOrderProcessor) ProcessMessage(in *s.InPkg) *s.MessageResult {
 			}
 		}
 		if not_send_price {
-			text = "Ваш заказ создан!"
+			text = "Ваш заказ создан! В течении 5 минут Вам будет назначен автомобиль. Или перезвонит оператор если ожидаемое время подачи составит более 15 минут."
 		} else {
 			log.Printf("calculate price")
 			cost, _ := nop.API.CalcOrderCost(*new_order)
@@ -655,7 +655,7 @@ func (nop *TaxiNewOrderProcessor) ProcessMessage(in *s.InPkg) *s.MessageResult {
 					}
 				}
 			}
-			text = fmt.Sprintf("Ваш заказ создан! Стоимость поездки составит %+v рублей. %s", cost, markup_text)
+			text = fmt.Sprintf("Ваш заказ создан! Стоимость поездки составит %+v рублей. %s. В течении 5 минут Вам будет назначен автомобиль. Или перезвонит оператор если ожидаемое время подачи составит более 15 минут.", cost, markup_text)
 		}
 		return &s.MessageResult{Body:text, Commands:nop.context.Commands[CMDS_CREATED_ORDER], Type:"chat"}
 	}
