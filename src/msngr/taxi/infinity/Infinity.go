@@ -155,7 +155,9 @@ func (p *InfinityAPI) WaitForReLogin() bool {
 	}
 	sleep_time := time.Duration(1000)
 	p.InReloginNow = true
+	log.Printf("INF Start wait for relogin")
 	defer func() {
+		log.Printf("INF Stop wait for relogin")
 		p.InReloginNow = false
 	}()
 
@@ -202,7 +204,7 @@ func (p *InfinityAPI) _request(conn_suffix string, url_values map[string]string)
 			p.ConnStrings = append(p.ConnStrings[:0], append([]string{connString}, p.ConnStrings[0:]...)...)
 		}()
 		if res != nil && res.StatusCode != 200 {
-			log.Println("INF response is: ", res, "; error is:", err, ". Will login and retrieve data again after second")
+			log.Println("INF For ", conn_suffix, " [", url_values, "]\n response is: ", res, "; error is:", err, ". Will login and retrieve data again after second")
 			time.Sleep(time.Second)
 			login_result := p.Login()
 			if !login_result {

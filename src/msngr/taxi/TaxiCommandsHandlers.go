@@ -260,7 +260,7 @@ type TaxiCarPositionMessageProcessor struct {
 }
 
 func (cp *TaxiCarPositionMessageProcessor) ProcessMessage(in *s.InPkg) *s.MessageResult {
-	if !cp.API.IsConnected(){
+	if !cp.API.IsConnected() {
 		cp.API.Connect()
 		return CONNECTION_ERROR
 	}
@@ -281,7 +281,7 @@ func (cp *TaxiCarPositionMessageProcessor) ProcessMessage(in *s.InPkg) *s.Messag
 		car_info := cp.Cars.GetCarInfo(car_id)
 		if car_info != nil {
 			return &s.MessageResult{Body:fmt.Sprintf("Lat:%v;Lon:%v", car_info.Lat, car_info.Lon)}
-		}else{
+		}else {
 			return s.ErrorMessageResult(errors.New("Неизвестный автомобиль."), cp.context.Commands[CMDS_CREATED_ORDER])
 		}
 
@@ -311,7 +311,7 @@ func get_text(in s.InCommand) (s string, err error) {
 }
 
 func (smp *TaxiWriteDispatcherMessageProcessor) ProcessMessage(in *s.InPkg) *s.MessageResult {
-	if !smp.API.IsConnected(){
+	if !smp.API.IsConnected() {
 		smp.API.Connect()
 		return CONNECTION_ERROR
 	}
@@ -345,7 +345,7 @@ type TaxiCallbackRequestMessageProcessor struct {
 }
 
 func (crmp *TaxiCallbackRequestMessageProcessor) ProcessMessage(in *s.InPkg) *s.MessageResult {
-	if !crmp.API.IsConnected(){
+	if !crmp.API.IsConnected() {
 		crmp.API.Connect()
 		return CONNECTION_ERROR
 	}
@@ -370,7 +370,7 @@ type TaxiWhereItMessageProcessor struct {
 }
 
 func (twmp *TaxiWhereItMessageProcessor) ProcessMessage(in *s.InPkg) *s.MessageResult {
-	if !twmp.API.IsConnected(){
+	if !twmp.API.IsConnected() {
 		twmp.API.Connect()
 		return CONNECTION_ERROR
 	}
@@ -421,6 +421,7 @@ type TaxiCommandsProcessor struct {
 	d.MainDb
 	context *m.BotContext
 }
+
 func (cp *TaxiCommandsProcessor) ProcessRequest(in *s.InPkg) *s.RequestResult {
 	if in.UserData != nil {
 		cp.Users.AddUser(in.From, in.UserData.Name, in.UserData.Phone, in.UserData.Email)
@@ -436,6 +437,7 @@ func (cp *TaxiCommandsProcessor) ProcessRequest(in *s.InPkg) *s.RequestResult {
 type TaxiInformationProcessor struct {
 	information *string
 }
+
 func (ih *TaxiInformationProcessor) ProcessMessage(in *s.InPkg) *s.MessageResult {
 	var info_text string
 	if ih.information == nil {
@@ -453,6 +455,7 @@ type AddressNotHere struct {
 	From string
 	To   string
 }
+
 func (a *AddressNotHere) Error() string {
 	return fmt.Sprintf("Адрес \n %+v --> %+v \n не поддерживается этим такси.", a.From, a.To)
 }
@@ -567,7 +570,7 @@ func ApplyTransforms(order *NewOrderInfo, transofrmations []c.Transformation) *N
 }
 func (nop *TaxiNewOrderProcessor) ProcessMessage(in *s.InPkg) *s.MessageResult {
 	log.Printf("check connect")
-	if !nop.API.IsConnected(){
+	if !nop.API.IsConnected() {
 		nop.API.Connect()
 		return CONNECTION_ERROR
 	}
@@ -654,8 +657,14 @@ func (nop *TaxiNewOrderProcessor) ProcessMessage(in *s.InPkg) *s.MessageResult {
 						break
 					}
 				}
+				text = fmt.Sprintf("Ваш заказ создан! Стоимость поездки составит %+v рублей. %s. " +
+				"В течении 5 минут Вам будет назначен автомобиль. Или перезвонит оператор если ожидаемое время подачи составит более 15 минут.", cost, markup_text)
+
+			} else {
+				text = fmt.Sprintf("Ваш заказ создан! Стоимость поездки составит %+v рублей. " +
+				"В течении 5 минут Вам будет назначен автомобиль. Или перезвонит оператор если ожидаемое время подачи составит более 15 минут.", cost)
 			}
-			text = fmt.Sprintf("Ваш заказ создан! Стоимость поездки составит %+v рублей. %s. В течении 5 минут Вам будет назначен автомобиль. Или перезвонит оператор если ожидаемое время подачи составит более 15 минут.", cost, markup_text)
+
 		}
 		return &s.MessageResult{Body:text, Commands:nop.context.Commands[CMDS_CREATED_ORDER], Type:"chat"}
 	}
@@ -671,7 +680,7 @@ type TaxiCancelOrderProcessor struct {
 }
 
 func (cop *TaxiCancelOrderProcessor) ProcessMessage(in *s.InPkg) *s.MessageResult {
-	if !cop.API.IsConnected(){
+	if !cop.API.IsConnected() {
 		cop.API.Connect()
 		return CONNECTION_ERROR
 	}
@@ -710,7 +719,7 @@ type TaxiCalculatePriceProcessor struct {
 }
 
 func (cpp *TaxiCalculatePriceProcessor) ProcessMessage(in *s.InPkg) *s.MessageResult {
-	if !cpp.API.IsConnected(){
+	if !cpp.API.IsConnected() {
 		cpp.API.Connect()
 		return CONNECTION_ERROR
 	}
@@ -743,7 +752,7 @@ func _get_feedback(fields []s.InField) (fdb string, rate int) {
 }
 
 func (fp *TaxiFeedbackProcessor) ProcessMessage(in *s.InPkg) *s.MessageResult {
-	if !fp.API.IsConnected(){
+	if !fp.API.IsConnected() {
 		fp.API.Connect()
 		return CONNECTION_ERROR
 	}
