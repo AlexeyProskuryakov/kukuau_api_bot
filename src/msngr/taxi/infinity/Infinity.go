@@ -205,7 +205,7 @@ func (p *InfinityAPI) _request(conn_suffix string, url_values map[string]string)
 		}()
 		if res != nil && res.StatusCode != 200 {
 			log.Println("INF For ", conn_suffix, " [", url_values, "]\n response is: ", res, "; error is:", err, ". Will login and retrieve data again after second")
-			time.Sleep(time.Second)
+			time.Sleep(time.Second * 5)
 			login_result := p.Login()
 			if !login_result {
 				log.Printf("INF can not login now, will trying")
