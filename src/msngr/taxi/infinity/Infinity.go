@@ -240,7 +240,7 @@ func (p *InfinityAPI) NewOrder(order t.NewOrderInfo) t.Answer {
 		log.Printf("INF NO error at marshal json to infinity %+v, %v", order, err)
 		return t.Answer{IsSuccess:false, Message:fmt.Sprint(err)}
 	}
-	log.Printf("INF NEW ORDER (jsonified): \n%+v \nat INF:%+v", string(param), p)
+	log.Printf("INF NEW ORDER (jsonified): \n%s\nat%+v", param, p)
 	body, err := p._request("RemoteCall", map[string]string{"params": string(param), "method": "Taxi.WebAPI.NewOrder"})
 	if err != nil {
 		return t.Answer{IsSuccess:false, Message:fmt.Sprint(err)}

@@ -481,6 +481,9 @@ func _form_order(fields []s.InField, ah AddressHandler) (*NewOrderInfo, error) {
 	new_order := NewOrderInfo{Notes:"Заказ создан через мессенджер Klichat"}
 	var dest, deliv AddressF
 	if ah != nil {
+		if from_key == "" || to_key == "" {
+			return nil, &AddressNotHere{From:from_key, To:to_key}
+		}
 		if !ah.IsHere(from_key) && !ah.IsHere(to_key) {
 			return nil, &AddressNotHere{From:from_key, To:to_key}
 		}
