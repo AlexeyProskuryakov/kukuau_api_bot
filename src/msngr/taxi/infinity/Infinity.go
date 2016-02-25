@@ -82,15 +82,7 @@ func _initInfinity(config t.TaxiAPIConfig, name string) *InfinityAPI {
 	logon := result.Login()
 
 	if !logon {
-		go func() {
-			for {
-				res := result.WaitForReLogin()
-				if !res {
-					log.Printf("INF Can not connect to %+v :(\nWill try next after 5 minutes", result.ConnStrings)
-				}
-				time.Sleep(5 * time.Minute)
-			}
-		}()
+		go result.WaitForReLogin()
 	}
 
 	return result
@@ -204,16 +196,10 @@ func (p *InfinityAPI) _request(conn_suffix string, url_values map[string]string)
 			p.ConnStrings = append(p.ConnStrings[:0], append([]string{connString}, p.ConnStrings[0:]...)...)
 		}()
 		if res != nil && res.StatusCode != 200 {
-			log.Println("INF For ", conn_suffix, " [", url_values, "]\n response is: ", res, "; error is:", err, ". Will login and retrieve data again after second")
+			log.Printf("INF For %v [%v] \n response is: %+v error is: %v", conn_suffix, url_values, res, err)
 			time.Sleep(time.Second * 5)
-			login_result := p.Login()
-			if !login_result {
-				log.Printf("INF can not login now, will trying")
-				p.Connect()
-				return nil, errors.New(CONNECTION_ERROR)
-			}else {
-				return p._request(conn_suffix, url_values)
-			}
+			p.Connect()
+			return nil, errors.New(CONNECTION_ERROR)
 		}
 		defer res.Body.Close()
 		body, err := ioutil.ReadAll(res.Body)
@@ -222,7 +208,6 @@ func (p *InfinityAPI) _request(conn_suffix string, url_values map[string]string)
 			return body, errors.New(CONNECTION_ERROR)
 		}
 		p.TryingsCount = 0
-		//log.Printf("INF [%v] OK {%v}", p.Name, p.ConnStrings[i])
 		return body, nil
 	}
 	return nil, errors.New(CONNECTION_ERROR)
@@ -449,7 +434,7 @@ func (p *InfinityAPI) AddressesAutocomplete(text string) t.AddressPackage {
 	//log.Printf("INF ADDRESS AUTOCOMPLETE FOR %s \nRETRIEVE THIS:%s", text, string(body))
 	err = json.Unmarshal(body, &temp)
 	if err != nil {
-		log.Printf("INF AA  error at unmarshal json from infinity %s", string(body))
+		log.Printf("INF AA error at unmarshal json from infinity %s", string(body))
 		p.Connect()
 		return t.AddressPackage{}
 	}
