@@ -98,7 +98,7 @@ func GetContacts(db *d.MainDb, after int64) ([]usrs.Contact, error) {
 	resp := []usrs.Contact{}
 	err := db.Messages.Collection.Pipe([]bson.M{
 		bson.M{"$match":bson.M{"time_stamp":bson.M{"$gt":after}}},
-		bson.M{"$group": bson.M{"_id":"$from", "not_answered_count":bson.M{"$sum":"$not_answered"}, "name":bson.M{"$first":"$from"}, "time":bson.M{"$max":"$time_stamp"}}}}).All(&resp)
+		bson.M{"$group": bson.M{"_id":"$from", "unread_count":bson.M{"$sum":"$unread"}, "name":bson.M{"$first":"$from"}, "time":bson.M{"$max":"$time_stamp"}}}}).All(&resp)
 	if err != nil {
 		return resp, err
 	}
@@ -274,7 +274,6 @@ func Run(addr string, notifier *ntf.Notifier, db *d.MainDb, cs c.ConfigStorage, 
 	})
 
 	r.Get("/delete_key_all", func(render render.Render) {
-
 		log.Printf("CONSOLE WEB was delete all keys")
 		qs.Steps.RemoveAll(bson.M{})
 		render.Redirect("/new_keys")
@@ -294,19 +293,17 @@ func Run(addr string, notifier *ntf.Notifier, db *d.MainDb, cs c.ConfigStorage, 
 		if with == "" {
 			with = ALL
 		}
-
+		db.Messages.SetMessagesRead(with)
 		collocutor := Collocutor{}
 
 		var messages []d.MessageWrapper
-
 		if with != ALL {
-			//log.Printf("CONSOLE WEB CHAT: get mesages for %v", with)
 			user, _ := db.Users.GetUserById(with)
 			if user != nil {
 				messages, _ = db.Messages.GetMessages(bson.M{
 					"$or":[]bson.M{
-						bson.M{"from":user.UserId},
-						bson.M{"to":user.UserId},
+							bson.M{"from":user.UserId},
+							bson.M{"to":user.UserId},
 					},
 				})
 				for i, _ := range messages {
@@ -395,8 +392,6 @@ func Run(addr string, notifier *ntf.Notifier, db *d.MainDb, cs c.ConfigStorage, 
 			render.JSON(500, map[string]interface{}{"ok":false, "detail":fmt.Sprintf("can not unmarshal request body %v \n %s", err, request_body)})
 			return
 		}
-		//log.Printf("CONSOLE WEB NM Ask: %+v", q)
-
 		query := bson.M{"time_stamp":bson.M{"$gt":q.After}}
 		if q.For == "" {
 			q.For = ALL
@@ -437,7 +432,7 @@ func Run(addr string, notifier *ntf.Notifier, db *d.MainDb, cs c.ConfigStorage, 
 			render.JSON(500, map[string]interface{}{"ok":false, "detail":fmt.Sprintf("can not unmarshal request body %v \n %s", err, request_body)})
 			return
 		}
-		//log.Printf("CONSOLE WEB NC Ask: %+v", cr)
+		log.Printf("CONSOLE WEB NC Ask: %+v", cr)
 		contacts, err := GetContacts(db, cr.After)
 		if err != nil {
 			render.JSON(500, map[string]interface{}{"ok":false, "detail":fmt.Sprintf("db err body %v \n %s", err)})

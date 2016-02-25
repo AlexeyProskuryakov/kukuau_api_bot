@@ -183,3 +183,6 @@ body::-webkit-scrollbar {
     width:70%;
     height:70%;
 }
+#left-bar{
+    margin-left:5px;
+}

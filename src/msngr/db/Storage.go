@@ -78,6 +78,7 @@ type MessageWrapper struct {
 	Time             time.Time `bson:"time"`
 	TimeStamp        int64 `bson:"time_stamp"`
 	NotAnswered      int `bson:"not_answered"`
+	Unread		 int `bson:"unread"`
 	MessageID        string `bson:"message_id"`
 	MessageStatus    string `bson:"message_status"`
 	MessageCondition string `bson:"message_condition"`
@@ -248,6 +249,11 @@ func (odbh *MainDb) ensureIndexes() {
 	})
 	message_collection.EnsureIndex(mgo.Index{
 		Key:[]string{"not_answered"},
+		Unique:false,
+	})
+
+	message_collection.EnsureIndex(mgo.Index{
+		Key:[]string{"unread"},
 		Unique:false,
 	})
 	message_collection.EnsureIndex(mgo.Index{
@@ -608,13 +614,14 @@ func (eh *errorHandler) GetBy(req bson.M) (*[]ErrorWrapper, error) {
 	return &result, err
 }
 
+//MESSAGES
 func (mh *messageHandler) StoreMessage(from, to, body string, message_id string) error {
 	//log.Printf("DB: sm :%v -> %v [%v] {%v}", from, to, body, message_id)
 	if !mh.parent.Check() {
 		return errors.New("БД не доступна")
 	}
 	found, err := mh.GetMessageByMessageId(message_id)
-	result := MessageWrapper{From:from, To:to, Body:body, TimeStamp:time.Now().Unix(), Time:time.Now(), NotAnswered:1, MessageID:message_id, MessageStatus:"sended"}
+	result := MessageWrapper{From:from, To:to, Body:body, TimeStamp:time.Now().Unix(), Time:time.Now(), NotAnswered:1, Unread:1, MessageID:message_id, MessageStatus:"sended"}
 	if found == nil&&err == nil {
 		err := mh.Collection.Insert(&result)
 		log.Printf("DB: sm OK! %v", result)
@@ -635,12 +642,23 @@ func (mh *messageHandler) SetMessagesAnswered(from, by string) error {
 	return err
 }
 
+func (mh *messageHandler) SetMessagesRead(from string) error {
+	if !mh.parent.Check() {
+		return errors.New("БД не доступна")
+	}
+	_, err := mh.Collection.UpdateAll(
+		bson.M{"from":from, "unread":bson.M{"$ne":0}},
+		bson.M{"$set":bson.M{"unread":0}},
+	)
+	return err
+}
+
 func (mh *messageHandler) GetMessages(query bson.M) ([]MessageWrapper, error) {
 	result := []MessageWrapper{}
 	if !mh.parent.Check() {
 		return result, errors.New("БД не доступна")
 	}
-	err := mh.Collection.Find(query).Sort("-time_stamp").All(&result)
+	err := mh.Collection.Find(query).Sort("time_stamp").All(&result)
 	return result, err
 }
 
