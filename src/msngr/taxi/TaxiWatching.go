@@ -19,7 +19,7 @@ const (
 	nominated = "Вам назначен: "
 	order_canceled = "Ваш заказ отменен."
 
-	REFRESH_TIME = 3 * time.Second
+	REFRESH_TIME = 5 * time.Second
 
 	CHANGE_STATE = "state"
 	CHANGE_CAR = "car"
