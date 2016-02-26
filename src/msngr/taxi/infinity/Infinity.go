@@ -221,7 +221,7 @@ func (p *InfinityAPI) _request(conn_suffix string, url_values map[string]string)
 			log.Printf("INF Error at reading from response %v", err)
 			return body, errors.New(CONNECTION_ERROR)
 		}
-		log.Printf("INF [%v] OK > [%v]", p.Name, connString)
+		log.Printf("INF [%v] OK > [%v] {%v, %+v}", p.Name, connString, conn_suffix, url_values)
 		return body, nil
 	}
 	return nil, errors.New(CONNECTION_ERROR)
