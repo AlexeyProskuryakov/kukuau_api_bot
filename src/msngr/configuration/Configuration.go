@@ -35,15 +35,15 @@ type ApiData struct {
 }
 
 type TaxiApiParams struct {
-	Name         string `json:"name"`
-	Data         ApiData `json:"data"`
-	GeoOrbit     TaxiGeoOrbit `json:"geo_orbit"`
-	NotSendPrice bool `json:"not_send_price"`
+	Name            string `json:"name"`
+	Data            ApiData `json:"data"`
+	GeoOrbit        TaxiGeoOrbit `json:"geo_orbit"`
+	NotSendPrice    bool `json:"not_send_price"`
 	Transformations []Transformation `json:"transformations"`
-	Fake         struct {
-			     SendedStates []int `json:"sended_states"`
-			     SleepTime    int `json:"sleep_time"`
-		     } `json:"fake"`
+	Fake            struct {
+				SendedStates []int `json:"sended_states"`
+				SleepTime    int `json:"sleep_time"`
+			} `json:"fake"`
 }
 
 func (api TaxiApiParams) String() string {
@@ -68,7 +68,7 @@ func (api TaxiApiParams) GetIdService() int64 {
 func (api TaxiApiParams) GetAPIData() ApiData {
 	return api.Data
 }
-func (api TaxiApiParams) GetTransformations() []Transformation{
+func (api TaxiApiParams) GetTransformations() []Transformation {
 	return api.Transformations
 }
 
@@ -89,7 +89,6 @@ type TaxiConfig struct {
 			  } `json:"information"`
 	Markups           *[]string `json:"markups,omitempty"`
 	AvailableCommands map[string][]string `json:"available_commands"`
-
 }
 
 type ShopConfig struct {
@@ -134,6 +133,7 @@ type Configuration struct {
 			WorkUrl     string `json:"work_url"`
 		} `json:"ru_post"`
 }
+
 func (conf *Configuration) SetLogFile(fn string) {
 	f, err := os.OpenFile(fn, os.O_RDWR | os.O_CREATE | os.O_TRUNC, 0666)
 	if err != nil {
@@ -143,7 +143,7 @@ func (conf *Configuration) SetLogFile(fn string) {
 	log.Println("Logging file is setted to %v", fn)
 }
 
-func UnmarshallConfig(cdata []byte)Configuration{
+func UnmarshallConfig(cdata []byte) Configuration {
 	log.Println("config data: ", string(cdata))
 	conf := Configuration{}
 	err := json.Unmarshal(cdata, &conf)
@@ -163,7 +163,7 @@ func UnmarshallConfig(cdata []byte)Configuration{
 	return conf
 }
 
-func ReadConfigInRecursive() Configuration{
+func ReadConfigInRecursive() Configuration {
 	log.Printf("Path sep: %+v", os.PathSeparator)
 	fn := u.FoundFile("config.json")
 	if fn == nil {
@@ -178,7 +178,7 @@ func ReadConfigInRecursive() Configuration{
 	return UnmarshallConfig(cdata)
 }
 
-func ReadTestConfigInRecursive() Configuration{
+func ReadTestConfigInRecursive() Configuration {
 	log.Printf("Path sep: %+v", os.PathSeparator)
 	fn := u.FoundFile("config.test.json")
 	if fn == nil {
@@ -192,7 +192,6 @@ func ReadTestConfigInRecursive() Configuration{
 	}
 	return UnmarshallConfig(cdata)
 }
-
 
 func ReadConfig() Configuration {
 	//log.Printf("Path sep: %s", RuneToAscii(os.PathSeparator))

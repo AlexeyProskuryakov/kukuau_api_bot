@@ -105,7 +105,21 @@ func GetInfinityAddressSupplier(tc t.TaxiAPIConfig, name string) t.AddressSuppli
 
 func (p *InfinityAPI) Login() bool {
 	p.LoginResponse.Success = false
-	body, err := p._request("Login", map[string]string{"l":p.Config.GetLogin(), "p":p.Config.GetPassword(), "app":"CxTaxiClient"})
+	login := p.Config.GetLogin()
+	pwd := p.Config.GetPassword()
+	var body []byte
+	var err error
+
+	if p.Config.GetAPIData().ApiKey != "" {
+		log.Printf("INF [%v] USE API KEY %v", p.Name, p.Config.GetAPIData().ApiKey)
+		body, err = p._request("Login", map[string]string{"k":p.Config.GetAPIData().ApiKey, "app":"CxTaxiWebAPI"})
+	} else if login != "" && pwd != "" {
+		log.Printf("INF [%v] USE login and pass", p.Name)
+		body, err = p._request("Login", map[string]string{"l":p.Config.GetLogin(), "p":p.Config.GetPassword(), "app":"CxTaxiClient"})
+	} else {
+		panic(fmt.Sprintf("Not api key not login and not pwd at [%v]", p.Name))
+	}
+
 	if err != nil {
 		return false
 	}

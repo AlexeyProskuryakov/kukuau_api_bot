@@ -72,7 +72,7 @@ func FormTaxiBotContext(im *ExternalApiMixin, db_handler *d.MainDb, tc c.TaxiCon
 		"callback_request": &TaxiCallbackRequestMessageProcessor{ExternalApiMixin:*im},
 		"where_it":         &TaxiWhereItMessageProcessor{ExternalApiMixin:*im, MainDb:*db_handler, context:&context},
 		"car_position":     &TaxiCarPositionMessageProcessor{ExternalApiMixin: *im, MainDb:*db_handler, context:&context, Cars:NewCarInfoProvider(cc)},
-		"":                    &TaxiWriteDispatcherMessageProcessor{ExternalApiMixin: *im},
+		"":                 &TaxiWriteDispatcherMessageProcessor{ExternalApiMixin: *im},
 	}
 	context.Settings = make(map[string]interface{})
 	context.Settings["not_send_price"] = tc.Api.NotSendPrice

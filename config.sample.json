@@ -144,7 +144,7 @@
             "http://212.20.48.191:8080/WebAPITaxi/",
             "http://109.202.17.249:8080/WebAPITaxi/"
           ],
-          "host": "212.20.48.191:8080"
+          "api_key": "e063c27d8a1147a387315654b782c29f"
         },
         "not_send_price": false
       },
