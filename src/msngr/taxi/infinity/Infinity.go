@@ -261,6 +261,7 @@ func (p *InfinityAPI) NewOrder(order t.NewOrderInfo) t.Answer {
 	}
 	var ans t.Answer
 	err = json.Unmarshal(body, &ans)
+	log.Printf("INF NEW ORDER ANSER: \n%+v err? %v", ans, err)
 	if err != nil {
 		log.Printf("INF NO error at unmarshal json from infinity %v", string(body))
 		p.Connect()
@@ -270,9 +271,6 @@ func (p *InfinityAPI) NewOrder(order t.NewOrderInfo) t.Answer {
 }
 
 func (p *InfinityAPI) CalcOrderCost(order t.NewOrderInfo) (int, string) {
-	//	order.Delivery.IdStreet = strconv.ParseInt(order.Delivery.IdAddress, 10, 64)
-	//	order.Destinations[0].IdStreet = strconv.ParseInt(order.Destinations[0].IdAddress, 10, 64)
-
 	order.IdService = p.Config.GetIdService()
 	param, err := json.Marshal(order)
 	if err != nil {
