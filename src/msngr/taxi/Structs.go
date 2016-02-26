@@ -209,7 +209,6 @@ type AnswerContent struct {
 type Answer struct {
 	IsSuccess bool   `json:"isSuccess"`
 	Message   string `json:"message"`
-
 	Content   AnswerContent `json:"content"`
 }
 

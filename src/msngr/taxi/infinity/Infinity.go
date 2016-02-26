@@ -210,7 +210,7 @@ func (p *InfinityAPI) _request(conn_suffix string, url_values map[string]string)
 			p.ConnStrings = append(p.ConnStrings[:0], append([]string{connString}, p.ConnStrings[0:]...)...)
 		}()
 		if res != nil && res.StatusCode != 200 {
-			log.Printf("INF For %v [%v] \n response is: %+v error is: %v", conn_suffix, url_values, res, err)
+			log.Printf("INF For %v [%v] > %v\n response is: %+v error is: %v", conn_suffix, url_values, connString, res, err)
 			time.Sleep(time.Second * 5)
 			p.Connect()
 			return nil, errors.New(CONNECTION_ERROR)
@@ -221,7 +221,7 @@ func (p *InfinityAPI) _request(conn_suffix string, url_values map[string]string)
 			log.Printf("INF Error at reading from response %v", err)
 			return body, errors.New(CONNECTION_ERROR)
 		}
-		p.TryingsCount = 0
+		log.Printf("INF [%v] OK > [%v]", p.Name, connString)
 		return body, nil
 	}
 	return nil, errors.New(CONNECTION_ERROR)
