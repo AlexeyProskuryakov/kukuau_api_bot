@@ -211,9 +211,7 @@ func (p *InfinityAPI) _request(conn_suffix string, url_values map[string]string)
 		}()
 		if res != nil && res.StatusCode != 200 {
 			log.Printf("INF For %v [%v] > %v\n response is: %+v error is: %v", conn_suffix, url_values, connString, res, err)
-			time.Sleep(time.Second * 5)
-			p.Connect()
-			return nil, errors.New(CONNECTION_ERROR)
+			continue
 		}
 		defer res.Body.Close()
 		body, err := ioutil.ReadAll(res.Body)
@@ -224,6 +222,8 @@ func (p *InfinityAPI) _request(conn_suffix string, url_values map[string]string)
 		log.Printf("INF [%v] OK > [%v] {%v, %+v}", p.Name, connString, conn_suffix, url_values)
 		return body, nil
 	}
+	time.Sleep(time.Second * 5)
+	p.Connect()
 	return nil, errors.New(CONNECTION_ERROR)
 
 }
