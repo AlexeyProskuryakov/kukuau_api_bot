@@ -79,6 +79,12 @@ func FormTaxiBotContext(im *ExternalApiMixin, db_handler *d.MainDb, tc c.TaxiCon
 	if tc.Markups != nil {
 		context.Settings["markups"] = *tc.Markups
 	}
+	if tc.Api.Data.RefreshOrdersTimeStep != 0 {
+		context.Settings["refresh_orders_time_step"] = time.Duration(tc.Api.Data.RefreshOrdersTimeStep) * time.Second
+	} else {
+		context.Settings["refresh_orders_time_step"] = 10 * time.Second
+	}
+
 	return &context
 }
 
@@ -338,7 +344,7 @@ func (smp *TaxiWriteDispatcherMessageProcessor) ProcessMessage(in *s.InPkg) *s.M
 	if user != nil {
 		message = fmt.Sprintf("%s от %v", message, user.Phone)
 	} else {
-		if in.UserData != nil{
+		if in.UserData != nil {
 			message = fmt.Sprintf("%s от %v", message, in.UserData.Phone)
 			smp.Users.AddUser(in.From, in.UserData.Name, in.UserData.Phone, in.UserData.Email)
 		}

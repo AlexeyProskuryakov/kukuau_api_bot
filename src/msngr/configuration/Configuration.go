@@ -18,20 +18,22 @@ type Transformation struct {
 }
 
 type ApiData struct {
-	Host               string `json:"host"`
-	Login              string `json:"login"`
-	Password           string `json:"password"`
-	ConnectionsStrings []string `json:"connection_strings"`
-	IdService          int64 `json:"id_service"`
+	Host                 string `json:"host"`
+	Login                 string `json:"login"`
+	Password              string `json:"password"`
+	ConnectionsStrings    []string `json:"connection_strings"`
+	IdService             int64 `json:"id_service"`
 
-	BearerToken        string `json:"bearer_token"`
+	BearerToken           string `json:"bearer_token"`
 
-	AppKey             string `json:"app_key"`
-	ApiKey             string `json:"api_key"`
-	City               string `json:"city"`
-	Phone              string `json:"phone"`
-	Name               string `json:"name"`
-	SaleKeyword        string `json:"sale_kw"`
+	AppKey                string `json:"app_key"`
+	ApiKey                string `json:"api_key"`
+	City                  string `json:"city"`
+	Phone                 string `json:"phone"`
+	Name                  string `json:"name"`
+	SaleKeyword           string `json:"sale_kw"`
+
+	RefreshOrdersTimeStep int `json:"refresh_orders_time_step"`
 }
 
 type TaxiApiParams struct {
@@ -140,7 +142,7 @@ func (conf *Configuration) SetLogFile(fn string) {
 		log.Fatalf("error opening log file: %v", err)
 	}
 	log.SetOutput(f)
-	log.Println("Logging file is setted to %v", fn)
+	log.Printf("Logging file is setted to %v", fn)
 }
 
 func UnmarshallConfig(cdata []byte) Configuration {
@@ -158,7 +160,7 @@ func UnmarshallConfig(cdata []byte) Configuration {
 			log.Fatalf("error opening log file: %v", err)
 		}
 		log.SetOutput(f)
-		log.Println("Logging file is setted to %v", conf.Main.LoggingFile)
+		log.Printf("Logging file is setted to %v", conf.Main.LoggingFile)
 	}
 	return conf
 }

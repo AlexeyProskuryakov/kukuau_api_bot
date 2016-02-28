@@ -74,32 +74,30 @@ func (i InfinityAPI) String() string {
 	return fmt.Sprintf("\nInfinity API processing.\nConnection strings:%+v\nLogon?:%v, time:%v client id:%v\nid_service: %v", i.ConnStrings, i.LoginResponse.Success, i.LoginTime, i.LoginResponse.IDClient, i.Config.GetIdService())
 }
 
-func _initInfinity(config t.TaxiAPIConfig, name string) *InfinityAPI {
+func initInfinity(config t.TaxiAPIConfig, name string) *InfinityAPI {
 	result := &InfinityAPI{}
 	result.ConnStrings = config.GetConnectionStrings()
 	result.Config = config
 	result.Name = name
 	logon := result.Login()
-
 	if !logon {
-		go result.WaitForReLogin()
+		result.Connect()
 	}
-
 	return result
 }
 
 func GetInfinityAPI(tc t.TaxiAPIConfig, name string) t.TaxiInterface {
-	instance := _initInfinity(tc, name)
+	instance := initInfinity(tc, name)
 	return instance
 }
 
 func GetTestInfAPI(tc t.TaxiAPIConfig) interface{} {
-	instance := _initInfinity(tc, "test")
+	instance := initInfinity(tc, "test")
 	return instance
 }
 
 func GetInfinityAddressSupplier(tc t.TaxiAPIConfig, name string) t.AddressSupplier {
-	instance := _initInfinity(tc, name + "_address_supplier")
+	instance := initInfinity(tc, name + "_address_supplier")
 	return instance
 }
 
@@ -130,12 +128,6 @@ func (p *InfinityAPI) Login() bool {
 	}
 	if p.LoginResponse.Success {
 		log.Printf("INF [%v] login SUCCESS! JSESSIONID: %v", p.Name, p.LoginResponse.SessionID)
-		p.Cookie = &http.Cookie{
-			Name:   "JSESSIONID",
-			Value:  p.LoginResponse.SessionID,
-			Path:   "/",
-			Domain: get_domain(p.ConnStrings[0]),
-		}
 		p.LoginTime = time.Now()
 		return true
 	}
@@ -159,7 +151,7 @@ func (p *InfinityAPI) WaitForReLogin() bool {
 	if p.Config.GetLogin() == "" && p.Config.GetPassword() == "" {
 		panic(errors.New("ReLogin before login! I don't know login and password :( "))
 	}
-	sleep_time := time.Duration(1000)
+	sleep_time := time.Second
 	p.InReloginNow = true
 	log.Printf("INF Start wait for relogin")
 	defer func() {
@@ -173,7 +165,7 @@ func (p *InfinityAPI) WaitForReLogin() bool {
 			return result
 		} else {
 			log.Printf("INF: [%v] Login is fail trying next after %+v", p.Name, sleep_time)
-			time.Sleep(sleep_time * time.Millisecond)
+			time.Sleep(sleep_time)
 			sleep_time = time.Duration(float32(sleep_time) * 1.4)
 		}
 	}
@@ -196,8 +188,13 @@ func (p *InfinityAPI) _request(conn_suffix string, url_values map[string]string)
 
 		req.URL.RawQuery = values.Encode()
 
-		if p.Cookie != nil {
-			req.AddCookie(p.Cookie)
+		if p.LoginResponse.Success {
+			req.AddCookie(&http.Cookie{
+				Name:   "JSESSIONID",
+				Value:  p.LoginResponse.SessionID,
+				Path:   "/",
+				Domain: get_domain(connString),
+			})
 		}
 		client := &http.Client{Timeout:15 * time.Second}
 		res, err := client.Do(req)
@@ -209,8 +206,14 @@ func (p *InfinityAPI) _request(conn_suffix string, url_values map[string]string)
 			p.ConnStrings = append(p.ConnStrings[:i], p.ConnStrings[i + 1:]...)
 			p.ConnStrings = append(p.ConnStrings[:0], append([]string{connString}, p.ConnStrings[0:]...)...)
 		}()
+
+		if res.StatusCode == 403 {
+			log.Printf("INF [%v] will relogin", p.Name)
+			p.Login()
+			return p._request(conn_suffix, url_values)
+		}
 		if res != nil && res.StatusCode != 200 {
-			log.Printf("INF For %v [%v] > %v\n response is: %+v error is: %v", conn_suffix, url_values, connString, res, err)
+			log.Printf("INF [%v] For %v [%v] > %v\n response is: %+v error is: %v", p.Name, conn_suffix, url_values, connString, res, err)
 			continue
 		}
 		defer res.Body.Close()
@@ -422,7 +425,7 @@ func (p *InfinityAPI) Markups() []t.Markup {
 
 	body, err := p._request("GetViewData", map[string]string{"params": "[{\"viewName\": \"Taxi.Markups\"}]"})
 	if err != nil {
-		log.Print("INF MRKPS error at connection to inf at markups %( %v", err)
+		log.Printf("INF MRKPS error at connection to inf at markups :( %v", err)
 		return []t.Markup{}
 	}
 

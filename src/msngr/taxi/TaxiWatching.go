@@ -223,7 +223,8 @@ func TaxiOrderWatch(taxiContext *TaxiContext, botContext *m.BotContext) {
 			}
 			PreviousStates[api_order.ID] = api_order.State
 		}
-		time.Sleep(REFRESH_TIME)
+
+		time.Sleep(botContext.Settings["refresh_orders_time_step"].(time.Duration))
 	}
 }
 
