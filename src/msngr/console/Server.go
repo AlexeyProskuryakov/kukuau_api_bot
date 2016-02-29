@@ -520,6 +520,10 @@ func Run(addr string, notifier *ntf.Notifier, db *d.MainDb, cs c.ConfigStorage, 
 		render.Redirect(fmt.Sprintf("/chat?with=%v", between))
 	})
 
+	r.Get("/profiles", func(render render.Render){
+		render.HTML(200, "console/profiles", map[string]interface{}{})
+	})
+
 	m.Action(r.Handle)
 	m.RunOnAddr(addr)
 }
