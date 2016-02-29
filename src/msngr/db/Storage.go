@@ -431,7 +431,7 @@ func (oh *orderHandler) GetOrders(q bson.M) ([]OrderWrapper, error) {
 		return nil, errors.New("БД не доступна")
 	}
 	var result []OrderWrapper
-	err := oh.Collection.Find(q).Sort("-when").One(&result)
+	err := oh.Collection.Find(q).Sort("-when").All(&result)
 	if err != nil && err != mgo.ErrNotFound {
 		return nil, err
 	}

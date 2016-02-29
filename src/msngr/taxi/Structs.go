@@ -177,9 +177,10 @@ type Order struct {
 	TimeArrival       *time.Time                        //Прогнозируемое время прибытия машины на заказ (в виде времени)
 }
 
-func (o *Order) ToOrderData() db.OrderData {
+func (o *Order) ToOrderData() *db.OrderData {
 	odc, _ := utils.ToMap(o, "json")
-	return db.NewOrderData(odc)
+	result := db.NewOrderData(odc)
+	return &result
 }
 
 func (o Order) String() string {

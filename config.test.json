@@ -42,7 +42,7 @@
             "http://109.202.17.249:8080/WebAPITaxi",
             "http://212.20.48.191:8080/WebAPITaxi/"
           ],
-          "refresh_order_time_step":30
+          "refresh_orders_time_step":30
         },
         "not_send_price": true,
         "markups": [

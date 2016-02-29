@@ -10,6 +10,7 @@ import (
 	u "msngr/utils"
 	n "msngr/notify"
 	m "msngr"
+	"gopkg.in/mgo.v2/bson"
 )
 
 const (
@@ -131,7 +132,7 @@ func get_arrival_time(api_order Order) time.Time {
 func process_state_change(taxiContext *TaxiContext, botContext *m.BotContext, api_order Order, db_order *d.OrderWrapper, previous_states map[int64]int) {
 	log.Printf("WATCH [%v] state of: %+v is updated (api: %v != db: %v)", botContext.Name, api_order.ID, api_order.State, db_order.OrderState)
 	order_data := api_order.ToOrderData()
-	err := taxiContext.DataBase.Orders.SetState(api_order.ID, botContext.Name, api_order.State, &order_data)
+	err := taxiContext.DataBase.Orders.SetState(api_order.ID, botContext.Name, api_order.State, order_data)
 	if err != nil {
 		log.Printf("WATCH [%v] for order %+v can not update status %+v", botContext.Name, api_order.ID, api_order.State)
 		return
@@ -202,8 +203,12 @@ var PreviousStates = make(map[int64]int)
 
 func TaxiOrderWatch(taxiContext *TaxiContext, botContext *m.BotContext) {
 	for {
+		api_orders_map := map[int64]Order{}
+
 		api_orders := taxiContext.API.Orders()
 		for _, api_order := range api_orders {
+			api_orders_map[api_order.ID] = api_order
+
 			db_order, err := taxiContext.DataBase.Orders.GetById(api_order.ID, botContext.Name)
 			if err != nil {
 				log.Printf("WATCH [%v] some error in retrieve order: %v\nOrder:\n[%+v]", botContext.Name, err, api_order)
@@ -222,6 +227,18 @@ func TaxiOrderWatch(taxiContext *TaxiContext, botContext *m.BotContext) {
 				}
 			}
 			PreviousStates[api_order.ID] = api_order.State
+		}
+
+		if saved_orders, err := taxiContext.DataBase.Orders.GetOrders(bson.M{"active":true, "source":botContext.Name}); err == nil {
+			for _, o := range saved_orders {
+				if order, ok := api_orders_map[o.OrderId]; !ok {
+					log.Printf("WATCH Found in db active order [%v] which not present in api. Will cancel it", o.OrderId)
+					taxiContext.DataBase.Orders.SetState(o.OrderId, botContext.Name, ORDER_CANCELED, order.ToOrderData())
+					taxiContext.DataBase.Orders.SetActive(o.OrderId, botContext.Name, false)
+				}
+			}
+		} else {
+			log.Printf("WATCH ERROR getting active orders %v", err)
 		}
 
 		time.Sleep(botContext.Settings["refresh_orders_time_step"].(time.Duration))
