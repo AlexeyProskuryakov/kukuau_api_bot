@@ -441,7 +441,7 @@ type TaxiInformationProcessor struct {
 func (ih *TaxiInformationProcessor) ProcessMessage(in *s.InPkg) *s.MessageResult {
 	var info_text string
 	if ih.information == nil {
-		info_text = "Срочный заказ такси. Быстрая подача. Оплата наличными или картой. Нажмите кнопку меню чтобы создать заказ. Для офрмления заказа нажмите кнопк меню расположенную в нижнем левом углу."
+		info_text = "Срочный заказ такси. Быстрая подача. Оплата наличными или картой. Для оформления заказа нажмите кнопку меню расположенную в нижнем левом углу."
 	} else {
 		info_text = *ih.information
 	}
