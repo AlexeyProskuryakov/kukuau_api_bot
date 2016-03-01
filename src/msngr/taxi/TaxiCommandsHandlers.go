@@ -68,17 +68,23 @@ func FormTaxiBotContext(im *ExternalApiMixin, db_handler *d.MainDb, tc c.TaxiCon
 		"cancel_order":     &TaxiCancelOrderProcessor{ExternalApiMixin: *im, MainDb: *db_handler, context:&context, alert_phone:tc.Information.Phone},
 		"calculate_price":  &TaxiCalculatePriceProcessor{ExternalApiMixin: *im, context:&context, AddressHandler:ah, Config: tc},
 		"feedback":         &TaxiFeedbackProcessor{ExternalApiMixin: *im, MainDb: *db_handler, context:&context},
-		"write_dispatcher": &TaxiWriteDispatcherMessageProcessor{ExternalApiMixin: *im},
+		"write_dispatcher": &TaxiWriteDispatcherMessageProcessor{ExternalApiMixin: *im, MainDb:*db_handler},
 		"callback_request": &TaxiCallbackRequestMessageProcessor{ExternalApiMixin:*im},
 		"where_it":         &TaxiWhereItMessageProcessor{ExternalApiMixin:*im, MainDb:*db_handler, context:&context},
 		"car_position":     &TaxiCarPositionMessageProcessor{ExternalApiMixin: *im, MainDb:*db_handler, context:&context, Cars:NewCarInfoProvider(cc)},
-		"":                    &TaxiWriteDispatcherMessageProcessor{ExternalApiMixin: *im},
+		"":                 &TaxiWriteDispatcherMessageProcessor{ExternalApiMixin: *im, MainDb:*db_handler},
 	}
 	context.Settings = make(map[string]interface{})
 	context.Settings["not_send_price"] = tc.Api.NotSendPrice
 	if tc.Markups != nil {
 		context.Settings["markups"] = *tc.Markups
 	}
+	if tc.Api.Data.RefreshOrdersTimeStep != 0 {
+		context.Settings["refresh_orders_time_step"] = time.Duration(tc.Api.Data.RefreshOrdersTimeStep) * time.Second
+	} else {
+		context.Settings["refresh_orders_time_step"] = 10 * time.Second
+	}
+
 	return &context
 }
 
@@ -295,6 +301,7 @@ func (cp *TaxiCarPositionMessageProcessor) ProcessMessage(in *s.InPkg) *s.Messag
 
 type TaxiWriteDispatcherMessageProcessor struct {
 	ExternalApiMixin
+	d.MainDb
 }
 
 func get_text(in s.InCommand) (s string, err error) {
@@ -330,6 +337,18 @@ func (smp *TaxiWriteDispatcherMessageProcessor) ProcessMessage(in *s.InPkg) *s.M
 		return &s.MessageResult{Body:"Ошибка, совсем нет букв. Мне нечего отправить диспетчеру :("}
 	}
 	//	log.Printf("TAXI Write dispatcher message: %s", message)
+	user, err := smp.Users.GetUserById(in.From)
+	if err != nil {
+		return &s.MessageResult{Body:"Ошибка нет телефона у пользователя или самого пользователя :(", Type:"chat"}
+	}
+	if user != nil {
+		message = fmt.Sprintf("%s от %v", message, user.Phone)
+	} else {
+		if in.UserData != nil {
+			message = fmt.Sprintf("%s от %v", message, in.UserData.Phone)
+			smp.Users.AddUser(in.From, in.UserData.Name, in.UserData.Phone, in.UserData.Email)
+		}
+	}
 	ok, result := smp.API.WriteDispatcher(message)
 	var text string
 	if ok {
