@@ -207,12 +207,15 @@ func (p *InfinityAPI) _request(conn_suffix string, url_values map[string]string)
 			p.ConnStrings = append(p.ConnStrings[:0], append([]string{connString}, p.ConnStrings[0:]...)...)
 		}()
 
+		if res == nil{
+			log.Printf("INF [%v] response is null! :( ", p.Name)
+			continue
+		}
 		if res.StatusCode == 403 {
 			log.Printf("INF [%v] will relogin", p.Name)
 			p.Login()
 			return p._request(conn_suffix, url_values)
-		}
-		if res != nil && res.StatusCode != 200 {
+		} else if res.StatusCode != 200 {
 			log.Printf("INF [%v] For %v [%v] > %v\n response is: %+v error is: %v", p.Name, conn_suffix, url_values, connString, res, err)
 			continue
 		}
@@ -414,6 +417,24 @@ func (p *InfinityAPI) Orders() []t.Order {
 		}
 		result = append(result, order)
 	}
+	//also request by closed orders...
+	//body, err = p._request("GetViewData", map[string]string{"params": "[{\"viewName\": \"Taxi.Orders.Closed.LastN\"}]"})
+	//closed_orders := []Orders{}
+	//err = json.Unmarshal(body, &closed_orders)
+	//if err != nil {
+	//	log.Printf("INF ORDRS error at unmarshal json from infinity of orders closed %s %v ", string(body), err)
+	//	p.Connect()
+	//	return result
+	//}
+	//for _, order := range closed_orders[0].Rows {
+	//	if arrival, err := time.Parse("2006-01-02 15:04:05", order.ArrivalTime); err == nil {
+	//		order.TimeArrival = &arrival
+	//	}
+	//	if delivery, err := time.Parse("2006-01-02 15:04:05", order.DeliveryTime); err == nil {
+	//		order.TimeDelivery = &delivery
+	//	}
+	//	result = append(result, order)
+	//}
 	return result
 }
 

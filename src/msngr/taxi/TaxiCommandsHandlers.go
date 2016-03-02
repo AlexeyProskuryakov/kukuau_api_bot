@@ -20,7 +20,9 @@ import (
 )
 
 const (
-	car_info_update_time = 5.0
+	CAR_INFO_UPDATE_TIME = 30.0
+	NEW_ORDER_TEXT_INFO = "В течении 5 минут Вам будет назначен автомобиль. Или перезвонит оператор если ожидаемое время подачи составит более 15 минут."
+
 )
 
 var CONNECTION_ERROR = s.ErrorMessageResult(errors.New("Система обработки заказов такси не отвечает, попробуйте позже."), nil)
@@ -35,7 +37,7 @@ func NewCarInfoProvider(cache *CarsCache) *CarInfoProvider {
 }
 
 func (cip *CarInfoProvider) GetCarInfo(car_id int64) *CarInfo {
-	if time.Now().Sub(cip.LastUpdate).Seconds() > car_info_update_time {
+	if time.Now().Sub(cip.LastUpdate).Seconds() > CAR_INFO_UPDATE_TIME {
 		cip.Cache.Reload()
 		cip.LastUpdate = time.Now()
 	}
@@ -661,7 +663,7 @@ func (nop *TaxiNewOrderProcessor) ProcessMessage(in *s.InPkg) *s.MessageResult {
 			}
 		}
 		if not_send_price {
-			text = "Ваш заказ создан! В течении 5 минут Вам будет назначен автомобиль. Или перезвонит оператор если ожидаемое время подачи составит более 15 минут."
+			text = fmt.Sprintf("Ваш заказ создан! %v", NEW_ORDER_TEXT_INFO)
 		} else {
 			log.Printf("calculate price")
 			cost, _ := nop.API.CalcOrderCost(*new_order)
@@ -679,12 +681,10 @@ func (nop *TaxiNewOrderProcessor) ProcessMessage(in *s.InPkg) *s.MessageResult {
 						break
 					}
 				}
-				text = fmt.Sprintf("Ваш заказ создан! Стоимость поездки составит %+v рублей. %s. " +
-				"В течении 5 минут Вам будет назначен автомобиль. Или перезвонит оператор если ожидаемое время подачи составит более 15 минут.", cost, markup_text)
+				text = fmt.Sprintf("Ваш заказ создан! Стоимость поездки составит %v рублей. %s. %v", cost, markup_text, NEW_ORDER_TEXT_INFO)
 
 			} else {
-				text = fmt.Sprintf("Ваш заказ создан! Стоимость поездки составит %+v рублей. " +
-				"В течении 5 минут Вам будет назначен автомобиль. Или перезвонит оператор если ожидаемое время подачи составит более 15 минут.", cost)
+				text = fmt.Sprintf("Ваш заказ создан! Стоимость поездки составит %v рублей. %v", cost, NEW_ORDER_TEXT_INFO)
 			}
 
 		}
@@ -723,7 +723,7 @@ func (cop *TaxiCancelOrderProcessor) ProcessMessage(in *s.InPkg) *s.MessageResul
 	if is_success {
 		return &s.MessageResult{Body:"Ваш заказ отменен!", Commands: cop.context.Commands[CMDS_NOT_CREATED_ORDER], Type:"chat"}
 	} else {
-		return &s.MessageResult{Body:fmt.Sprintf("Проблемы с отменой заказа %v\nЗвони скорее: %+v ", message, cop.alert_phone), Commands: cop.context.Commands[CMDS_NOT_CREATED_ORDER], Type:"chat"}
+		return &s.MessageResult{Body:fmt.Sprintf("Проблемы с отменой заказа. %v\nЗвони скорее: %+v ", message, cop.alert_phone), Commands: cop.context.Commands[CMDS_NOT_CREATED_ORDER], Type:"chat"}
 	}
 
 	commands, err := form_commands(in.From, cop.MainDb, cop.context)

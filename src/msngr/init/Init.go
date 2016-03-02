@@ -9,15 +9,16 @@ import (
 	m "msngr"
 	d "msngr/db"
 	c "msngr/configuration"
-	i "msngr/taxi/infinity"
 	cnsl "msngr/console"
 	n "msngr/notify"
 	rp "msngr/ruposts"
 	sh "msngr/shop"
 	q "msngr/quests"
+
 	t "msngr/taxi"
-	sedi "msngr/taxi/sedi"
-	geo "msngr/taxi/geo"
+	i "msngr/taxi/infinity"
+	"msngr/taxi/sedi"
+	"msngr/taxi/geo"
 )
 
 func GetTaxiAPI(params c.TaxiApiParams, for_name string) (t.TaxiInterface, error) {

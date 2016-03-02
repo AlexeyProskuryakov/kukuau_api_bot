@@ -313,30 +313,29 @@ func (oh *orderHandler) SetActive(order_id int64, source string, state bool) err
 	}
 	err := oh.Collection.Update(bson.M{"order_id": order_id, "source":source}, bson.M{"$set":bson.M{"active":state}})
 	if err == mgo.ErrNotFound {
-		log.Printf("update not existed %v %v to active %v", order_id, source, state)
+		log.Printf("DB: update not existed %v %v to active %v", order_id, source, state)
 	}
 	return err
 }
 
 func (oh *orderHandler) SetState(order_id int64, source string, new_state int, order_data *OrderData) error {
 	if !oh.parent.Check() {
+		log.Printf("DB: can not set state for [%v] now... Will do it after.", order_id)
 		utils.After(oh.parent.Check, func() {
 			oh.SetState(order_id, source, new_state, order_data)
 		})
 		return nil
 	}
-	var to_set bson.M
+	to_set := bson.M{"order_state": new_state, "when": time.Now()}
 	if order_data != nil {
-		to_set = bson.M{"order_state": new_state, "when": time.Now(), "data": order_data, "active":true}
-	} else {
-		to_set = bson.M{"order_state": new_state, "when": time.Now()}
+		to_set["data"] = order_data
 	}
 
 	change := bson.M{"$set": to_set}
 	log.Println("DB: change:", change["$set"])
 	err := oh.Collection.Update(bson.M{"order_id": order_id, "source":source}, change)
 	if err != nil && err != mgo.ErrNotFound {
-		log.Printf("State [%v] for order [%v] %v is not stated because order is not found", new_state, order_id, source)
+		log.Printf("DB: state [%v] for order [%v] %v is not stated because %v", new_state, order_id, source, err)
 		return err
 	}
 	if err == mgo.ErrNotFound {
@@ -624,7 +623,7 @@ func (mh *messageHandler) StoreMessage(from, to, body string, message_id string)
 	result := MessageWrapper{From:from, To:to, Body:body, TimeStamp:time.Now().Unix(), Time:time.Now(), NotAnswered:1, Unread:1, MessageID:message_id, MessageStatus:"sended"}
 	if found == nil&&err == nil {
 		err := mh.Collection.Insert(&result)
-		log.Printf("DB: sm OK! %v", result)
+		log.Printf("DB: store message is OK! %v", result)
 		return err
 	}
 	//log.Printf("DB: sm DUPLICATE ;(")

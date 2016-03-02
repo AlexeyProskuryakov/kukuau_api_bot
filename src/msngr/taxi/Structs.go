@@ -260,6 +260,8 @@ const (
 
 	ORDER_NOT_PAYED = 8
 	ORDER_FIXED = 12
+
+	ORDER_ERROR = -1
 )
 
 var InfinityStatusesName = map[int]string{

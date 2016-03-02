@@ -144,9 +144,17 @@
             "http://212.20.48.191:8080/WebAPITaxi/",
             "http://109.202.17.249:8080/WebAPITaxi/"
           ],
-          "api_key": "e063c27d8a1147a387315654b782c29f"
+          "api_key": "e063c27d8a1147a387315654b782c29f",
+          "refresh_orders_time_step":30
         },
-        "not_send_price": false
+        "not_send_price": false,
+        "transformations": [
+          {
+            "field": "phone",
+            "regex_code": "\\+?7([\\d]{8,10})",
+            "to": "8$1"
+          }
+        ]
       },
       "dict_url": "http://msg.kuku-au.com:9193/taxi/academ/streets",
       "information": {
