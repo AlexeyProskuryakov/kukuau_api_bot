@@ -302,8 +302,8 @@ func Run(addr string, notifier *ntf.Notifier, db *d.MainDb, cs c.ConfigStorage, 
 			if user != nil {
 				messages, _ = db.Messages.GetMessages(bson.M{
 					"$or":[]bson.M{
-							bson.M{"from":user.UserId},
-							bson.M{"to":user.UserId},
+						bson.M{"from":user.UserId},
+						bson.M{"to":user.UserId},
 					},
 				})
 				for i, _ := range messages {
@@ -520,10 +520,91 @@ func Run(addr string, notifier *ntf.Notifier, db *d.MainDb, cs c.ConfigStorage, 
 		render.Redirect(fmt.Sprintf("/chat?with=%v", between))
 	})
 
-	r.Get("/profiles", func(render render.Render){
-		render.HTML(200, "console/profiles", map[string]interface{}{})
+	r.Group("/profile", func(r martini.Router) {
+		r.Get("/", func(render render.Render) {
+			render.HTML(200, "profile/index", map[string]interface{}{})
+		})
+		r.Get("/data/books", func(render render.Render) {
+			type book struct {
+				id     int `json:"id"`
+				name   string `json:"name"`
+				author string `json:"author"`
+				year   int `json:"year"`
+			}
+			render.JSON(200, map[string]interface{}{
+				"success":true,
+				"books":[]book{
+					book{1, "tb1", "ta", 1991},
+					book{2, "tb2", "ta", 1991},
+					book{3, "tb3", "ta", 1991},
+
+				},
+			})
+		})
+
 	})
 
 	m.Action(r.Handle)
 	m.RunOnAddr(addr)
+}
+
+func RunProfileServer(addr string, db *d.MainDb) {
+	log.Printf("Server for profile is initted at %v", addr)
+	m := martini.New()
+	m.Use(martini.Logger())
+	m.Use(martini.Recovery())
+
+	m.Use(render.Renderer(render.Options{
+		Extensions: []string{".tmpl", ".html"},
+		Charset: "UTF-8",
+		IndentJSON: true,
+		IndentXML: true,
+		Funcs:[]template.FuncMap{
+			template.FuncMap{
+				"eq_s":func(a, b string) bool {
+					return a == b
+				},
+			},
+		},
+	}))
+
+	m.Use(auth.BasicFunc(func(username, password string) bool {
+		usr, _ := db.Users.GetUser(bson.M{"user_name":username, "role":MANAGER})
+		if usr != nil {
+			return u.PHash(password) == usr.Password
+		}
+		return username == default_user && password == default_pwd
+	}))
+
+	m.Use(martini.Static("static"))
+
+	r := martini.NewRouter()
+
+	r.Get("/", func(render render.Render) {
+		render.HTML(200, "profile/index", map[string]interface{}{})
+	})
+	r.Get("/data/books", func(render render.Render) {
+		type book struct {
+			Id     int `json:"id"`
+			Name   string `json:"name"`
+			Author string `json:"author"`
+			Year   int `json:"year"`
+		}
+		render.JSON(200, map[string]interface{}{
+			"success":true,
+			"books":[]book{
+				book{1, "tb1", "ta", 1991},
+				book{2, "tb2", "ta", 1991},
+				book{3, "tb3", "ta", 1991},
+
+			},
+		})
+	})
+
+	//r.Group("/profile", func(r martini.Router) {
+	//
+	//})
+	m.Action(r.Handle)
+	m.RunOnAddr(addr)
+
 }
