@@ -1,14 +1,14 @@
-Ext.define('BookApp.store.BookStore', {
+Ext.define('Console.store.ProfileStore', {
     extend: 'Ext.data.Store',
-    model: 'BookApp.model.Book',
+    model: 'Console.model.Profile',
     autoLoad: true,
-    storeId: 'BookStore',
+    storeId: 'ProfileStore',
     proxy: {
         type: 'ajax',
-        url: '/data/books',
+        url: '/data/profiles',
         reader: {
             type: 'json',
-            root: 'books',
+            root: 'profiles',
             successProperty: 'success'
         }
     }

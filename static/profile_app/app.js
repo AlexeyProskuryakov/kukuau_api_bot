@@ -1,15 +1,15 @@
 Ext.application({
     requires: ['Ext.container.Viewport'],
-    name: 'BookApp',
+    name: 'Console',
  
     appFolder: 'profile_app/app',
-    controllers: ['Books'],
+    controllers: ['Profiles'],
     
     launch: function() {
         Ext.create('Ext.container.Viewport', {
             layout: 'fit',
             items: {
-                xtype: 'booklist',
+                xtype: 'profilelist',
             }
         });
     }

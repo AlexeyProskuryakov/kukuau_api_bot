@@ -583,19 +583,30 @@ func RunProfileServer(addr string, db *d.MainDb) {
 	r.Get("/", func(render render.Render) {
 		render.HTML(200, "profile/index", map[string]interface{}{})
 	})
-	r.Get("/data/books", func(render render.Render) {
-		type book struct {
-			Id     int `json:"id"`
-			Name   string `json:"name"`
-			Author string `json:"author"`
-			Year   int `json:"year"`
-		}
+	r.Get("/data/profiles", func(render render.Render) {
 		render.JSON(200, map[string]interface{}{
 			"success":true,
-			"books":[]book{
-				book{1, "tb1", "ta", 1991},
-				book{2, "tb2", "ta", 1991},
-				book{3, "tb3", "ta", 1991},
+			"profiles":[]Profile{
+				Profile{
+					Id:1,
+					ImageURL:"https://pp.vk.me/c627327/v627327611/2240e/IXITveP15NE.jpg",
+					Name:"Рыба профайл",
+					ShortDescription:"рыба ",
+					TextDescription:"рыба плавающая",
+					Contacts:[]ProfileContact{ProfileContact{Type:"phone", Value:"+79992095923", Description:"Звонить с предложениями"}},
+					Address:"Ниолаева 11 офис 1",
+					Place:Coordinates{12.2123, 13.3132},
+				},
+				Profile{
+					Id:2,
+					ImageURL:"https://pp.vk.me/c627623/v627623611/20ab5/xAZq3BugHJ0.jpg",
+					Name:"Рыба профайл 2",
+					ShortDescription:"рыба 2",
+					TextDescription:"рыба плавающая 2",
+					Contacts:[]ProfileContact{ProfileContact{Type:"phone", Value:"+79992095923", Description:"Звонить с предложениями"}},
+					Address:"Ниолаева 11 офис 1",
+					Place:Coordinates{19.2123, 55.3132},
+				},
 
 			},
 		})
