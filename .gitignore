@@ -10,7 +10,7 @@ config.json
 
 
 /temp.json
-test_foo.go
+test_foo.gor
 shop_revue.txt
 
 #for my win
@@ -27,4 +27,4 @@ src/golang.org
 src/start_demo_bot
 
 install.sh
-taxi_statistic.xlsx
+*taxi_statistic.xlsx
