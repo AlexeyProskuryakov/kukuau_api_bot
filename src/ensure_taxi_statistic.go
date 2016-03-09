@@ -50,12 +50,12 @@ func EnsureStatistic() {
 
 		for _, order := range orders {
 			log.Printf("adding row for order %+v", order)
-			row = sheet.AddRow()
 			user, u_err := db.Users.GetUserById(order.Whom)
 			if u_err != nil || user == nil {
 				log.Printf("No user found at id: %v", order.Whom)
 				continue
 			}
+			row = sheet.AddRow()
 
 			ph_c := row.AddCell()
 			ph_c.SetString(user.Phone)
