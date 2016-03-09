@@ -524,6 +524,10 @@ func Run(addr string, notifier *ntf.Notifier, db *d.MainDb, cs c.ConfigStorage, 
 		render.HTML(200, "console/profiles", map[string]interface{}{})
 	})
 
+	r.Get("/statistic/taxi", func(render render.Render) {
+		render.HTML(200, "console/statistic", map[string]interface{}{"providers":[]string{"academ"}})
+	})
+
 	m.Action(r.Handle)
 	m.RunOnAddr(addr)
 }
