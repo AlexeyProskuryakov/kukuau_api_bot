@@ -88,30 +88,36 @@ func GetProfileContacts(db *sql.DB, userName string) ([]ProfileContact, error) {
 	}
 	return contacts, nil
 }
+
+func NewProfileFromRow(row *sql.Rows) Profile {
+	var id, short_text, long_text, image, name string
+	var enable, public int
+	err := row.Scan(&id, &short_text, &long_text, &image, &name, &enable, &public)
+	if err != nil {
+		log.Printf("P Error at scan profile data %v", err)
+	}
+	profile := Profile{UserName:id, ShortDescription:short_text, TextDescription:long_text, ImageURL:image, Name:name}
+	if enable != 0 {
+		profile.Enable = true
+	}
+	if public != 0 {
+		profile.Public = true
+	}
+	return profile
+}
+
 func GetAllProfiles(db *sql.DB) ([]Profile, error) {
 	profiles := []Profile{}
 	profileRows, err := db.Query("SELECT p.username, p.short_text, p.long_text, i.path, vs.fn, p.enable, p.public FROM profile p INNER JOIN profile_icons i ON p.username = i.username INNER JOIN vcard_search vs ON vs.username = p.username")
 	if err != nil {
-		log.Printf("CS Error at query profiles: %v", err)
+		log.Printf("P ERROR at query profiles: %v", err)
 		return profiles, err
 	}
 	for profileRows.Next() {
-		var id, short_text, long_text, image, name string
-		var enable, public int
-		err = profileRows.Scan(&id, &short_text, &long_text, &image, &name, &enable, &public)
-		if err != nil {
-			log.Printf("CS Error at scan profile data %v", err)
-		}
-		profile := Profile{UserName:id, ShortDescription:short_text, TextDescription:long_text, ImageURL:image, Name:name}
-		if enable != 0 {
-			profile.Enable = true
-		}
-		if public != 0 {
-			profile.Public = true
-		}
+		profile := NewProfileFromRow(profileRows)
 		contacts, err := GetProfileContacts(db, profile.UserName)
 		if err != nil {
-			log.Printf("ERROR profile %v error load contacts", profile.UserName)
+			log.Printf("P ERROR profile %v error load contacts", profile.UserName)
 			continue
 		}
 		profile.Contacts = contacts
@@ -121,26 +127,21 @@ func GetAllProfiles(db *sql.DB) ([]Profile, error) {
 }
 
 func GetProfile(db *sql.DB, username string) (*Profile, error) {
-	profileRow := db.QueryRow("SELECT p.username, p.short_text, p.long_text, i.path, vs.fn, p.enable, p.public FROM profile p INNER JOIN profile_icons i ON p.username = i.username INNER JOIN vcard_search vs ON vs.username = p.username WHERE p.username = $1", username)
-	var id, short_text, long_text, image, name string
-	var enable, public int
-	err := profileRow.Scan(&id, &short_text, &long_text, &image, &name, &enable, &public)
+	profileRow, err := db.Query("SELECT p.username, p.short_text, p.long_text, i.path, vs.fn, p.enable, p.public FROM profile p INNER JOIN profile_icons i ON p.username = i.username INNER JOIN vcard_search vs ON vs.username = p.username WHERE p.username = $1", username)
 	if err != nil {
-		log.Printf("CS Error at scan profile data %v", err)
+		log.Printf("P ERROR at query profiles: %v", err)
+		return nil, err
 	}
-	profile := Profile{UserName:id, ShortDescription:short_text, TextDescription:long_text, ImageURL:image, Name:name}
-	if enable != 0 {
-		profile.Enable = true
+	if profileRow.Next() {
+		profile := NewProfileFromRow(profileRow)
+		contacts, err := GetProfileContacts(db, profile.UserName)
+		if err != nil {
+			log.Printf("ERROR profile %v error load contacts", profile.UserName)
+		}
+		profile.Contacts = contacts
+		return &profile, nil
 	}
-	if public != 0 {
-		profile.Public = true
-	}
-	contacts, err := GetProfileContacts(db, profile.UserName)
-	if err != nil {
-		log.Printf("ERROR profile %v error load contacts", profile.UserName)
-	}
-	profile.Contacts = contacts
-	return &profile, nil
+	return nil, nil
 }
 
 func InsertNewProfile(db *sql.DB, p Profile) {
@@ -267,7 +268,7 @@ func DeleteProfile(db *sql.DB, userName string) error {
 	deleteFromTable(db, "vcard", "username", userName)
 	deleteFromTable(db, "vcard_search", "username", userName)
 	contacts, _ := GetProfileContacts(db, userName)
-	for _, contact := range contacts{
+	for _, contact := range contacts {
 		DeleteContact(db, contact.ContactId)
 	}
 	deleteFromTable(db, "profile_contacts", "username", userName)
