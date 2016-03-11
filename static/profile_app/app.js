@@ -14,3 +14,8 @@ Ext.application({
         });
     }
 });
+//todo click to pickture for loading it
+//todo change html editor and configutre it
+//todo list of categories
+//todo choose adress at map
+//todo change field names

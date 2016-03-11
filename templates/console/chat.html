@@ -1,3 +1,5 @@
+{{template "content_chat" .}}
+{{define "content_chat" }}
 <div id="left-bar" class="col-md-2">
     {{$with := .with}}
     {{$all := "all"}}
@@ -127,3 +129,4 @@
 </div>
 <script src="script.js"></script>
 
+{{end}}

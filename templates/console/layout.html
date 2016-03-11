@@ -1,5 +1,16 @@
-<!DOCTYPE html>
-<html lang="en">
+{{ define "base" }}
+<html lang="ru">
+    {{template "head" . }}
+  <body>
+  {{template "head_menu" . }}
+
+  {{ yield }}
+
+  </body>
+</html>
+{{end}}
+
+{{ define "head" }}
   <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -10,10 +21,11 @@
     <script src="https://ajax.googleapis.com/ajax/libs/jquery/2.1.4/jquery.min.js"></script>
     <script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.5/js/bootstrap.min.js"></script>
     <script src="mustache.min.js"></script>
-
   </head>
+{{ end}}
 
-  <body>
+
+{{define "head_menu"}}
      <nav class="navbar navbar-inverse navbar-static-top">
       <div class="container">
         <div class="navbar-header">
@@ -35,9 +47,4 @@
         </div>
       </div>
     </nav>
-
-  {{yield}}
-
-  </body>
-
-</html>
+  {{end}}

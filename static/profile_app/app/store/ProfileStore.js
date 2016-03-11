@@ -1,11 +1,10 @@
 Ext.define('Console.store.ProfileStore', {
     extend: 'Ext.data.Store',
     model: 'Console.model.Profile',
-    autoLoad: true,
     storeId: 'ProfileStore',
     proxy: {
         type: 'ajax',
-        url: '/data/profiles',
+        url: '/profile/data',
         reader: {
             type: 'json',
             root: 'profiles',

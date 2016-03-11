@@ -18,7 +18,7 @@ type Transformation struct {
 }
 
 type ApiData struct {
-	Host                 string `json:"host"`
+	Host                  string `json:"host"`
 	Login                 string `json:"login"`
 	Password              string `json:"password"`
 	ConnectionsStrings    []string `json:"connection_strings"`
@@ -125,6 +125,9 @@ type Configuration struct {
 					     ConnString string `json:"connection_string"`
 					     Name       string `json:"name"`
 				     } `json:"database"`
+			PGDatabase   struct {
+					     ConnString string `json:"connection_string"`
+				     } `json:"pg_database"`
 		} `json:"main"`
 	Console ConsoleConfig  `json:"console"`
 	Taxis   map[string]TaxiConfig `json:"taxis"`

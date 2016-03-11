@@ -6,18 +6,39 @@ Ext.define('Console.view.ProfileList' ,{
     store: 'ProfileStore',
 
     initComponent: function() {
-        console.log("profile list init");
         this.columns = [
         {header: 'Имя',  dataIndex: 'name', flex: 1},
         {header: 'Короткое описание',  dataIndex: 'short_description', flex: 1},
         {header: 'Полное описание', dataIndex: 'text_description', flex: 1},
         {header: 'Адресс', dataIndex: 'address', flex: 1},
+        {xtype: 'booleancolumn', 
+        text: 'Включен',
+        trueText: 'Да',
+        falseText: 'Нет', 
+        dataIndex: 'enable'},
+        {xtype: 'booleancolumn', 
+        text: 'Публичен',
+        trueText: 'Да',
+        falseText: 'Нет', 
+        dataIndex: 'public'}
         ];
 
         this.buttons = [{
             text: 'Добавить новый профайл',
             scope: this,
             action: 'new'
+        }];
+        this.dockedItems=[{
+            xtype:'toolbar',
+            docked: 'top',
+            items: [
+            {
+                text:'В старую консоль',
+                handler: function() {
+                    window.location = '/';
+                }
+            }
+            ]
         }];
         this.callParent(arguments);
     }
