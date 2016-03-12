@@ -153,7 +153,7 @@ func UnmarshallConfig(cdata []byte) Configuration {
 	conf := Configuration{}
 	err := json.Unmarshal(cdata, &conf)
 	if err != nil {
-		log.Printf("error decoding configuration file", err)
+		log.Printf("error decoding configuration file %v", err)
 		os.Exit(-1)
 	}
 

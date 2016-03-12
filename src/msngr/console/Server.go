@@ -31,9 +31,6 @@ import (
 	usrs "msngr/users"
 	"time"
 	"sort"
-
-	"database/sql"
-	_ "github.com/lib/pq"
 )
 
 const (
@@ -176,18 +173,17 @@ func Run(addr string, notifier *ntf.Notifier, db *d.MainDb, cs c.ConfigStorage, 
 	})
 
 	pg_conf := cfg.Main.PGDatabase
-	pg, err := sql.Open("postgres", pg_conf.ConnString)
+	ph, err := NewProfileDbHandler(pg_conf.ConnString)
 	if err != nil {
-		log.Printf("CS Error at connect to db [%v]: %v", pg_conf.ConnString, err)
+		panic(err)
 	}
-	defer pg.Close()
 
 	r.Group("/profile", func(r martini.Router) {
 		r.Get("", func(render render.Render) {
 			render.HTML(200, "profile", map[string]interface{}{})
 		})
 		r.Get("/data", func(render render.Render, params martini.Params, req *http.Request) {
-			profiles, err := GetAllProfiles(pg)
+			profiles, err := ph.GetAllProfiles()
 			if err != nil {
 				log.Printf("CS Error at getting all profiles: %v", err)
 				render.JSON(500, map[string]interface{}{"success":false, "error":err})
@@ -204,16 +200,25 @@ func Run(addr string, notifier *ntf.Notifier, db *d.MainDb, cs c.ConfigStorage, 
 				log.Printf("error at reading post data %v", err)
 			}
 			log.Printf("CS CREATE data: %s", data)
-			profile := Profile{}
-			err = json.Unmarshal(data, &profile)
-			log.Printf("CS CREATE profile: %v+", profile)
+			profile := &Profile{}
+			err = json.Unmarshal(data, profile)
+			log.Printf("CS CREATE profile: %+v", profile)
 			if err != nil {
 				log.Printf("CS CREATE error at unmarshal data at create profile %v", err)
 				render.JSON(500, map[string]interface{}{"error":err, "success":false})
 				return
 			}
-			InsertNewProfile(pg, profile)
-			render.JSON(200, map[string]interface{}{"success":true})
+			profile, err = ph.InsertNewProfile(profile)
+			if err != nil {
+				log.Printf("CS CREATE DB are not available")
+				render.JSON(500, map[string]interface{}{"error":err, "success":false})
+			}
+			out, err := json.Marshal(profile)
+			if err != nil {
+				log.Printf("CS CREATE error at marshal data to out")
+				render.JSON(500, map[string]interface{}{"error":err, "success":false})
+			}
+			render.JSON(200, map[string]interface{}{"success":true, "data":out})
 		})
 
 		r.Post("/update", func(render render.Render, params martini.Params, req *http.Request) {
@@ -224,15 +229,19 @@ func Run(addr string, notifier *ntf.Notifier, db *d.MainDb, cs c.ConfigStorage, 
 				render.JSON(500, map[string]interface{}{"error":err, "success":false})
 				return
 			}
-			profile := Profile{}
-			err = json.Unmarshal(data, &profile)
+			profile := &Profile{}
+			err = json.Unmarshal(data, profile)
 			if err != nil {
 				log.Printf("CS UPDATE error at unmarshal data at create profile %v", err)
 				render.JSON(500, map[string]interface{}{"error":err, "success":false})
 				return
 			}
-			log.Printf("CS UPDATE profile: %v+", profile)
-			UpdateProfile(pg, profile)
+			log.Printf("CS UPDATE profile: %+v", profile)
+			err = ph.UpdateProfile(profile)
+			if err != nil {
+				render.JSON(500, map[string]interface{}{"error":err, "success":false})
+				return
+			}
 			render.JSON(200, map[string]interface{}{"success":true})
 		})
 
@@ -254,7 +263,7 @@ func Run(addr string, notifier *ntf.Notifier, db *d.MainDb, cs c.ConfigStorage, 
 				render.JSON(500, map[string]interface{}{"error":err, "success":false})
 				return
 			}
-			DeleteProfile(pg, info.Id)
+			ph.DeleteProfile(info.Id)
 			render.JSON(200, map[string]interface{}{"success":true})
 		})
 	})

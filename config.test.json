@@ -9,6 +9,9 @@
     "database": {
       "name": "bot",
       "connection_string": "localhost:27017"
+    },
+    "pg_database": {
+      "connection_string": "postgres://postgres:123@localhost:5432/kuku_test?sslmode=disable"
     }
   },
   "taxis": {
@@ -42,7 +45,7 @@
             "http://109.202.17.249:8080/WebAPITaxi",
             "http://212.20.48.191:8080/WebAPITaxi/"
           ],
-          "refresh_orders_time_step":30
+          "refresh_orders_time_step": 30
         },
         "not_send_price": true,
         "markups": [

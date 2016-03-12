@@ -7,8 +7,11 @@
       "name": "bot",
       "connection_string": "localhost:27017"
     },
-//    "google_key": "AIzaSyBXW3UaS5e4FtOt-XJqLFHGpvrFlf45DV4",
-      "google_key": "AIzaSyBkmvXK-SqfQcyj2XlXgTx-r_B18TJb-vY",
+    "pg_database": {
+      "connection_string": "postgres://postgres:123@localhost:5432/kuku?sslmode=disable"
+    },
+     //"google_key": "AIzaSyBXW3UaS5e4FtOt-XJqLFHGpvrFlf45DV4",
+    "google_key": "AIzaSyBkmvXK-SqfQcyj2XlXgTx-r_B18TJb-vY",
     "elastic_conn": "http://localhost:9200/"
   },
   "console": {
@@ -91,7 +94,7 @@
         },
         "not_send_price": false
       },
-      "markups":[
+      "markups": [
         "5005378429"
       ]
     },
@@ -145,7 +148,7 @@
             "http://109.202.17.249:8080/WebAPITaxi/"
           ],
           "api_key": "e063c27d8a1147a387315654b782c29f",
-          "refresh_orders_time_step":30
+          "refresh_orders_time_step": 30
         },
         "not_send_price": false,
         "transformations": [
