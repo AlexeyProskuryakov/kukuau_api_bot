@@ -269,7 +269,7 @@ func Run(config c.QuestConfig, qs *QuestStorage, ntf *ntf.Notifier, additionalNo
 				collocutor.Name = team.Name
 				collocutor.IsTeam = true
 				collocutor.IsWinner = team.Winner
-				if collocutor.IsWinner{
+				if collocutor.IsWinner {
 					tm := time.Unix(team.WinTime, 0)
 					collocutor.WinTime = tm.Format("Mon 15:04:05")
 				}
@@ -313,7 +313,7 @@ func Run(config c.QuestConfig, qs *QuestStorage, ntf *ntf.Notifier, additionalNo
 			collocutor.Name = with
 			messages, _ = qs.GetMessages(bson.M{"to":with})
 		}
-
+		log.Printf("QS i return this messages: %+v", messages)
 		result_data["with"] = with
 		result_data["collocutor"] = collocutor
 		result_data["messages"] = messages
@@ -443,7 +443,11 @@ func Run(config c.QuestConfig, qs *QuestStorage, ntf *ntf.Notifier, additionalNo
 	})
 
 	r.Get("/manage", func(render render.Render, req *http.Request) {
-		render.HTML(200, "quests/manage", map[string]interface{}{})
+		teams, err := qs.GetAllTeams()
+		if err != nil {
+			log.Printf("QS E: Can not load teams for manage: %v", err)
+		}
+		render.HTML(200, "quests/manage", map[string]interface{}{"teams":teams})
 	})
 	r.Get("/delete_chat/:between", func(params martini.Params, render render.Render, req *http.Request) {
 		between := params["between"]
@@ -455,6 +459,7 @@ func Run(config c.QuestConfig, qs *QuestStorage, ntf *ntf.Notifier, additionalNo
 		type Messages struct {
 			ToWinner    string `json:"to_winner"`
 			ToNotWinner string `json:"to_not_winner"`
+			Winners     []string `json:"winners"`
 		}
 		messages := Messages{}
 		data, err := ioutil.ReadAll(req.Body)
@@ -464,6 +469,7 @@ func Run(config c.QuestConfig, qs *QuestStorage, ntf *ntf.Notifier, additionalNo
 			return
 		}
 		err = json.Unmarshal(data, &messages)
+		log.Printf("QS I see this data for send messages at quest end:\n %+v", messages)
 		if err != nil {
 			log.Printf("QS QE E: at unmarshal json messages %v", err)
 			render.JSON(500, map[string]interface{}{"error":err})
@@ -481,7 +487,7 @@ func Run(config c.QuestConfig, qs *QuestStorage, ntf *ntf.Notifier, additionalNo
 			if err != nil {
 				log.Printf("QS QE: error at getting members for teams [%v]: %v", team.Name, err)
 			}
-			if team.Winner {
+			if utils.InS(team.Name, messages.Winners) {
 				SendMessagesToPeoples(members, additionalNotifier, messages.ToWinner)
 			}else {
 				SendMessagesToPeoples(members, additionalNotifier, messages.ToNotWinner)
@@ -492,7 +498,7 @@ func Run(config c.QuestConfig, qs *QuestStorage, ntf *ntf.Notifier, additionalNo
 
 	r.Post("/delete_all", func(render render.Render, req *http.Request) {
 		//1. Steps or keys:
-		//si, _ := qs.Steps.RemoveAll(bson.M{})
+		si, _ := qs.Steps.RemoveAll(bson.M{})
 		//2 Peoples
 		pi, _ := qs.Peoples.UpdateAll(bson.M{
 			"$and":[]bson.M{
@@ -528,7 +534,7 @@ func Run(config c.QuestConfig, qs *QuestStorage, ntf *ntf.Notifier, additionalNo
 		}
 		render.JSON(200, map[string]interface{}{
 			"ok":true,
-			//"steps_removed":si.Removed,
+			"steps_removed":si.Removed,
 			"peoples_updated":pi.Updated,
 			"teams_removed":tc,
 			"messages_removed":mc,

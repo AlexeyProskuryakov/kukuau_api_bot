@@ -412,7 +412,6 @@ func (s ByContactsTeam) Less(i, j int) bool {
 func (qs *QuestStorage) GetContacts(teams []Team) ([]Contact, error) {
 	resp := []Contact{}
 	err := qs.Messages.Pipe([]bson.M{
-		bson.M{"$match":bson.M{"is_key":false}},
 		bson.M{"$group": bson.M{"_id":"$from", "not_answered_count":bson.M{"$sum":"$not_answered"}, "name":bson.M{"$first":"$from"}, "time":bson.M{"$max":"$time_stamp"}}}}).All(&resp)
 	if err != nil {
 		return resp, err

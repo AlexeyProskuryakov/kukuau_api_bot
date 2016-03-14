@@ -119,12 +119,16 @@ function delete_all(){
 
 function send_messages_from_klichat(){
     var to_winner = $("#to-winner").val(),
-        to_not_winner = $("#to-not-winner").val();
-    console.log("message for winner: ", to_winner, "to not winner: ", to_not_winner);
+        to_not_winner = $("#to-not-winner").val(),
+        winners = [],
+        winners_chbx = $(".winner:checked").each(function(x, obj){
+            winners.push(obj.id);
+        });
+    console.log("message for winner: ", to_winner, "to not winner: ", to_not_winner, "winners: ", winners);
     $.ajax({
         type:           "POST",
         url:            "/send_messages_at_quest_end",
-        data:           JSON.stringify({to_winner:to_winner, to_not_winner:to_not_winner}),
+        data:           JSON.stringify({to_winner:to_winner, to_not_winner:to_not_winner, winners:winners}),
         dataType:       'json',
         success:        function(x){
                     if (x.ok == true) {
