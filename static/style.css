@@ -180,6 +180,9 @@ body::-webkit-scrollbar {
 }
 .cat-img{
     overflow:auto;
-    width:70%;
-    height:70%;
+    width:50%;
+    height:50%;
+}
+#left-bar{
+    margin-left:5px;
 }

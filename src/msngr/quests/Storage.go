@@ -20,6 +20,7 @@ type Message struct {
 	Time        time.Time `bson:"time"`
 	TimeStamp   int64 `bson:"time_stamp"`
 	NotAnswered int `bson:"not_answered"`
+	Unread      int `bson:"unread"`
 	IsKey       bool `bson:"is_key"`
 }
 
@@ -353,6 +354,7 @@ func (qs *QuestStorage) StoreMessage(from, to, body string, is_key bool) (Messag
 		Time: time.Now(),
 		TimeStamp: time.Now().Unix(),
 		NotAnswered: 1,
+		Unread:1,
 		IsKey: is_key,
 	}
 	err := qs.Messages.Insert(result)

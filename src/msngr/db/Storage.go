@@ -78,6 +78,7 @@ type MessageWrapper struct {
 	Time             time.Time `bson:"time"`
 	TimeStamp        int64 `bson:"time_stamp"`
 	NotAnswered      int `bson:"not_answered"`
+	Unread		 int `bson:"unread"`
 	MessageID        string `bson:"message_id"`
 	MessageStatus    string `bson:"message_status"`
 	MessageCondition string `bson:"message_condition"`
@@ -87,17 +88,14 @@ type messageHandler struct {
 	Collection *mgo.Collection
 	parent     *MainDb
 }
-
 type orderHandler struct {
 	Collection *mgo.Collection
 	parent     *MainDb
 }
-
 type userHandler struct {
 	Collection *mgo.Collection
 	parent     *MainDb
 }
-
 type errorHandler struct {
 	Collection *mgo.Collection
 	parent     *MainDb
@@ -225,6 +223,9 @@ func (odbh *MainDb) ensureIndexes() {
 	users_collection.EnsureIndex(mgo.Index{
 		Key:        []string{"role"},
 	})
+	users_collection.EnsureIndex(mgo.Index{
+		Key:        []string{"last_marker"},
+	})
 
 	error_collection := odbh.Session.DB(odbh.DbName).C("errors")
 
@@ -248,6 +249,11 @@ func (odbh *MainDb) ensureIndexes() {
 	})
 	message_collection.EnsureIndex(mgo.Index{
 		Key:[]string{"not_answered"},
+		Unique:false,
+	})
+
+	message_collection.EnsureIndex(mgo.Index{
+		Key:[]string{"unread"},
 		Unique:false,
 	})
 	message_collection.EnsureIndex(mgo.Index{
@@ -307,30 +313,29 @@ func (oh *orderHandler) SetActive(order_id int64, source string, state bool) err
 	}
 	err := oh.Collection.Update(bson.M{"order_id": order_id, "source":source}, bson.M{"$set":bson.M{"active":state}})
 	if err == mgo.ErrNotFound {
-		log.Printf("update not existed %v %v to active %v", order_id, source, state)
+		log.Printf("DB: update not existed %v %v to active %v", order_id, source, state)
 	}
 	return err
 }
 
 func (oh *orderHandler) SetState(order_id int64, source string, new_state int, order_data *OrderData) error {
 	if !oh.parent.Check() {
+		log.Printf("DB: can not set state for [%v] now... Will do it after.", order_id)
 		utils.After(oh.parent.Check, func() {
 			oh.SetState(order_id, source, new_state, order_data)
 		})
 		return nil
 	}
-	var to_set bson.M
+	to_set := bson.M{"order_state": new_state, "when": time.Now()}
 	if order_data != nil {
-		to_set = bson.M{"order_state": new_state, "when": time.Now(), "data": order_data, "active":true}
-	} else {
-		to_set = bson.M{"order_state": new_state, "when": time.Now()}
+		to_set["data"] = order_data
 	}
 
 	change := bson.M{"$set": to_set}
 	log.Println("DB: change:", change["$set"])
 	err := oh.Collection.Update(bson.M{"order_id": order_id, "source":source}, change)
 	if err != nil && err != mgo.ErrNotFound {
-		log.Printf("State [%v] for order [%v] %v is not stated because order is not found", new_state, order_id, source)
+		log.Printf("DB: state [%v] for order [%v] %v is not stated because %v", new_state, order_id, source, err)
 		return err
 	}
 	if err == mgo.ErrNotFound {
@@ -431,7 +436,7 @@ func (oh *orderHandler) GetOrders(q bson.M) ([]OrderWrapper, error) {
 		return nil, errors.New("БД не доступна")
 	}
 	var result []OrderWrapper
-	err := oh.Collection.Find(q).Sort("-when").One(&result)
+	err := oh.Collection.Find(q).Sort("-when").All(&result)
 	if err != nil && err != mgo.ErrNotFound {
 		return nil, err
 	}
@@ -473,7 +478,7 @@ func (uh userHandler) AddUserObject(uw UserWrapper) error {
 	return err
 }
 
-func (uh *userHandler) SetUserMultiplyState(user_id, state_key, state_value string) error {
+func (uh *userHandler) SetUserState(user_id, state_key, state_value string) error {
 	/**
 	Выставление сосотяние по определенному аспекту. к примеру для квестов. Или для еще какой хуйни, посему требуется ключ да значение.
 	Отличается от просто SetUserState тем что там выставляется состояние глобальное
@@ -608,16 +613,17 @@ func (eh *errorHandler) GetBy(req bson.M) (*[]ErrorWrapper, error) {
 	return &result, err
 }
 
+//MESSAGES
 func (mh *messageHandler) StoreMessage(from, to, body string, message_id string) error {
 	//log.Printf("DB: sm :%v -> %v [%v] {%v}", from, to, body, message_id)
 	if !mh.parent.Check() {
 		return errors.New("БД не доступна")
 	}
 	found, err := mh.GetMessageByMessageId(message_id)
-	result := MessageWrapper{From:from, To:to, Body:body, TimeStamp:time.Now().Unix(), Time:time.Now(), NotAnswered:1, MessageID:message_id, MessageStatus:"sended"}
+	result := MessageWrapper{From:from, To:to, Body:body, TimeStamp:time.Now().Unix(), Time:time.Now(), NotAnswered:1, Unread:1, MessageID:message_id, MessageStatus:"sended"}
 	if found == nil&&err == nil {
 		err := mh.Collection.Insert(&result)
-		log.Printf("DB: sm OK! %v", result)
+		log.Printf("DB: store message is OK! %v", result)
 		return err
 	}
 	//log.Printf("DB: sm DUPLICATE ;(")
@@ -635,12 +641,23 @@ func (mh *messageHandler) SetMessagesAnswered(from, by string) error {
 	return err
 }
 
+func (mh *messageHandler) SetMessagesRead(from string) error {
+	if !mh.parent.Check() {
+		return errors.New("БД не доступна")
+	}
+	_, err := mh.Collection.UpdateAll(
+		bson.M{"from":from, "unread":bson.M{"$ne":0}},
+		bson.M{"$set":bson.M{"unread":0}},
+	)
+	return err
+}
+
 func (mh *messageHandler) GetMessages(query bson.M) ([]MessageWrapper, error) {
 	result := []MessageWrapper{}
 	if !mh.parent.Check() {
 		return result, errors.New("БД не доступна")
 	}
-	err := mh.Collection.Find(query).Sort("-time_stamp").All(&result)
+	err := mh.Collection.Find(query).Sort("time_stamp").All(&result)
 	return result, err
 }
 

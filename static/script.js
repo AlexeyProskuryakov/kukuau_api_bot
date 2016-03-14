@@ -1,3 +1,5 @@
+document.getElementById( 'chat-end' ).scrollIntoView();
+
 var messages_updated = Math.round( Date.now() / 1000 );
 var contacts_updated = Math.round( Date.now() / 1000 );
 
@@ -7,7 +9,7 @@ var message_for = $("#with").prop("value");
 function paste_message(message){
     var text_message = "<div class='media msg'><div class='media-body'><small class='pull-right time'><i class='fa fa-clock-o'></i>{{Time}}</small><h5 class='media-heading'>{{From}}</h5><small class='col-lg-10'>{{Body}}</small></div></div>";
     var result = Mustache.render(text_message,message);
-    $("#chat-wrapper").prepend(result);
+    $("#chat-wrapper").append(result);
 }
 
 function update_messages(){
@@ -40,9 +42,12 @@ function add_new_contact(contact){
     var result = Mustache.render(c_text, contact);
     if (contact.IsTeam == true) {
         $("#team-contacts").prepend(result);
-    } else {
+    } else if (contact.IsPassersby == true){
         $("#man-contacts").prepend(result);
+    } else {
+        $("#contacts").prepend(result);
     }
+
 }
 
 function delete_chat(between){
@@ -81,7 +86,6 @@ function update_contacts(){
                 console.log("new",c);
                 add_new_contact(c);
             });
-            // contacts_updated = x.next_;
         }
     });
     return true;
@@ -92,6 +96,7 @@ $("#chat-form-message").keydown(function(e){
         $("#chat-form").submit();
     }
 });
+
 setInterval(function(){
 
     update_messages();
@@ -140,5 +145,6 @@ function send_messages_from_klichat(){
         }
     });
 }
+
 
 

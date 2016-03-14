@@ -7,8 +7,11 @@
       "name": "bot",
       "connection_string": "localhost:27017"
     },
-//    "google_key": "AIzaSyBXW3UaS5e4FtOt-XJqLFHGpvrFlf45DV4",
-      "google_key": "AIzaSyBkmvXK-SqfQcyj2XlXgTx-r_B18TJb-vY",
+    "pg_database": {
+      "connection_string": "postgres://postgres:123@localhost:5432/kuku?sslmode=disable"
+    },
+     //"google_key": "AIzaSyBXW3UaS5e4FtOt-XJqLFHGpvrFlf45DV4",
+    "google_key": "AIzaSyBkmvXK-SqfQcyj2XlXgTx-r_B18TJb-vY",
     "elastic_conn": "http://localhost:9200/"
   },
   "console": {
@@ -66,10 +69,10 @@
         }
       }
     },
-    "karavan": {
-      "name": "karavan",
-      "dict_url": "http://localhost:9191/taxi/karavan/streets",
-      "key": "Kuku karavan_taxi_key",
+    "caravan": {
+      "name": "caravan",
+      "dict_url": "http://localhost:9191/taxi/caravan/streets",
+      "key": "Kuku caravan_taxi_key",
       "information": {
         "phone": "123-45-67",
         "text": "Такси Караван! Самое лучшее такси в Бердске!"
@@ -90,12 +93,15 @@
           "id_service": 5000360106
         },
         "not_send_price": false
-      }
+      },
+      "markups": [
+        "5005378429"
+      ]
     },
     "kd": {
       "name": "kd",
       "dict_url": "http://localhost:9191/taxi/kd/streets",
-      "key": "Kuku karavan_taxi_key",
+      "key": "Kuku caravan_taxi_key",
       "information": {
         "phone": "8 (383) 292-92-92",
         "text": "Такси Каретный Двор! Самое лучшее такси в Новосибирске!"
@@ -139,11 +145,19 @@
           "password": "789kukuau987",
           "connection_strings": [
             "http://212.20.48.191:8080/WebAPITaxi/",
-            "http://109.202.17.249:8080/WebAPITaxi"
+            "http://109.202.17.249:8080/WebAPITaxi/"
           ],
-          "host": "212.20.48.191:8080"
+          "api_key": "e063c27d8a1147a387315654b782c29f",
+          "refresh_orders_time_step": 30
         },
-        "not_send_price": false
+        "not_send_price": false,
+        "transformations": [
+          {
+            "field": "phone",
+            "regex_code": "\\+?7([\\d]{8,10})",
+            "to": "8$1"
+          }
+        ]
       },
       "dict_url": "http://msg.kuku-au.com:9193/taxi/academ/streets",
       "information": {
@@ -208,7 +222,7 @@
         }
       }
     },
-    "fake_infinity": {
+    "fake": {
       "name": "fake_infinity",
       "dict_url": "http://localhost:9191/taxi/fake/streets",
       "key": "Kuku demo_taxi_key",

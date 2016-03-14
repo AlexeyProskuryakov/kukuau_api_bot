@@ -5,30 +5,41 @@ import (
 	"log"
 	"net/http"
 	"errors"
+
 	m "msngr"
-	s "msngr/structs"
-//tm "msngr/text_messages"
 	d "msngr/db"
 	c "msngr/configuration"
-	i "msngr/taxi/infinity"
 	cnsl "msngr/console"
 	n "msngr/notify"
 	rp "msngr/ruposts"
 	sh "msngr/shop"
 	q "msngr/quests"
+
 	t "msngr/taxi"
+	i "msngr/taxi/infinity"
+	"msngr/taxi/sedi"
 	"msngr/taxi/geo"
-	sedi "msngr/taxi/sedi"
 )
 
-func GetTaxiAPIInstruments(params c.TaxiApiParams) (t.TaxiInterface, t.AddressSupplier, error) {
-
+func GetTaxiAPI(params c.TaxiApiParams, for_name string) (t.TaxiInterface, error) {
 	switch api_name := params.Name; api_name {
 	case i.INFINITY:
-		return i.GetInfinityAPI(params), i.GetInfinityAddressSupplier(params), nil
+		return i.GetInfinityAPI(params, for_name), nil
 	case t.FAKE:
-		return t.GetFakeAPI(params), i.GetInfinityAddressSupplier(params), nil
+		return t.GetFakeAPI(params), nil
+	case sedi.SEDI:
+		sedi_api := sedi.NewSediAPI(params)
+		return sedi_api, nil
+	}
+	return nil, errors.New("Not imply name of api")
+}
 
+func GetTaxiAPIInstruments(params c.TaxiApiParams, for_name string) (t.TaxiInterface, t.AddressSupplier, error) {
+	switch api_name := params.Name; api_name {
+	case i.INFINITY:
+		return i.GetInfinityAPI(params, for_name), i.GetInfinityAddressSupplier(params, for_name), nil
+	case t.FAKE:
+		return t.GetFakeAPI(params), i.GetInfinityAddressSupplier(params, for_name), nil
 	case sedi.SEDI:
 		sedi_api := sedi.NewSediAPI(params)
 		return sedi_api, sedi_api, nil
@@ -36,7 +47,7 @@ func GetTaxiAPIInstruments(params c.TaxiApiParams) (t.TaxiInterface, t.AddressSu
 	return nil, nil, errors.New("Not imply name of api")
 }
 
-func get_address_instruments(c c.Configuration, taxi_name string, external_supplier t.AddressSupplier) (t.AddressHandler, t.AddressSupplier) {
+func GetAddressInstruments(c c.Configuration, taxi_name string, external_supplier t.AddressSupplier) (t.AddressHandler, t.AddressSupplier) {
 	if c.Taxis[taxi_name].Api.Name == sedi.SEDI {
 		log.Printf("[ADDRESSES ENGINE] For %v Will use SEDI address supplier no any address handler", taxi_name)
 		return nil, external_supplier
@@ -61,7 +72,7 @@ func StartBot(db *d.MainDb, result chan string) c.Configuration {
 
 	for taxi_name, taxi_conf := range conf.Taxis {
 		log.Printf("taxi api configuration for %+v:\n%v", taxi_conf.Name, taxi_conf.Api)
-		external_api, external_address_supplier, err := GetTaxiAPIInstruments(taxi_conf.Api)
+		external_api, external_address_supplier, err := GetTaxiAPIInstruments(taxi_conf.Api, taxi_name)
 
 		if err != nil {
 			log.Printf("Skip this taxi api [%+v]\nBecause: %v", taxi_conf.Api, err)
@@ -73,27 +84,34 @@ func StartBot(db *d.MainDb, result chan string) c.Configuration {
 		carsCache := t.NewCarsCache(external_api)
 		notifier := n.NewNotifier(conf.Main.CallbackAddr, taxi_conf.Key, db)
 
-		address_handler, address_supplier := get_address_instruments(conf, taxi_name, external_address_supplier)
+		address_handler, address_supplier := GetAddressInstruments(conf, taxi_name, external_address_supplier)
 
 		botContext := t.FormTaxiBotContext(&apiMixin, db, taxi_conf, address_handler, carsCache)
-		log.Printf("Was create bot context: %+v\n", botContext)
-		taxiContext := t.TaxiContext{API: external_api, DataBase: db, Cars: carsCache, Notifier: notifier}
 		controller := m.FormBotController(botContext, db)
 
+		log.Printf("Was create bot context: %+v\n", botContext)
 		http.HandleFunc(fmt.Sprintf("/taxi/%v", taxi_conf.Name), controller)
 
-		s.StartAfter(botContext.Check, func() {
+		go func() {
+			api, err := GetTaxiAPI(taxi_conf.Api, taxi_name + "_watch")
+			if err != nil {
+				log.Printf("Error at get api: %v for %v, will not use order watching", err, taxi_name)
+			}
+			cc := t.NewCarsCache(api)
+			taxiContext := t.TaxiContext{API: api, DataBase: db, Cars: cc, Notifier: notifier}
 			log.Printf("Will start order watcher for [%v]", botContext.Name)
 			t.TaxiOrderWatch(&taxiContext, botContext)
-		})
+		}()
 
 		http.HandleFunc(fmt.Sprintf("/taxi/%v/streets", taxi_conf.Name), func(w http.ResponseWriter, r *http.Request) {
 			geo.StreetsSearchController(w, r, address_supplier)
 		})
+		if m.TEST {
+			http.HandleFunc(fmt.Sprintf("/taxi/%v/streets/ext", taxi_conf.Name), func(w http.ResponseWriter, r *http.Request) {
+				geo.StreetsSearchController(w, r, external_address_supplier)
+			})
+		}
 
-		http.HandleFunc(fmt.Sprintf("/taxi/%v/streets/ext", taxi_conf.Name), func(w http.ResponseWriter, r *http.Request) {
-			geo.StreetsSearchController(w, r, external_address_supplier)
-		})
 		result <- fmt.Sprintf("taxi_%v", taxi_name)
 	}
 
@@ -129,10 +147,10 @@ func StartBot(db *d.MainDb, result chan string) c.Configuration {
 		Addr: server_address,
 	}
 
-	if conf.Console.WebPort != "" && conf.Console.Key != ""  {
+	if conf.Console.WebPort != "" && conf.Console.Key != "" {
 		log.Printf("Will handling requests from /console")
-		bc := cnsl.FormConsoleBotContext(conf, db,cs)
-		cc := m.FormBotController(bc,db)
+		bc := cnsl.FormConsoleBotContext(conf, db, cs)
+		cc := m.FormBotController(bc, db)
 		http.HandleFunc("/console", cc)
 		result <- "console"
 	}

@@ -1,69 +1,36 @@
-{
-  "to": "TEST",
-  "message": {
-    "id": "4751997750760398084",
-    "type": "chat",
-    "thread": "2c474723-ff4d-4fad-a31f-18e8063bdff2",
-    "body": "Ошибка! not found",
-    "commands": [
-      {
-        "title": "Вызвать такси",
-        "action": "new_order",
-        "position": 0,
-        "fixed": false,
-        "repeated": true,
-        "form": {
-          "title": "Форма вsызова такси",
-          "text": "Откуда: ?(street_from), ?(house_from), ?(entrance). Куда: ?(street_to), ?(house_to).",
-          "type": "form",
-          "name": "call_taxi",
-          "fields": [
-            {
-              "name": "street_from",
-              "type": "dict",
-              "attrs": {
-                "label": "улица",
-                "required": true,
-                "url": "http://127.0.0.1:9191/taxi/fake/streets"
-              }
-            },
-            {
-              "name": "house_from",
-              "type": "text",
-              "attrs": {
-                "label": "дом",
-                "required": true
-              }
-            },
-            {
-              "name": "entrance",
-              "type": "number",
-              "attrs": {
-                "label": "подъезд",
-                "required": false,
-                "empty_text": "не указан"
-              }
-            },
-            {
-              "name": "street_to",
-              "type": "dict",
-              "attrs": {
-                "label": "улицa",
-                "required": true,
-                "url": "http://127.0.0.1:9191/taxi/fake/streets"
-              }
-            },
-            {
-              "name": "house_to",
-              "type": "text",
-              "attrs": {
-                "label": "дом",
-                "required": true
-              }
-            }
-          ]
-        }
+ "taxis": {
+    "caravan": {
+      "name": "caravan",
+      "dict_url": "http://localhost:9191/taxi/caravan/streets",
+      "key": "Kuku caravan_taxi_key",
+      "information": {
+        "phone": "123-45-67",
+        "text": "Такси Караван! Самое лучшее такси в Бердске!"
+      },
+      "api": {
+        "geo_orbit": {
+          "lat": 54.760457,
+          "lon": 83.103499,
+          "radius": 50000
+        },
+        "name": "infinity",
+        "data": {
+          "login": "kukuau",
+          "password": "89831395746",
+          "connection_strings": [
+            "http://s1.k154.ru:18080/WebAPITaxi/",
+            "http://s2.k154.ru:18080/WebAPITaxi/"
+          ],
+          "id_service": 5002204175
+        },
+        "not_send_price": false
+      },
+      "available_commands": {
+        "created_order": [
+          "where_it",
+          "callback_request",
+          "car_position"
+        ]
       }
-    ]
-  }
-}
+    }
+  },

@@ -24,8 +24,9 @@
     "type": "chat",
     "id": "T6rqU-93"
   },
-  "from": "113c32ee9f65586882284425376e5d9d",
+  "from": "TEST",
   "userdata": {
-    "phone": "+79046105885"
+    "phone": "TESTPHONE",
+    "name": "TESTNAME"
   }
 }

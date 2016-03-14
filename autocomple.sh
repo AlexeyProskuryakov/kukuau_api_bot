@@ -4,23 +4,49 @@ curl -XPOST "http://localhost:9200/autocomplete" -d '{
   "settings": {
     "index": {
       "analysis": {
-        "analyzer" : {
-         "autocomplete_analyzer": {
-            "type": "custom",
-            "tokenizer": "lowercase",
-            "filter": [
-              "asciifolding",
-              "title_ngram"
+        "char_filter": {
+          "e_map": {
+            "type": "mapping",
+            "mappings": [
+              "ё=>е"
             ]
           }
-         },
-          "filter" : {
-            "title_ngram": {
-                "type": "nGram",
-                "min_gram": 3,
-                "max_gram": 7
-            }
+        },
+        "analyzer": {
+          "autocomplete_analyzer": {
+            "type": "custom",
+            "tokenizer": "standard",
+            "filter": [
+              "lowercase",
+              "word_delimiter",
+              "app_ngram"
+            ],
+            "char_filter": [
+              "e_map"
+            ]
+          },
+          "autocomplete_search_analyzer": {
+            "type": "custom",
+            "tokenizer": "standard",
+            "filter": [
+              "lowercase",
+              "word_delimiter"
+            ],
+            "char_filter": [
+              "e_map"
+            ]
           }
+        },
+        "filter": {
+          "app_ngram": {
+            "type": "nGram",
+            "min_gram": 2,
+            "max_gram": 15
+          },
+          "word_delimiter": {
+            "type": "word_delimiter"
+          }
+        }
       }
     }
   },
@@ -33,13 +59,12 @@ curl -XPOST "http://localhost:9200/autocomplete" -d '{
         "name": {
           "type": "string",
           "analyzer": "autocomplete_analyzer"
-
         },
         "osm_id": {
           "type": "long"
         },
-        "location":{
-          "type":"geo_point"
+        "location": {
+          "type": "geo_point"
         }
       }
     }

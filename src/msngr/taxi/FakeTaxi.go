@@ -38,6 +38,9 @@ func send_states(order_id int64, api *FakeTaxiAPI) {
 		time.Sleep(time.Duration(api.SleepTime) * time.Second)
 		api.set_order_state(order_id, i)
 	}
+
+	time.Sleep(time.Duration(api.SleepTime) * time.Second)
+	api.delete_order(order_id)
 }
 
 func (inf *FakeTaxiAPI) set_order_state(order_id int64, new_state int) {
@@ -60,6 +63,17 @@ func (inf *FakeTaxiAPI) set_order_state(order_id int64, new_state int) {
 			}
 		}
 	}
+}
+
+func (inf *FakeTaxiAPI) delete_order(order_id int64){
+	log.Printf("FA delete order [%v]", order_id)
+	var oid int
+	for i, order := range inf.orders{
+		if order.ID == order_id{
+			oid = i
+		}
+	}
+	inf.orders = append(inf.orders[:oid], inf.orders[oid+1:]...)
 }
 
 func (inf *FakeTaxiAPI) NewOrder(order NewOrderInfo) Answer {
@@ -90,6 +104,7 @@ func (inf *FakeTaxiAPI) NewOrder(order NewOrderInfo) Answer {
 func (inf *FakeTaxiAPI) Orders() []Order {
 	inf.Lock()
 	defer inf.Unlock()
+	log.Printf("FA get orders... %+v", inf.orders)
 	return inf.orders
 }
 
@@ -145,4 +160,8 @@ func (p *FakeTaxiAPI) WhereIt(order_id int64) (bool, string) {
 
 func (p *FakeTaxiAPI) Markups() []Markup {
 	return []Markup{Markup{Name:"Животное", Value:100500, ID:1234567890}}
+}
+
+func (p *FakeTaxiAPI) Connect(){
+
 }

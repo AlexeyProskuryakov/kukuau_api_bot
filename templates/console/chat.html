@@ -1,13 +1,22 @@
+{{template "content_chat" .}}
+{{define "content_chat" }}
 <div id="left-bar" class="col-md-2">
     {{$with := .with}}
     {{$all := "all"}}
-
+    {{$all_tm := "all_hash_writers"}}
     <div class="row">
         <a class="bg-danger a-contact
         {{if eq_s $with $all}}
         c-active
         {{end}}
         " href="/chat?with={{$all}}">Написать всем</a>
+    </div>
+      <div class="row">
+        <a class="bg-warning a-contact
+        {{if eq_s $with $all_tm}}
+        c-active
+        {{end}}
+        " href="/chat?with={{$all_tm}}">Написать всем кто вводил маркеры</a>
     </div>
     <hr>
     <div class="row" id="contacts">
@@ -28,7 +37,7 @@
         </div>
         {{end}}
     </div>
-    <hr>
+
 
 </div>
 <div id="chat-window" class="col-md-7">
@@ -36,30 +45,32 @@
         <div class="message-wrap col-lg-8">
             <div class="msg-wrap" id="chat-wrapper">
                 {{range $message := .messages}}
-                {{if eq_s $message.From "me" }}
-                <div class="media msg">
-                    <div class="media-body">
-                        <small class="pull-left time"><i class="fa fa-clock-o"></i>{{$message.Time}}</small>
-                        <h5 class="media-heading pull-right">{{$message.From}}</h5>
-                        <br>
-                        <small class="col-lg-10 pull-right bg-info">{{$message.Body}}</small>
-                    </div>
-                </div>
-                {{else}}
-                <div class="media msg">
-                    <div class="media-body">
-                        <small class="pull-right time"><i class="fa fa-clock-o"></i>{{$message.Time}}</small>
-                        <h5 class="media-heading">{{$message.From}}</h5>
-                        <small class="col-lg-10 bg-success">{{$message.Body}}</small>
-                    </div>
-                </div>
+                    <hr>
+                    {{if eq_s $message.From "me" }}
+                        <div class="media msg">
+                            <div class="media-body">
+                                <small class="pull-left time"><i class="fa fa-clock-o"></i>{{$message.Time}}</small>
+                                <h5 class="media-heading pull-right">{{$message.From}}</h5>
+                                <br>
+                                <small class="col-lg-10 pull-right bg-info">{{$message.Body}}</small>
+                            </div>
+                        </div>
+                    {{else}}
+                        <div class="media msg">
+                            <div class="media-body">
+                                <small class="pull-right time"><i class="fa fa-clock-o"></i>{{$message.Time}}</small>
+                                <h5 class="media-heading">{{$message.From}}</h5>
+                                <small class="col-lg-10 bg-success">{{$message.Body}}</small>
+                            </div>
+                        </div>
+                    {{end}}
                 {{end}}
-                <hr>
-                {{end}}
+                <div id="chat-end"></div>
+
             </div>
         </div>
     </div>
-    <hr>
+    <br>
     <div class="row">
         <div class="chat-input">
             <form id="chat-form" method="post" action="/send_message">
@@ -106,7 +117,16 @@
         {{end}}
     {{end}}
 
+<div class="row">
+            {{if .messages}}
+            <a href="/delete_chat/{{$with}}" class="btn btn-sm btn-danger">
+                Удалить переписку
+            </a>
+            <span class="bg-success bg-small" id="removed" style="display: none"></span>
+            {{end}}
 
+</div>
 </div>
 <script src="script.js"></script>
 
+{{end}}

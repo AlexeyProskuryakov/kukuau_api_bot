@@ -1021,3 +1021,7 @@ func (s *SediAPI)WhereIt(order_id int64) (bool, string) {
 func (p *SediAPI) Markups() []t.Markup {
 	return []t.Markup{}
 }//список наценок
+
+func (p *SediAPI) Connect(){
+
+}

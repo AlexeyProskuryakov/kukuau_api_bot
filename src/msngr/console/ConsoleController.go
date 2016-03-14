@@ -66,6 +66,7 @@ func (cmp ConsoleMessageProcessor) ProcessMessage(in *s.InPkg) *s.MessageResult 
 			log.Printf("CC: Here is key: %v", r_body)
 			step, err := cmp.quest_storage.GetStepByStartKey(r_body)
 			if step != nil {
+				cmp.Users.SetUserState(in.From, "last_marker", r_body)
 				return &s.MessageResult{Type:"chat", Body:step.Description}
 			}
 			if step == nil && err == nil {
@@ -99,7 +100,9 @@ func FormConsoleBotContext(conf c.Configuration, db_handler *d.MainDb, cs c.Conf
 	}
 
 	notifier := n.NewNotifier(conf.Main.CallbackAddr, conf.Console.Key, db_handler)
-	go Run(conf.Console.WebPort, notifier, db_handler, cs, qs, notifier)
+
+	go Run(conf.Console.WebPort, notifier, db_handler, cs, qs, notifier, conf)
+	//go RunProfileServer(conf.Console.WebPort, db_handler)
 
 	return &result
 }

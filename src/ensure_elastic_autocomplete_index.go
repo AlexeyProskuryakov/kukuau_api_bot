@@ -72,7 +72,6 @@ func (e ElEntity) String() string {
 
 type AutocompleteEntity struct {
 	Name       string `json:"name"`
-	PhotonName string `json:"photon_name"`
 	OSM_ID     int64 `json:"osm_id"`
 	City       string `json:"city"`
 	Location   Coordinates `json:"location"`
@@ -83,64 +82,19 @@ func (e AutocompleteEntity) String() string {
 }
 
 
-func CorrectAddressesAtAutocomplete() {
-	client, err := elastic.NewClient()
-	searchPhotonResult, err := client.Search().
-	Index("photon").
-	Size(math.MaxInt32).
-	Pretty(true).
-	Do()
-	if err != nil {
-		log.Printf("ERROR: %v", err)
-		return
-	}
-	var eet ElEntity
-	count := 0
-	log.Printf("Start searching... At %v results", searchPhotonResult.TotalHits())
-
-	for _, photon_hit := range searchPhotonResult.Each(reflect.TypeOf(eet)) {
-		if entity, ok := photon_hit.(ElEntity); ok {
-			name := fmt.Sprintf("%v %v", entity.Name.Ru, entity.Name.Default)
-			if entity.OSM_key == "highway" && reg.MatchString(name) {
-				if subst, ok := corrects[reg.FindAllString(name, -1)[0]]; ok {
-					var name_to_save string
-					if entity.Name.Ru != "" {
-						name_to_save = entity.Name.Ru
-					} else {
-						name_to_save = entity.Name.Default
-					}
-					//correcting
-					if !strings.Contains(name_to_save, " ") {
-						name_to_save = reg.ReplaceAllString(name_to_save, fmt.Sprintf("%v ", subst))
-					} else {
-						name_to_save = reg.ReplaceAllString(name_to_save, subst)
-					}
-					//delete from autocomplete osm_id
-					deleteResult, err := client.Delete().Index("autocomplete").Type("name").Id(fmt.Sprintf("%v", entity.OSM_ID)).Do()
-					if err != nil {
-						log.Printf("Error at deleting in autocomplete")
-						continue
-					}
-					if deleteResult == nil {
-						log.Printf("Delete result: %v", deleteResult)
-					}
-
-					index_el := AutocompleteEntity{Name:name_to_save, OSM_ID:entity.OSM_ID, City:entity.City.GetAny(), Location:entity.Coordinates}
-					//paste
-					log.Printf("Will paste this: %+v", index_el)
-					_, err = client.Index().Index("autocomplete").Type("name").Id(fmt.Sprintf("%v", entity.OSM_ID)).BodyJson(index_el).Do()
-					if err != nil {
-						log.Printf("Error at adding to autocomplete: %v", err)
-						continue
-					}
-					count += 1
-
-				}
+func NameCorrection(in string) string {
+	if reg.MatchString(in) {
+		if subst, ok := corrects[reg.FindAllString(in, -1)[0]]; ok {
+			//correcting
+			if !strings.Contains(in, " ") {
+				in = reg.ReplaceAllString(in, fmt.Sprintf("%v ", subst))
+			} else {
+				in = reg.ReplaceAllString(in, subst)
 			}
+			in = strings.TrimSpace(in)
 		}
 	}
-	log.Printf("ALL: %v", count)
-
+	return in
 }
 
 func EnsureAutocomplete(index_name string) {
@@ -164,23 +118,9 @@ func EnsureAutocomplete(index_name string) {
 			if name_to_save == "" {
 				continue
 			}
-
-			if reg.MatchString(name_to_save) {
-				if subst, ok := corrects[reg.FindAllString(name_to_save, -1)[0]]; ok {
-					//correcting
-					if !strings.Contains(name_to_save, " ") {
-						name_to_save = reg.ReplaceAllString(name_to_save, fmt.Sprintf("%v ", subst))
-					} else {
-						name_to_save = reg.ReplaceAllString(name_to_save, subst)
-					}
-					name_to_save = strings.TrimSpace(name_to_save)
-				}
-			}
-
+			name_to_save = NameCorrection(name_to_save)
 			index_el := AutocompleteEntity{Name:name_to_save, OSM_ID: entity.OSM_ID, City:entity.City.GetAny(), Location:entity.Coordinates}
-
 			_, err = client.Index().Index(index_name).Type("name").Id(fmt.Sprintf("%v", entity.OSM_ID)).BodyJson(index_el).Do()
-
 			if err != nil {
 				log.Printf("Error at adding to autocomplete: %v", err)
 				continue
@@ -202,7 +142,6 @@ func CountsOfCities(index string) map[string]int {
 		log.Printf("elastic err: %v", err)
 		return cities
 	}
-	//	agg := elastic.NewSumAggregation().Field("city")
 	var eet AutocompleteEntity
 	result, err := client.Search().Index(index).Query(elastic.NewMatchAllQuery()).Size(math.MaxInt32).Do()
 	for _, hit := range result.Each(reflect.TypeOf(eet)) {
@@ -219,28 +158,22 @@ func CountsOfCities(index string) map[string]int {
 
 
 type ByCitySize struct {
-	data []string
+	data   []string
 	cities map[string]int
 }
-func ByCitySizeWithCityCounts(data []string, cities map[string]int) ByCitySize{
+
+func ByCitySizeWithCityCounts(data []string, cities map[string]int) ByCitySize {
 	return ByCitySize{data:data, cities:cities}
 }
-// We implement `sort.Interface` - `Len`, `Less`, and
-// `Swap` - on our type so we can use the `sort` package's
-// generic `Sort` function. `Len` and `Swap`
-// will usually be similar across types and `Less` will
-// hold the actual custom sorting logic. In our case we
-// want to sort in order of increasing string length, so
-// we use `len(s[i])` and `len(s[j])` here.
 func (s ByCitySize) Len() int {
-    return len(s.data)
+	return len(s.data)
 }
 func (s ByCitySize) Swap(i, j int) {
-    s.data[i], s.data[j] = s.data[j], s.data[i]
+	s.data[i], s.data[j] = s.data[j], s.data[i]
 }
 func (s ByCitySize) Less(i, j int) bool {
-    if s_c_i, ok_i := s.cities[s.data[i]];ok_i{
-		if s_c_j, ok_j := s.cities[s.data[j]]; ok_j{
+	if s_c_i, ok_i := s.cities[s.data[i]]; ok_i {
+		if s_c_j, ok_j := s.cities[s.data[j]]; ok_j {
 			return s_c_i < s_c_j
 		}
 	}
@@ -249,21 +182,26 @@ func (s ByCitySize) Less(i, j int) bool {
 
 func to_list_keys(input map[string]int) []string {
 	res := []string{}
-	for k,_:=range input{
+	for k, _ := range input {
 		res = append(res, k)
 	}
 	return res
 }
 
-func main() {
+
+func ensure() {
 	EnsureAutocomplete("autocomplete")
-	//	CorrectAddressesAtAutocomplete()
+
 	cs := CountsOfCities("autocomplete")
 	keys := ByCitySizeWithCityCounts(to_list_keys(cs), cs)
 	sort.Sort(keys)
-//	sort.Reverse(keys)
+	sort.Reverse(keys)
 
-	for _, k := range keys.data{
+	for _, k := range keys.data {
 		log.Printf("%v : %v", k, cs[k])
 	}
+}
+
+func main() {
+	ensure()
 }

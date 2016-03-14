@@ -17,7 +17,9 @@ import (
 
 )
 
-var CC_REGEXP = regexp.MustCompile("(ул(ица|\\.| )|пр(\\.|оспект|\\-кт|оезд)?|пер(\\.|еулок| )|г(ород|\\.|ор\\.| )|обл(асть|\\.| )|р(айон|\\-н )|^с |бульвар|пл(\\.|ощадь))")
+var CC_REGEXP = regexp.MustCompile("(ул(ица|\\.| )|пр(\\.|оспект|\\-кт|оезд)|пер(\\.|еулок| )|г(ород|\\.|ор\\.| )|обл(асть|\\.| )|р(айон|\\-н )|^с |бульвар|пл(\\.|ощадь)|\\(.*\\))")
+var SPLIT_REGEXP = regexp.MustCompile("\\s+")
+var IO_REGEXP = regexp.MustCompile("[ёЁ]")
 
 func StreetsSearchController(w http.ResponseWriter, r *http.Request, i t.AddressSupplier) {
 	w.Header().Set("Content-type", "application/json")
@@ -35,7 +37,7 @@ func StreetsSearchController(w http.ResponseWriter, r *http.Request, i t.Address
 				fmt.Fprintf(w, "%s", string(ans))
 				return
 			}
-			log.Printf("connected. All ok. Start querying for: %+v", query)
+			log.Printf("SSC connected. All ok. Start querying for: %+v", query)
 			rows := i.AddressesAutocomplete(query).Rows
 			if rows == nil {
 				return

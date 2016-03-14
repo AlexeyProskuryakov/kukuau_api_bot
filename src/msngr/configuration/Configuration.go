@@ -18,20 +18,22 @@ type Transformation struct {
 }
 
 type ApiData struct {
-	Host               string `json:"host"`
-	Login              string `json:"login"`
-	Password           string `json:"password"`
-	ConnectionsStrings []string `json:"connection_strings"`
-	IdService          int64 `json:"id_service"`
+	Host                  string `json:"host"`
+	Login                 string `json:"login"`
+	Password              string `json:"password"`
+	ConnectionsStrings    []string `json:"connection_strings"`
+	IdService             int64 `json:"id_service"`
 
-	BearerToken        string `json:"bearer_token"`
+	BearerToken           string `json:"bearer_token"`
 
-	AppKey             string `json:"app_key"`
-	ApiKey             string `json:"api_key"`
-	City               string `json:"city"`
-	Phone              string `json:"phone"`
-	Name               string `json:"name"`
-	SaleKeyword        string `json:"sale_kw"`
+	AppKey                string `json:"app_key"`
+	ApiKey                string `json:"api_key"`
+	City                  string `json:"city"`
+	Phone                 string `json:"phone"`
+	Name                  string `json:"name"`
+	SaleKeyword           string `json:"sale_kw"`
+
+	RefreshOrdersTimeStep int `json:"refresh_orders_time_step"`
 }
 
 type TaxiApiParams struct {
@@ -121,6 +123,9 @@ type Configuration struct {
 					     ConnString string `json:"connection_string"`
 					     Name       string `json:"name"`
 				     } `json:"database"`
+			PGDatabase   struct {
+					     ConnString string `json:"connection_string"`
+				     } `json:"pg_database"`
 		} `json:"main"`
 	Console ConsoleConfig  `json:"console"`
 	Taxis   map[string]TaxiConfig `json:"taxis"`
@@ -138,7 +143,7 @@ func (conf *Configuration) SetLogFile(fn string) {
 		log.Fatalf("error opening log file: %v", err)
 	}
 	log.SetOutput(f)
-	log.Println("Logging file is setted to %v", fn)
+	log.Printf("Logging file is setted to %v", fn)
 }
 
 func UnmarshallConfig(cdata []byte) Configuration {
@@ -156,7 +161,7 @@ func UnmarshallConfig(cdata []byte) Configuration {
 			log.Fatalf("error opening log file: %v", err)
 		}
 		log.SetOutput(f)
-		log.Println("Logging file is setted to %v", conf.Main.LoggingFile)
+		log.Printf("Logging file is setted to %v", conf.Main.LoggingFile)
 	}
 	return conf
 }
@@ -175,6 +180,23 @@ func ReadConfigInRecursive() Configuration {
 	}
 	return UnmarshallConfig(cdata)
 }
+
+
+func ReadTestConfigInRecursive() Configuration {
+	log.Printf("Path sep: %+v", os.PathSeparator)
+	fn := u.FoundFile("config.test.json")
+	if fn == nil {
+		log.Printf("can not find config.json file :(")
+		os.Exit(-1)
+	}
+	cdata, err := ioutil.ReadFile(*fn)
+	if err != nil {
+		log.Printf("error reading config %v", err)
+		os.Exit(-1)
+	}
+	return UnmarshallConfig(cdata)
+}
+
 
 func ReadConfig() Configuration {
 	dir, err := os.Getwd()

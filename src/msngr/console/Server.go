@@ -98,7 +98,7 @@ func GetContacts(db *d.MainDb, after int64) ([]usrs.Contact, error) {
 	resp := []usrs.Contact{}
 	err := db.Messages.Collection.Pipe([]bson.M{
 		bson.M{"$match":bson.M{"time_stamp":bson.M{"$gt":after}}},
-		bson.M{"$group": bson.M{"_id":"$from", "not_answered_count":bson.M{"$sum":"$not_answered"}, "name":bson.M{"$first":"$from"}, "time":bson.M{"$max":"$time_stamp"}}}}).All(&resp)
+		bson.M{"$group": bson.M{"_id":"$from", "unread_count":bson.M{"$sum":"$unread"}, "name":bson.M{"$first":"$from"}, "time":bson.M{"$max":"$time_stamp"}}}}).All(&resp)
 	if err != nil {
 		return resp, err
 	}
@@ -135,14 +135,15 @@ type CollocutorInfo struct {
 	CountOrdersByProvider []OrdersInfo
 }
 
-func Run(addr string, notifier *ntf.Notifier, db *d.MainDb, cs c.ConfigStorage, qs *quests.QuestStorage, ntf *ntf.Notifier) {
+func Run(addr string, notifier *ntf.Notifier, db *d.MainDb, cs c.ConfigStorage, qs *quests.QuestStorage, ntf *ntf.Notifier, cfg c.Configuration) {
 	m := martini.New()
 	m.Use(w.NonJsonLogger())
 
 	m.Use(martini.Recovery())
 
 	m.Use(render.Renderer(render.Options{
-		Layout: "console/layout",
+		Directory:"templates/console",
+		//Layout: "console/layout",
 		Extensions: []string{".tmpl", ".html"},
 		Charset: "UTF-8",
 		IndentJSON: true,
@@ -155,7 +156,6 @@ func Run(addr string, notifier *ntf.Notifier, db *d.MainDb, cs c.ConfigStorage, 
 			},
 		},
 	}))
-
 	m.Use(auth.BasicFunc(func(username, password string) bool {
 		usr, _ := db.Users.GetUser(bson.M{"user_name":username, "role":MANAGER})
 		if usr != nil {
@@ -168,13 +168,139 @@ func Run(addr string, notifier *ntf.Notifier, db *d.MainDb, cs c.ConfigStorage, 
 
 	r := martini.NewRouter()
 
-	r.Get("/", func(user auth.User, render render.Render) {
-		render.HTML(200, "console/index", map[string]interface{}{})
+	r.Get("/", func(user auth.User, r render.Render) {
+		r.HTML(200, "index", map[string]interface{}{}, render.HTMLOptions{Layout:"base"})
 	})
 
-	xlsFileReg := regexp.MustCompile(".+\\.xlsx?")
+	r.Group("/profile", func(r martini.Router) {
+		type ProfileId struct {
+			Id string `json:"id"`
+		}
+		pg_conf := cfg.Main.PGDatabase
+		ph, err := NewProfileDbHandler(pg_conf.ConnString)
+		if err != nil {
+			panic(err)
+		}
+
+		r.Get("", func(render render.Render) {
+			render.HTML(200, "profile", map[string]interface{}{})
+		})
+		r.Get("/all", func(render render.Render) {
+			profiles, err := ph.GetAllProfiles()
+			if err != nil {
+				log.Printf("CS Error at getting all profiles: %v", err)
+				render.JSON(500, map[string]interface{}{"success":false, "error":err})
+			}
+			log.Printf("result: %+v", profiles)
+			render.JSON(200, map[string]interface{}{
+				"success":true,
+				"profiles":profiles,
+			})
+		})
+		r.Get("/link_types", func(render render.Render) {
+			render.JSON(200, map[string]interface{}{"data":ph.GetContactLinkTypes()})
+		})
+		r.Post("/read", func(render render.Render, params martini.Params, req *http.Request) {
+			data, err := ioutil.ReadAll(req.Body)
+			if err != nil {
+				log.Printf("error at reading post data %v", err)
+			}
+			log.Printf("CS READ data: %s", data)
+			info := ProfileId{}
+			err = json.Unmarshal(data, &info)
+			if err != nil {
+				log.Printf("CS READ error at unmarshal delete data %v", err)
+				render.JSON(500, map[string]interface{}{"error":err, "success":false})
+				return
+			}
+			profile, err := ph.GetProfile(info.Id)
+			if err != nil {
+				log.Printf("CS READ error at unmarshal delete data %v", err)
+				render.JSON(500, map[string]interface{}{"error":err, "success":false})
+				return
+			}
+			out, err := json.Marshal(profile)
+			if err != nil {
+				log.Printf("CS READ error at marshal data to out")
+				render.JSON(500, map[string]interface{}{"error":err, "success":false})
+			}
+			render.JSON(200, map[string]interface{}{"success":true, "data":out})
+		})
+
+		r.Post("/create", func(render render.Render, params martini.Params, req *http.Request) {
+			data, err := ioutil.ReadAll(req.Body)
+			if err != nil {
+				log.Printf("error at reading post data %v", err)
+			}
+			log.Printf("CS CREATE data: %s", data)
+			profile := &Profile{}
+			err = json.Unmarshal(data, profile)
+			log.Printf("CS CREATE profile: %+v", profile)
+			if err != nil {
+				log.Printf("CS CREATE error at unmarshal data at create profile %v", err)
+				render.JSON(500, map[string]interface{}{"error":err, "success":false})
+				return
+			}
+			profile, err = ph.InsertNewProfile(profile)
+			if err != nil {
+				log.Printf("CS CREATE DB are not available")
+				render.JSON(500, map[string]interface{}{"error":err, "success":false})
+			}
+			out, err := json.Marshal(profile)
+			if err != nil {
+				log.Printf("CS CREATE error at marshal data to out")
+				render.JSON(500, map[string]interface{}{"error":err, "success":false})
+			}
+			render.JSON(200, map[string]interface{}{"success":true, "data":out})
+		})
+
+		r.Post("/update", func(render render.Render, params martini.Params, req *http.Request) {
+			data, err := ioutil.ReadAll(req.Body)
+			log.Printf("CS UPDATE data: %s", data)
+			if err != nil {
+				log.Printf("CS UPDATE error at reading post data %v", err)
+				render.JSON(500, map[string]interface{}{"error":err, "success":false})
+				return
+			}
+			profile := &Profile{}
+			err = json.Unmarshal(data, profile)
+			if err != nil {
+				log.Printf("CS UPDATE error at unmarshal data at create profile %v", err)
+				render.JSON(500, map[string]interface{}{"error":err, "success":false})
+				return
+			}
+			log.Printf("CS UPDATE profile: %+v", profile)
+			err = ph.UpdateProfile(profile)
+			if err != nil {
+				render.JSON(500, map[string]interface{}{"error":err, "success":false})
+				return
+			}
+			render.JSON(200, map[string]interface{}{"success":true})
+		})
+
+		r.Post("/delete", func(render render.Render, params martini.Params, req *http.Request) {
+			data, err := ioutil.ReadAll(req.Body)
+			if err != nil {
+				log.Printf("CS DELETE error at reading post data %v", err)
+				render.JSON(500, map[string]interface{}{"error":err, "success":false})
+				return
+			}
+			log.Printf("CS DELETE data: %s", data)
+
+			info := ProfileId{}
+			err = json.Unmarshal(data, &info)
+			if err != nil {
+				log.Printf("CS DELETE error at unmarshal delete data %v", err)
+				render.JSON(500, map[string]interface{}{"error":err, "success":false})
+				return
+			}
+			ph.DeleteProfile(info.Id)
+			render.JSON(200, map[string]interface{}{"success":true})
+		})
+	})
 
 	r.Post("/load/up", func(render render.Render, request *http.Request) {
+		xlsFileReg := regexp.MustCompile(".+\\.xlsx?")
 		file, header, err := request.FormFile("file")
 
 		log.Printf("Form file information: file: %+v \nheader:%v, %v\nerr:%v", file, header.Filename, header.Header, err)
@@ -234,9 +360,9 @@ func Run(addr string, notifier *ntf.Notifier, db *d.MainDb, cs c.ConfigStorage, 
 		render.JSON(200, map[string]interface{}{"OK":true})
 	})
 
-	r.Get("/new_keys", func(render render.Render) {
+	r.Get("/new_keys", func(r render.Render) {
 		log.Printf("CONSOLE WEB will show keys")
-		render.HTML(200, "console/new_keys", GetKeysInfo("", qs))
+		r.HTML(200, "new_keys", GetKeysInfo("", qs), render.HTMLOptions{Layout:"base"})
 	})
 
 	r.Post("/add_key", func(user auth.User, render render.Render, request *http.Request) {
@@ -274,14 +400,12 @@ func Run(addr string, notifier *ntf.Notifier, db *d.MainDb, cs c.ConfigStorage, 
 	})
 
 	r.Get("/delete_key_all", func(render render.Render) {
-
-
 		log.Printf("CONSOLE WEB was delete all keys")
 		qs.Steps.RemoveAll(bson.M{})
 		render.Redirect("/new_keys")
 	})
 
-	r.Get("/chat", func(render render.Render, params martini.Params, req *http.Request) {
+	r.Get("/chat", func(r render.Render, params martini.Params, req *http.Request) {
 		var with string
 		result_data := map[string]interface{}{}
 		query := req.URL.Query()
@@ -295,13 +419,11 @@ func Run(addr string, notifier *ntf.Notifier, db *d.MainDb, cs c.ConfigStorage, 
 		if with == "" {
 			with = ALL
 		}
-
+		db.Messages.SetMessagesRead(with)
 		collocutor := Collocutor{}
 
 		var messages []d.MessageWrapper
-
 		if with != ALL {
-			//log.Printf("CONSOLE WEB CHAT: get mesages for %v", with)
 			user, _ := db.Users.GetUserById(with)
 			if user != nil {
 				messages, _ = db.Messages.GetMessages(bson.M{
@@ -334,7 +456,6 @@ func Run(addr string, notifier *ntf.Notifier, db *d.MainDb, cs c.ConfigStorage, 
 		}
 
 		if strings.Contains(with, ALL) {
-			//log.Printf("CONSOLE WEB CHAT: getting messages for all")
 			messages, _ = db.Messages.GetMessages(bson.M{"to":with})
 		}
 		result_data["collocutor"] = collocutor
@@ -344,7 +465,8 @@ func Run(addr string, notifier *ntf.Notifier, db *d.MainDb, cs c.ConfigStorage, 
 		if contacts, err := GetContacts(db, START_DT); err == nil {
 			result_data["contacts"] = contacts
 		}
-		render.HTML(200, "console/chat", result_data)
+		log.Printf("CS result data :%+v", result_data)
+		r.HTML(200, "chat", result_data, render.HTMLOptions{Layout:"base"})
 	})
 
 	r.Post("/send_message", func(render render.Render, req *http.Request) {
@@ -358,6 +480,13 @@ func Run(addr string, notifier *ntf.Notifier, db *d.MainDb, cs c.ConfigStorage, 
 				//log.Printf("CONSOLE SM: will send [%v] to all %v peoples", text, len(peoples))
 				send_messages_to_peoples(peoples, ntf, text)
 				db.Messages.StoreMessage(from, to, text, u.GenId())
+
+			} else if to == "all_hash_writers" {
+				go func() {
+					peoples, _ := db.Users.GetBy(bson.M{"last_marker":bson.M{"$exists":true}})
+					send_messages_to_peoples(peoples, ntf, text)
+				}()
+
 			} else {
 				user, _ := db.Users.GetUserById(to)
 				if user != nil {
@@ -372,7 +501,6 @@ func Run(addr string, notifier *ntf.Notifier, db *d.MainDb, cs c.ConfigStorage, 
 		}
 		render.Redirect(fmt.Sprintf("/chat?with=%v", to))
 	})
-
 	r.Post("/new_messages", func(render render.Render, req *http.Request) {
 		type NewMessagesReq struct {
 			For   string `json:"m_for"`
@@ -389,8 +517,6 @@ func Run(addr string, notifier *ntf.Notifier, db *d.MainDb, cs c.ConfigStorage, 
 			render.JSON(500, map[string]interface{}{"ok":false, "detail":fmt.Sprintf("can not unmarshal request body %v \n %s", err, request_body)})
 			return
 		}
-		//log.Printf("CONSOLE WEB NM Ask: %+v", q)
-
 		query := bson.M{"time_stamp":bson.M{"$gt":q.After}}
 		if q.For == "" {
 			q.For = ALL
@@ -431,7 +557,7 @@ func Run(addr string, notifier *ntf.Notifier, db *d.MainDb, cs c.ConfigStorage, 
 			render.JSON(500, map[string]interface{}{"ok":false, "detail":fmt.Sprintf("can not unmarshal request body %v \n %s", err, request_body)})
 			return
 		}
-		//log.Printf("CONSOLE WEB NC Ask: %+v", cr)
+		log.Printf("CONSOLE WEB NC Ask: %+v", cr)
 		contacts, err := GetContacts(db, cr.After)
 		if err != nil {
 			render.JSON(500, map[string]interface{}{"ok":false, "detail":fmt.Sprintf("db err body %v \n %s", err)})
@@ -456,8 +582,8 @@ func Run(addr string, notifier *ntf.Notifier, db *d.MainDb, cs c.ConfigStorage, 
 
 	})
 
-	r.Get("/users", func(render render.Render, req *http.Request) {
-		render.HTML(200, "console/users", GetUsersInfo("", db))
+	r.Get("/users", func(r render.Render, req *http.Request) {
+		r.HTML(200, "users", GetUsersInfo("", db), render.HTMLOptions{Layout:"base"})
 	})
 
 	r.Post("/add_user", func(user auth.User, render render.Render, request *http.Request) {
@@ -473,7 +599,7 @@ func Run(addr string, notifier *ntf.Notifier, db *d.MainDb, cs c.ConfigStorage, 
 			db.Users.AddUserObject(d.UserWrapper{UserId:u_id, UserName:u_name, Email:u_email, Phone:u_phone, Role:u_role, Password:u.PHash(u_pwd), LastUpdate:time.Now()})
 			render.Redirect("/users")
 		} else {
-			render.HTML(200, "console/users", GetUsersInfo("Невалидные значения имени и (или) идентификатора добавляемого пользователя", db))
+			render.HTML(200, "users", GetUsersInfo("Невалидные значения имени и (или) идентификатора добавляемого пользователя", db))
 		}
 	})
 
@@ -512,6 +638,50 @@ func Run(addr string, notifier *ntf.Notifier, db *d.MainDb, cs c.ConfigStorage, 
 		log.Printf("CONSOLE WEB update user [%s]  '%s' +%s %s |%v| {%v}", u_id, u_name, u_phone, u_email, u_role, u_pwd)
 		render.Redirect("/users")
 	})
+
+	r.Get("/delete_chat/:between", func(params martini.Params, render render.Render, req *http.Request) {
+		between := params["between"]
+		db.Messages.Collection.RemoveAll(bson.M{"$or":[]bson.M{bson.M{"from":between}, bson.M{"to":between}}})
+		render.Redirect(fmt.Sprintf("/chat?with=%v", between))
+	})
+
 	m.Action(r.Handle)
 	m.RunOnAddr(addr)
+}
+
+func RunProfileServer(addr string, db *d.MainDb) {
+	log.Printf("Server for profile is initted at %v", addr)
+	m := martini.New()
+	m.Use(martini.Logger())
+	m.Use(martini.Recovery())
+
+	m.Use(render.Renderer(render.Options{
+		Extensions: []string{".tmpl", ".html"},
+		Charset: "UTF-8",
+		IndentJSON: true,
+		IndentXML: true,
+		Funcs:[]template.FuncMap{
+			template.FuncMap{
+				"eq_s":func(a, b string) bool {
+					return a == b
+				},
+			},
+		},
+	}))
+
+	m.Use(auth.BasicFunc(func(username, password string) bool {
+		usr, _ := db.Users.GetUser(bson.M{"user_name":username, "role":MANAGER})
+		if usr != nil {
+			return u.PHash(password) == usr.Password
+		}
+		return username == default_user && password == default_pwd
+	}))
+
+	m.Use(martini.Static("static"))
+
+	r := martini.NewRouter()
+
+	m.Action(r.Handle)
+	m.RunOnAddr(addr)
+
 }

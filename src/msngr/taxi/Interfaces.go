@@ -2,6 +2,7 @@ package taxi
 
 type ConnectInterface interface {
 	IsConnected() bool
+	Connect()
 }
 
 type TaxiInterface interface {

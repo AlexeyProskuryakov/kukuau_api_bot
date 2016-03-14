@@ -10,6 +10,7 @@ import (
 	u "msngr/utils"
 	n "msngr/notify"
 	m "msngr"
+	"gopkg.in/mgo.v2/bson"
 )
 
 const (
@@ -17,7 +18,13 @@ const (
 	car_set_out = "Машина выехала"
 	good_passage = "Приятной Вам поездки!"
 	nominated = "Вам назначен: "
-	order_canceled = "Ваш заказ отменен!"
+	order_canceled = "Ваш заказ отменен."
+	order_end = "Заказ выполнен! Спасибо что воспользовались услугами нашей компании. Оставьте Ваш отзыв о поездке выбрав соответствующий пункт меню."
+
+	CHANGE_STATE = "change_state"
+	CHANGE_CAR = "change_car"
+
+	ACTIVE_ORDER_DELETE_AFTER = 3600.0
 )
 
 func FormNotification(context *TaxiContext, ow *d.OrderWrapper, previous_state int, car_info CarInfo, deliv_time time.Time) *s.OutPkg {
@@ -29,8 +36,13 @@ func FormNotification(context *TaxiContext, ow *d.OrderWrapper, previous_state i
 		}
 	case ORDER_CAR_SET_OUT:
 		if previous_state != ORDER_CAR_SET_OUT {
-			text = fmt.Sprintf("%v, время подачи %v", car_set_out, deliv_time.Format("15:04"))
+			if previous_state != ORDER_ASSIGNED {
+				text = fmt.Sprintf("%v %v. %v, время подачи %v", nominated, car_info, car_set_out, deliv_time.Format("15:04"))
+			} else {
+				text = fmt.Sprintf("%v, время подачи %v", car_set_out, deliv_time.Format("15:04"))
+			}
 		}
+
 	case ORDER_CLIENT_WAIT:
 		if previous_state == ORDER_CREATED {
 			text = fmt.Sprintf("%v %v %v %v.", car_arrived, good_passage, nominated, car_info)
@@ -45,22 +57,17 @@ func FormNotification(context *TaxiContext, ow *d.OrderWrapper, previous_state i
 		} else {
 			text = fmt.Sprintf("%v %v", car_arrived, good_passage)
 		}
-
 	case ORDER_PAYED:
-		text = "Заказ выполнен! Спасибо что воспользовались услугами нашей компании."
+		text = order_end
 		context.DataBase.Orders.SetActive(ow.OrderId, ow.Source, false)
 
 	case ORDER_CANCELED:
 		if !u.In(previous_state, []int{ORDER_PAYED, ORDER_NOT_PAYED}) {
-			text = "Заказ выполнен! Спасибо что воспользовались услугами нашей компании."
+			text = order_end
 		} else {
 			text = order_canceled
 		}
 		context.DataBase.Orders.SetActive(ow.OrderId, ow.Source, false)
-
-	//	default:
-	//		status, _ := StatusesMap[state]
-	//		text = fmt.Sprintf("Машина %v %v c номером %v перешла в состояние [%v]", car_info.Color, car_info.Model, car_info.Number, status)
 	}
 
 	if text != "" {
@@ -77,10 +84,6 @@ type CarsCache struct {
 
 func _create_cars_map(i TaxiInterface) map[int64]CarInfo {
 	cars_map := make(map[int64]CarInfo)
-	for !i.IsConnected() {
-		log.Printf("Can not create cars cache because taxi api is not response")
-		time.Sleep(3 * time.Second)
-	}
 	cars_info := i.GetCarsInfo()
 	if len(cars_info) == 0 {
 		log.Printf("Cars cache will be empty :( Because api is responsed empty cars list")
@@ -131,10 +134,22 @@ func get_arrival_time(api_order Order) time.Time {
 	return *arrival_time
 }
 
+func notify_cancel_order(taxiContext *TaxiContext, botContext *m.BotContext, db_order *d.OrderWrapper, ) {
+	taxiContext.Notifier.Notify(s.OutPkg{
+		To:db_order.Whom,
+		Message: &s.OutMessage{
+			ID: u.GenId(),
+			Type: "chat",
+			Body: "Ваш заказ отменен!",
+			Commands: botContext.Commands["commands_at_not_created_order"],
+		},
+	})
+}
+
 func process_state_change(taxiContext *TaxiContext, botContext *m.BotContext, api_order Order, db_order *d.OrderWrapper, previous_states map[int64]int) {
 	log.Printf("WATCH [%v] state of: %+v is updated (api: %v != db: %v)", botContext.Name, api_order.ID, api_order.State, db_order.OrderState)
 	order_data := api_order.ToOrderData()
-	err := taxiContext.DataBase.Orders.SetState(api_order.ID, botContext.Name, api_order.State, &order_data)
+	err := taxiContext.DataBase.Orders.SetState(api_order.ID, botContext.Name, api_order.State, order_data)
 	if err != nil {
 		log.Printf("WATCH [%v] for order %+v can not update status %+v", botContext.Name, api_order.ID, api_order.State)
 		return
@@ -145,15 +160,7 @@ func process_state_change(taxiContext *TaxiContext, botContext *m.BotContext, ap
 	//если заказ отменил не пользователь
 	if api_order.State == ORDER_CANCELED {
 		log.Printf("WATCH [%v] NOTIFYING THAT ORDER IS CANCELED", botContext.Name)
-		taxiContext.Notifier.Notify(s.OutPkg{
-			To:db_order.Whom,
-			Message: &s.OutMessage{
-				ID: u.GenId(),
-				Type: "chat",
-				Body: "Ваш заказ отменен!",
-				Commands: botContext.Commands["commands_at_not_created_order"],
-			},
-		})
+		notify_cancel_order(taxiContext, botContext, db_order)
 		previous_states[api_order.ID] = api_order.State
 		taxiContext.DataBase.Orders.SetActive(api_order.ID, botContext.Name, false)
 		return
@@ -189,11 +196,6 @@ func process_car_state(taxiContext *TaxiContext, botContext *m.BotContext, api_o
 	taxiContext.Notifier.Notify(result)
 }
 
-const (
-	CHANGE_STATE = "state"
-	CHANGE_CAR = "car"
-)
-
 func get_changes(api_order Order, db_order *d.OrderWrapper) []string {
 	var buff []string
 	if result, ok := db_order.OrderData.Get("IDCar").(int64); ok && result != api_order.IDCar {
@@ -203,36 +205,50 @@ func get_changes(api_order Order, db_order *d.OrderWrapper) []string {
 		buff = append(buff, CHANGE_STATE)
 	}
 	return buff
-
 }
 
-var PreviousStates = make(map[int64]int)
-
 func TaxiOrderWatch(taxiContext *TaxiContext, botContext *m.BotContext) {
+	var PreviousStates = make(map[int64]int)
+	refresh_time := botContext.Settings["refresh_orders_time_step"].(time.Duration)
+	log.Printf("WATCH start watching...")
 	for {
-		api_orders := taxiContext.API.Orders()
-		//		log.Printf("result of orders request: %v", len(api_orders))
-		for _, api_order := range api_orders {
-			db_order, err := taxiContext.DataBase.Orders.GetById(api_order.ID, botContext.Name)
-			if err != nil {
-				log.Printf("WATCH [%v] some error in retrieve order: %v\nOrder:\n[%+v]", botContext.Name, err, api_order)
-				continue
+		if saved_orders, err := taxiContext.DataBase.Orders.GetOrders(bson.M{"active":true, "source":botContext.Name}); err == nil && len(saved_orders) > 0 {
+			log.Printf("WATCH OK, found %v orders in db", len(saved_orders))
+			db_orders_map := map[int64]d.OrderWrapper{}
+			for _, o := range saved_orders {
+				db_orders_map[o.OrderId] = o
 			}
-			if db_order == nil {
-				continue
-			}
+			api_orders_map := map[int64]Order{}
 
-			for _, el := range get_changes(api_order, db_order) {
-				switch el {
-				case CHANGE_STATE:
-					process_state_change(taxiContext, botContext, api_order, db_order, PreviousStates)
-				case CHANGE_CAR:
-					process_car_state(taxiContext, botContext, api_order, db_order)
+			api_orders := taxiContext.API.Orders()
+			log.Printf("WATCH API ORDERS: %+v", api_orders)
+			for _, api_order := range api_orders {
+				//processing api orders
+				api_orders_map[api_order.ID] = api_order
+				if db_order, ok := db_orders_map[api_order.ID]; ok {
+					for _, el := range get_changes(api_order, &db_order) {
+						switch el {
+						case CHANGE_STATE:
+							process_state_change(taxiContext, botContext, api_order, &db_order, PreviousStates)
+						case CHANGE_CAR:
+							process_car_state(taxiContext, botContext, api_order, &db_order)
+						}
+					}
+					PreviousStates[api_order.ID] = api_order.State
 				}
 			}
-			PreviousStates[api_order.ID] = api_order.State
+			for _, o := range saved_orders {
+				//processing db orders
+				if api_order, ok := api_orders_map[o.OrderId]; !ok && time.Now().Sub(o.When).Seconds() > ACTIVE_ORDER_DELETE_AFTER{
+					log.Printf("WATCH Found in db active order [%v] which not present in api. Will setting error", o.OrderId)
+					taxiContext.DataBase.Orders.SetState(o.OrderId, botContext.Name, ORDER_ERROR, api_order.ToOrderData())
+					taxiContext.DataBase.Orders.SetActive(o.OrderId, botContext.Name, false)
+				}
+			}
+		} else if err != nil {
+			log.Printf("WATCH ERROR getting active orders %v", err)
 		}
-		time.Sleep(1 * time.Second)
+		time.Sleep(refresh_time)
 	}
 }
 
