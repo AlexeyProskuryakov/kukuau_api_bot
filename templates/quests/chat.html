@@ -31,7 +31,7 @@
                 Комманда {{$contact.Name}}
             <span class="small" id="s-{{$contact.ID}}">
                 {{if $contact.NewMessagesCount}}
-                ( {{$contact.NewMessagesCount}} )
+                    ( {{$contact.NewMessagesCount}} )
                 {{end}}
                 {{end}}
             </span>
@@ -51,7 +51,7 @@
                 {{if $contact.IsTeam}}
 
                 {{else}}
-                {{$contact.Name}}
+                {{$contact.Name}} [{{$contact.Phone}}]
 
 
 
@@ -140,9 +140,9 @@
             <div class="accordion-group">
                 <div class="accordion-heading">
                     <p class="{{if $key.Founded}}
-                    bg-info
+                    bg-danger
                     {{else}}
-                    bg-success
+                    bg-info
                     {{end}}">
                         <a class="accordion-toggle" data-toggle="collapse" data-parent="#keys-accordion"
                            href="#{{$key.SID}}">
@@ -159,7 +159,15 @@
             {{end}}
         </div>
     </div>
+    {{if .collocutor.IsWinner}}
+    <div class="row">
+        <h3>WINNER!<br><small>at {{.collocutor.WinTime}}</small></h3>
+    </div>
     {{end}}
+
+    {{end}}
+
+
 
 
     {{if .collocutor.IsMan}}

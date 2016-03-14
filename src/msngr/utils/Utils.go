@@ -172,7 +172,7 @@ func GET(url string, params *map[string]string) (*[]byte, error) {
 	//	log.Printf("GET > [%+v] |%+v|", url, params)
 	req, err := http.NewRequest("GET", url, nil)
 	if err != nil {
-		log.Printf("ERROR IN GET FORM REQUEST! [%v]\n", url, err)
+		log.Printf("ERROR IN GET FORM REQUEST! [%v]\n%v", url, err)
 		return nil, err
 	}
 
@@ -206,5 +206,12 @@ func After(p Predicate, what func()) {
 			}
 			time.Sleep(2 * time.Second)
 		}
+	}()
+}
+
+func DoDeferred(after time.Duration, what func()) {
+	go func() {
+		time.Sleep(after)
+		what()
 	}()
 }

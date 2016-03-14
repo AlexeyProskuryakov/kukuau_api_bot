@@ -39,10 +39,10 @@ func PREPARE_KEYS(salt string, commands_count int) {
 
 	for i := 1; i <= commands_count; i++ {
 		for j := 0; j <= 10; j++ {
-			key, err := qs.AddKey(k(j, i), kr(j, i), k(j + 1, i))
+			key, err := qs.AddStep(k(j, i), kr(j, i), k(j + 1, i))
 			log.Printf("Q T Add key %+v err: %v", key, err)
 		}
-		key, err := qs.AddKey(k(11, i), kr(11, i), "")
+		key, err := qs.AddStep(k(11, i), kr(11, i), "")
 		log.Printf("Q T Add last key %+v err: %v", key, err)
 	}
 

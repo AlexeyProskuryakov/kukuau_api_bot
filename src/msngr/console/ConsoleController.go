@@ -64,12 +64,12 @@ func (cmp ConsoleMessageProcessor) ProcessMessage(in *s.InPkg) *s.MessageResult 
 		r_body = strings.ToLower(strings.TrimSpace(r_body))
 		if key_reg.MatchString(r_body) {
 			log.Printf("CC: Here is key: %v", r_body)
-			step, err := cmp.quest_storage.GetKeyByStartKey(r_body)
+			step, err := cmp.quest_storage.GetStepByStartKey(r_body)
 			if step != nil {
 				return &s.MessageResult{Type:"chat", Body:step.Description}
 			}
 			if step == nil && err == nil {
-				keys, err := cmp.quest_storage.GetAllKeys()
+				keys, err := cmp.quest_storage.GetAllStep()
 				//log.Printf("CC: keys: %v, err: %v", keys, err)
 				key_s := []string{}
 				for _, k := range keys {

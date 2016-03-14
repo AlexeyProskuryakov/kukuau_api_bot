@@ -68,9 +68,23 @@ type QuestMessageProcessor struct {
 
 var marker_reg = regexp.MustCompile("^\\#[\\w\\dа-яА-Я]+\\-?(?P<team>[\\w\\da-zа-я]+)?")
 
+func (qmp *QuestMessageProcessor) CheckTeamIsWinner(teamName string) bool {
+	steps, err := qmp.Storage.GetTeamSteps(teamName)
+	if err != nil {
+		log.Printf("Q Error at checking team [%v] of win %v", teamName, err)
+		return false
+	}
+	for _, step := range steps {
+		if !step.Founded {
+			return false
+		}
+	}
+	return true
+}
+
 func ValidateKeyBySequent(team *Team, key_info *Step, qs *QuestStorage) (string, error, bool) {
 	//return description or some text for user or "" if error
-	previous_key, _ := qs.GetKeyByNextKey(key_info.StartKey)
+	previous_key, _ := qs.GetStepByNextKey(key_info.StartKey)
 	if previous_key != nil {
 		log.Printf("Q: i found previous key which have next_key == %v and: " +
 		"\nit was in team founded keys? %v," +
@@ -88,7 +102,7 @@ func ValidateKeyBySequent(team *Team, key_info *Step, qs *QuestStorage) (string,
 			return NOT_NEXT_KEY, nil, false
 		}
 	}
-	log.Printf("Q: i not found any key which have next_key == %v and i think that it is first key in sequence", key_info)
+	log.Printf("Q: i not found any key which have next_key == %+v and i think that it is first key in sequence", key_info)
 	return key_info.Description, nil, true
 }
 
@@ -110,9 +124,9 @@ func (qmpp QuestMessageProcessor) ProcessMessage(in *s.InPkg) *s.MessageResult {
 		if marker_reg.MatchString(key) {
 			key = strings.ToLower(key)
 			log.Printf("Q: Here is key: %v", key)
-			key_info, err := qmpp.Storage.GetKeyByStartKey(key)
+			key_info, err := qmpp.Storage.GetStepByStartKey(key)
 			if err != nil {
-				log.Printf("QUEST key [%v] is ERR! %v", err)
+				log.Printf("QUEST key [%v] is ERR! %v", key, err)
 				return DB_ERROR_RESULT
 			}
 			if key_info == nil {
@@ -132,13 +146,16 @@ func (qmpp QuestMessageProcessor) ProcessMessage(in *s.InPkg) *s.MessageResult {
 				}
 			}
 			log.Printf("Q:Team recognised: %+v", team)
-			prev_key, err := qmpp.Storage.GetKeyByNextKey(key);
+			prev_key, err := qmpp.Storage.GetStepByNextKey(key);
 			log.Printf("Q:prevkey? %+v , Err? %v", prev_key, err)
 			if err != nil {
 				return DB_ERROR_RESULT
 			}
 			member, err := qmpp.Storage.GetTeamMemberByUserId(in.From)
-
+			if err != nil {
+				log.Printf("Q E : at getting or persisting user team %v", err)
+				return DB_ERROR_RESULT
+			}
 			if member == nil {
 				if prev_key == nil {
 					log.Printf("Q:Recognised register key from %v [%+v], add him to team: %v", in.From, in.UserData, team_name)
@@ -163,25 +180,26 @@ func (qmpp QuestMessageProcessor) ProcessMessage(in *s.InPkg) *s.MessageResult {
 					return &s.MessageResult{Type:"chat", Body:NOT_TEAM_MEMBER}
 				}
 			}
-
-			if err != nil {
-				log.Printf("Q E : at getting or persisting user team %v", err)
-				return DB_ERROR_RESULT
-			}
 			descr, err, ok := ValidateKeyBySequent(team, key_info, qmpp.Storage)
-			log.Printf("QUESTS want to send key %v i have this answer for key: %v, err: %v, ok? %v", key, descr, err, ok)
+			log.Printf("Q:want to send key %v i have this answer for key: %v, err: %v, ok? %v", key, descr, err, ok)
 			if err != nil {
 				log.Printf("Q E : at processing key result %v", err)
 				return DB_ERROR_RESULT
 			}
 			if ok {
-				qmpp.Storage.SetKeyFounded(key, team_name)
+				log.Printf("Q key [%v] is validated OK! Of team %+v (%v) ", key, team, team_name)
+				qmpp.Storage.SetStepFounded(key, team.Name)
 				_, err = qmpp.Storage.StoreMessage(team.Name, ME, key, true)
 				if err != nil {
 					log.Printf("Q E : at storing key as message %v", err)
 					return DB_ERROR_RESULT
 				}
-
+			}
+			if qmpp.CheckTeamIsWinner(team_name) {
+				err := qmpp.Storage.SetTeamIsWinner(team_name)
+				if err != nil {
+					log.Printf("Q E : can not store that team %v is winner, because %v", team_name, err)
+				}
 			}
 			return &s.MessageResult{Type:"chat", Body:descr, }
 		} else {
@@ -191,7 +209,6 @@ func (qmpp QuestMessageProcessor) ProcessMessage(in *s.InPkg) *s.MessageResult {
 			if member != nil {
 				from = member.TeamName
 				log.Printf("Q: message from member %v of group %v ", in.From, from)
-
 			} else if in.UserData != nil {
 				user_data := in.UserData
 				from = in.From
@@ -201,7 +218,7 @@ func (qmpp QuestMessageProcessor) ProcessMessage(in *s.InPkg) *s.MessageResult {
 				log.Printf("Q: but %v it is not team member and not have userdata", in.From)
 				return USER_DATA_ERROR_RESULT
 			}
-			log.Printf("Q: will storing msg:[%v] from:v to:%v as not key answer", key, from, ME)
+			log.Printf("Q: will storing msg:[%v] from:%v to:%v as not key answer", key, from, ME)
 			qmpp.Storage.StoreMessage(from, ME, key, false)
 		}
 	} else {
@@ -228,7 +245,8 @@ func FormQuestBotContext(conf c.Configuration, qname string, cs c.ConfigStorage,
 
 	result.CommandsStorage = cs
 	notifier := msngr.NewNotifier(conf.Main.CallbackAddr, qconf.Key, db)
-	go Run(qconf, qs, notifier)
+	additionalNotifier := msngr.NewNotifier(conf.Main.CallbackAddr, qconf.AdditionalKey, db)
+	go Run(qconf, qs, notifier, additionalNotifier)
 
 	return &result
 }

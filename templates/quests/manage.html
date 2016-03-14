@@ -1,18 +1,56 @@
 <div class="container-fluid">
     <div class="row">
 
-        <div class="col-md-6 col-md-offset-3">
-            <h2>Перезагрузка квеста. <span class="small">Удалятся комманды, шаги, пользователи все повыходят из комманд.</span>
-            </h2>
+        <div class="col-md-5 col-md-offset-3">
+            <!--<button class="btn btn-danger btn-lg btn-block" id="delete-all" onclick="delete_all()"> Выполнить</button>-->
+            <button class="btn btn-info btn-lg btn-block" data-target="#send-message-modal" data-toggle="modal">
+                Отправить сообщения для участников квестов от профиля Кличат.
+            </button>
+
+            <!-- Modal -->
+            <div class="modal fade" id="send-message-modal" role="dialog">
+                <div class="modal-dialog">
+                    <!-- Modal content-->
+                    <div class="modal-content">
+                        <div class="modal-header">
+                            <button type="button" class="close" data-dismiss="modal">&times;</button>
+                            <h3>Введите сообщения:</h3>
+                        </div>
+                        <div class="modal-body">
+                            <form class="form form-horizontal">
+                                <div class="form-group">
+                                    <label for="to-winner" class="col-md-4">Для победителей:</label>
+                                    <textarea id="to-winner" class="form-control" rows="4">Поздравляем с выйгрышем! И дарим бесплатные поездки на такси! Закажи через прифиль такси поездку и едь нахаляву. Но один раз... </textarea>
+                                </div>
+                                <div class="form-group">
+                                    <label for="to-not-winner" class="col-md-4">Для не выиграйвших:</label>
+                                    <textarea id="to-not-winner" class="form-control" rows="4">Поздравляем с окончание квеста! И дарим скидон на таксон! Закажи через прифиль такси поездку и едь со скидкой. Но один раз... "</textarea>
+                                </div>
+                                <hr>
+                                <div class="form-group">
+                                    <button type="button" class="col-md-12 btn btn-info btn-lg"
+                                            onclick="send_messages_from_klichat()"
+                                            data-dismiss="modal">Отправить
+                                    </button>
+                                </div>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="row">
+        <div class="col-md-5 col-md-offset-3" id="send-result">
 
         </div>
     </div>
     <div class="row">
 
-        <div class="col-md-3 col-md-offset-3">
+        <div class="col-md-5 col-md-offset-3">
             <!--<button class="btn btn-danger btn-lg btn-block" id="delete-all" onclick="delete_all()"> Выполнить</button>-->
             <button class="btn btn-danger btn-lg btn-block" data-target="#delete-modal" data-toggle="modal">
-                Выполнить
+                Выполнить перезагрузку квеста.
             </button>
 
             <!-- Modal -->
@@ -26,7 +64,9 @@
                         </div>
                         <div class="modal-body">
                             <button type="button" class="btn btn-info btn-lg" data-dismiss="modal">Нет</button>
-                            <button type="button" class="btn btn-danger btn-lg" onclick="delete_all()" data-dismiss="modal">Да</button>
+                            <button type="button" class="btn btn-danger btn-lg" onclick="delete_all()"
+                                    data-dismiss="modal">Да
+                            </button>
                         </div>
                     </div>
                 </div>

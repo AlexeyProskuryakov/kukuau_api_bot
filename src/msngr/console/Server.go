@@ -44,7 +44,7 @@ func GetKeysInfo(err_text string, qs *quests.QuestStorage) map[string]interface{
 	var e error
 	result := map[string]interface{}{}
 
-	keys, e = qs.GetAllKeys()
+	keys, e = qs.GetAllStep()
 
 	if e != nil || err_text != "" {
 		result["is_error"] = true
@@ -203,7 +203,7 @@ func Run(addr string, notifier *ntf.Notifier, db *d.MainDb, cs c.ConfigStorage, 
 
 			parse_res, _ := w.ParseExportXlsx(xlFile, skip_rows, skip_cols)
 			for _, prel := range parse_res {
-				qs.AddKey(prel[0], prel[1], prel[2])
+				qs.AddStep(prel[0], prel[1], prel[2])
 			}
 		} else {
 			render.HTML(200, "console/new_keys", GetKeysInfo("Файл имеет не то расширение :(", qs))
@@ -246,7 +246,7 @@ func Run(addr string, notifier *ntf.Notifier, db *d.MainDb, cs c.ConfigStorage, 
 
 		log.Printf("CONSOLE WEB add key %s -> %s -> %s", start_key, description, next_key)
 		if start_key != "" && description != "" {
-			key, err := qs.AddKey(start_key, description, next_key)
+			key, err := qs.AddStep(start_key, description, next_key)
 			log.Printf("QW is error? %v key: %v", err, key)
 			render.Redirect("/new_keys")
 		} else {
@@ -256,7 +256,7 @@ func Run(addr string, notifier *ntf.Notifier, db *d.MainDb, cs c.ConfigStorage, 
 
 	r.Post("/delete_key/:key", func(params martini.Params, render render.Render) {
 		key := params["key"]
-		err := qs.DeleteKey(key)
+		err := qs.DeleteStep(key)
 		log.Printf("CONSOLE WEB will delete %v (%v)", key, err)
 		render.Redirect("/new_keys")
 	})
@@ -268,7 +268,7 @@ func Run(addr string, notifier *ntf.Notifier, db *d.MainDb, cs c.ConfigStorage, 
 		next_key := request.FormValue("next-key")
 		description := request.FormValue("description")
 
-		err := qs.UpdateKey(key_id, start_key, description, next_key)
+		err := qs.UpdateStep(key_id, start_key, description, next_key)
 		log.Printf("CONSOLE WEB was update key %s %s %s %s\n err? %v", key_id, start_key, description, next_key, err)
 		render.Redirect("/new_keys")
 	})

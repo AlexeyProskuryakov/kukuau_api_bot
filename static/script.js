@@ -109,10 +109,30 @@ function delete_all(){
         success:        function(x){
             if (x.ok == true) {
                 console.log(x);
-                text = "<div><p class='bg-success'>Удалено шагов: {{steps_removed}}</p><p class='bg-success'>Обновленно пользователей: {{peoples_updated}}</p><p class='bg-success'>Удалено комманд: {{teams_removed}}</p></div>";
+                text = "<div><p class='bg-success'>Удалено шагов: {{steps_removed}}</p><p class='bg-success'>Обновленно пользователей: {{peoples_updated}}</p><p class='bg-success'>Удалено комманд: {{teams_removed}}</p><p class='bg-success'>Удалено сообщений от комманд: {{messages_removed}}</p></div>";
                 el = Mustache.render(text, x);
                 $("#delete-result").prepend(el);
             }
+        }
+    });
+}
+
+function send_messages_from_klichat(){
+    var to_winner = $("#to-winner").val(),
+        to_not_winner = $("#to-not-winner").val();
+    console.log("message for winner: ", to_winner, "to not winner: ", to_not_winner);
+    $.ajax({
+        type:           "POST",
+        url:            "/send_messages_at_quest_end",
+        data:           JSON.stringify({to_winner:to_winner, to_not_winner:to_not_winner}),
+        dataType:       'json',
+        success:        function(x){
+                    if (x.ok == true) {
+                        console.log(x);
+                        text = "<div><p class='bg-success'>Сообщения поставлены в очередь на отправление.</p></div>"
+                        el = Mustache.render(text, x);
+                        $("#send-result").prepend(el);
+                    }
         }
     });
 }

@@ -33,9 +33,9 @@ func prep_keys(qs *QuestStorage) {
 	for i, _ := range keys {
 		for j, _ := range teams {
 			if i + 1 < len(keys) {
-				qs.AddKey(f_k(i, j), f_d(i, j), f_k(i + 1, j))
+				qs.AddStep(f_k(i, j), f_d(i, j), f_k(i + 1, j))
 			} else {
-				qs.AddKey(f_k(i, j), f_d(i, j), "")
+				qs.AddStep(f_k(i, j), f_d(i, j), "")
 			}
 		}
 	}

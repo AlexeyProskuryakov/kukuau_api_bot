@@ -51,9 +51,11 @@ type Passersby struct {
 
 type Team struct {
 	ID        bson.ObjectId `bson:"_id,omitempty"`
-	SID       string
+	SID       string `bson:"sid"`
 	Name      string `bson:"name"`
 	FoundKeys []string `bson:"found_keys"`
+	Winner    bool `bson:"winner"`
+	WinTime   int64 `bson:"win_time"`
 }
 
 type QuestStorage struct {
@@ -76,6 +78,10 @@ func (qks *QuestStorage) ensureIndexes() {
 	collection.EnsureIndex(mgo.Index{
 		Key:        []string{"next_key"},
 	})
+	collection.EnsureIndex(mgo.Index{
+		Key:        []string{"for_team"},
+	})
+
 	qks.Steps = collection
 
 	message_collection := qks.Session.DB(qks.DbName).C("quest_messages")
@@ -132,8 +138,8 @@ func NewQuestStorage(conn, dbname string) *QuestStorage {
 	return &result
 }
 
-//KEYS
-func (qks *QuestStorage) AddKey(start_key, description, next_key string) (*Step, error) {
+//KEYS (STEPS)
+func (qks *QuestStorage) AddStep(start_key, description, next_key string) (*Step, error) {
 	kw := Step{}
 	err := qks.Steps.Find(bson.M{"start_key":start_key}).One(&kw)
 	if err == mgo.ErrNotFound {
@@ -150,17 +156,17 @@ func (qks *QuestStorage) AddKey(start_key, description, next_key string) (*Step,
 	}
 }
 
-func (qks *QuestStorage) DeleteKey(key_id string) error {
+func (qks *QuestStorage) DeleteStep(key_id string) error {
 	err := qks.Steps.RemoveId(bson.ObjectIdHex(key_id))
 	return err
 }
 
-func (qks *QuestStorage) UpdateKey(key_id, start_key, description, next_key string) error {
+func (qks *QuestStorage) UpdateStep(key_id, start_key, description, next_key string) error {
 	err := qks.Steps.UpdateId(bson.ObjectIdHex(key_id), bson.M{"$set":bson.M{"description":description, "start_key":start_key, "next_key":next_key}})
 	return err
 }
 
-func (qs *QuestStorage) GetKeys(query bson.M) ([]Step, error) {
+func (qs *QuestStorage) GetSteps(query bson.M) ([]Step, error) {
 	result := []Step{}
 	err := qs.Steps.Find(query).All(&result)
 	if err != nil && err != mgo.ErrNotFound {
@@ -172,7 +178,7 @@ func (qs *QuestStorage) GetKeys(query bson.M) ([]Step, error) {
 	return result, nil
 }
 
-func (qs *QuestStorage) GetKeyByStartKey(start_key string) (*Step, error) {
+func (qs *QuestStorage) GetStepByStartKey(start_key string) (*Step, error) {
 	result := Step{}
 	err := qs.Steps.Find(bson.M{"start_key":start_key}).One(&result)
 
@@ -187,7 +193,7 @@ func (qs *QuestStorage) GetKeyByStartKey(start_key string) (*Step, error) {
 	return &result, nil
 }
 
-func (qs *QuestStorage) SetKeyFounded(key, by string) error {
+func (qs *QuestStorage) SetStepFounded(key, by string) error {
 	err := qs.Steps.Update(bson.M{"start_key":key}, bson.M{"$set":bson.M{"found_by":by, "is_found":true}})
 	if err != nil {
 		return err
@@ -196,7 +202,7 @@ func (qs *QuestStorage) SetKeyFounded(key, by string) error {
 	return err
 }
 
-func (qs *QuestStorage) GetKeyByNextKey(next_key string) (*Step, error) {
+func (qs *QuestStorage) GetStepByNextKey(next_key string) (*Step, error) {
 	result := Step{}
 	err := qs.Steps.Find(bson.M{"next_key":next_key}).One(&result)
 	if err != nil && err != mgo.ErrNotFound {
@@ -207,7 +213,7 @@ func (qs *QuestStorage) GetKeyByNextKey(next_key string) (*Step, error) {
 	return &result, nil
 }
 
-func (qks *QuestStorage) GetAllKeys() ([]Step, error) {
+func (qks *QuestStorage) GetAllStep() ([]Step, error) {
 	result := []Step{}
 	err := qks.Steps.Find(bson.M{}).All(&result)
 	for i, key := range result {
@@ -246,6 +252,18 @@ func (qs *QuestStorage) GetTeamByName(name string) (*Team, error) {
 	return &result, nil
 }
 
+func (qs *QuestStorage) SetTeamIsWinner(teamName string) error {
+	err := qs.Teams.Update(bson.M{"name":teamName}, bson.M{"$set":bson.M{"winner":true, "win_time":time.Now().Unix()}})
+	return err
+}
+
+func (qs *QuestStorage) GetTeamSteps(teamName string) ([]Step, error) {
+	steps, err := qs.GetSteps(bson.M{"for_team":teamName})
+	if err != nil && err != mgo.ErrNotFound {
+		return steps, err
+	}
+	return steps, nil
+}
 
 //TEAM MEMBERS
 func (qs *QuestStorage) AddTeamMember(user_id, m_name, phone string, team *Team) (*TeamMember, error) {

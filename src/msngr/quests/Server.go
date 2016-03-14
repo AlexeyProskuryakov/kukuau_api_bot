@@ -69,7 +69,7 @@ func GetKeysErrorInfo(err_text string, qs *QuestStorage) map[string]interface{} 
 	var e error
 	result := map[string]interface{}{}
 
-	keys, e := qs.GetAllKeys()
+	keys, e := qs.GetAllStep()
 
 	if e != nil || err_text != "" {
 		result["is_error"] = true
@@ -85,14 +85,14 @@ func GetKeysErrorInfo(err_text string, qs *QuestStorage) map[string]interface{} 
 
 func GetKeysTeamsInfo(teams_info map[string]string, qs *QuestStorage) map[string]interface{} {
 	result := map[string]interface{}{}
-	keys, _ := qs.GetAllKeys()
+	keys, _ := qs.GetAllStep()
 	result["keys"] = keys
 	result["is_team_info"] = true
 	result["team_info"] = teams_info
 	return result
 }
 
-func send_messages_to_peoples(people []TeamMember, ntf *ntf.Notifier, text string) {
+func SendMessagesToPeoples(people []TeamMember, ntf *ntf.Notifier, text string) {
 	go func() {
 		for _, user := range people {
 			ntf.NotifyText(user.UserId, text)
@@ -100,7 +100,7 @@ func send_messages_to_peoples(people []TeamMember, ntf *ntf.Notifier, text strin
 	}()
 }
 
-func Run(config c.QuestConfig, qs *QuestStorage, ntf *ntf.Notifier) {
+func Run(config c.QuestConfig, qs *QuestStorage, ntf *ntf.Notifier, additionalNotifier *ntf.Notifier) {
 	m := martini.New()
 	m.Use(w.NonJsonLogger())
 	m.Use(martini.Recovery())
@@ -143,7 +143,7 @@ func Run(config c.QuestConfig, qs *QuestStorage, ntf *ntf.Notifier) {
 
 		log.Printf("QUESTS WEB add key %s -> %s -> %s", start_key, description, next_key)
 		if start_key != "" && description != "" {
-			key, err := qs.AddKey(start_key, description, next_key)
+			key, err := qs.AddStep(start_key, description, next_key)
 			if key != nil &&err != nil {
 				render.HTML(200, "quests/new_keys", GetKeysErrorInfo("Такой ключ уже существует. Используйте изменение ключа если хотите его изменить.", qs))
 				return
@@ -158,7 +158,7 @@ func Run(config c.QuestConfig, qs *QuestStorage, ntf *ntf.Notifier) {
 
 	r.Post("/delete_key/:key", func(params martini.Params, render render.Render) {
 		key := params["key"]
-		err := qs.DeleteKey(key)
+		err := qs.DeleteStep(key)
 		log.Printf("QUESTS WEB will delete %v (%v)", key, err)
 		render.Redirect("/new_keys")
 	})
@@ -170,7 +170,7 @@ func Run(config c.QuestConfig, qs *QuestStorage, ntf *ntf.Notifier) {
 		next_key := strings.TrimSpace(request.FormValue("next-key"))
 		description := request.FormValue("description")
 
-		err := qs.UpdateKey(key_id, start_key, description, next_key)
+		err := qs.UpdateStep(key_id, start_key, description, next_key)
 		log.Printf("QUESTS WEB was update key %s %s %s %s\n err? %v", key_id, start_key, description, next_key, err)
 		render.Redirect("/new_keys")
 	})
@@ -224,7 +224,7 @@ func Run(config c.QuestConfig, qs *QuestStorage, ntf *ntf.Notifier) {
 				return
 			}
 			for _, prel := range parse_res {
-				qs.AddKey(prel[0], prel[1], prel[2])
+				qs.AddStep(prel[0], prel[1], prel[2])
 			}
 			render.HTML(200, "quests/new_keys", GetKeysTeamsInfo(res, qs))
 		} else {
@@ -233,6 +233,7 @@ func Run(config c.QuestConfig, qs *QuestStorage, ntf *ntf.Notifier) {
 
 		render.Redirect("/new_keys")
 	})
+
 	r.Get("/chat", func(render render.Render, params martini.Params, req *http.Request) {
 		var with string
 		result_data := map[string]interface{}{}
@@ -245,11 +246,13 @@ func Run(config c.QuestConfig, qs *QuestStorage, ntf *ntf.Notifier) {
 			}
 		}
 		type Collocutor struct {
-			IsTeam bool
-			IsMan  bool
-			IsAll  bool
-			Info   interface{}
-			Name   string
+			IsTeam   bool
+			IsMan    bool
+			IsAll    bool
+			IsWinner bool
+			WinTime  string
+			Info     interface{}
+			Name     string
 		}
 		collocutor := Collocutor{}
 
@@ -265,8 +268,13 @@ func Run(config c.QuestConfig, qs *QuestStorage, ntf *ntf.Notifier) {
 
 				collocutor.Name = team.Name
 				collocutor.IsTeam = true
+				collocutor.IsWinner = team.Winner
+				if collocutor.IsWinner{
+					tm := time.Unix(team.WinTime, 0)
+					collocutor.WinTime = tm.Format("Mon 15:04:05")
+				}
 				members, _ := qs.GetMembersOfTeam(team.Name)
-				keys, _ := qs.GetKeys(bson.M{"for_team":team.Name})
+				keys, _ := qs.GetSteps(bson.M{"for_team":team.Name})
 
 				collocutor.Info = TeamInfo{FoundedKeys:team.FoundKeys, Members:members, AllKeys:keys}
 
@@ -312,6 +320,7 @@ func Run(config c.QuestConfig, qs *QuestStorage, ntf *ntf.Notifier) {
 
 		all_teams, _ := qs.GetAllTeams()
 		if contacts, err := qs.GetContacts(all_teams); err == nil {
+			log.Printf("QS Contacts: %+v", contacts)
 			result_data["contacts"] = contacts
 		}
 		render.HTML(200, "quests/chat", result_data)
@@ -325,11 +334,11 @@ func Run(config c.QuestConfig, qs *QuestStorage, ntf *ntf.Notifier) {
 			if to == "all" {
 				peoples, _ := qs.GetPeoples(bson.M{})
 				log.Printf("QSERV: will send [%v] to all %v peoples", text, len(peoples))
-				send_messages_to_peoples(peoples, ntf, text)
+				SendMessagesToPeoples(peoples, ntf, text)
 			} else if to == "all_team_members" {
 				peoples, _ := qs.GetAllTeamMembers()
 				log.Printf("QSERV: will send [%v] to all team members %v peoples", text, len(peoples))
-				send_messages_to_peoples(peoples, ntf, text)
+				SendMessagesToPeoples(peoples, ntf, text)
 			} else {
 				team, _ := qs.GetTeamByName(to)
 				if team == nil {
@@ -341,7 +350,7 @@ func Run(config c.QuestConfig, qs *QuestStorage, ntf *ntf.Notifier) {
 				}else {
 					peoples, _ := qs.GetMembersOfTeam(team.Name)
 					log.Printf("QSERV: will send [%v] to team members of %v team to %v peoples", text, team.Name, len(peoples))
-					send_messages_to_peoples(peoples, ntf, text)
+					SendMessagesToPeoples(peoples, ntf, text)
 				}
 			}
 			qs.StoreMessage(from, to, text, false)
@@ -441,28 +450,88 @@ func Run(config c.QuestConfig, qs *QuestStorage, ntf *ntf.Notifier) {
 		qs.Messages.RemoveAll(bson.M{"$or":[]bson.M{bson.M{"from":between}, bson.M{"to":between}}})
 		render.Redirect(fmt.Sprintf("/chat?with=%v", between))
 	})
+
+	r.Post("/send_messages_at_quest_end", func(render render.Render, req *http.Request) {
+		type Messages struct {
+			ToWinner    string `json:"to_winner"`
+			ToNotWinner string `json:"to_not_winner"`
+		}
+		messages := Messages{}
+		data, err := ioutil.ReadAll(req.Body)
+		if err != nil {
+			log.Printf("QS QE E: errror at reading req body %v", err)
+			render.JSON(500, map[string]interface{}{"error":err})
+			return
+		}
+		err = json.Unmarshal(data, &messages)
+		if err != nil {
+			log.Printf("QS QE E: at unmarshal json messages %v", err)
+			render.JSON(500, map[string]interface{}{"error":err})
+			return
+		}
+
+		teams, err := qs.GetAllTeams()
+		if err != nil {
+			log.Printf("QS QE E: errror at getting teams %v", err)
+			render.JSON(500, map[string]interface{}{"error":err})
+			return
+		}
+		for _, team := range teams {
+			members, err := qs.GetMembersOfTeam(team.Name)
+			if err != nil {
+				log.Printf("QS QE: error at getting members for teams [%v]: %v", team.Name, err)
+			}
+			if team.Winner {
+				SendMessagesToPeoples(members, additionalNotifier, messages.ToWinner)
+			}else {
+				SendMessagesToPeoples(members, additionalNotifier, messages.ToNotWinner)
+			}
+		}
+		render.JSON(200, map[string]interface{}{"ok":true})
+	})
+
 	r.Post("/delete_all", func(render render.Render, req *http.Request) {
 		//1. Steps or keys:
-		si, _ := qs.Steps.RemoveAll(bson.M{})
+		//si, _ := qs.Steps.RemoveAll(bson.M{})
 		//2 Peoples
-		pi, _ := qs.Peoples.UpdateAll(bson.M{"is_passerby":false, "team_name":bson.M{"$exists":true}, "team_sid":bson.M{"$exists":true}}, bson.M{"$set":bson.M{"is_passerby":true}, "$unset":bson.M{"team_name":"", "team_sid":""}})
+		pi, _ := qs.Peoples.UpdateAll(bson.M{
+			"$and":[]bson.M{
+				bson.M{"$or":[]bson.M{
+					bson.M{"is_passerby":false},
+					bson.M{"is_passerby":bson.M{"$exists":false}},
+				}},
+				bson.M{"$or":[]bson.M{
+					bson.M{"team_name":bson.M{"$exists":true}},
+					bson.M{"team_sid":bson.M{"$exists":true}},
+				}},
+			},
+		},
+			bson.M{
+				"$set":bson.M{"is_passerby":true},
+				"$unset":bson.M{"team_name":"", "team_sid":""},
+			})
 		//3 teams and messages
 		teams := []Team{}
 		qs.Teams.Find(bson.M{}).All(&teams)
 		tc := 0
+		mc := 0
 		for _, team := range teams {
-			qs.Messages.RemoveAll(bson.M{"$or":[]bson.M{bson.M{"from":team.Name}, bson.M{"to":team.Name}}})
+			mri, _ := qs.Messages.RemoveAll(bson.M{
+				"$or":[]bson.M{
+					bson.M{"from":team.Name},
+					bson.M{"to":team.Name},
+				}})
+			mc += mri.Removed
+
 			qs.Teams.RemoveId(team.ID)
 			tc += 1
 		}
 		render.JSON(200, map[string]interface{}{
 			"ok":true,
-			"steps_removed":si.Removed,
-			//"steps_removed":0,
+			//"steps_removed":si.Removed,
 			"peoples_updated":pi.Updated,
-			//"peoples_updated":0,
 			"teams_removed":tc,
-			//"teams_removed":0,
+			"messages_removed":mc,
 		})
 	})
 
