@@ -342,18 +342,19 @@ func Run(config c.QuestConfig, qs *QuestStorage, ntf *ntf.Notifier, additionalNo
 			collocutor.Name = with
 			messages, _ = qs.GetMessages(bson.M{"to":with})
 		}
+
 		//log.Printf("QS i return this messages: %+v", messages)
 		result_data["with"] = with
 		result_data["collocutor"] = collocutor
 		result_data["messages"] = messages
+
+		qs.SetMessagesRead(with)
 
 		all_teams, _ := qs.GetAllTeams()
 		if contacts, err := qs.GetContacts(all_teams); err == nil {
 			log.Printf("QS Contacts: %+v", contacts)
 			result_data["contacts"] = contacts
 		}
-
-		qs.SetMessagesRead(with)
 
 		render.HTML(200, "quests/chat", result_data)
 	})

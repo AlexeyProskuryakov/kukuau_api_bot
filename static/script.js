@@ -1,4 +1,4 @@
-document.getElementById( 'chat-end' ).scrollIntoView();
+document.getElementById( 'chat-end' ).scrollIntoView(false);
 
 var messages_updated = Math.round( Date.now() / 1000 );
 var contacts_updated = Math.round( Date.now() / 1000 );
@@ -11,7 +11,7 @@ function paste_message(message){
     var result = Mustache.render(text_message, message);
 //    $("#chat-wrapper").append(result);
     $(result).insertBefore("#chat-end");
-    document.getElementById( 'chat-end' ).scrollIntoView();
+    document.getElementById( 'chat-end' ).scrollIntoView(false);
 }
 
 function update_messages(){
@@ -40,11 +40,13 @@ function set_contact_new_message(contact_id, count){
 
 function add_new_contact(contact){
     console.log("add new contact",contact);
-    var c_text = "<div class='contact' id='{{ID}}'><a class='bg-success a-contact' href='/chat?with={{ID}}'> {{#IsTeam}} Команда {{/IsTeam}}{{Name}} <span class='small' id='s-{{ID}}'>({{NewMessagesCount}})<span></a></div>";
-    var result = Mustache.render(c_text, contact);
     if (contact.IsTeam == true) {
+        var c_text = "<div class='contact' id='{{ID}}'><a class='bg-success a-contact' href='/chat?with={{ID}}'>  Команда {{Name}} <span class='small' id='s-{{ID}}'>({{NewMessagesCount}})<span></a></div>";
+        var result = Mustache.render(c_text, contact);
         $("#team-contacts").prepend(result);
     } else if (contact.IsPassersby == true){
+        var c_text = "<div class='contact' id='{{ID}}'><a class='bg-success a-contact' href='/chat?with={{ID}}'> {{Name}} [{{Phone}}]<span class='small' id='s-{{ID}}'>({{NewMessagesCount}})<span></a></div>";
+        var result = Mustache.render(c_text, contact);
         $("#man-contacts").prepend(result);
     } else {
         $("#contacts").prepend(result);

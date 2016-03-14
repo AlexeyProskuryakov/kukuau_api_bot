@@ -1,4 +1,3 @@
-
 <div id="left-bar" class="col-md-2">
     {{$with := .with}}
     {{$all := "all"}}
@@ -18,40 +17,46 @@
         " href="/chat?with={{$all_tm}}">Написать всем участникам квестов</a>
     </div>
     <hr>
-    <div class="row" id="team-contacts">
-        {{range $contact := .contacts}}
-        <div class="contact" id="{{$contact.ID}}">
-            <a id="a-{{$contact.ID}}" class="bg-success a-contact
+    <div class="row" id="team-wrapper">
+        <div class="message-wrap">
+            <div class="msg-wrap col-md-11" id="team-contacts">
+                {{range $contact := .contacts}}
+                <div class="contact" id="{{$contact.ID}}">
+                    <a id="a-{{$contact.ID}}" class="bg-success a-contact
             {{if eq_s $with $contact.ID}}
             c-active
             {{end}}
             " href="/chat?with={{$contact.ID}}">
-                {{if $contact.IsTeam}}
+                        {{if $contact.IsTeam}}
 
-                Комманда {{$contact.Name}}
+                        Комманда {{$contact.Name}}
             <span class="small" id="s-{{$contact.ID}}">
                 {{if $contact.NewMessagesCount}}
                     ( {{$contact.NewMessagesCount}} )
                 {{end}}
                 {{end}}
             </span>
-            </a>
+                    </a>
+                </div>
+                {{end}}
+            </div>
         </div>
-        {{end}}
-        </div>
-        <hr>
-    <div class="row" id="man-contacts">
-        {{range $contact := .contacts}}
-        <div class="contact" id="{{$contact.ID}}">
-            <a id="a-{{$contact.ID}}" class="bg-success a-contact
+    </div>
+    <hr>
+    <div class="row" id="man-wrapper">
+        <div class="message-wrap">
+            <div class="msg-wrap col-md-11" id="man-contacts">
+                {{range $contact := .contacts}}
+                <div class="contact" id="{{$contact.ID}}">
+                    <a id="a-{{$contact.ID}}" class="bg-success a-contact
             {{if eq_s $with $contact.ID}}
             c-active
             {{end}}
             " href="/chat?with={{$contact.ID}}">
-                {{if $contact.IsTeam}}
+                        {{if $contact.IsTeam}}
 
-                {{else}}
-                {{$contact.Name}} [{{$contact.Phone}}]
+                        {{else}}
+                        {{$contact.Name}} [{{$contact.Phone}}]
 
 
 
@@ -60,10 +65,12 @@
                 ( {{$contact.NewMessagesCount}} )
                 {{end}}
             </span>
+                        {{end}}
+                    </a>
+                </div>
                 {{end}}
-            </a>
+            </div>
         </div>
-        {{end}}
 
     </div>
     <hr>
@@ -73,10 +80,13 @@
     <div class="row">
         <div class="message-wrap col-lg-8">
             <div class="msg-wrap" id="chat-wrapper">
+                <div id="chat-start"></div>
                 {{range $message := .messages}}
                 <div class="media msg">
                     <div class="media-body">
-                        <h4 class="media-heading">{{$message.From}} <small class="time">{{stamp_date $message.Time}}</small></h4>
+                        <h4 class="media-heading">{{$message.From}}
+                            <small class="time">{{stamp_date $message.Time}}</small>
+                        </h4>
                         <div class="col-lg-11">{{$message.Body}}</div>
                     </div>
                 </div>
@@ -93,7 +103,8 @@
             <form id="chat-form" method="post" action="/send_message">
                 <div class="form-group form-inline">
                     <label class="control-label"></label>
-                    <textarea class="form-control form-inline" placeholder="..." name="chat-form-message" id="chat-form-message"
+                    <textarea class="form-control form-inline" placeholder="..." name="chat-form-message"
+                              id="chat-form-message"
                               rows="4" autofocus></textarea>
 
                     <button type="submit" class="btn btn-default btn-lg">
@@ -150,8 +161,6 @@
     {{end}}
 
 
-
-
     {{if .collocutor.IsMan}}
     <div class="row">
         <h4> {{.collocutor.Name}} <span class="small">{{.collocutor.Info.Phone}}</span></h4>
@@ -164,15 +173,15 @@
 
     </div>
     {{end}}
-<div class="row">
-            {{if .messages}}
-            <a href="/delete_chat/{{$with}}" class="btn btn-sm btn-danger">
-                Удалить переписку
-            </a>
-            <span class="bg-success bg-small" id="removed" style="display: none"></span>
-            {{end}}
+    <div class="row">
+        {{if .messages}}
+        <a href="/delete_chat/{{$with}}" class="btn btn-sm btn-danger">
+            Удалить переписку
+        </a>
+        <span class="bg-success bg-small" id="removed" style="display: none"></span>
+        {{end}}
 
-</div>
+    </div>
 </div>
 
 <script src="script.js"></script>
