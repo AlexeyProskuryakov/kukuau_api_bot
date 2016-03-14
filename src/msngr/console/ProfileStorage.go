@@ -19,13 +19,13 @@ type ProfileContact struct {
 	ContactId   int64 `json:"id"`
 	Address     string `json:"address"`
 	Description string `json:"description"`
-	Geo         Coordinates `json:"place"`
+	Geo         Coordinates `json:"geo"`
 	Links       []ProfileContactLink `json:"links"`
 	OrderNumber int        `json:"order_number"`
 }
 
 type ProfileContactLink struct {
-	LinkId      int64  `json:"link_id"`
+	LinkId      int64  `json:"id"`
 	Type        string `json:"type"`
 	Value       string `json:"value"`
 	Description string `json:"description"`
@@ -100,6 +100,11 @@ func NewProfileDbHandler(connectionString string) (*ProfileDbHandler, error) {
 	return ph, nil
 }
 
+func (ph *ProfileDbHandler) GetContactLinkTypes() []string {
+	return []string{
+		"phone", "WWW", "site",
+	}
+}
 func (ph *ProfileDbHandler) GetProfileContacts(userName string) ([]ProfileContact, error) {
 	contacts := []ProfileContact{}
 	contactRows, err := ph.db.Query("SELECT pc.id, pc.address, pc.lat, pc.lon, pc.descr, pc.ord FROM profile_contacts pc WHERE pc.username = $1 ORDER BY pc.ord ASC", userName)

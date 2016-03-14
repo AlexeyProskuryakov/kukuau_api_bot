@@ -1,6 +1,6 @@
 Ext.define('Console.view.Contact', {
 	extend: 'Ext.window.Window',
-	alias: 'widget.contactwindow',
+	alias: 'widget.contactWindow',
 
 	title: 'Контакт',
 	layout: 'fit',
@@ -12,48 +12,28 @@ Ext.define('Console.view.Contact', {
 	},
 	initComponent: function() {
 		console.log("init contact window");
-		var store = Ext.create('Ext.data.Store', {
-			fields: ['name', 'show'],
-			data:[
-				{name:"phone", show:"Телефон"},
-				{name:"email",show:"Электронная почта"},
-				{name:"adress",show:"Адресс"},
-				{name:"WWW",show:"Сайт"},
-				{name:"vk",show:"Вконтачъ"},
-				{name:"twitter",show:"Твиттеръ"},
-				{name:"facebook",show:"Фейсбукъ"},
-			]
-		});
 		this.items= [{
-			xtype:"form",
-			items:[
-			{
-				xtype: 'combo',
-				name : 'type',
-				store:store,
-				queryMode: 'local',
-				displayField: 'show',
-				valueField: 'name',
-				fieldLabel: 'Тип',
-				typeAhead: true,
-		        typeAheadDelay: 100,
-		        hideTrigger: true,
-				width: 350,
-				padding:10
-			}, {
-				xtype: 'textfield',
-				name : 'value',
-				fieldLabel: 'Значение',
-				width: 350,
-				padding:10
-			},{
-				xtype: 'textfield',
-				name : 'description',
-				fieldLabel: 'Описание',
-				width: 350,
-				padding:10
-			}
-
+			xtype:"grid",
+			title:"Способы связи",
+			itemId:"profile_contact_links",
+			store: 'ContactLinksStore',
+			columns:[
+				{header: 'Тип',  dataIndex: 'type'},
+				{header: 'Значение', dataIndex: 'value', flex:1},
+				{header: 'Описание', dataIndex: 'description', flex:1},
+				{
+					xtype : 'actioncolumn',
+					header : 'Delete',
+					width : 100,
+					align : 'center',
+					action:"delete_contact_link",
+					items : [
+					{
+						icon:'img/delete-icon.png',
+						tooltip : 'Delete',
+						scope : me
+					}]
+				}
 			]
 		}];
 		this.buttons = [{
@@ -64,6 +44,4 @@ Ext.define('Console.view.Contact', {
 
 		this.callParent(arguments);
 	}
-	
-
 });

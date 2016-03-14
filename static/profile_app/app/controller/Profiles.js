@@ -38,15 +38,13 @@ function createProfileDynamicForm(profileModel){
     var store = profileModel.contacts();
     contacts_grid.reconfigure(store);
     form.loadRecord(profileModel);
-    form.get
     return profile_window;
 }
 
 Ext.define('Console.controller.Profiles', {
     extend: 'Ext.app.Controller',
-    
     views: ['ProfileList', 'Profile', 'Contact'],
-    stores: ['ProfileStore', 'ContactsStore'],
+    stores: ['ProfileStore', 'ContactsStore', 'ContactLinksStore', 'GroupsStore'],
     models: ['Profile'],
     init: function() {
         this.control({
@@ -75,7 +73,7 @@ Ext.define('Console.controller.Profiles', {
             'profilewindow actioncolumn[action=delete_contact]':{
                 click: this.deleteContact
             },
-            'contactwindow button[action=add_contact_end]':{
+            'ContactLinkWindow button[action=add_contact_end]':{
                 click:this.addContact
             }
         });
@@ -186,7 +184,7 @@ Ext.define('Console.controller.Profiles', {
     showContactForm: function(button, record){
         var win    = button.up('window');
 
-        var c_view = Ext.widget("contactwindow", {"parent":win});
+        var c_view = Ext.widget("ContactLinkWindow", {"parent":win});
         if (!(record instanceof Ext.EventObjectImpl)){
             c_view.down("form").loadRecord(record);
         }

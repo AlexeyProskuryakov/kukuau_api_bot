@@ -1,19 +1,17 @@
 Ext.define("Console.model.Contact",{
 	extend:"Ext.data.Model",
+	idProperty:'id',
 	fields:[
 	'id',
-	'type',
-	'value',
-	'description'
+	'address',
+	'description',
+	{name:'lat', mapping:'geo.lat', type:'float'},
+	{name:'lon', mapping:'geo.lon', type:'float'},
+	'order_number'
 	],
-	 // proxy: {
-  //                  type: 'ajax',
-  //                  api: {
-  //                           read: '/profile/contact/read',
-  //                           create: '/profile/contact/create',
-  //                           update: '/profile/contact/update',
-  //                           destroy: '/profile/contact/destroy'
-  //                      }
-  //           },
-	belongsTo: {model:'Console.model.Profile', name:'profile'}
+	associations: [{
+		type: 'hasMany',
+		model: 'Console.model.ContactLink',
+		name: 'links'
+	}]
 });

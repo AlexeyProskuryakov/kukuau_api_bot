@@ -172,26 +172,59 @@ func Run(addr string, notifier *ntf.Notifier, db *d.MainDb, cs c.ConfigStorage, 
 		r.HTML(200, "index", map[string]interface{}{}, render.HTMLOptions{Layout:"base"})
 	})
 
-	pg_conf := cfg.Main.PGDatabase
-	ph, err := NewProfileDbHandler(pg_conf.ConnString)
-	if err != nil {
-		panic(err)
-	}
-
 	r.Group("/profile", func(r martini.Router) {
+		type ProfileId struct {
+			Id string `json:"id"`
+		}
+		pg_conf := cfg.Main.PGDatabase
+		ph, err := NewProfileDbHandler(pg_conf.ConnString)
+		if err != nil {
+			panic(err)
+		}
+
 		r.Get("", func(render render.Render) {
 			render.HTML(200, "profile", map[string]interface{}{})
 		})
-		r.Get("/data", func(render render.Render, params martini.Params, req *http.Request) {
+		r.Get("/all", func(render render.Render) {
 			profiles, err := ph.GetAllProfiles()
 			if err != nil {
 				log.Printf("CS Error at getting all profiles: %v", err)
 				render.JSON(500, map[string]interface{}{"success":false, "error":err})
 			}
+			log.Printf("result: %+v", profiles)
 			render.JSON(200, map[string]interface{}{
 				"success":true,
 				"profiles":profiles,
 			})
+		})
+		r.Get("/link_types", func(render render.Render) {
+			render.JSON(200, map[string]interface{}{"data":ph.GetContactLinkTypes()})
+		})
+		r.Post("/read", func(render render.Render, params martini.Params, req *http.Request) {
+			data, err := ioutil.ReadAll(req.Body)
+			if err != nil {
+				log.Printf("error at reading post data %v", err)
+			}
+			log.Printf("CS READ data: %s", data)
+			info := ProfileId{}
+			err = json.Unmarshal(data, &info)
+			if err != nil {
+				log.Printf("CS READ error at unmarshal delete data %v", err)
+				render.JSON(500, map[string]interface{}{"error":err, "success":false})
+				return
+			}
+			profile, err := ph.GetProfile(info.Id)
+			if err != nil {
+				log.Printf("CS READ error at unmarshal delete data %v", err)
+				render.JSON(500, map[string]interface{}{"error":err, "success":false})
+				return
+			}
+			out, err := json.Marshal(profile)
+			if err != nil {
+				log.Printf("CS READ error at marshal data to out")
+				render.JSON(500, map[string]interface{}{"error":err, "success":false})
+			}
+			render.JSON(200, map[string]interface{}{"success":true, "data":out})
 		})
 
 		r.Post("/create", func(render render.Render, params martini.Params, req *http.Request) {
@@ -253,10 +286,8 @@ func Run(addr string, notifier *ntf.Notifier, db *d.MainDb, cs c.ConfigStorage, 
 				return
 			}
 			log.Printf("CS DELETE data: %s", data)
-			type DeleteInfo struct {
-				Id string `json:"id"`
-			}
-			info := DeleteInfo{}
+
+			info := ProfileId{}
 			err = json.Unmarshal(data, &info)
 			if err != nil {
 				log.Printf("CS DELETE error at unmarshal delete data %v", err)

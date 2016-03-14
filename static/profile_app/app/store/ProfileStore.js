@@ -4,7 +4,7 @@ Ext.define('Console.store.ProfileStore', {
     storeId: 'ProfileStore',
     proxy: {
         type: 'ajax',
-        url: '/profile/data',
+        url: '/profile/all',
         reader: {
             type: 'json',
             root: 'profiles',

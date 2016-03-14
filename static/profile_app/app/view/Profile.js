@@ -17,7 +17,6 @@ Ext.define('Console.view.Profile', {
             items: [ 
             new Ext.form.FormPanel({
                 frame: true,
-                // Нас интересует код от этого места
                 layout: 'column',
                 defaults: {
                     xtype: 'form',
@@ -43,22 +42,20 @@ Ext.define('Console.view.Profile', {
                     name: 'image',
                     padding:10
                 },
-                {
-                    xtype:'checkbox',
-                    name:'enabled',
-                    fieldLabel:"Включен?",
-                    width:800,
-                    padding:10
-                },
-                {
-                    xtype:'checkbox',
-                    name:'public',
-                    fieldLabel:"Публичен?",
-                    width:800,
-                    padding:10
-                },
                 ]
             }),
+            {
+                xtype:'checkbox',
+                name:'enabled',
+                fieldLabel:"Включен",
+                padding:10
+            },
+            {
+                xtype:'checkbox',
+                name:'public',
+                fieldLabel:"Публичен",
+                padding:10
+            },
             {
                 xtype: 'textfield',
                 name : 'name',
@@ -68,23 +65,30 @@ Ext.define('Console.view.Profile', {
             },{
                 xtype: 'htmleditor',
                 name: 'short_description',
+                enableColors:false,
+                enableFontSize:false,
+                enableLists:false,
+                enableSourceEdit:false,
+                enableAlignments:false,
+                enableFont:false,
+                height:70,
                 grow: true,
-                fieldLabel: 'Короткое описание',
+                fieldLabel: 'Слоган',
                 padding:10
             },{
                 xtype: 'htmleditor',
                 name : 'text_description',
+                height:100,
+                enableFont:false,
+                enableColors:false,
+                enableFontSize:false,
+                enableLists:false,
+                enableSourceEdit:false,
+                enableAlignments:false,
                 grow: true,
-                fieldLabel: 'Длинное описание',
+                fieldLabel: 'Описание',
                 padding:10
-            },{
-                xtype:'textfield',
-                name:'address',
-                fieldLabel:"Адресс",
-                width:800,
-                padding:10
-            }, 
-
+            },
             {
                 xtype:"grid",
                 title:"Контакты",
