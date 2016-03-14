@@ -9,19 +9,20 @@ import (
 	"sort"
 	"errors"
 	"log"
+	"fmt"
 )
 
 type Message struct {
-	ID          bson.ObjectId `bson:"_id,omitempty"`
-	SID         string
-	From        string `bson:"from"`
-	To          string `bson:"to"`
-	Body        string `bson:"body"`
-	Time        time.Time `bson:"time"`
-	TimeStamp   int64 `bson:"time_stamp"`
-	NotAnswered int `bson:"not_answered"`
-	Unread      int `bson:"unread"`
-	IsKey       bool `bson:"is_key"`
+	ID            bson.ObjectId `bson:"_id,omitempty"`
+	SID           string `bson:",omitempty"`
+	From          string `bson:"from"`
+	To            string `bson:"to"`
+	Body          string `bson:"body"`
+	Time          time.Time `bson:"time"`
+	TimeStamp     int64 `bson:"time_stamp"`
+	TimeFormatted string `bson:",omitempty" json:"time"`
+	Unread        int `bson:"unread"`
+	IsKey         bool `bson:"is_key"`
 }
 
 type Step struct {
@@ -29,11 +30,14 @@ type Step struct {
 	SID         string
 	Founded     bool `bson:"is_found"`
 	FoundedBy   string `bson:"found_by"`
-	Founder     string `bson:"founder"`
 	StartKey    string `bson:"start_key"`
 	NextKey     string `bson:"next_key"`
 	Description string `bson:"description"`
 	ForTeam     string `bson:"for_team"`
+}
+
+func (s Step) String() string {
+	return fmt.Sprintf("[%v] %v > %v for [%v] found by [%v] (%v) \n", s.SID, s.StartKey, s.NextKey, s.ForTeam, s.FoundedBy, s.Description)
 }
 
 type TeamMember struct {
@@ -102,7 +106,7 @@ func (qks *QuestStorage) ensureIndexes() {
 		Key:[]string{"is_key"},
 	})
 	message_collection.EnsureIndex(mgo.Index{
-		Key:[]string{"not_answered"},
+		Key:[]string{"unread"},
 	})
 
 	qks.Messages = message_collection
@@ -353,41 +357,42 @@ func (qs *QuestStorage) StoreMessage(from, to, body string, is_key bool) (Messag
 		Body: body,
 		Time: time.Now(),
 		TimeStamp: time.Now().Unix(),
-		NotAnswered: 1,
-		Unread:1,
 		IsKey: is_key,
 	}
+	if !is_key {
+		result.Unread = 1
+	}
+
 	err := qs.Messages.Insert(result)
 	return result, err
 }
 
-func (qs *QuestStorage) SetMessagesAnswered(from, by string) error {
+func (qs *QuestStorage) SetMessagesRead(from string) error {
 	_, err := qs.Messages.UpdateAll(
-		bson.M{"from":from, "not_answered":bson.M{"$ne":0}},
-		bson.M{"$set":bson.M{
-			"answered_by":by,
-			"not_answered":0}})
+		bson.M{"from":from, "unread":bson.M{"$ne":0}},
+		bson.M{"$set":bson.M{"unread":0}},
+	)
 	return err
 }
 
 func (qs *QuestStorage) GetMessages(query bson.M) ([]Message, error) {
 	messages := []Message{}
 	query["is_key"] = false
-	err := qs.Messages.Find(query).Sort("-time").Limit(25).All(&messages)
+	err := qs.Messages.Find(query).Sort("time").All(&messages)
 	return messages, err
 }
 
 func (qs *QuestStorage) GetMessagesKeys(query bson.M) ([]Message, error) {
 	messages := []Message{}
 	query["is_key"] = true
-	err := qs.Messages.Find(query).Sort("-time").Limit(25).All(&messages)
+	err := qs.Messages.Find(query).Sort("time").All(&messages)
 	return messages, err
 }
 
 type Contact struct {
 	ID               string `bson:"_id"`
 	Name             string `bson:"name"`
-	NewMessagesCount int `bson:"not_answered_count"`
+	NewMessagesCount int `bson:"unread"`
 	Team             *Team
 	Phone            string
 	IsPassersby      bool
@@ -414,7 +419,7 @@ func (s ByContactsTeam) Less(i, j int) bool {
 func (qs *QuestStorage) GetContacts(teams []Team) ([]Contact, error) {
 	resp := []Contact{}
 	err := qs.Messages.Pipe([]bson.M{
-		bson.M{"$group": bson.M{"_id":"$from", "not_answered_count":bson.M{"$sum":"$not_answered"}, "name":bson.M{"$first":"$from"}, "time":bson.M{"$max":"$time_stamp"}}}}).All(&resp)
+		bson.M{"$group": bson.M{"_id":"$from", "unread":bson.M{"$sum":"$unread"}, "name":bson.M{"$first":"$from"}, "time":bson.M{"$max":"$time_stamp"}}}}).All(&resp)
 	if err != nil {
 		return resp, err
 	}
@@ -449,7 +454,7 @@ func (qs QuestStorage) GetContactsAfter(after int64) ([]Contact, error) {
 	resp := []Contact{}
 	err := qs.Messages.Pipe([]bson.M{
 		bson.M{"$match":bson.M{"time_stamp":bson.M{"$gt":after}, "from":bson.M{"$ne":ME}, "to":bson.M{"$ne":ALL}, "is_key":false}},
-		bson.M{"$group": bson.M{"_id":"$from", "not_answered_count":bson.M{"$sum":"$not_answered"}, "name":bson.M{"$first":"$from"}}}}).All(&resp)
+		bson.M{"$group": bson.M{"_id":"$from", "unread":bson.M{"$sum":"$unread"}, "name":bson.M{"$first":"$from"}}}}).All(&resp)
 	if err != nil {
 		return resp, err
 	}

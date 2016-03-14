@@ -7,9 +7,11 @@ var contacts_updated = Math.round( Date.now() / 1000 );
 var message_for = $("#with").prop("value");
 
 function paste_message(message){
-    var text_message = "<div class='media msg'><div class='media-body'><small class='pull-right time'><i class='fa fa-clock-o'></i>{{Time}}</small><h5 class='media-heading'>{{From}}</h5><small class='col-lg-10'>{{Body}}</small></div></div>";
-    var result = Mustache.render(text_message,message);
-    $("#chat-wrapper").append(result);
+    var text_message = "<div class='media msg'><div class='media-body'><h4 class='media-heading'>{{From}} <small class='time'>{{time}}</small></h4><div class='col-lg-11'>{{Body}}</div></div></div><hr>";
+    var result = Mustache.render(text_message, message);
+//    $("#chat-wrapper").append(result);
+    $(result).insertBefore("#chat-end");
+    document.getElementById( 'chat-end' ).scrollIntoView();
 }
 
 function update_messages(){
@@ -146,5 +148,27 @@ function send_messages_from_klichat(){
     });
 }
 
+$("#chat-form").on("submit", function(e){
+    e.preventDefault();
+    var body = $("#chat-form-message").val(),
+        from = $("#from").attr("value");
+        to = $("#with").attr("value");
 
+    console.log("body: ", body, "from: ", from, "to: ", to)
+    $.ajax({
+        type:           "POST",
+        url:            "/send_message",
+        data:           JSON.stringify({from:from, to:to, body:body}),
+        dataType:       'json',
+        success:        function(x){
+                        console.log(x);
+                        if (x.ok == true) {
+                         paste_message(x.message);
+                         $("#chat-form-message").val("");
+                        }else{
+                            window.location.href = "/chat";
+                        }
+        }
+    });
+});
 

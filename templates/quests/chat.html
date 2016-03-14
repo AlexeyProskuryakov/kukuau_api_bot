@@ -74,27 +74,15 @@
         <div class="message-wrap col-lg-8">
             <div class="msg-wrap" id="chat-wrapper">
                 {{range $message := .messages}}
-                {{if eq_s $message.From "me" }}
                 <div class="media msg">
                     <div class="media-body">
-                        <small class="pull-left time"><i class="fa fa-clock-o"></i>{{$message.Time}}</small>
-                        <h5 class="media-heading pull-right">{{$message.From}}</h5>
-                        <br>
-                        <small class="col-lg-10 pull-right bg-info">{{$message.Body}}</small>
+                        <h4 class="media-heading">{{$message.From}} <small class="time">{{stamp_date $message.Time}}</small></h4>
+                        <div class="col-lg-11">{{$message.Body}}</div>
                     </div>
                 </div>
-                {{else}}
-                <div class="media msg">
-                    <div class="media-body">
-                        <small class="pull-right time"><i class="fa fa-clock-o"></i>{{$message.Time}}</small>
-                        <h5 class="media-heading">{{$message.From}}</h5>
-                        <small class="col-lg-10 bg-success">{{$message.Body}}</small>
-                    </div>
-                </div>
-                {{end}}
                 <hr>
                 {{end}}
-
+                <div id="chat-end"></div>
             </div>
 
         </div>
@@ -113,7 +101,7 @@
                     </button>
                 </div>
                 <div class="form-group">
-                    <input type="hidden" name="from" value="me">
+                    <input type="hidden" name="from" id="from" value="me">
                     <input type="hidden" name="to" value="{{$with}}" id="with">
                 </div>
             </form>
@@ -159,12 +147,6 @@
             {{end}}
         </div>
     </div>
-    {{if .collocutor.IsWinner}}
-    <div class="row">
-        <h3>WINNER!<br><small>at {{.collocutor.WinTime}}</small></h3>
-    </div>
-    {{end}}
-
     {{end}}
 
 

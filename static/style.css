@@ -48,6 +48,7 @@
 .time
 {
     color:#bfbfbf;
+
 }
 
 .send-wrap
@@ -165,7 +166,7 @@ body::-webkit-scrollbar {
 }
 
 .a-contact{
-    font-weight:500;
+    ont-weight:500;
     font-size:20px;
 }
 

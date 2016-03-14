@@ -83,6 +83,32 @@ func GetKeysErrorInfo(err_text string, qs *QuestStorage) map[string]interface{} 
 	return result
 }
 
+func SortSteps(steps []Step) []Step {
+	step_map_next := map[string]Step{}
+	step_map_start := map[string]Step{}
+	sorted := []Step{}
+	var first_step Step
+	for _, step := range steps {
+		step_map_next[step.NextKey] = step
+		step_map_start[step.StartKey] = step
+
+		if _, ok := step_map_next[step.StartKey]; !ok {
+			first_step = step
+		}
+	}
+	//log.Printf("QS start key: %+v, \nstep_map_next: %+v\nstep_map_start %+v", first_step, step_map_next, step_map_start)
+	sorted = append(sorted, first_step)
+	for {
+		if next_step, ok := step_map_start[first_step.NextKey]; ok {
+			sorted = append(sorted, next_step)
+			first_step = next_step
+		} else {
+			break
+		}
+	}
+	return sorted
+}
+
 func GetKeysTeamsInfo(teams_info map[string]string, qs *QuestStorage) map[string]interface{} {
 	result := map[string]interface{}{}
 	keys, _ := qs.GetAllStep()
@@ -114,6 +140,9 @@ func Run(config c.QuestConfig, qs *QuestStorage, ntf *ntf.Notifier, additionalNo
 			template.FuncMap{
 				"eq_s":func(a, b string) bool {
 					return a == b
+				},
+				"stamp_date":func(t time.Time) string {
+					return t.Format(time.Stamp)
 				},
 			},
 		},
@@ -275,7 +304,7 @@ func Run(config c.QuestConfig, qs *QuestStorage, ntf *ntf.Notifier, additionalNo
 				}
 				members, _ := qs.GetMembersOfTeam(team.Name)
 				keys, _ := qs.GetSteps(bson.M{"for_team":team.Name})
-
+				keys = SortSteps(keys)
 				collocutor.Info = TeamInfo{FoundedKeys:team.FoundKeys, Members:members, AllKeys:keys}
 
 				messages, _ = qs.GetMessages(bson.M{
@@ -313,7 +342,7 @@ func Run(config c.QuestConfig, qs *QuestStorage, ntf *ntf.Notifier, additionalNo
 			collocutor.Name = with
 			messages, _ = qs.GetMessages(bson.M{"to":with})
 		}
-		log.Printf("QS i return this messages: %+v", messages)
+		//log.Printf("QS i return this messages: %+v", messages)
 		result_data["with"] = with
 		result_data["collocutor"] = collocutor
 		result_data["messages"] = messages
@@ -323,44 +352,70 @@ func Run(config c.QuestConfig, qs *QuestStorage, ntf *ntf.Notifier, additionalNo
 			log.Printf("QS Contacts: %+v", contacts)
 			result_data["contacts"] = contacts
 		}
+
+		qs.SetMessagesRead(with)
+
 		render.HTML(200, "quests/chat", result_data)
 	})
 
 	r.Post("/send_message", func(render render.Render, req *http.Request) {
-		from := req.FormValue("from")
-		to := req.FormValue("to")
-		text := req.FormValue("chat-form-message")
-		if from != "" && to != "" && text != "" {
-			if to == "all" {
+		type MessageFromF struct {
+			From string `json:"from"`
+			To   string `json:"to"`
+			Body string `json:"body"`
+		}
+		data, err := ioutil.ReadAll(req.Body)
+		if err != nil {
+			log.Printf("QS QE E: errror at reading req body %v", err)
+			render.JSON(500, map[string]interface{}{"error":err})
+			return
+		}
+		message := MessageFromF{}
+		err = json.Unmarshal(data, &message)
+		if err != nil {
+			log.Printf("QS QE E: at unmarshal json messages %v", err)
+			render.JSON(500, map[string]interface{}{"error":err})
+			return
+		}
+		log.Printf("QS I see this data for send message from f:\n %+v", message)
+
+		var result Message
+		if message.From != "" && message.To != "" && message.Body != "" {
+			if message.To == "all" {
 				peoples, _ := qs.GetPeoples(bson.M{})
-				log.Printf("QSERV: will send [%v] to all %v peoples", text, len(peoples))
-				SendMessagesToPeoples(peoples, ntf, text)
-			} else if to == "all_team_members" {
+				log.Printf("QSERV: will send [%v] to all %v peoples", message.Body, len(peoples))
+				SendMessagesToPeoples(peoples, ntf, message.Body)
+			} else if message.To == "all_team_members" {
 				peoples, _ := qs.GetAllTeamMembers()
-				log.Printf("QSERV: will send [%v] to all team members %v peoples", text, len(peoples))
-				SendMessagesToPeoples(peoples, ntf, text)
+				log.Printf("QSERV: will send [%v] to all team members %v peoples", message.Body, len(peoples))
+				SendMessagesToPeoples(peoples, ntf, message.Body)
 			} else {
-				team, _ := qs.GetTeamByName(to)
+				team, _ := qs.GetTeamByName(message.To)
 				if team == nil {
-					man, _ := qs.GetManByUserId(to)
+					man, _ := qs.GetManByUserId(message.To)
 					if man != nil {
-						log.Printf("QSERV: will send [%v] to %v", text, man.UserId)
-						ntf.NotifyText(man.UserId, text)
+						log.Printf("QSERV: will send [%v] to %v", message.Body, man.UserId)
+						ntf.NotifyText(man.UserId, message.Body)
 					}
 				}else {
 					peoples, _ := qs.GetMembersOfTeam(team.Name)
-					log.Printf("QSERV: will send [%v] to team members of %v team to %v peoples", text, team.Name, len(peoples))
-					SendMessagesToPeoples(peoples, ntf, text)
+					log.Printf("QSERV: will send [%v] to team members of %v team to %v peoples", message.Body, team.Name, len(peoples))
+					SendMessagesToPeoples(peoples, ntf, message.Body)
 				}
 			}
-			qs.StoreMessage(from, to, text, false)
-			log.Printf("QSERV: will answered all messages from %v by %v", to, from)
-			qs.SetMessagesAnswered(to, from)
+			result, err = qs.StoreMessage(message.From, message.To, message.Body, false)
+			if err != nil {
+				log.Printf("QSERV: error at storing message %v", err)
+				render.JSON(200, map[string]interface{}{"ok":false})
+				return
+			}
+			result.TimeFormatted = result.Time.Format(time.Stamp)
 
 		} else {
-			render.Redirect("/chat")
+			render.JSON(200, map[string]interface{}{"ok":false})
 		}
-		render.Redirect(fmt.Sprintf("/chat?with=%v", to))
+		render.JSON(200, map[string]interface{}{"ok":true, "message":result})
+
 	})
 
 	r.Post("/new_messages", func(render render.Render, req *http.Request) {
@@ -397,6 +452,7 @@ func Run(config c.QuestConfig, qs *QuestStorage, ntf *ntf.Notifier, additionalNo
 				}
 
 			}
+			messages[i].TimeFormatted = message.Time.Format(time.Stamp)
 		}
 
 		render.JSON(200, map[string]interface{}{"messages":messages, "next_":time.Now().Unix()})
@@ -420,7 +476,7 @@ func Run(config c.QuestConfig, qs *QuestStorage, ntf *ntf.Notifier, additionalNo
 		}
 		contacts, err := qs.GetContactsAfter(cr.After)
 		if err != nil {
-			render.JSON(500, map[string]interface{}{"ok":false, "detail":fmt.Sprintf("db err body %v \n %s", err)})
+			render.JSON(500, map[string]interface{}{"ok":false, "detail": err})
 			return
 		}
 		new_contacts := []Contact{}
@@ -449,6 +505,7 @@ func Run(config c.QuestConfig, qs *QuestStorage, ntf *ntf.Notifier, additionalNo
 		}
 		render.HTML(200, "quests/manage", map[string]interface{}{"teams":teams})
 	})
+
 	r.Get("/delete_chat/:between", func(params martini.Params, render render.Render, req *http.Request) {
 		between := params["between"]
 		qs.Messages.RemoveAll(bson.M{"$or":[]bson.M{bson.M{"from":between}, bson.M{"to":between}}})
@@ -469,12 +526,12 @@ func Run(config c.QuestConfig, qs *QuestStorage, ntf *ntf.Notifier, additionalNo
 			return
 		}
 		err = json.Unmarshal(data, &messages)
-		log.Printf("QS I see this data for send messages at quest end:\n %+v", messages)
 		if err != nil {
 			log.Printf("QS QE E: at unmarshal json messages %v", err)
 			render.JSON(500, map[string]interface{}{"error":err})
 			return
 		}
+		log.Printf("QS I see this data for send messages at quest end:\n %+v", messages)
 
 		teams, err := qs.GetAllTeams()
 		if err != nil {
