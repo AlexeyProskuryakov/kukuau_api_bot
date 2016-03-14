@@ -373,7 +373,7 @@ func Run(config c.QuestConfig, qs *QuestStorage, ntf *ntf.Notifier, additionalNo
 		message := MessageFromF{}
 		err = json.Unmarshal(data, &message)
 		if err != nil {
-			log.Printf("QS QE E: at unmarshal json messages %v", err)
+			log.Printf("QS QE E: at unmarshal json messages %v\ndata:%s", err, data)
 			render.JSON(500, map[string]interface{}{"error":err})
 			return
 		}
