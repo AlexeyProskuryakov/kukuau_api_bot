@@ -103,7 +103,7 @@ type QuestConfig struct {
 	Info          string `json:"information"`
 	WebPort       string `json:"web_port"`
 	Key           string `json:"key"`
-	AdditionalKey string `json:"addtional_key"`
+	AdditionalKey string `json:"additional_key"`
 }
 
 type ConsoleConfig struct {
