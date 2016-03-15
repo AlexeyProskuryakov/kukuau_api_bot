@@ -3,13 +3,6 @@
     {{$all := "all"}}
     {{$all_tm := "all_team_members"}}
     <div class="row">
-        <a class="bg-danger a-contact
-        {{if eq_s $with $all}}
-        c-active
-        {{end}}
-        " href="/chat?with={{$all}}">Написать всем</a>
-    </div>
-    <div class="row">
         <a class="bg-warning a-contact
         {{if eq_s $with $all_tm}}
         c-active
@@ -134,15 +127,18 @@
     </div>
 
     <div class="row">
+        <h5>Пройденные шаги для комманды <strong id="team-name">{{.collocutor.Name}}</strong>:</h5>
+    </div>
+    <div class="row">
         <div class="accordion" id="keys-accordion">
             {{range $key := .collocutor.Info.AllKeys}}
             <div class="accordion-group">
                 <div class="accordion-heading">
-                    <p class="{{if $key.Founded}}
-                    key-founded
+                    <p class="{{if $key.IsFound}}
+                    key-found
                     {{else}}
-                    key-not-founded
-                    {{end}}">
+                    key-not-found
+                    {{end}}" key-id="{{$key.SID}}">
                         <a class="accordion-toggle" data-toggle="collapse" data-parent="#keys-accordion"
                            href="#{{$key.SID}}">
                             {{$key.StartKey}} > {{$key.NextKey}}

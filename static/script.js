@@ -95,6 +95,27 @@ function update_contacts(){
     return true;
 }
 
+function update_key_states(team_name){
+    if (team_name != undefined || team_name != ""){
+        $.ajax({
+                type:"POST",
+                url:            "/founded_keys",
+                contentType:    'application/json',
+                data:           JSON.stringify({team:team_name}),
+                dataType:       'json',
+                success:        function(x){
+                    x.keys.forEach(function(k){
+                        key = $("[key-id="+k.SID+"]");
+                        key.removeClass("key-not-found");
+                        key.addClass("key-found");
+                    });
+
+                }
+        });
+    }
+
+}
+
 $("#chat-form-message").keydown(function(e){
     if (e.ctrlKey && e.keyCode == 13) {
         $("#chat-form").submit();
@@ -105,6 +126,7 @@ setInterval(function(){
 
     update_messages();
     update_contacts();
+    update_key_states($("#team-name").text());
     return true;
 }, 5000);
 

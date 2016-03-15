@@ -188,14 +188,14 @@ body::-webkit-scrollbar {
     margin-left:5px;
 }
 
-.key-founded{
+.key-found{
     background-color: green;
 }
 
-.key-not-founded{
+.key-not-found{
     background-color: gray;
 }
 
-.key-founded a, .key-not-founded a {
+.key-found a, .key-not-found a {
     color: white;
 }

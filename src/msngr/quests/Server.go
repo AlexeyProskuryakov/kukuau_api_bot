@@ -599,6 +599,16 @@ func Run(config c.QuestConfig, qs *QuestStorage, ntf *ntf.Notifier, additionalNo
 		})
 	})
 
+	r.Post("/founded_keys", func(ren render.Render, req *http.Request) {
+		type T struct {
+			Name string `json:"team"`
+		}
+		t := T{}
+		body, _ := ioutil.ReadAll(req.Body)
+		json.Unmarshal(body, &t)
+		steps, _ := qs.GetSteps(bson.M{"for_team":t.Name, "is_found":true})
+		ren.JSON(200, map[string]interface{}{"keys":steps})
+	})
 	log.Printf("Will start web server for quest at: %v", config.WebPort)
 
 	//m.MapTo(r, (*martini.Routes)(nil))

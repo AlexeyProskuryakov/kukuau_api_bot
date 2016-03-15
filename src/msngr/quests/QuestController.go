@@ -75,7 +75,7 @@ func (qmp *QuestMessageProcessor) CheckTeamIsWinner(teamName string) bool {
 		return false
 	}
 	for _, step := range steps {
-		if !step.Founded {
+		if !step.IsFound {
 			return false
 		}
 	}
@@ -92,11 +92,11 @@ func ValidateKeyBySequent(team *Team, key_info *Step, qs *QuestStorage) (string,
 		"\nitfounded by this team? %v (by %v)",
 			key_info.StartKey,
 			utils.InS(previous_key.StartKey, team.FoundKeys),
-			previous_key.Founded,
+			previous_key.IsFound,
 			previous_key.FoundedBy == team.Name,
 			previous_key.FoundedBy,
 		)
-		if utils.InS(previous_key.StartKey, team.FoundKeys) && previous_key.Founded && previous_key.FoundedBy == team.Name {
+		if utils.InS(previous_key.StartKey, team.FoundKeys) && previous_key.IsFound && previous_key.FoundedBy == team.Name {
 			return key_info.Description, nil, true
 		} else {
 			return NOT_NEXT_KEY, nil, false

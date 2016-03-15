@@ -28,7 +28,7 @@ type Message struct {
 type Step struct {
 	ID          bson.ObjectId `bson:"_id,omitempty"`
 	SID         string
-	Founded     bool `bson:"is_found"`
+	IsFound     bool `bson:"is_found"`
 	FoundedBy   string `bson:"found_by"`
 	StartKey    string `bson:"start_key"`
 	NextKey     string `bson:"next_key"`
@@ -37,7 +37,7 @@ type Step struct {
 }
 
 func (s Step) String() string {
-	if s.Founded {
+	if s.IsFound {
 		return fmt.Sprintf("[%v] %v > %v for [%v] found by [%v] \n", s.SID, s.StartKey, s.NextKey, s.ForTeam, s.FoundedBy)
 	}        else {
 		return fmt.Sprintf("[%v] %v > %v for [%v] \n", s.SID, s.StartKey, s.NextKey, s.ForTeam)
