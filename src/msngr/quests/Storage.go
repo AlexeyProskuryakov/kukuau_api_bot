@@ -457,7 +457,7 @@ func (qs *QuestStorage) GetContacts(teams []Team) ([]Contact, error) {
 func (qs QuestStorage) GetContactsAfter(after int64) ([]Contact, error) {
 	resp := []Contact{}
 	err := qs.Messages.Pipe([]bson.M{
-		bson.M{"$match":bson.M{"time_stamp":bson.M{"$gt":after}, "from":bson.M{"$ne":ME}, "to":bson.M{"$ne":ALL}, "is_key":false}},
+		bson.M{"$match":bson.M{"time_stamp":bson.M{"$gt":after}, "from":bson.M{"$ne":ME}, "to":bson.M{"$ne":ALL}}},
 		bson.M{"$group": bson.M{"_id":"$from", "unread":bson.M{"$sum":"$unread"}, "name":bson.M{"$first":"$from"}}}}).All(&resp)
 	if err != nil {
 		return resp, err
