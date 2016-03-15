@@ -14,15 +14,17 @@
                     <div class="modal-content">
                         <div class="modal-header">
                             <button type="button" class="close" data-dismiss="modal">&times;</button>
-                            <h3>Введите сообщения:</h3>
+                            <h3>Отправка сообщений от Кличата</h3>
                         </div>
                         <div class="modal-body">
                             <form class="form form-horizontal">
+                                <h4>Победители:</h4>
                                 <div class="form-group form-inline">
-                                    <h4>Победители:</h4>
                                     {{range $team := .teams}}
-                                    <label for="{{$team.Name}}">{{$team.Name}}</label>
-                                    <input id="{{$team.Name}}" class="winner" type="checkbox">
+                                    <div class="col-md-2">
+                                        <label for="{{$team.Name}}">{{$team.Name}}</label>
+                                        <input id="{{$team.Name}}" class="winner" type="checkbox">
+                                    </div>
                                     {{end}}
 
                                 </div>
@@ -31,15 +33,25 @@
                                     <textarea id="to-winner" class="form-control" rows="4">Поздравляем с выйгрышем! И дарим бесплатные поездки на такси! Закажи через прифиль такси поездку и едь нахаляву. Но один раз... </textarea>
                                 </div>
                                 <div class="form-group">
+                                    <button type="button" class="col-md-12 btn btn-info btn-lg"
+                                            onclick="send_messages_to_winners()">Отправить выбранным командам
+                                    </button>
+                                </div>
+                                <br>
+                                <hr>
+                                <br>
+                                <div class="form-group">
                                     <label for="to-not-winner" class="col-md-4">Для не выиграйвших:</label>
                                     <textarea id="to-not-winner" class="form-control" rows="4">Поздравляем с окончание квеста! И дарим скидон на таксон! Закажи через прифиль такси поездку и едь со скидкой. Но один раз... "</textarea>
                                 </div>
                                 <hr>
                                 <div class="form-group">
                                     <button type="button" class="col-md-12 btn btn-info btn-lg"
-                                            onclick="send_messages_from_klichat()"
-                                            data-dismiss="modal">Отправить
+                                            onclick="send_messages_to_losers()">Отправить все командам кроме выбранных
                                     </button>
+                                </div>
+                                <div class="send-message-result">
+
                                 </div>
                             </form>
                         </div>

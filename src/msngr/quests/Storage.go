@@ -242,7 +242,7 @@ func (qs *QuestStorage) AddTeam(name string) (*Team, error) {
 
 func (qs *QuestStorage) GetAllTeams() ([]Team, error) {
 	result := []Team{}
-	err := qs.Teams.Find(bson.M{}).All(&result)
+	err := qs.Teams.Find(bson.M{}).Sort("name").All(&result)
 	for i, team := range result {
 		result[i].SID = team.ID.Hex()
 	}
