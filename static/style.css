@@ -158,7 +158,7 @@ body::-webkit-scrollbar {
 }
 
 #chat-form-message{
-    width:500px;!important
+    width:85%;!important
 }
 
 #right-bar{
@@ -190,14 +190,12 @@ body::-webkit-scrollbar {
 
 .key-founded{
     background-color: green;
-    color: white;
 }
 
 .key-not-founded{
-    background-color: lightgray;
-    color: red;
+    background-color: gray;
 }
 
 .key-founded a, .key-not-founded a {
-    color: inherit;
+    color: white;
 }

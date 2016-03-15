@@ -37,7 +37,11 @@ type Step struct {
 }
 
 func (s Step) String() string {
-	return fmt.Sprintf("[%v] %v > %v for [%v] found by [%v] (%v) \n", s.SID, s.StartKey, s.NextKey, s.ForTeam, s.FoundedBy, s.Description)
+	if s.Founded {
+		return fmt.Sprintf("[%v] %v > %v for [%v] found by [%v] \n", s.SID, s.StartKey, s.NextKey, s.ForTeam, s.FoundedBy)
+	}        else {
+		return fmt.Sprintf("[%v] %v > %v for [%v] \n", s.SID, s.StartKey, s.NextKey, s.ForTeam)
+	}
 }
 
 type TeamMember struct {

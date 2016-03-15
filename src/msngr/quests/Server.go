@@ -91,12 +91,13 @@ func SortSteps(steps []Step) []Step {
 	for _, step := range steps {
 		step_map_next[step.NextKey] = step
 		step_map_start[step.StartKey] = step
-
+	}
+	for _, step := range steps {
 		if _, ok := step_map_next[step.StartKey]; !ok {
 			first_step = step
 		}
 	}
-	//log.Printf("QS start key: %+v, \nstep_map_next: %+v\nstep_map_start %+v", first_step, step_map_next, step_map_start)
+	log.Printf("QS start key: %+v, \nstep_map_next: %+v\nstep_map_start %+v", first_step, step_map_next, step_map_start)
 	sorted = append(sorted, first_step)
 	for {
 		if next_step, ok := step_map_start[first_step.NextKey]; ok {
@@ -352,7 +353,6 @@ func Run(config c.QuestConfig, qs *QuestStorage, ntf *ntf.Notifier, additionalNo
 
 		all_teams, _ := qs.GetAllTeams()
 		if contacts, err := qs.GetContacts(all_teams); err == nil {
-			log.Printf("QS Contacts: %+v", contacts)
 			result_data["contacts"] = contacts
 		}
 
