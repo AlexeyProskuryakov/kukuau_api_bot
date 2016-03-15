@@ -187,3 +187,17 @@ body::-webkit-scrollbar {
 #left-bar{
     margin-left:5px;
 }
+
+.key-founded{
+    background-color: green;
+    color: white;
+}
+
+.key-not-founded{
+    background-color: lightgray;
+    color: red;
+}
+
+.key-founded a, .key-not-founded a {
+    color: inherit;
+}
