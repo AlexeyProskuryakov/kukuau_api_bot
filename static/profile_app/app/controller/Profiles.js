@@ -29,15 +29,21 @@ function createContactComponent(type, value, descrption){
     return contactInfoComponent;
 }
 
-function createProfileDynamicForm(profileModel){
+function createProfileForm(profileModel){
     var profile_window = Ext.widget('profilewindow');
     var form = profile_window.down('form');
-    var contacts_grid = form.getComponent('profile_contacts');
+
+    var store = profileModel.contacts();
+    Ext.each(store, function(x){
+        contactForm = Ext.create('contactPanel');
+        form.add(contactForm);
+    });
+
+    form.loadRecord(profileModel);
+
     var image = Ext.getCmp("profile_image");
     image.setSrc(profileModel.get("image_url"));
-    var store = profileModel.contacts();
-    contacts_grid.reconfigure(store);
-    form.loadRecord(profileModel);
+
     return profile_window;
 }
 
@@ -177,7 +183,8 @@ Ext.define('Console.controller.Profiles', {
     },
 
     editProfile: function(grid, record) {
-        view = createProfileDynamicForm(record);
+        view = createProfile
+Form(record);
         view.show();
     },
 
