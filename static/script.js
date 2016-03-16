@@ -1,4 +1,7 @@
-document.getElementById( 'chat-end' ).scrollIntoView(false);
+var chat_end = document.getElementById( 'chat-end' );
+if (chat_end != null){
+    chat_end.scrollIntoView(false);
+}
 
 var messages_updated = Math.round( Date.now() / 1000 );
 var contacts_updated = Math.round( Date.now() / 1000 );
@@ -95,6 +98,27 @@ function update_contacts(){
     return true;
 }
 
+function update_key_states(team_name){
+    if (team_name != undefined || team_name != ""){
+        $.ajax({
+                type:"POST",
+                url:            "/founded_keys",
+                contentType:    'application/json',
+                data:           JSON.stringify({team:team_name}),
+                dataType:       'json',
+                success:        function(x){
+                    x.keys.forEach(function(k){
+                        key = $("[key-id="+k.SID+"]");
+                        key.removeClass("key-not-found");
+                        key.addClass("key-found");
+                    });
+
+                }
+        });
+    }
+
+}
+
 $("#chat-form-message").keydown(function(e){
     if (e.ctrlKey && e.keyCode == 13) {
         $("#chat-form").submit();
@@ -105,6 +129,7 @@ setInterval(function(){
 
     update_messages();
     update_contacts();
+    update_key_states($("#team-name").text());
     return true;
 }, 5000);
 
@@ -126,25 +151,47 @@ function delete_all(){
     });
 }
 
-function send_messages_from_klichat(){
-    var to_winner = $("#to-winner").val(),
-        to_not_winner = $("#to-not-winner").val(),
-        winners = [],
+function send_messages_to_winners(){
+    var winners = [],
         winners_chbx = $(".winner:checked").each(function(x, obj){
             winners.push(obj.id);
-        });
-    console.log("message for winner: ", to_winner, "to not winner: ", to_not_winner, "winners: ", winners);
+        }),
+        text = $("#to-winner").val();
+
     $.ajax({
         type:           "POST",
         url:            "/send_messages_at_quest_end",
-        data:           JSON.stringify({to_winner:to_winner, to_not_winner:to_not_winner, winners:winners}),
+        data:           JSON.stringify({teams:winners, text:text, exclude:false}),
         dataType:       'json',
         success:        function(x){
                     if (x.ok == true) {
                         console.log(x);
-                        text = "<div><p class='bg-success'>Сообщения поставлены в очередь на отправление.</p></div>"
+                        text = "<div><p class='bg-success'>Сообщения для выбранных комманд поставлены в очередь на отправление.</p></div>"
                         el = Mustache.render(text, x);
-                        $("#send-result").prepend(el);
+                        $("#send-message-result").prepend(el);
+                    }
+        }
+    });
+}
+
+function send_messages_to_losers(){
+    var winners = [],
+        winners_chbx = $(".winner:checked").each(function(x, obj){
+            winners.push(obj.id);
+        }),
+        text = $("#to-not-winner").val();
+
+    $.ajax({
+        type:           "POST",
+        url:            "/send_messages_at_quest_end",
+        data:           JSON.stringify({teams:winners, text:text, exclude:true}),
+        dataType:       'json',
+        success:        function(x){
+                    if (x.ok == true) {
+                        console.log(x);
+                        text = "<div><p class='bg-success'>Сообщения для комманд не входящих в выбранные поставлены в очередь на отправление.</p></div>"
+                        el = Mustache.render(text, x);
+                        $("#send-message-result").prepend(el);
                     }
         }
     });

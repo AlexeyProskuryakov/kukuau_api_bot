@@ -78,7 +78,7 @@ type MessageWrapper struct {
 	Time             time.Time `bson:"time"`
 	TimeStamp        int64 `bson:"time_stamp"`
 	NotAnswered      int `bson:"not_answered"`
-	Unread		 int `bson:"unread"`
+	Unread           int `bson:"unread"`
 	MessageID        string `bson:"message_id"`
 	MessageStatus    string `bson:"message_status"`
 	MessageCondition string `bson:"message_condition"`
@@ -621,9 +621,8 @@ func (mh *messageHandler) StoreMessage(from, to, body string, message_id string)
 	}
 	found, err := mh.GetMessageByMessageId(message_id)
 	result := MessageWrapper{From:from, To:to, Body:body, TimeStamp:time.Now().Unix(), Time:time.Now(), NotAnswered:1, Unread:1, MessageID:message_id, MessageStatus:"sended"}
-	if found == nil&&err == nil {
+	if found == nil && err == nil {
 		err := mh.Collection.Insert(&result)
-		log.Printf("DB: store message is OK! %v", result)
 		return err
 	}
 	//log.Printf("DB: sm DUPLICATE ;(")

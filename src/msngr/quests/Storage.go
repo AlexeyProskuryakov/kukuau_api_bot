@@ -28,7 +28,7 @@ type Message struct {
 type Step struct {
 	ID          bson.ObjectId `bson:"_id,omitempty"`
 	SID         string
-	Founded     bool `bson:"is_found"`
+	IsFound     bool `bson:"is_found"`
 	FoundedBy   string `bson:"found_by"`
 	StartKey    string `bson:"start_key"`
 	NextKey     string `bson:"next_key"`
@@ -37,7 +37,11 @@ type Step struct {
 }
 
 func (s Step) String() string {
-	return fmt.Sprintf("[%v] %v > %v for [%v] found by [%v] (%v) \n", s.SID, s.StartKey, s.NextKey, s.ForTeam, s.FoundedBy, s.Description)
+	if s.IsFound {
+		return fmt.Sprintf("[%v] %v > %v for [%v] found by [%v] \n", s.SID, s.StartKey, s.NextKey, s.ForTeam, s.FoundedBy)
+	}        else {
+		return fmt.Sprintf("[%v] %v > %v for [%v] \n", s.SID, s.StartKey, s.NextKey, s.ForTeam)
+	}
 }
 
 type TeamMember struct {
@@ -238,7 +242,7 @@ func (qs *QuestStorage) AddTeam(name string) (*Team, error) {
 
 func (qs *QuestStorage) GetAllTeams() ([]Team, error) {
 	result := []Team{}
-	err := qs.Teams.Find(bson.M{}).All(&result)
+	err := qs.Teams.Find(bson.M{}).Sort("name").All(&result)
 	for i, team := range result {
 		result[i].SID = team.ID.Hex()
 	}
@@ -453,7 +457,7 @@ func (qs *QuestStorage) GetContacts(teams []Team) ([]Contact, error) {
 func (qs QuestStorage) GetContactsAfter(after int64) ([]Contact, error) {
 	resp := []Contact{}
 	err := qs.Messages.Pipe([]bson.M{
-		bson.M{"$match":bson.M{"time_stamp":bson.M{"$gt":after}, "from":bson.M{"$ne":ME}, "to":bson.M{"$ne":ALL}, "is_key":false}},
+		bson.M{"$match":bson.M{"time_stamp":bson.M{"$gt":after}, "from":bson.M{"$ne":ME}, "to":bson.M{"$ne":ALL}}},
 		bson.M{"$group": bson.M{"_id":"$from", "unread":bson.M{"$sum":"$unread"}, "name":bson.M{"$first":"$from"}}}}).All(&resp)
 	if err != nil {
 		return resp, err

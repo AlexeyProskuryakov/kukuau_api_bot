@@ -91,12 +91,13 @@ func SortSteps(steps []Step) []Step {
 	for _, step := range steps {
 		step_map_next[step.NextKey] = step
 		step_map_start[step.StartKey] = step
-
+	}
+	for _, step := range steps {
 		if _, ok := step_map_next[step.StartKey]; !ok {
 			first_step = step
 		}
 	}
-	//log.Printf("QS start key: %+v, \nstep_map_next: %+v\nstep_map_start %+v", first_step, step_map_next, step_map_start)
+	log.Printf("QS start key: %+v, \nstep_map_next: %+v\nstep_map_start %+v", first_step, step_map_next, step_map_start)
 	sorted = append(sorted, first_step)
 	for {
 		if next_step, ok := step_map_start[first_step.NextKey]; ok {
@@ -352,7 +353,6 @@ func Run(config c.QuestConfig, qs *QuestStorage, ntf *ntf.Notifier, additionalNo
 
 		all_teams, _ := qs.GetAllTeams()
 		if contacts, err := qs.GetContacts(all_teams); err == nil {
-			log.Printf("QS Contacts: %+v", contacts)
 			result_data["contacts"] = contacts
 		}
 
@@ -515,9 +515,9 @@ func Run(config c.QuestConfig, qs *QuestStorage, ntf *ntf.Notifier, additionalNo
 
 	r.Post("/send_messages_at_quest_end", func(render render.Render, req *http.Request) {
 		type Messages struct {
-			ToWinner    string `json:"to_winner"`
-			ToNotWinner string `json:"to_not_winner"`
-			Winners     []string `json:"winners"`
+			Text    string `json:"text"`
+			Teams   []string `json:"teams"`
+			Exclude bool `json:"exclude"`
 		}
 		messages := Messages{}
 		data, err := ioutil.ReadAll(req.Body)
@@ -534,24 +534,33 @@ func Run(config c.QuestConfig, qs *QuestStorage, ntf *ntf.Notifier, additionalNo
 		}
 		log.Printf("QS I see this data for send messages at quest end:\n %+v", messages)
 
-		teams, err := qs.GetAllTeams()
-		if err != nil {
-			log.Printf("QS QE E: errror at getting teams %v", err)
-			render.JSON(500, map[string]interface{}{"error":err})
-			return
-		}
-		for _, team := range teams {
-			members, err := qs.GetMembersOfTeam(team.Name)
+		if messages.Exclude {
+			teams, err := qs.GetAllTeams()
 			if err != nil {
-				log.Printf("QS QE: error at getting members for teams [%v]: %v", team.Name, err)
+				log.Printf("QS QE E: errror at getting teams %v", err)
+				render.JSON(500, map[string]interface{}{"error":err})
+				return
 			}
-			if utils.InS(team.Name, messages.Winners) {
-				SendMessagesToPeoples(members, additionalNotifier, messages.ToWinner)
-			}else {
-				SendMessagesToPeoples(members, additionalNotifier, messages.ToNotWinner)
+			for _, team := range teams {
+				if !utils.InS(team.Name, messages.Teams) {
+					log.Printf("QS Will send message to team: %v", team.Name)
+					members, _ := qs.GetMembersOfTeam(team.Name)
+					SendMessagesToPeoples(members, additionalNotifier, messages.Text)
+				}
 			}
+			render.JSON(200, map[string]interface{}{"ok":true})
+		} else {
+			for _, team_name := range messages.Teams {
+				members, err := qs.GetMembersOfTeam(team_name)
+				if err != nil {
+					log.Printf("QS QE E: errror at getting team members %v", err)
+					continue
+				}
+				log.Printf("QS Will send message to team: %v", team_name)
+				SendMessagesToPeoples(members, additionalNotifier, messages.Text)
+			}
+			render.JSON(200, map[string]interface{}{"ok":true})
 		}
-		render.JSON(200, map[string]interface{}{"ok":true})
 	})
 
 	r.Post("/delete_all", func(render render.Render, req *http.Request) {
@@ -599,6 +608,16 @@ func Run(config c.QuestConfig, qs *QuestStorage, ntf *ntf.Notifier, additionalNo
 		})
 	})
 
+	r.Post("/founded_keys", func(ren render.Render, req *http.Request) {
+		type T struct {
+			Name string `json:"team"`
+		}
+		t := T{}
+		body, _ := ioutil.ReadAll(req.Body)
+		json.Unmarshal(body, &t)
+		steps, _ := qs.GetSteps(bson.M{"for_team":t.Name, "is_found":true})
+		ren.JSON(200, map[string]interface{}{"keys":steps})
+	})
 	log.Printf("Will start web server for quest at: %v", config.WebPort)
 
 	//m.MapTo(r, (*martini.Routes)(nil))
