@@ -51,6 +51,7 @@ type UserWrapper struct {
 	States     map[string]string `bson:"states"`
 	UserId     string `bson:"user_id"`
 	UserName   string `bson:"user_name"`
+	ShowedName string `bson:"showed_name"`
 	Password   string `bson:"password"`
 	Phone      string `bson:"phone"`
 	Email      string `bson:"email"`
@@ -77,6 +78,7 @@ type MessageWrapper struct {
 	To               string `bson:"to"`
 	Time             time.Time `bson:"time"`
 	TimeStamp        int64 `bson:"time_stamp"`
+	TimeFormatted    string `bson:",omitempty" json:"time"`
 	NotAnswered      int `bson:"not_answered"`
 	Unread           int `bson:"unread"`
 	MessageID        string `bson:"message_id"`
@@ -614,19 +616,28 @@ func (eh *errorHandler) GetBy(req bson.M) (*[]ErrorWrapper, error) {
 }
 
 //MESSAGES
-func (mh *messageHandler) StoreMessage(from, to, body string, message_id string) error {
-	//log.Printf("DB: sm :%v -> %v [%v] {%v}", from, to, body, message_id)
+func (mh *messageHandler) StoreMessage(from, to, body, message_id string) (*MessageWrapper, error) {
 	if !mh.parent.Check() {
-		return errors.New("БД не доступна")
+		return nil, errors.New("БД не доступна")
 	}
 	found, err := mh.GetMessageByMessageId(message_id)
-	result := MessageWrapper{From:from, To:to, Body:body, TimeStamp:time.Now().Unix(), Time:time.Now(), NotAnswered:1, Unread:1, MessageID:message_id, MessageStatus:"sended"}
+	result := MessageWrapper{
+		From:from,
+		To:to,
+		Body:body,
+		TimeStamp:time.Now().Unix(),
+		Time:time.Now(),
+		NotAnswered:1,
+		Unread:1,
+		MessageID:message_id,
+		MessageStatus:"sended",
+		TimeFormatted: time.Now().Format(time.Stamp),
+	}
 	if found == nil && err == nil {
 		err := mh.Collection.Insert(&result)
-		return err
+		return &result, err
 	}
-	//log.Printf("DB: sm DUPLICATE ;(")
-	return errors.New(fmt.Sprintf("I have duplicate!%+v", found))
+	return nil, errors.New(fmt.Sprintf("I have duplicate!%+v", found))
 }
 
 func (mh *messageHandler) SetMessagesAnswered(from, by string) error {
@@ -657,6 +668,9 @@ func (mh *messageHandler) GetMessages(query bson.M) ([]MessageWrapper, error) {
 		return result, errors.New("БД не доступна")
 	}
 	err := mh.Collection.Find(query).Sort("time_stamp").All(&result)
+	for i, message := range result {
+		result[i].TimeFormatted = message.Time.Format(time.Stamp)
+	}
 	return result, err
 }
 
@@ -668,6 +682,7 @@ func (mh *messageHandler) GetMessageByMessageId(message_id string) (*MessageWrap
 	}else if err != nil {
 		return nil, err
 	}
+	result.TimeFormatted = result.Time.Format(time.Stamp)
 	return &result, nil
 }
 func (mh *messageHandler) UpdateMessageStatus(message_id, status, condition string) error {

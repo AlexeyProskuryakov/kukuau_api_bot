@@ -563,7 +563,7 @@ func Run(config c.QuestConfig, qs *QuestStorage, ntf *ntf.Notifier, additionalNo
 		}
 	})
 
-	r.Post("/delete_all", func(render render.Render, req *http.Request) {
+	r.Post("/delete_all_keys", func(render render.Render, req *http.Request) {
 		//1. Steps or keys:
 		si, _ := qs.Steps.RemoveAll(bson.M{})
 		//2 Peoples

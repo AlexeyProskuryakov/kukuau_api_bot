@@ -1,132 +1,89 @@
 {{template "content_chat" .}}
 {{define "content_chat" }}
-<div id="left-bar" class="col-md-2">
-    {{$with := .with}}
-    {{$all := "all"}}
-    {{$all_tm := "all_hash_writers"}}
-    <div class="row">
-        <a class="bg-danger a-contact
-        {{if eq_s $with $all}}
-        c-active
-        {{end}}
-        " href="/chat?with={{$all}}">Написать всем</a>
-    </div>
-      <div class="row">
-        <a class="bg-warning a-contact
-        {{if eq_s $with $all_tm}}
-        c-active
-        {{end}}
-        " href="/chat?with={{$all_tm}}">Написать всем кто вводил маркеры</a>
-    </div>
-    <hr>
-    <div class="row" id="contacts">
-        {{range $contact := .contacts}}
-        <div class="contact" id="{{$contact.ID}}">
-            <a id="a-{{$contact.ID}}" class="bg-success a-contact
-            {{if eq_s $with $contact.ID}}
-            c-active
-            {{end}}
-            " href="/chat?with={{$contact.ID}}">
-                {{$contact.Name}}
-            <span class="small" id="s-{{$contact.ID}}">
-                {{if $contact.NewMessagesCount}}
-                ( {{$contact.NewMessagesCount}} )
-                {{end}}
-            </span>
-            </a>
+
+<div class="container-fluid">
+    <button type="button" class="navbar-toggle collapsed" data-toggle="collapse" data-target="#navbar"
+            aria-expanded="false" aria-controls="navbar">
+        <span class="sr-only">Toggle navigation</span>
+        <span class="icon-bar"></span>
+        <span class="icon-bar"></span>
+        <span class="icon-bar"></span>
+    </button>
+
+    <div id="left-bar" class="col-md-2 col-xs-0">
+        {{$with := .with}}
+        {{$all := "all"}}
+        {{$all_tm := "all_hash_writers"}}
+        <div class="row">
+            <div class="col-md-10">
+                <a class="bg-danger a-contact {{if eq_s $with $all}} c-active {{end}}"
+                   href="/chat?with={{$all}}">
+                    Написать всем
+                </a>
+            </div>
+
         </div>
-        {{end}}
-    </div>
-
-
-</div>
-<div id="chat-window" class="col-md-7">
-    <div class="row">
-        <div class="message-wrap col-lg-8">
-            <div class="msg-wrap" id="chat-wrapper">
-                {{range $message := .messages}}
-                    <hr>
-                    {{if eq_s $message.From "me" }}
-                        <div class="media msg">
-                            <div class="media-body">
-                                <small class="pull-left time"><i class="fa fa-clock-o"></i>{{$message.Time}}</small>
-                                <h5 class="media-heading pull-right">{{$message.From}}</h5>
-                                <br>
-                                <small class="col-lg-10 pull-right bg-info">{{$message.Body}}</small>
-                            </div>
-                        </div>
-                    {{else}}
-                        <div class="media msg">
-                            <div class="media-body">
-                                <small class="pull-right time"><i class="fa fa-clock-o"></i>{{$message.Time}}</small>
-                                <h5 class="media-heading">{{$message.From}}</h5>
-                                <small class="col-lg-10 bg-success">{{$message.Body}}</small>
-                            </div>
-                        </div>
+        <br>
+        <div class="row" id="contacts-wrapper">
+            <div class="message-wrap">
+                <div class="msg-wrap" id="man-contacts">
+                    {{range $contact := .contacts}}
+                    <div class="contact" id="{{$contact.ID}}">
+                        <a id="a-{{$contact.ID}}" class="a-contact {{if eq_s $with $contact.ID}} c-active {{end}}"
+                           href="/chat?with={{$contact.ID}}">
+                            {{$contact.Name}}
+                            <small id="s-{{$contact.ID}}">
+                                {{if $contact.NewMessagesCount}}
+                                ({{$contact.NewMessagesCount}})
+                                {{end}}
+                            </small>
+                        </a>
+                    </div>
                     {{end}}
-                {{end}}
-                <div id="chat-end"></div>
-
+                </div>
             </div>
         </div>
     </div>
-    <br>
-    <div class="row">
-        <div class="chat-input">
-            <form id="chat-form" method="post" action="/send_message">
-                <div class="form-group form-inline">
-                    <label class="control-label">Message:</label>
-                    <textarea class="form-control" placeholder="..." name="chat-form-message" id="chat-form-message"
-                              rows="2" autofocus></textarea>
+    <div id="chat-window" class="col-md-9 col-xs-12">
+        <div class="row">
+            <div class="message-wrap col-lg-8">
+                <div class="msg-wrap" id="chat-wrapper">
+                    {{range $message := .messages}}
+                    <div class="msg">
+                        <h4 class="media-heading">{{$message.From}}
+                            <small class="time">{{stamp_date $message.Time}}</small>
+                        </h4>
+                        <div class="col-lg-11">{{$message.Body}}</div>
+                    </div>
+                    <hr>
+                    {{end}}
+                    <div id="chat-end"></div>
+                </div>
+            </div>
+        </div>
+        <br>
+        <div class="row">
+            <div class="chat-input">
+                <form id="chat-form" method="post" action="/send_message">
+                    <div class="form-group form-inline">
+                        <label class="control-label"></label>
+                    <textarea class="form-control form-inline" placeholder="..." name="chat-form-message"
+                              id="chat-form-message"
+                              rows="4" autofocus></textarea>
 
-                    <button type="submit" class="btn btn-default">
-                        <span class="glyphicon glyphicon-send" aria-hidden="true"></span>
-                    </button>
-                </div>
-                <div class="form-group">
-                    <input type="hidden" name="from" value="me">
-                    <input type="hidden" name="to" value="{{$with}}" id="with">
-                </div>
-            </form>
+                        <button type="submit" class="btn btn-default btn-lg">
+                            <span class="glyphicon glyphicon-send" aria-hidden="true"></span>
+                        </button>
+                    </div>
+                    <div class="form-group">
+                        <input type="hidden" name="from" id="from" value="me">
+                        <input type="hidden" name="to" value="{{$with}}" id="with">
+                    </div>
+                </form>
+            </div>
         </div>
     </div>
 </div>
-
-<div id="right-bar" class="col-md-2">
-    <h4>
-        <span class="bg-warning">{{.collocutor.Name}}</span>
-        <span class="bg-success small">{{.collocutor.Phone}}</span>
-        <span class="bg-info small">{{.collocutor.Email}}</span>
-    </h4>
-    {{if .collocutor.InfoPresent}}
-        {{if eq .collocutor.Info.CountOrdersAll 0 }}
-            <h5>В такси заказов у этого пользователя НЕТ</h5>
-        {{else}}
-            <h4>Количества заказов в службах такси: </h4>
-            {{range $order:= .collocutor.Info.CountOrdersByProvider}}
-            <h5>
-                В <span class="bg-success"> {{$order.SourceName}}:</span>
-                <span class="bg-info"> {{$order.Count}}</span>
-            </h5>
-            <hr>
-            {{end}}
-        <h5>Всего заказов в такси:
-            <span class="bg-danger">{{.collocutor.Info.CountOrdersAll}}</span>
-        </h5>
-
-        {{end}}
-    {{end}}
-
-<div class="row">
-            {{if .messages}}
-            <a href="/delete_chat/{{$with}}" class="btn btn-sm btn-danger">
-                Удалить переписку
-            </a>
-            <span class="bg-success bg-small" id="removed" style="display: none"></span>
-            {{end}}
-
-</div>
-</div>
-<script src="script.js"></script>
+<script src="chat_script.js"></script>
 
 {{end}}

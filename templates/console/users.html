@@ -2,7 +2,7 @@
     <div class="row">
         <div class="col-md-6 col-md-offset-3">
             <h2> Добавьте нового пользователя: </h2>
-            <form action="/add_user" method="post" id="manage-user-form">
+            <form action="/users/add" method="post" id="manage-user-form">
                 <div class="form-group">
                     <label for="user-id"> Идентификатор: </label>
                     <input type="text" class="form-control" id="user-id" name="user-id">
@@ -79,7 +79,7 @@
                                 </div>
                                 <div class="modal-body">
 
-                                    <form action="/update_user/{{$user.UserId}}" method="post">
+                                    <form action="/users/update/{{$user.UserId}}" method="post">
                                         <div class="form-group">
                                             <label for="user-name-{{$user.UserId}}">Имя </label>
                                             <input type="text" class="form-control" id="user-name-{{$user.UserId}}"
@@ -115,7 +115,7 @@
 
                 </td>
                 <td class="col-md-1">
-                    <form action="/delete_user/{{$user.UserId}}" method="post">
+                    <form action="/users/delete/{{$user.UserId}}" method="post">
                         <div class="form-group">
                             <button type="submit" class="btn btn-danger">Удалить</button>
                         </div>

@@ -29,19 +29,19 @@
 .message-wrap
 {
     box-shadow: 0 0 3px #ddd;
-    padding:0;
     width:auto;
-
+    max-width: 100%;
+    min-width: 95%;
 }
 .msg
 {
     padding:5px;
-    /*border-bottom:1px solid #ddd;*/
     margin:0;
 }
 .msg-wrap {
     padding:10px;
-    max-height: 600px;
+    max-height: 75%;
+    min-height: 75%;
     overflow: auto;
 }
 
@@ -173,7 +173,7 @@ body::-webkit-scrollbar {
 .a-contact:hover{
     color: #FFF;
     text-decoration:none;
-    background-color: #000;!important
+    background-color: #555;!important
 }
 .c-active{
     background-color: #000;
