@@ -39,7 +39,7 @@
     margin:0;
 }
 .msg-wrap {
-    padding:10px;
+
     max-height: 75%;
     min-height: 75%;
     overflow: auto;
@@ -166,7 +166,7 @@ body::-webkit-scrollbar {
 }
 
 .a-contact{
-    ont-weight:500;
+    font-weight:700;
     font-size:20px;
 }
 
@@ -184,9 +184,6 @@ body::-webkit-scrollbar {
     width:50%;
     height:50%;
 }
-#left-bar{
-    margin-left:5px;
-}
 
 .key-found{
     background-color: green;
@@ -198,4 +195,18 @@ body::-webkit-scrollbar {
 
 .key-found a, .key-not-found a {
     color: white;
+}
+
+#left-bar{
+    position:relative; /*обязательное свойство*/
+	overflow:visible; /*обязательное свойство*/
+}
+
+#contacts-wrapper{
+    padding-left: 7px;
+
+}
+
+#chat-window{
+   position:relative;
 }

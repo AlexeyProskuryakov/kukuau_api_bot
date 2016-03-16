@@ -166,3 +166,58 @@ setInterval(function(){
     return true;
 }, 5000);
 
+
+if($(window).width() < 600){
+    var cw = $("#contacts-wrapper");
+    cw.attr("closed", "true");
+
+    cw.css(
+    {'margin-left':'-200px',
+    'position':'relative',
+	'top':0,
+	'left':0,
+	'z-index':2000,
+	'overflow':'visible',
+	'background-color':'white'}
+    )
+    cw.prepend("<p class='open'><span class='glyphicon glyphicon-chevron-right'></span></p>")
+
+    $("#contacts-wrapper p.open").css({
+        'position':'absolute',
+		'top':'10px',
+		'left':'200px'
+    })
+
+
+    $("p.open").click(function(x){
+        var cw = $("#contacts-wrapper"),
+            closed = cw.attr("closed");
+        console.log(x, cw, closed);
+
+        if (closed == "true"){
+            cw.animate({left:"200px"},400);
+            cw.attr("closed", "false");
+            $("#contacts-wrapper p.open span").removeClass("glyphicon-chevron-right");
+            $("#contacts-wrapper p.open span").addClass("glyphicon-chevron-left");
+          }else{
+            cw.animate({left:'0px'},300);
+            cw.attr("closed", "true");
+            $("#contacts-wrapper p.open span").removeClass("glyphicon-chevron-left");
+            $("#contacts-wrapper p.open span").addClass("glyphicon-chevron-right");
+            }
+    });
+
+    $("a.a-contact").click(function(e){
+        e.preventDefault();
+        console.log(e);
+
+
+        cw.animate({left:'0px'},300, function(x){
+            cw.attr("closed", "true");
+            $("#contacts-wrapper p.open span").removeClass("glyphicon-chevron-left");
+            $("#contacts-wrapper p.open span").addClass("glyphicon-chevron-right");
+
+            window.location.href = e.toElement.href;
+        });
+    })
+}
