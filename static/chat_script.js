@@ -1,4 +1,36 @@
+var storage = localStorage;
+
 var chat_message_container = $("#chat-form-message");
+
+function getNewMessagesCount(){
+    var result = 0;
+    $(".new-message-counter").each(function(x, el){
+        result+=parseInt(el.attributes.getNamedItem("count").value);
+    });
+    return result;
+}
+
+var countNewMessages = getNewMessagesCount();
+
+function playNotification(for_element){
+    console.log("will play notification... ",($("#mute:checked").length == 0), (countNewMessages < getNewMessagesCount()), "before messages:", countNewMessages, "now messages", getNewMessagesCount());
+    if (($("#mute:checked").length == 0) && (countNewMessages < getNewMessagesCount())){
+        var au = document.getElementById("audio-notification");
+        au.play();
+    }
+}
+
+if (storage.getItem("k_audio_muted") == 'true'){
+    $("#mute").prop("checked", true);
+}
+
+$("#mute").change(function() {
+    if(this.checked) {
+        localStorage.setItem("k_audio_muted", true);
+    } else {
+        localStorage.setItem("k_audio_muted", false);
+    }
+});
 
 chat_message_container.focus();
 chat_message_container.keydown(function(e){
@@ -7,10 +39,8 @@ chat_message_container.keydown(function(e){
     }
 });
 chat_message_container.focus(function(e){
-
         var with_id = $("#with").val();
         set_messages_read(with_id);
-
 })
 
 
@@ -22,7 +52,6 @@ function set_messages_read(from){
         data:           JSON.stringify(data),
         dataType:       'json',
         success:        function(x){
-            console.log(x);
             if (x.ok==true){
                 $("#s-"+from).text("");
             }
@@ -57,7 +86,6 @@ function update_messages(){
         dataType:       'json',
         success:        function(x){
             x.messages.forEach(function(message){
-                console.log(message)
                 paste_message(message);
             });
             messages_updated = x.next_;
@@ -70,25 +98,25 @@ function update_messages(){
 
 function set_contact_new_message(contact_id, count){
     var c_w = $("#s-"+contact_id);
-    c_w.text("("+count+")");
+    if (parseInt(c_w.attr("count")) != count){
+        c_w.text("("+count+")");
+        c_w.attr("count", count);
+        playNotification();
+    }
 }
 
 function paste_contact(contact){
-    console.log("paste contact",contact);
     if (contact.NewMessagesCount != 0){
         if (contact.IsTeam == true) {
-            var c_text = "<div class='contact' id='{{ID}}'><a class='bg-success a-contact' href='/chat?with={{ID}}'>  Команда {{Name}} <span class='small' id='s-{{ID}}'>({{NewMessagesCount}})<span></a></div>";
+            var c_text = "<div class='contact' id='{{ID}}'><a class='bg-success a-contact' href='/chat?with={{ID}}'>  Команда {{Name}} <span class='small' id='s-{{ID}}' class='new-message-counter' count='{{NewMessagesCount}}'>({{NewMessagesCount}})<span></a></div>";
             var result = Mustache.render(c_text, contact);
             $("#team-contacts").prepend(result);
-        } else if (contact.IsPassersby == true){
-            var c_text = "<div class='contact' id='{{ID}}'><a class='bg-success a-contact' href='/chat?with={{ID}}'> {{Name}} <span class='small' id='s-{{ID}}'>({{NewMessagesCount}})<span></a></div>";
-            var result = Mustache.render(c_text, contact);
-            $("#man-contacts").prepend(result);
         } else {
-            var c_text = "<div class='contact' id='{{ID}}'><a class='bg-success a-contact' href='/chat?with={{ID}}'> {{Name}} <span class='small' id='s-{{ID}}'>({{NewMessagesCount}})<span></a></div>";
+            var c_text = "<div class='contact' id='{{ID}}'><a class='bg-success a-contact' href='/chat?with={{ID}}'> {{Name}} <span class='small' id='s-{{ID}}' class='new-message-counter' count='{{NewMessagesCount}}'>({{NewMessagesCount}})<span></a></div>";
             var result = Mustache.render(c_text, contact);
             $("#man-contacts").prepend(result);
         }
+        playNotification();
     }
 }
 
@@ -221,20 +249,6 @@ if($(window).width() < 600){
         });
     })
 }
-
-//$('a.a-contact').dblclick(function(e){
-////    <a id="a-{{$contact.ID}}" class="a-contact {{if eq_s $with $contact.ID}} c-active {{end}}"
-////                       href="/chat?with={{$contact.ID}}">
-////                        {{$contact.Name}}
-////                        <small id="s-{{$contact.ID}}">
-////                            {{if $contact.NewMessagesCount}}
-////                            ({{$contact.NewMessagesCount}})
-////                            {{end}}
-////                        </small>
-////                    </a>
-//
-//
-//})
 
 var DELAY = 700, clicks = 0, timer = null;
  $("a.a-contact").on("click", function(e){

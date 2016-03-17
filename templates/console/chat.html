@@ -21,7 +21,7 @@
                     <a id="a-{{$contact.ID}}" class="a-contact {{if eq_s $with $contact.ID}} c-active {{end}}"
                        href="/chat?with={{$contact.ID}}">
                         {{$contact.Name}}
-                        <small id="s-{{$contact.ID}}">
+                        <small id="s-{{$contact.ID}}" class="new-message-counter" count="{{$contact.NewMessagesCount}}">
                             {{if $contact.NewMessagesCount}}
                             ({{$contact.NewMessagesCount}})
                             {{end}}
@@ -74,11 +74,17 @@
         </div>
     </div>
 </div>
-
-<audio>
-   <source src="elvis.mp3" type='audio/mpeg; codecs="mp3"'>
-   <source src="elvis.oga" type='audio/ogg; codecs="vorbis"'>
-   <!-- здесь - добавить запасные варианты тегов -->
+<form class="form-inline">
+    <div class="checkbox col-md-3">
+        <label>
+            <input id="mute" type="checkbox"> Выключить звук
+        </label>
+    </div>
+</form>
+<audio id="audio-notification">
+    <source src="audio1.mp3" type='audio/mpeg; codecs="mp3"'>
+    <source src="audio2.wav" type='audio/wav;'>
+    <!-- здесь - добавить запасные варианты тегов -->
 </audio>
 
 <script src="chat_script.js"></script>
