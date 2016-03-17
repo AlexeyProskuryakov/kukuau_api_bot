@@ -161,10 +161,6 @@ body::-webkit-scrollbar {
     width:85%;!important
 }
 
-#right-bar{
-    margin: 20px;
-}
-
 .a-contact{
     font-weight:700;
     font-size:20px;
@@ -178,11 +174,6 @@ body::-webkit-scrollbar {
 .c-active{
     background-color: #000;
     color: #FFF;
-}
-.cat-img{
-    overflow:auto;
-    width:50%;
-    height:50%;
 }
 
 .key-found{
@@ -204,7 +195,9 @@ body::-webkit-scrollbar {
 
 #contacts-wrapper{
     padding-left: 7px;
-
+    max-height: 90%;
+    min-height: 90%;
+    overflow:auto;
 }
 
 #chat-window{
