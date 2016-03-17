@@ -96,12 +96,16 @@ func GetContacts(db *d.MainDb, after int64) ([]usrs.Contact, error) {
 	}
 	result := []usrs.Contact{}
 	for i, cnt := range resp {
-		if cnt.Name == ME{
+		if cnt.Name == ME {
 			continue
 		}
 		user, _ := db.Users.GetUserById(cnt.ID)
 		if user != nil {
-			resp[i].Name = user.UserName
+			if user.ShowedName != "" {
+				resp[i].Name = user.ShowedName
+			} else {
+				resp[i].Name = user.UserName
+			}
 			resp[i].Phone = user.Phone
 			result = append(result, resp[i])
 		}
@@ -404,6 +408,7 @@ func Run(addr string, notifier *ntf.Notifier, db *d.MainDb, cs c.ConfigStorage, 
 			}
 			render.JSON(200, map[string]interface{}{"ok":true, "message":result})
 		})
+
 		r.Post("/messages_read", func(render render.Render, req *http.Request) {
 			type Readed struct {
 				From string `json:"from"`
@@ -429,6 +434,7 @@ func Run(addr string, notifier *ntf.Notifier, db *d.MainDb, cs c.ConfigStorage, 
 			}
 			render.JSON(200, map[string]interface{}{"ok":true})
 		})
+
 		r.Post("/messages", func(render render.Render, req *http.Request) {
 			type NewMessagesReq struct {
 				For   string `json:"m_for"`
@@ -471,6 +477,7 @@ func Run(addr string, notifier *ntf.Notifier, db *d.MainDb, cs c.ConfigStorage, 
 			}
 			render.JSON(200, map[string]interface{}{"messages":result, "next_":time.Now().Unix()})
 		})
+
 		r.Post("/contacts", func(render render.Render, req *http.Request) {
 			type NewContactsReq struct {
 				After int64 `json:"after"`
@@ -497,7 +504,7 @@ func Run(addr string, notifier *ntf.Notifier, db *d.MainDb, cs c.ConfigStorage, 
 
 			for _, contact := range contacts {
 				if u.InS(contact.ID, cr.Exist) {
-					if contact.NewMessagesCount > 0{
+					if contact.NewMessagesCount > 0 {
 						old_contacts = append(old_contacts, contact)
 					}
 				}else {
@@ -516,6 +523,30 @@ func Run(addr string, notifier *ntf.Notifier, db *d.MainDb, cs c.ConfigStorage, 
 			between := params["between"]
 			db.Messages.Collection.RemoveAll(bson.M{"$or":[]bson.M{bson.M{"from":between}, bson.M{"to":between}}})
 			render.Redirect(fmt.Sprintf("/chat?with=%v", between))
+		})
+
+		r.Post("/contacts/change", func(render render.Render, req *http.Request) {
+			type NewContactName struct {
+				Id      string `json:"id"`
+				NewName string `json:"new_name"`
+			}
+			ncn := NewContactName{}
+			request_body, err := ioutil.ReadAll(req.Body)
+			if err != nil {
+				render.JSON(500, map[string]interface{}{"ok":false, "detail":"can not read request body"})
+				return
+			}
+			err = json.Unmarshal(request_body, &ncn)
+			if err != nil {
+				render.JSON(500, map[string]interface{}{"ok":false, "detail":fmt.Sprintf("can not unmarshal request body %v \n %s", err, request_body)})
+				return
+			}
+			err = db.Users.SetUserShowedName(ncn.Id, ncn.NewName)
+			if err != nil {
+				render.JSON(500, map[string]interface{}{"ok":false, "detail":err})
+				return
+			}
+			render.JSON(200, map[string]interface{}{"ok":true})
 		})
 	})
 

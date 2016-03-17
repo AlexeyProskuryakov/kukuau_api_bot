@@ -8,8 +8,6 @@
             {{$all := "all"}}
             {{$all_tm := "all_hash_writers"}}
             <div id="contacts-wrapper" closed="true">
-
-
                 <p>
                     <a class="bg-danger a-contact {{if eq_s $with $all}} c-active {{end}}"
                        href="/chat?with={{$all}}">
@@ -28,6 +26,7 @@
                             {{end}}
                         </small>
                     </a>
+                    <input class="name-change" type="text" name="{{$contact.ID}}" value="{{$contact.Name}}">
                 </p>
                 {{end}}
             </div>

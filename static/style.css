@@ -210,3 +210,10 @@ body::-webkit-scrollbar {
 #chat-window{
    position:relative;
 }
+
+.name-change{
+    position:relative;
+    left:-10%;
+    width:85%;
+    display:none;
+}

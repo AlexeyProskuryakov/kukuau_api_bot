@@ -221,3 +221,76 @@ if($(window).width() < 600){
         });
     })
 }
+
+//$('a.a-contact').dblclick(function(e){
+////    <a id="a-{{$contact.ID}}" class="a-contact {{if eq_s $with $contact.ID}} c-active {{end}}"
+////                       href="/chat?with={{$contact.ID}}">
+////                        {{$contact.Name}}
+////                        <small id="s-{{$contact.ID}}">
+////                            {{if $contact.NewMessagesCount}}
+////                            ({{$contact.NewMessagesCount}})
+////                            {{end}}
+////                        </small>
+////                    </a>
+//
+//
+//})
+
+var DELAY = 700, clicks = 0, timer = null;
+ $("a.a-contact").on("click", function(e){
+        e.preventDefault();
+        clicks++;  //count clicks
+        var a = this;
+        if(clicks === 1) {
+            timer = setTimeout(function() {
+                console.log("one click");
+                clicks = 0;             //after action performed, reset counter
+                window.location.href = a.href;
+            }, DELAY);
+
+        } else {
+            clearTimeout(timer);    //prevent single-click action
+            console.log("dbl click");
+
+            var    id = this.parentNode.attributes.getNamedItem("id").value,
+                input = $("#"+id+" input.name-change"),
+                name = a.text.trim();
+
+
+            $(a).hide();
+            input.show();
+            console.log(a,input, name, id);
+
+            clicks = 0;             //after action performed, reset counter
+        }
+
+}).on("dblclick", function(e){
+        e.preventDefault();  //cancel system double-click event
+});
+
+
+$("input.name-change").keydown(function(e){
+    if (e.keyCode == 13){
+        //send to change name
+        var a = $(e.target).parent().find("a"),
+            id = $(e.target).parent().attr("id"),
+            new_name = $(e.target).val();
+
+        $.ajax({
+            type:           "POST",
+            url:            "/chat/contacts/change",
+            data:           JSON.stringify({'id':id, 'new_name':new_name}),
+            dataType:       'json',
+            success:        function(x){
+                            console.log(x);
+                            if (x.ok == true) {
+                                a.text(new_name);
+                                $(e.target).hide();
+                                a.show();
+                            } else {
+                                console.log(x);
+                            }
+            }
+        });
+    }
+})

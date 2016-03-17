@@ -558,6 +558,19 @@ func (uh *userHandler) GetUserById(user_id string) (*UserWrapper, error) {
 	}
 	return &result, err
 }
+
+func (uh *userHandler) SetUserShowedName(user_id, new_name string) error {
+	if !uh.parent.Check() {
+		return errors.New("БД не доступна")
+	}
+	user, _ := uh.GetUserById(user_id)
+	if user != nil {
+		err := uh.Collection.Update(bson.M{"user_id":user_id}, bson.M{"$set":bson.M{"showed_name":new_name}})
+		return err
+	}
+	return errors.New("User not found :(")
+}
+
 func (uh *userHandler) UpdateUserData(user_id, name, phone, email string) error {
 	if !uh.parent.Check() {
 		return errors.New("БД не доступна")
