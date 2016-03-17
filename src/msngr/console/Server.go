@@ -550,6 +550,9 @@ func Run(addr string, notifier *ntf.Notifier, db *d.MainDb, cs c.ConfigStorage, 
 		})
 	})
 
+	r = EnsureWorkWithKeys(r, qs)
+	r = EnsureWorkWithUsers(r, db)
+
 	m.Action(r.Handle)
 	m.RunOnAddr(addr)
 }
