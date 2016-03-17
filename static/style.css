@@ -206,7 +206,6 @@ body::-webkit-scrollbar {
 
 .name-change{
     position:relative;
-    left:-10%;
     width:85%;
     display:none;
 }
