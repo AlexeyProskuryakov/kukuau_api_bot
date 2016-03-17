@@ -86,6 +86,11 @@ type MessageWrapper struct {
 	MessageCondition string `bson:"message_condition"`
 }
 
+func NewMessageForWeb(from, to, body string) *MessageWrapper {
+	result := MessageWrapper{From:from, To:to, Body:body, TimeFormatted:time.Now().Format(time.Stamp)}
+	return &result
+}
+
 type messageHandler struct {
 	Collection *mgo.Collection
 	parent     *MainDb

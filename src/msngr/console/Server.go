@@ -383,7 +383,6 @@ func Run(addr string, notifier *ntf.Notifier, db *d.MainDb, cs c.ConfigStorage, 
 				render.JSON(500, map[string]interface{}{"error":err})
 				return
 			}
-			var result *d.MessageWrapper
 			if message.From != "" && message.To != "" && message.Body != "" {
 				if message.To == ALL {
 					peoples, _ := db.Users.GetBy(bson.M{})
@@ -399,14 +398,13 @@ func Run(addr string, notifier *ntf.Notifier, db *d.MainDb, cs c.ConfigStorage, 
 						go ntf.NotifyText(message.To, message.Body)
 					}
 				}
-				result, err = db.Messages.StoreMessage(message.From, message.To, message.Body, u.GenId())
 				if err != nil {
 					render.JSON(500, map[string]interface{}{"error":err})
 				}
 			} else {
 				render.Redirect("/chat")
 			}
-			render.JSON(200, map[string]interface{}{"ok":true, "message":result})
+			render.JSON(200, map[string]interface{}{"ok":true, "message":d.NewMessageForWeb(message.From, message.To, message.Body)})
 		})
 
 		r.Post("/messages_read", func(render render.Render, req *http.Request) {
