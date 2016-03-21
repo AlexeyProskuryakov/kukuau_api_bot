@@ -659,12 +659,12 @@ func (mh *MessageHandler) StoreMessage(from, to, body, message_id string) (*Mess
 	return nil, errors.New(fmt.Sprintf("I have duplicate!%+v", found))
 }
 
-func (mh *MessageHandler) SetMessageAnswered(sid, by string) error {
+func (mh *MessageHandler) SetMessagesAnswered(from, by string) error {
 	if !mh.parent.Check() {
 		return errors.New("БД не доступна")
 	}
 	_, err := mh.Collection.UpdateAll(
-		bson.M{"_id":bson.ObjectIdHex(sid)},
+		bson.M{"from":from, "not_answered":1},
 		bson.M{"$set":bson.M{"not_answered":0, "answered_by":by}},
 	)
 	return err
@@ -675,7 +675,7 @@ func (mh *MessageHandler) SetMessagesRead(from string) error {
 		return errors.New("БД не доступна")
 	}
 	_, err := mh.Collection.UpdateAll(
-		bson.M{"from":from, "unread":bson.M{"$ne":0}},
+		bson.M{"from":from, "unread":1},
 		bson.M{"$set":bson.M{"unread":0}},
 	)
 	return err
