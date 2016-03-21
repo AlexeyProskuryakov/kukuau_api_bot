@@ -1,0 +1,61 @@
+{
+  "main": {
+    "port": 9191,
+    "callback_addr": "http://localhost:9876/notify",
+    "log_file": "",
+    "test_log_file": "test_result.log",
+    "google_key": "AIzaSyBkmvXK-SqfQcyj2XlXgTx-r_B18TJb-vY",
+    "elastic_conn": "http://localhost:9200/",
+    "database": {
+      "name": "bot",
+      "connection_string": "localhost:27017"
+    },
+    "pg_database": {
+      "connection_string": "postgres://postgres:123@localhost:5432/kuku?sslmode=disable"
+    }
+  },
+  "chats": {
+    "remig": {
+      "name": "Ремиг, сервисный центр",
+      "id": "remig",
+      "information": "Сервисный центр «Ремиг» - гарантийный и негарантийный ремонт мелкой бытовой техники. Тел. +7 (383) 344-30-68. Будем рады ответить на Ваш вопрос!",
+      "auto_answer": {
+        "enable": true,
+        "after_min": 2,
+        "text": "<Will answer you later. Wait please>"
+      },
+      "bot_answer": "<I receive your message>",
+      "key": "Kuku remig_key",
+      "user": "remig@ngs.ru",
+      "password": "ur.sgn@gimer"
+    },
+    "aba_service": {
+      "name": "АБА сервис",
+      "id": "aba_service",
+      "information": "Служба сервиса «АБА» - это качественный ремонт холодильников и стиральных машин на дому. Чтобы отправить заявку нажмите кнопку меню в левом нижнем углу.",
+      "auto_answer": {
+        "enable": true,
+        "after_min": 2,
+        "text": "<Will answer you later. Wait please>"
+      },
+      "bot_answer": "<I receive your message>",
+      "key": "Kuku aba_service_key",
+      "user": "holod300@inbox.ru",
+      "password": "ur.xobni@003doloh"
+    },
+    "rbt_service": {
+      "name": "Новосибрембыттехника",
+      "id": "rbt_service",
+      "information": "«Новосибрембыттехника» - предприятие по ремонту бытовой техники с многолетним опытом. Тел. +7 (383) 266-25-61.Чтобы отправить заявку, нажмите кнопку меню в левом нижнем углу.",
+      "auto_answer": {
+        "enable": true,
+        "after_min": 2,
+        "text": "<Will answer you later. Wait please>"
+      },
+      "bot_answer": "<I receive your message>",
+      "key": "Kuku rbt_service_key",
+      "user": "nrbt-servise@yandex.ru",
+      "password": "Corolla446"
+    }
+  }
+}

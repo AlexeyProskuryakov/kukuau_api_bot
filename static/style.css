@@ -206,6 +206,11 @@ body::-webkit-scrollbar {
 
 .name-change{
     position:relative;
-    width:85%;
     display:none;
+}
+
+.name-change-input{
+    position:relative;
+    width:56% !important;
+
 }

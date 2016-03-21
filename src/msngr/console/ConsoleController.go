@@ -101,7 +101,7 @@ func FormConsoleBotContext(conf c.Configuration, db_handler *d.MainDb, cs c.Conf
 
 	notifier := n.NewNotifier(conf.Main.CallbackAddr, conf.Console.Key, db_handler)
 
-	go Run(conf.Console.WebPort, notifier, db_handler, cs, qs, notifier, conf)
+	go Run(conf.Console.WebPort, db_handler, cs, qs, notifier, conf)
 	//go RunProfileServer(conf.Console.WebPort, db_handler)
 
 	return &result

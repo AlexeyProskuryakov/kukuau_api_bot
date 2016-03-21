@@ -65,27 +65,6 @@ func GetUsersInfo(err_text string, db *d.MainDb) map[string]interface{} {
 	return result
 }
 
-type ByContactsLastMessageTime []usrs.Contact
-
-func (s ByContactsLastMessageTime) Len() int {
-	return len(s)
-}
-func (s ByContactsLastMessageTime) Swap(i, j int) {
-	s[i], s[j] = s[j], s[i]
-}
-func (s ByContactsLastMessageTime) Less(i, j int) bool {
-	return s[i].LastMessageTime > s[j].LastMessageTime
-
-}
-
-func send_messages_to_peoples(people []d.UserWrapper, ntf *ntf.Notifier, text string) {
-	go func() {
-		for _, user := range people {
-			ntf.NotifyText(user.UserId, text)
-		}
-	}()
-}
-
 func GetContacts(db *d.MainDb, after int64) ([]usrs.Contact, error) {
 	resp := []usrs.Contact{}
 	err := db.Messages.Collection.Pipe([]bson.M{
@@ -110,7 +89,7 @@ func GetContacts(db *d.MainDb, after int64) ([]usrs.Contact, error) {
 			result = append(result, resp[i])
 		}
 	}
-	sort.Sort(ByContactsLastMessageTime(result))
+	sort.Sort(usrs.ByContactsLastMessageTime(result))
 	return result, nil
 }
 
@@ -130,7 +109,7 @@ type CollocutorInfo struct {
 	CountOrdersByProvider []OrdersInfo
 }
 
-func Run(addr string, notifier *ntf.Notifier, db *d.MainDb, cs c.ConfigStorage, qs *quests.QuestStorage, ntf *ntf.Notifier, cfg c.Configuration) {
+func Run(addr string, db *d.MainDb, cs c.ConfigStorage, qs *quests.QuestStorage, ntf *ntf.Notifier, cfg c.Configuration) {
 	m := martini.New()
 	m.Use(w.NonJsonLogger())
 
@@ -155,11 +134,11 @@ func Run(addr string, notifier *ntf.Notifier, db *d.MainDb, cs c.ConfigStorage, 
 		},
 	}))
 	m.Use(auth.BasicFunc(func(username, password string) bool {
-		usr, _ := db.Users.GetUser(bson.M{"user_name":username, "role":MANAGER})
+		usr, _ := db.Users.GetUser(bson.M{"user_name":username, "role":usrs.MANAGER})
 		if usr != nil {
 			return u.PHash(password) == usr.Password
 		}
-		return username == default_user && password == default_pwd
+		return username == usrs.DEFAULT_USER && password == usrs.DEFAULT_PWD
 	}))
 
 	m.Use(martini.Static("static"))
@@ -386,11 +365,11 @@ func Run(addr string, notifier *ntf.Notifier, db *d.MainDb, cs c.ConfigStorage, 
 			if message.From != "" && message.To != "" && message.Body != "" {
 				if message.To == ALL {
 					peoples, _ := db.Users.GetBy(bson.M{})
-					send_messages_to_peoples(peoples, ntf, message.Body)
+					ntf.SendMessageToPeople(peoples, message.Body)
 
 				} else if message.To == "all_hash_writers" {
 					peoples, _ := db.Users.GetBy(bson.M{"last_marker":bson.M{"$exists":true}})
-					send_messages_to_peoples(peoples, ntf, message.Body)
+					ntf.SendMessageToPeople(peoples, message.Body)
 
 				} else {
 					user, _ := db.Users.GetUserById(message.To)

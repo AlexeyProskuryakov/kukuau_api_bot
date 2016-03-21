@@ -112,6 +112,21 @@ type ConsoleConfig struct {
 	Information string `json:"information"`
 }
 
+type ChatConfig struct {
+	Name        string `json:"name"`
+	CompanyId   string `json:"id"`
+	Information string `json:"information"`
+	AutoAnswer  struct {
+			    Enable bool `json:"enable"`
+			    After  int `json:"after_min"`
+			    Text   string `json:"text"`
+		    } `json:"auto_answer"`
+	BotAnswer   string `json:"bot_answer"`
+	Key         string `json:"key"`
+	User        string `json:"user"`
+	Password    string `json:"password"`
+}
+
 type Configuration struct {
 	Main    struct {
 			Port         int    `json:"port"`
@@ -135,6 +150,8 @@ type Configuration struct {
 			ExternalUrl string `json:"external_url"`
 			WorkUrl     string `json:"work_url"`
 		} `json:"ru_post"`
+
+	Chats   map[string]ChatConfig `json:"chats"`
 }
 
 func (conf *Configuration) SetLogFile(fn string) {
@@ -181,7 +198,6 @@ func ReadConfigInRecursive() Configuration {
 	return UnmarshallConfig(cdata)
 }
 
-
 func ReadTestConfigInRecursive() Configuration {
 	log.Printf("Path sep: %+v", os.PathSeparator)
 	fn := u.FoundFile("config.test.json")
@@ -196,7 +212,6 @@ func ReadTestConfigInRecursive() Configuration {
 	}
 	return UnmarshallConfig(cdata)
 }
-
 
 func ReadConfig() Configuration {
 	dir, err := os.Getwd()

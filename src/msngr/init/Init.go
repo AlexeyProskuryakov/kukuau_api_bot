@@ -19,6 +19,10 @@ import (
 	i "msngr/taxi/infinity"
 	"msngr/taxi/sedi"
 	"msngr/taxi/geo"
+
+	"msngr/chat"
+	"msngr/utils"
+	"msngr/users"
 )
 
 func GetTaxiAPI(params c.TaxiApiParams, for_name string) (t.TaxiInterface, error) {
@@ -153,6 +157,40 @@ func StartBot(db *d.MainDb, result chan string) c.Configuration {
 		cc := m.FormBotController(bc, db)
 		http.HandleFunc("/console", cc)
 		result <- "console"
+	}
+
+	if len(conf.Chats) > 0 {
+		fs := http.FileServer(http.Dir("static"))
+		http.Handle("/static/", http.StripPrefix("/static/", fs))
+	}
+	for _, chat_conf := range conf.Chats {
+		chatBotContext := chat.FormChatBotContext(chat_conf, db)
+		chatBotController := m.FormBotController(chatBotContext, db)
+		route := fmt.Sprintf("/bot/chat/%v", chat_conf.CompanyId)
+		http.HandleFunc(route, chatBotController)
+		log.Printf("I will serving message for chat bot at : [%v]", route)
+
+		notifier := n.NewNotifier(conf.Main.CallbackAddr, chat_conf.Key, db)
+		notifier.SetFrom(chat_conf.CompanyId)
+
+		if chat_conf.AutoAnswer.Enable {
+			go chat.Watch(db.Messages, notifier, chat_conf)
+		}
+		webRoute := fmt.Sprintf("/web/chat/%v", chat_conf.CompanyId)
+		http.Handle(webRoute, chat.GetChatMainHandler(webRoute, notifier, db, chat_conf))
+
+		sr := func(s string) string {
+			return fmt.Sprintf("%v%v", webRoute, s)
+		}
+		http.Handle(sr("/send"), chat.GetChatSendHandler(sr("/send"), notifier, db, chat_conf, chat.NewChatStorage(db)))
+		http.Handle(sr("/messages"), chat.GetChatMessagesHandler(sr("/messages"), notifier, db, chat_conf))
+		http.Handle(sr("/messages_read"), chat.GetChatMessageReadHandler(sr("/messages_read"), notifier, db, chat_conf))
+		http.Handle(sr("/contacts"), chat.GetChatContactsHandler(sr("/contacts"), notifier, db, chat_conf))
+		http.Handle(sr("/contacts_change"), chat.GetChatContactsChangeHandler(sr("/contacts_change"), notifier, db, chat_conf))
+
+		log.Printf("I will handling web requests for chat at : [%v]", webRoute)
+
+		db.Users.AddUserObject(d.UserWrapper{UserName:chat_conf.User, Password:utils.PHash(chat_conf.Password), Role:users.MANAGER, UserId:chat_conf.User})
 	}
 
 	result <- "listen"
