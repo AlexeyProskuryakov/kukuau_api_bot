@@ -33,14 +33,11 @@ function createProfileForm(profileModel){
     var profile_window = Ext.widget('profilewindow');
     var form = profile_window.down('form');
 
-    var store = profileModel.contacts();
-    Ext.each(store, function(x){
-        contactForm = Ext.create('contactPanel');
-        form.add(contactForm);
-    });
-
     form.loadRecord(profileModel);
 
+    var contacts_grid = form.getComponent('profile_contacts');
+    contacts_grid.reconfigure(profileModel.contacts());
+    
     var image = Ext.getCmp("profile_image");
     image.setSrc(profileModel.get("image_url"));
 
@@ -183,17 +180,21 @@ Ext.define('Console.controller.Profiles', {
     },
 
     editProfile: function(grid, record) {
-        view = createProfile
-Form(record);
+        view = createProfileForm(record);
         view.show();
     },
 
     showContactForm: function(button, record){
         var win    = button.up('window');
-
-        var c_view = Ext.widget("ContactLinkWindow", {"parent":win});
+        console.log("scf: ",win);
+        var c_view = Ext.widget("contactWindow", {"parent":win});
         if (!(record instanceof Ext.EventObjectImpl)){
-            c_view.down("form").loadRecord(record);
+            var c_form = c_view.down("form");
+            c_form.loadRecord(record);
+            console.log(c_form);
+            var cl_grid = c_form.getComponent("profile_contact_links");
+            cl_grid.reconfigure(record.links());
+
         }
         c_view.show();
     },

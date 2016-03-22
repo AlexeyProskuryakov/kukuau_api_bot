@@ -24,12 +24,24 @@ type ProfileContact struct {
 	OrderNumber int        `json:"order_number"`
 }
 
+func (pc ProfileContact) String() string {
+	return fmt.Sprintf("\n\tContact [%v] position: %v\n\taddress: %v\n\tdescription: %v\n\tgeo: %+v\n\tlinks:%+v\n",
+		pc.ContactId, pc.OrderNumber, pc.Address, pc.Description, pc.Geo, pc.Links,
+	)
+}
+
 type ProfileContactLink struct {
 	LinkId      int64  `json:"id"`
 	Type        string `json:"type"`
 	Value       string `json:"value"`
 	Description string `json:"description"`
 	OrderNumber int    `json:"order_number"`
+}
+
+func (pcl ProfileContactLink) String() string {
+	return fmt.Sprintf("\n\t\tLink [%v] position: %v type: %v\n\t\tvalue: %v\n\t\tdescription: %v\n",
+		pcl.LinkId, pcl.OrderNumber, pcl.Type, pcl.Value, pcl.Description,
+	)
 }
 
 type Coordinates struct {
@@ -52,7 +64,11 @@ type Profile struct {
 func (p *Profile) Equal(p1 *Profile) bool {
 	return reflect.DeepEqual(p, p1)
 }
-
+func (p Profile) String() string {
+	return fmt.Sprintf("\nProfile: %v [%v] enable: %v, public: %v \nimg: %v\ndescriptions: %v %v \ncontacts: %+v \ngroups: %v \n",
+		p.Name, p.UserName, p.Enable, p.Public, p.ImageURL, p.ShortDescription, p.TextDescription, p.Contacts, p.Groups,
+	)
+}
 func NewProfileFromRow(row *sql.Rows) Profile {
 	var id, short_text, long_text, image, name string
 	var enable, public int
@@ -115,29 +131,39 @@ func (ph *ProfileDbHandler) GetProfileContacts(userName string) ([]ProfileContac
 	for contactRows.Next() {
 		var cId int64
 		var cOrd int
-		var address, descr string
+		var address string
+		var descr sql.NullString
 		var lat, lon float64
 		err = contactRows.Scan(&cId, &address, &lat, &lon, &descr, &cOrd)
 		if err != nil {
 			log.Printf("P ERROR at scan profile [%v] contacts %v", userName, err)
 			continue
 		}
-		contact := ProfileContact{ContactId:cId, Address:address, Geo:Coordinates{Lat:lat, Lon:lon}, OrderNumber:cOrd, Description:descr}
+		var description string
+		if descr.Valid {
+			description = descr.String
+		}
+		contact := ProfileContact{ContactId:cId, Address:address, Geo:Coordinates{Lat:lat, Lon:lon}, OrderNumber:cOrd, Description:description}
 		linkRows, err := ph.db.Query("SELECT l.id, l.ctype, l.cvalue, l.descr, l.ord FROM contact_links l WHERE l.contact_id = $1 ORDER BY l.ord ASC", cId)
 		if err != nil {
-			log.Printf("P ERROR at query to contact links [%+v]", contact)
+			log.Printf("P ERROR at query to contact links [%+v] err: %v", contact, err)
 			continue
 		}
 		for linkRows.Next() {
-			var lType, lValue, lDescr string
+			var lType, lValue string
 			var lId int64
 			var lOrd int
+			var lDescr sql.NullString
 			err = linkRows.Scan(&lId, &lType, &lValue, &lDescr, &lOrd)
 			if err != nil {
-				log.Printf("P ERROR at scan contact link")
+				log.Printf("P ERROR at scan contact link for contact_id = %v, %v", cId, err)
 				continue
 			}
-			contactLink := ProfileContactLink{LinkId:lId, Type:lType, Description:lDescr, OrderNumber:lOrd}
+			var lDescription string
+			if lDescr.Valid{
+				lDescription = lDescr.String
+			}
+			contactLink := ProfileContactLink{LinkId:lId, Type:lType, Description:lDescription, OrderNumber:lOrd, Value:lValue}
 			contact.Links = append(contact.Links, contactLink)
 		}
 

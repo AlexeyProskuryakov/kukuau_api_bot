@@ -5,8 +5,8 @@ Ext.define('Console.view.Profile', {
     title: 'Профайл',
     layout: 'fit',
     autoShow: false,
-    autoScroll:true,
-    width:800,
+    autoScroll:false,
+    width:1024,
     height:900,
 
     initComponent: function() {
@@ -43,10 +43,9 @@ Ext.define('Console.view.Profile', {
                     padding:10
                 },
                 ]
-            }),
-            {
+            }),{
                 xtype:'checkbox',
-                name:'enabled',
+                name:'enable',
                 fieldLabel:"Включен",
                 padding:10
             },
@@ -94,9 +93,9 @@ Ext.define('Console.view.Profile', {
                 title:"Контакты",
                 itemId:"profile_contacts",
                 store: 'ContactsStore',
+                name:'contacts',
                 columns:[
-                {header: 'Тип',  dataIndex: 'type'},
-                {header: 'Значение', dataIndex: 'value', flex:1},
+                {header: 'Адрес',  dataIndex: 'address', flex:1},
                 {header: 'Описание', dataIndex: 'description', flex:1},
                 {
                     xtype : 'actioncolumn',
