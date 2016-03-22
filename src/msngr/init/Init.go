@@ -187,6 +187,7 @@ func StartBot(db *d.MainDb, result chan string) c.Configuration {
 		http.Handle(sr("/messages_read"), chat.GetChatMessageReadHandler(sr("/messages_read"), notifier, db, chat_conf))
 		http.Handle(sr("/contacts"), chat.GetChatContactsHandler(sr("/contacts"), notifier, db, chat_conf))
 		http.Handle(sr("/contacts_change"), chat.GetChatContactsChangeHandler(sr("/contacts_change"), notifier, db, chat_conf))
+		http.Handle(sr("/config"), chat.GetChatConfigHandler(sr("/config"), webRoute, db, chat_conf))
 
 		log.Printf("I will handling web requests for chat at : [%v]", webRoute)
 

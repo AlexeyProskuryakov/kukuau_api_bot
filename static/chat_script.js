@@ -40,19 +40,22 @@ function update_messages(){
 
 
 function set_contact_new_message(contact_id, count){
-    var p = $("#"+contact_id),
-        c_w = p.find(".new-message-counter");
-
-    if (parseInt(c_w.attr("count")) != count){
+    var c_wrapper = $("#"+contact_id),
+        cntr_wrapper= c_wrapper.find(".new-message-counter"),
+        a = cntr_wrapper.parent();
+    if (a.hasClass('c-active')){
+        return;
+    }
+    if (parseInt(cntr_wrapper.attr("count")) != count){
         if (count == 0){
-            c_w.text("");
+            cntr_wrapper.text("");
         } else {
-            c_w.text("("+count+")");
+            cntr_wrapper.text("("+count+")");
             playNotification();
-            p.remove();
-            p.insertAfter("#write-all")
+            c_wrapper.remove();
+            c_wrapper.insertAfter("#write-all")
         }
-        c_w.attr("count", count);
+        cntr_wrapper.attr("count", count);
     }
 }
 

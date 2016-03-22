@@ -73,7 +73,6 @@ func getRenderer(cName, cId, start_addr string) martini.Handler {
 					return cName
 				},
 				"me":func() string {
-					log.Printf("Envoke ME is %v", cId)
 					return cId
 				},
 				"prefix":func() string {
@@ -349,4 +348,12 @@ func GetChatContactsChangeHandler(start_addr string, notifier *ntf.Notifier, db 
 	return m
 }
 
+
+func GetChatConfigHandler(start_addr, prefix string, db *d.MainDb, config c.ChatConfig) http.Handler {
+	m := getMartini(config.Name, config.CompanyId, prefix, db)
+	m.Get(start_addr, func(ren render.Render, req *http.Request) {
+		ren.HTML(200, "config", map[string]interface{}{}, render.HTMLOptions{Layout:"base"})
+	})
+	return m
+}
 
