@@ -17,6 +17,7 @@ func Watch(messageStore *db.MessageHandler, ntf *msngr.Notifier, config configur
 		messages, err := messageStore.GetMessages(bson.M{
 			"to":config.CompanyId,
 			"not_answered":1,
+			"unread":1,
 			"time_stamp":bson.M{
 				"$lte": timeStampLess,
 			}})

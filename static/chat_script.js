@@ -41,14 +41,18 @@ function update_messages(){
 
 function set_contact_new_message(contact_id, count){
     var p = $("#"+contact_id),
-        c_w = p.find("small");
+        c_w = p.find(".new-message-counter");
 
-    if (parseInt(c_w.attr("count")) < count){
-        c_w.text("("+count+")");
+    if (parseInt(c_w.attr("count")) != count){
+        if (count == 0){
+            c_w.text("");
+        } else {
+            c_w.text("("+count+")");
+            playNotification();
+            p.remove();
+            p.insertAfter("#write-all")
+        }
         c_w.attr("count", count);
-        playNotification();
-        p.remove();
-        p.insertAfter("#write-all")
     }
 }
 
@@ -76,17 +80,26 @@ function update_contacts(){
         data:           JSON.stringify(data),
         dataType:       'json',
         success:        function(x){
-
-            x['old'].forEach(function(c){
-                console.log("old:",c);
-                if (c.NewMessagesCount > 0){
+            if (x.ok){
+                var update = [];
+                x['old'].forEach(function(c){
+                    console.log("old: ",c);
                     set_contact_new_message(c.ID, c.NewMessagesCount);
-                }
-            });
-            x['new'].forEach(function(c){
-                console.log("new",c);
-                paste_new_contact(c);
-            });
+                    update.push(c.ID);
+                });
+                x['new'].forEach(function(c){
+                    console.log("new: ",c);
+                    paste_new_contact(c);
+                    update.push(c.ID);
+                });
+                $(".new-message-counter").each(function(i,el){
+                    var id = el.attributes.getNamedItem("id").value.substring(2);
+                    if (update.indexOf(id) == -1){
+                        $(el).text("");
+                        $(el).attr("count", 0);
+                    }
+                });
+            }
         }
     });
     return true;
