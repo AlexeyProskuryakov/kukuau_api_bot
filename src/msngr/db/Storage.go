@@ -64,6 +64,13 @@ func (uw *UserWrapper) GetStateValue(state_key string) (string, bool) {
 	return res, ok
 }
 
+func (uw *UserWrapper) GetName() string {
+	if uw.ShowedName != "" {
+		return uw.ShowedName
+	}
+	return uw.UserName
+}
+
 type ErrorWrapper struct {
 	Username string
 	Error    string

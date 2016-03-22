@@ -133,6 +133,13 @@ func GetChatMainHandler(start_addr string, notifier *ntf.Notifier, db *d.MainDb,
 						bson.M{"to":user.UserId, "from":config.CompanyId},
 					},
 				})
+				for i, message := range messages {
+					if message.From == user.UserId {
+						messages[i].From = user.GetName()
+					} else if message.To == user.UserId {
+						messages[i].To = user.GetName()
+					}
+				}
 			}
 		}
 
@@ -259,11 +266,7 @@ func GetChatMessagesHandler(start_addr string, notifier *ntf.Notifier, db *d.Mai
 		for i, msg := range messages {
 			if msg.From != config.CompanyId {
 				u, _ := db.Users.GetUserById(msg.From)
-				if u.ShowedName != "" {
-					messages[i].From = u.ShowedName
-				} else {
-					messages[i].From = u.UserName
-				}
+				messages[i].From = u.GetName()
 				result = append(result, messages[i])
 			}
 		}
