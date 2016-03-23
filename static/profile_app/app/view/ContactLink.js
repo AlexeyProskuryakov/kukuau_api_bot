@@ -5,7 +5,7 @@ Ext.define('Console.view.ContactLink', {
 	layout: 'fit',
 	autoShow: false,
 	width:600,
-	height:200,
+	height:250,
 	config:{
 		parent:undefined
 	},
@@ -49,6 +49,12 @@ Ext.define('Console.view.ContactLink', {
 				xtype: 'textfield',
 				name : 'description',
 				fieldLabel: 'Описание',
+				width: 550,
+				padding:10
+			}, {
+				xtype: 'textfield',
+				name : 'order_number',
+				fieldLabel: 'Порядковый номер',
 				width: 550,
 				padding:10
 			}

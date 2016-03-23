@@ -2,7 +2,7 @@ Ext.define("Console.model.Contact",{
 	extend:"Ext.data.Model",
 	idProperty:'id',
 	fields:[
-	'id',
+	{name:'id', type:'int'},
 	'address',
 	'description',
 	{name:'lat', mapping:'geo.lat', type:'float'},

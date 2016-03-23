@@ -1,13 +1,21 @@
 var view = undefined;
 
 function guid() {
-  function s4() {
-    return Math.floor((1 + Math.random()) * 0x10000)
-    .toString(16)
-    .substring(1);
-}
-return s4() + s4() + '-' + s4() + '-' + s4() + '-' +
-s4() + '-' + s4() + s4() + s4();
+    function s4() {
+        return Math.floor((1 + Math.random()) * 0x10000).toString(16).substring(1);
+    }
+    function hash(str) {
+        var hash = 0, i, chr, len;
+        if (str.length === 0) return hash;
+        for (i = 0, len = str.length; i < len; i++) {
+            chr   = str.charCodeAt(i);
+            hash  = ((hash << 5) - hash) + chr;
+            hash |= 0; // Convert to 32bit integer
+        }
+        return hash;
+    }
+
+    return hash(s4() + s4() + '-' + s4() + '-' + s4() + '-' + s4() + '-' + s4() + s4() + s4());
 }
 
 function createProfileForm(profileModel){
@@ -69,6 +77,9 @@ Ext.define('Console.controller.Profiles', {
             },
             'contactWindow button[action=save_contact]':{
                 click:this.saveContact
+            },
+            'contactWindow button[action=add_contact_link]':{
+                click:this.showContactLinkForm
             }
         });
         Ext.widget('profilelist').getStore().load();
@@ -221,9 +232,13 @@ Ext.define('Console.controller.Profiles', {
     showContactLinkForm: function(button, record){
         var win = button.up('window');
         var cl_view = Ext.widget("contactLinkWindow", {"parent":win});
+        var cl_form = cl_view.down("form");
         if (!(record instanceof Ext.EventObjectImpl)){
-            var cl_form = cl_view.down("form");
             cl_form.loadRecord(record);
+        } else {
+            var onf = cl_form.getForm().findField("order_number");
+            var cl_store = win.down("form").getRecord().links();
+            onf.setValue(cl_store.count()+1);
         }
         cl_view.show();
 
@@ -233,14 +248,20 @@ Ext.define('Console.controller.Profiles', {
         var win    = button.up('window'),
         form   = win.down('form'),
         cl_model = form.getRecord(),
+        values = form.getValues(),
         c_model = win.getParent().down("form").getRecord(),
-        cl_id = cl_model.getId(),
-        stored_cl_rec = c_model.links().getById(cl_id),
-        values = form.getValues();
+        l_store = c_model.links();
+        if (cl_model != undefined){
+            var cl_id = cl_model.getId(),
+            stored_cl_rec = l_store.getById(cl_id);
 
-        values.id = cl_id;
-        stored_cl_rec.set(values);
-
+            values.id = cl_id;
+            stored_cl_rec.set(values);            
+        } else {
+            values.id = guid();
+            l_store.add(values);
+        }
+        
         win.hide();
     },
 

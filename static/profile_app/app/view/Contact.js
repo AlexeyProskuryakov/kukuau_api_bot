@@ -48,7 +48,8 @@ Ext.define('Console.view.Contact', {
 						scope : me
 					}]
 				}
-				]
+				],
+				
 			}
 			]}
 
@@ -85,7 +86,7 @@ Ext.define('Console.view.Contact', {
 			action: 'save_contact'
 		},{
 			text:"Добавить связь",
-			action:"add_contact_start",
+			action:"add_contact_link",
 			scope: this,
 		}];
 		this.callParent(arguments);
