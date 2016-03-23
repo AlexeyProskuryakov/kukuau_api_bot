@@ -144,29 +144,10 @@ func (ph *ProfileDbHandler) GetProfileContacts(userName string) ([]ProfileContac
 			description = descr.String
 		}
 		contact := ProfileContact{ContactId:cId, Address:address, Geo:Coordinates{Lat:lat, Lon:lon}, OrderNumber:cOrd, Description:description}
-		linkRows, err := ph.db.Query("SELECT l.id, l.ctype, l.cvalue, l.descr, l.ord FROM contact_links l WHERE l.contact_id = $1 ORDER BY l.ord ASC", cId)
-		if err != nil {
-			log.Printf("P ERROR at query to contact links [%+v] err: %v", contact, err)
-			continue
+		links, err := ph.GetContactLinks(contact.ContactId)
+		if err == nil {
+			contact.Links = links
 		}
-		for linkRows.Next() {
-			var lType, lValue string
-			var lId int64
-			var lOrd int
-			var lDescr sql.NullString
-			err = linkRows.Scan(&lId, &lType, &lValue, &lDescr, &lOrd)
-			if err != nil {
-				log.Printf("P ERROR at scan contact link for contact_id = %v, %v", cId, err)
-				continue
-			}
-			var lDescription string
-			if lDescr.Valid{
-				lDescription = lDescr.String
-			}
-			contactLink := ProfileContactLink{LinkId:lId, Type:lType, Description:lDescription, OrderNumber:lOrd, Value:lValue}
-			contact.Links = append(contact.Links, contactLink)
-		}
-
 		contacts = append(contacts, contact)
 	}
 	return contacts, nil
@@ -361,9 +342,21 @@ func (ph *ProfileDbHandler) UpsertContact(userName string, newContact *ProfileCo
 		newContact.ContactId = updatedContact.ContactId
 	}
 
+	new_links_map := map[int64]ProfileContactLink{}
 	for _, link := range newContact.Links {
 		if c, _ := ph.UpdateContactLink(link); c == 0 {
-			ph.InsertContactLink(&link, newContact.ContactId)
+			insertedLink, _ := ph.InsertContactLink(&link, newContact.ContactId)
+			new_links_map[insertedLink.LinkId] = link
+		} else {
+			new_links_map[link.LinkId] = link
+		}
+	}
+	links, _ := ph.GetContactLinks(newContact.ContactId)
+	log.Printf("new links: %v, \nold links: %v, \nnew links map: %v\n", newContact.Links, links, new_links_map)
+	for _, stored_link := range links {
+		if _, ok := new_links_map[stored_link.LinkId]; !ok {
+			log.Printf("delete contact link: %v", stored_link)
+			ph.DeleteOneContactLink(stored_link.LinkId)
 		}
 	}
 	return nil
@@ -382,7 +375,7 @@ func (ph *ProfileDbHandler)InsertContactLink(link *ProfileContactLink, contactId
 		log.Printf("P ERROR at insert contact link %v", err)
 		return nil, err
 	}
-	log.Printf("P link id: %v", lId)
+	log.Printf("P insert link id: %v of contact id %v", lId, contactId)
 	link.LinkId = lId
 	return link, nil
 }
@@ -411,6 +404,38 @@ func (ph *ProfileDbHandler)DeleteContactLinks(contactId int64) error {
 	return err
 }
 
+func (ph *ProfileDbHandler)DeleteOneContactLink(linkId int64) error {
+	err := ph.deleteFromTable("contact_links", "id", linkId)
+	return err
+}
+
+func (ph *ProfileDbHandler) GetContactLinks(contactId int64) ([]ProfileContactLink, error) {
+	links := []ProfileContactLink{}
+	linkRows, err := ph.db.Query("SELECT l.id, l.ctype, l.cvalue, l.descr, l.ord FROM contact_links l WHERE l.contact_id = $1 ORDER BY l.ord ASC", contactId)
+	if err != nil {
+		log.Printf("P ERROR at query to contact links [%+v] err: %v", contactId, err)
+		return links, err
+	}
+	for linkRows.Next() {
+		var lType, lValue string
+		var lId int64
+		var lOrd int
+		var lDescr sql.NullString
+		err = linkRows.Scan(&lId, &lType, &lValue, &lDescr, &lOrd)
+		if err != nil {
+			log.Printf("P ERROR at scan contact link for contact_id = %v, %v", contactId, err)
+			continue
+		}
+		var lDescription string
+		if lDescr.Valid {
+			lDescription = lDescr.String
+		}
+		contactLink := ProfileContactLink{LinkId:lId, Type:lType, Description:lDescription, OrderNumber:lOrd, Value:lValue}
+		links = append(links, contactLink)
+	}
+	return links, nil
+}
+
 func (ph *ProfileDbHandler)updateProfileField(tableName, fieldName, userName string, newValue interface{}) {
 	stmt, err := ph.db.Prepare(fmt.Sprintf("UPDATE %v SET %v=$1 WHERE username=$2", tableName, fieldName))
 	if err != nil {
@@ -424,7 +449,7 @@ func (ph *ProfileDbHandler)updateProfileField(tableName, fieldName, userName str
 }
 
 func (ph *ProfileDbHandler)deleteFromTable(tableName, nameId string, deleteId interface{}) error {
-	stmt, err := ph.db.Prepare(fmt.Sprintf("DELETE FROM %v WHERE username=$1", tableName))
+	stmt, err := ph.db.Prepare(fmt.Sprintf("DELETE FROM %v WHERE %v=$1", tableName, nameId))
 	if err != nil {
 		return err
 	}
@@ -511,8 +536,20 @@ func (ph *ProfileDbHandler)UpdateProfile(newProfile *Profile) error {
 
 	if !reflect.DeepEqual(savedProfile.Contacts, newProfile.Contacts) {
 		log.Printf("Difference in contacts")
+		new_contacts_map := map[int64]ProfileContact{}
 		for _, contact := range newProfile.Contacts {
+			log.Printf("update contact: %+v", contact)
 			ph.UpsertContact(newProfile.UserName, &contact)
+			new_contacts_map[contact.ContactId] = contact
+		}
+
+		contacts, _ := ph.GetProfileContacts(newProfile.UserName)
+		log.Printf("new contacts map : %+v\n updated stored contacts: %+v", new_contacts_map, contacts)
+		for _, stored_contact := range contacts {
+			if _, ok := new_contacts_map[stored_contact.ContactId]; !ok {
+				log.Printf("delete contact: %v", stored_contact)
+				ph.DeleteContact(stored_contact.ContactId)
+			}
 		}
 	}
 	if !reflect.DeepEqual(savedProfile.Groups, newProfile.Groups) {

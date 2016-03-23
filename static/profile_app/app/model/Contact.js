@@ -7,7 +7,7 @@ Ext.define("Console.model.Contact",{
 	'description',
 	{name:'lat', mapping:'geo.lat', type:'float'},
 	{name:'lon', mapping:'geo.lon', type:'float'},
-	'order_number'
+	{name:'order_number', type:'int'}
 	],
 	associations: [{
 		type: 'hasMany',

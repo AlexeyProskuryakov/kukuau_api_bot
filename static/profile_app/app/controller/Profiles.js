@@ -80,7 +80,11 @@ Ext.define('Console.controller.Profiles', {
             },
             'contactWindow button[action=add_contact_link]':{
                 click:this.showContactLinkForm
+            },
+            'contactWindow actioncolumn[action=delete_contact_link]':{
+                click:this.deleteContactLink
             }
+
         });
         Ext.widget('profilelist').getStore().load();
     },
@@ -209,12 +213,8 @@ Ext.define('Console.controller.Profiles', {
         win.hide();
     },
 
-    deleteContact: function(button){
-        var row_id = button.rowValues.recordId,
-        store = button.up('form').getRecord().contacts(),
-        record = store.getById(row_id);
-        store.remove(record);
-
+    deleteContact: function(grid, row, index){
+        grid.getStore().removeAt(index);
     },
 
     showContactForm: function(button, record){
@@ -231,14 +231,23 @@ Ext.define('Console.controller.Profiles', {
 
     showContactLinkForm: function(button, record){
         var win = button.up('window');
-        var cl_view = Ext.widget("contactLinkWindow", {"parent":win});
-        var cl_form = cl_view.down("form");
+         cl_view = Ext.widget("contactLinkWindow", {"parent":win}),
+         cl_form = cl_view.down("form"),
+         c_form = win.down("form");
+
         if (!(record instanceof Ext.EventObjectImpl)){
             cl_form.loadRecord(record);
         } else {
-            var onf = cl_form.getForm().findField("order_number");
-            var cl_store = win.down("form").getRecord().links();
+            var onf = cl_form.getForm().findField("order_number"),
+            c_model = win.down("form").getRecord();
+            if (c_model == undefined){
+                c_model = Ext.create("Console.model.Contact", c_form.getValues());
+                c_form.loadRecord(c_model);
+                c_form.getComponent("profile_contact_links").reconfigure(c_model.links());
+            } 
+            var cl_store = c_model.links();
             onf.setValue(cl_store.count()+1);
+            
         }
         cl_view.show();
 
@@ -249,7 +258,13 @@ Ext.define('Console.controller.Profiles', {
         form   = win.down('form'),
         cl_model = form.getRecord(),
         values = form.getValues(),
-        c_model = win.getParent().down("form").getRecord(),
+        parent_form = win.getParent().down("form"),
+        c_model = parent_form.getRecord();
+        // if (c_model == undefined){
+        //     c_model = Ext.create("Console.model.Contact", parent_form.getValues());
+        //     parent_form.loadRecord(c_model);
+        //     parent_form.getComponent("profile_contact_links").reconfigure(c_model.links())
+        // }
         l_store = c_model.links();
         if (cl_model != undefined){
             var cl_id = cl_model.getId(),
@@ -264,19 +279,32 @@ Ext.define('Console.controller.Profiles', {
         
         win.hide();
     },
+    deleteContactLink:function(grid, row, index){
+        grid.getStore().removeAt(index);
+    },
 
     saveContact:function(button){
         var win = button.up("window"),
-        form = win.down("form"),
-        c_values = form.getValues(),
-        c_model = form.getRecord(),
-        c_id = c_model.getId(),
-        p_model = win.getParent().down('form').getRecord(),
-        c_store = p_model.contacts(),
-        c_rec = c_store.getById(c_id);
+            form = win.down("form"),
+            c_values = form.getValues(),
+            c_model = form.getRecord();
+        
+        if (c_model == undefined){
+            c_model = Ext.create("Console.model.Contact", win.down("form").getValues());
+        } 
+
+        var c_id = c_model.getId(),
+            p_model = win.getParent().down('form').getRecord(),
+            c_store = p_model.contacts(),
+            c_rec = c_store.getById(c_id);
 
         c_values.id = c_id;
-        c_rec.set(c_values);
+        if (c_rec != null){
+            c_rec.set(c_values);
+        } else {
+            c_store.add(c_model);
+        }
+
 
         win.hide();
     }

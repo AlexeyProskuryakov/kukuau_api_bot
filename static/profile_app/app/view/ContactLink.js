@@ -10,7 +10,7 @@ Ext.define('Console.view.ContactLink', {
 		parent:undefined
 	},
 	initComponent: function() {
-		console.log("init contact window");
+		console.log("init contact link window");
 		var store = Ext.create('Ext.data.Store', {
 			fields: ['name', 'show'],
 			data:[
