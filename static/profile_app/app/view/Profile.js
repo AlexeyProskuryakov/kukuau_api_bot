@@ -45,6 +45,7 @@ Ext.define('Console.view.Profile', {
                 ]
             }),{
                 xtype:'checkbox',
+                inputValue:true,
                 name:'enable',
                 fieldLabel:"Включен",
                 padding:10
@@ -52,6 +53,7 @@ Ext.define('Console.view.Profile', {
             {
                 xtype:'checkbox',
                 name:'public',
+                inputValue:true,
                 fieldLabel:"Публичен",
                 padding:10
             },
@@ -112,17 +114,6 @@ Ext.define('Console.view.Profile', {
                 }
                 ],
             },
-            ]
-        }];
-
-        this.dockedItems=[{
-            xtype:'toolbar',
-            docked: 'top',
-            items: [
-            {
-                text:'Очистить',
-                action: 'clear'
-            }
             ]
         }];
 

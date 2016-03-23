@@ -7,5 +7,10 @@ Ext.define("Console.model.ContactLink",{
 	'value',
 	'description',
 	'order_number'
-	],
+	], 
+	associations: [{
+		type: 'belongsTo',
+		model: 'Console.model.Contact',
+		name: 'contact'
+	}]
 });

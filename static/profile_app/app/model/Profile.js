@@ -6,8 +6,8 @@ Ext.define('Console.model.Profile', {
 	'name', 
 	'short_description', 
 	'text_description', 
-	'enable',
-	'public'
+	{ name: 'enable', type:"boolean"},
+	{ name: 'public', type:"boolean"}
 	],
 	associations: [{
 		type: 'hasMany',

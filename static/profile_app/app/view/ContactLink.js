@@ -1,12 +1,11 @@
-Ext.define('Console.view.Contact', {
+Ext.define('Console.view.ContactLink', {
 	extend: 'Ext.window.Window',
-	alias: 'widget.ContactLinkWindow',
-
+	alias: 'widget.contactLinkWindow',
 	title: 'Способ связи',
 	layout: 'fit',
 	autoShow: false,
-	width:400,
-	height:400,
+	width:600,
+	height:200,
 	config:{
 		parent:undefined
 	},
@@ -15,13 +14,13 @@ Ext.define('Console.view.Contact', {
 		var store = Ext.create('Ext.data.Store', {
 			fields: ['name', 'show'],
 			data:[
-				{name:"phone", show:"Телефон"},
-				{name:"email",show:"Электронная почта"},
-				{name:"adress",show:"Адресс"},
-				{name:"WWW",show:"Сайт"},
-				{name:"vk",show:"Вконтачъ"},
-				{name:"twitter",show:"Твиттеръ"},
-				{name:"facebook",show:"Фейсбукъ"},
+			{name:"phone", show:"Телефон"},
+			{name:"email",show:"Электронная почта"},
+			{name:"adress",show:"Адресс"},
+			{name:"WWW",show:"Сайт"},
+			{name:"vk",show:"Вконтачъ"},
+			{name:"twitter",show:"Твиттеръ"},
+			{name:"facebook",show:"Фейсбукъ"},
 			]
 		});
 		this.items= [{
@@ -36,21 +35,21 @@ Ext.define('Console.view.Contact', {
 				valueField: 'name',
 				fieldLabel: 'Тип',
 				typeAhead: true,
-		        typeAheadDelay: 100,
-		        hideTrigger: true,
+				typeAheadDelay: 100,
+				hideTrigger: true,
 				width: 350,
 				padding:10
-			}, {
+			}, 		{
 				xtype: 'textfield',
 				name : 'value',
 				fieldLabel: 'Значение',
-				width: 350,
+				width: 550,
 				padding:10
 			},{
 				xtype: 'textfield',
 				name : 'description',
 				fieldLabel: 'Описание',
-				width: 350,
+				width: 550,
 				padding:10
 			}
 
@@ -59,7 +58,7 @@ Ext.define('Console.view.Contact', {
 		this.buttons = [{
 			text: 'Сохранить',
 			scope: this,
-			action: 'add_contact_link_end'
+			action: 'save_contact_link'
 		}];
 
 		this.callParent(arguments);

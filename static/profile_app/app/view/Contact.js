@@ -17,11 +17,15 @@ Ext.define('Console.view.Contact', {
 			items: [ {
 				xtype:"textfield",
 				name:"address",
-				fieldLabel:"Адресс"
+				fieldLabel:"Адресс",
+				width: 750,
+				padding:10
 			},{	
 				xtype:"textfield",
 				name:"description",
-				fieldLabel:"Описание"
+				fieldLabel:"Описание",
+				width: 750,
+				padding:10
 			},{
 				xtype:"grid",
 				title:"Способы связи",
@@ -75,34 +79,15 @@ Ext.define('Console.view.Contact', {
 		// 	}
 		// },
 		];
-		this.dockedItems=[{
-			xtype:'toolbar',
-			docked: 'top',
-			items: [
-			{
-				text:'Очистить',
-				action: 'clear'
-			}
-			]
-		}];
-
 		this.buttons = [{
 			text: 'Сохранить',
 			scope: this,
-			action: 'save'
+			action: 'save_contact'
 		},{
-			text:'Удалить',
-			action: 'delete',
-			scope: this
-		},
-		{
 			text:"Добавить связь",
 			action:"add_contact_start",
 			scope: this,
-		}
-
-		];
-
+		}];
 		this.callParent(arguments);
 	}
 });

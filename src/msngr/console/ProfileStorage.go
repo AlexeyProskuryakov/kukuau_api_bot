@@ -65,7 +65,7 @@ func (p *Profile) Equal(p1 *Profile) bool {
 	return reflect.DeepEqual(p, p1)
 }
 func (p Profile) String() string {
-	return fmt.Sprintf("\nProfile: %v [%v] enable: %v, public: %v \nimg: %v\ndescriptions: %v %v \ncontacts: %+v \ngroups: %v \n",
+	return fmt.Sprintf("\nPROFILE------------------\n: %v [%v] enable: %v, public: %v \nimg: %v\ndescriptions: %v %v \ncontacts: %+v \ngroups: %v \n----------------------\n",
 		p.Name, p.UserName, p.Enable, p.Public, p.ImageURL, p.ShortDescription, p.TextDescription, p.Contacts, p.Groups,
 	)
 }

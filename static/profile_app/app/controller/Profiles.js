@@ -10,25 +10,6 @@ return s4() + s4() + '-' + s4() + '-' + s4() + '-' +
 s4() + '-' + s4() + s4() + s4();
 }
 
-function createContactComponent(type, value, descrption){
-    var contactInfoComponent = {
-        xtype:"bar",
-        items:[
-        {
-            xtype:'label',
-            text:type,
-        },{
-            xtype:'label',
-            text:value, 
-        },{
-            xtype:'label',
-            text:descrption
-        }
-        ]
-    }
-    return contactInfoComponent;
-}
-
 function createProfileForm(profileModel){
     var profile_window = Ext.widget('profilewindow');
     var form = profile_window.down('form');
@@ -39,6 +20,7 @@ function createProfileForm(profileModel){
     contacts_grid.reconfigure(profileModel.contacts());
     
     var image = Ext.getCmp("profile_image");
+    console.log("setting image for ", image, "...", profileModel.get("image_url"));
     image.setSrc(profileModel.get("image_url"));
 
     return profile_window;
@@ -46,7 +28,7 @@ function createProfileForm(profileModel){
 
 Ext.define('Console.controller.Profiles', {
     extend: 'Ext.app.Controller',
-    views: ['ProfileList', 'Profile', 'Contact'],
+    views: ['ProfileList', 'Profile', 'Contact', 'ContactLink'],
     stores: ['ProfileStore', 'ContactsStore', 'ContactLinksStore', 'GroupsStore'],
     models: ['Profile'],
     init: function() {
@@ -76,8 +58,17 @@ Ext.define('Console.controller.Profiles', {
             'profilewindow actioncolumn[action=delete_contact]':{
                 click: this.deleteContact
             },
-            'ContactLinkWindow button[action=add_contact_end]':{
+            'contactWindow grid[itemId=profile_contact_links]':{
+                itemdblclick:this.showContactLinkForm
+            },
+            'contactLinkWindow button[action=add_contact_end]':{
                 click:this.addContact
+            },
+            'contactLinkWindow button[action=save_contact_link]':{
+                click:this.saveContactLink
+            },
+            'contactWindow button[action=save_contact]':{
+                click:this.saveContact
             }
         });
         Ext.widget('profilelist').getStore().load();
@@ -88,46 +79,38 @@ Ext.define('Console.controller.Profiles', {
         var form   = win.down('form');
         var values = form.getValues();
         var record = form.getRecord();
-        if (record == undefined) {
-            Ext.Ajax.request({
-                url: 'profile/create',
-                jsonData: values,
-                success: function(response){
-                    var data=Ext.decode(response.responseText);
-                    if(data.success){
-                        var store = Ext.widget('profilelist').getStore();
-                        store.load();
-                        view.hide();
-                    }
-                    else{
-                        Ext.Msg.alert('Обновление','Что-то пошло не так...');
-                    }
-                }
-            })
-        } else{
+        if (record != undefined) {
+            console.log("p record is undefined!");
             var id = record.get('id');
             values.id=id;
             cntcts = [];
             Ext.each(record.contacts().data.items, function(item){
-                cntcts.push(item.getData());
+                var c_data = item.getData();
+                c_data.links = [];
+                Ext.each(item.links().data.items, function(l_item){
+                    c_data.links.push(l_item.getData());
+                });
+                cntcts.push(c_data);
             });
             values.contacts = cntcts;
-            Ext.Ajax.request({
-                url: 'profile/update',
-                jsonData: values,
-                success: function(response){
-                    var data=Ext.decode(response.responseText);
-                    if(data.success){
-                        var store = Ext.widget('profilelist').getStore();
-                        store.load();
-                        view.hide();
-                    }
-                    else{
-                        Ext.Msg.alert('Обновление','Что-то пошло не так...');
-                    }
+        } 
+
+        Ext.Ajax.request({
+            url: 'profile/update',
+            jsonData: values,
+            success: function(response){
+                var data=Ext.decode(response.responseText);
+                if(data.success){
+                    var store = Ext.widget('profilelist').getStore();
+                    store.load();
+                    view.hide();
                 }
-            });
-        }
+                else{
+                    Ext.Msg.alert('Обновление','Что-то пошло не так...');
+                }
+            }
+        });
+        
     },
     // создание
     createProfile: function(button) {
@@ -184,20 +167,6 @@ Ext.define('Console.controller.Profiles', {
         view.show();
     },
 
-    showContactForm: function(button, record){
-        var win    = button.up('window');
-        console.log("scf: ",win);
-        var c_view = Ext.widget("contactWindow", {"parent":win});
-        if (!(record instanceof Ext.EventObjectImpl)){
-            var c_form = c_view.down("form");
-            c_form.loadRecord(record);
-            console.log(c_form);
-            var cl_grid = c_form.getComponent("profile_contact_links");
-            cl_grid.reconfigure(record.links());
-
-        }
-        c_view.show();
-    },
 
     addContact:function(button){
         var win    = button.up('window');
@@ -235,6 +204,62 @@ Ext.define('Console.controller.Profiles', {
         record = store.getById(row_id);
         store.remove(record);
 
+    },
+
+    showContactForm: function(button, record){
+        var win    = button.up('window');
+        var c_view = Ext.widget("contactWindow", {"parent":win});
+        if (!(record instanceof Ext.EventObjectImpl)){
+            var c_form = c_view.down("form");
+            c_form.loadRecord(record);
+            var cl_grid = c_form.getComponent("profile_contact_links");
+            cl_grid.reconfigure(record.links());
+        }
+        c_view.show();
+    },
+
+    showContactLinkForm: function(button, record){
+        var win = button.up('window');
+        var cl_view = Ext.widget("contactLinkWindow", {"parent":win});
+        if (!(record instanceof Ext.EventObjectImpl)){
+            var cl_form = cl_view.down("form");
+            cl_form.loadRecord(record);
+        }
+        cl_view.show();
+
+    },
+
+    saveContactLink:function(button){
+        var win    = button.up('window'),
+        form   = win.down('form'),
+        cl_model = form.getRecord(),
+        c_model = win.getParent().down("form").getRecord(),
+        cl_id = cl_model.getId(),
+        stored_cl_rec = c_model.links().getById(cl_id),
+        values = form.getValues();
+
+        values.id = cl_id;
+        stored_cl_rec.set(values);
+
+        win.hide();
+    },
+
+    saveContact:function(button){
+        var win = button.up("window"),
+        form = win.down("form"),
+        c_values = form.getValues(),
+        c_model = form.getRecord(),
+        c_id = c_model.getId(),
+        p_model = win.getParent().down('form').getRecord(),
+        c_store = p_model.contacts(),
+        c_rec = c_store.getById(c_id);
+
+        c_values.id = c_id;
+        c_rec.set(c_values);
+
+        win.hide();
     }
+
+
 
 });
