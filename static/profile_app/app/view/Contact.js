@@ -5,13 +5,16 @@ Ext.define('Console.view.Contact', {
 	layout: 'fit',
 	autoShow: false,
 	width:900,
-	height:600,
+	height:900,
 	config:{
-		parent:undefined
+		parent:undefined,
+
 	},
 	initComponent: function() {
 		console.log("init contact window");
 		var me = this;
+		var geocoder = new google.maps.Geocoder();
+
 		this.items= [{
 			xtype:"form",
 			items: [ {
@@ -26,33 +29,43 @@ Ext.define('Console.view.Contact', {
 				fieldLabel:"Описание",
 				width: 750,
 				padding:10
+			},{	
+				xtype:"textfield",
+				name:"lat",
+				itemId:"lat",
+				fieldLabel:"Долгота",
+				width: 250,
+				padding:10
+			},{	
+				xtype:"textfield",
+				itemId:'lon',
+				name:"lon",
+				fieldLabel:"Широта",
+				width: 250,
+				padding:10
 			},
-			// {
-			// 	xtype: 'gmappanel',
-			// 	itemId: 'contactAddressMap',
-			// 	zoomLevel: 14,
-			// 	gmapType: 'map',
-			// 	// mapConfOpts: ['enableScrollWheelZoom','enableDoubleClickZoom','enableDragging'],
-			// 	// mapControls: ['GSmallMapControl','GMapTypeControl'],
-			// 	// setCenter: {
-			// 	// 	lat: 39.26940,
-			// 	// 	lng: -76.64323
-			// 	// },
-			// 	// maplisteners: {
-			// 	// 	click: function(mevt){
-			// 	// 		Ext.Msg.alert('Lat/Lng of Click', mevt.latLng.lat() + ' / ' + mevt.latLng.lng());
-			// 	// 		var input = Ext.get('ac').dom,
-			// 	// 		sw = new google.maps.LatLng(39.26940,-76.64323),
-			// 	// 		ne = new google.maps.LatLng(39.38904,-76.54848),
-			// 	// 		bounds = new google.maps.LatLngBounds(sw,ne);
-			// 	// 		var options = {
-			// 	// 			location: mevt.latLng,
-			// 	// 			radius: '1000',
-			// 	// 			types: ['geocode']
-			// 	// 		};
-			// 	// 	}
-			// 	// }
-			// },
+
+			{
+				xtype: 'gmappanel',
+				itemId: 'contact_map',
+				zoomLevel: 14,
+				width:880,
+				height:400,
+				gmapType: 'map',
+				mapConfOpts: ['enableScrollWheelZoom','enableDoubleClickZoom','enableDragging'],
+				mapControls: ['GSmallMapControl','GMapTypeControl'],
+				maplisteners: {
+					click: function(mevt){
+						var lat = mevt.latLng.lat(),
+						lon = mevt.latLng.lng();
+						me.down('form').getComponent("lat").setValue(lat);
+						me.down('form').getComponent("lon").setValue(lon);
+						console.log(me, lat, lon, lat_cmp, lon_cmp);
+						// Ext.Msg.alert('Lat/Lng of Click', lat + ' / ' + lon);
+					}
+				}
+				
+			},
 			{
 				xtype:"grid",
 				title:"Способы связи",
@@ -79,16 +92,16 @@ Ext.define('Console.view.Contact', {
 
 			}
 			]}
-		];
-		this.buttons = [{
-			text: 'Сохранить',
-			scope: this,
-			action: 'save_contact'
-		},{
-			text:"Добавить связь",
-			action:"add_contact_link",
-			scope: this,
-		}];
-		this.callParent(arguments);
-	}
-});
+			];
+			this.buttons = [{
+				text: 'Сохранить',
+				scope: this,
+				action: 'save_contact'
+			},{
+				text:"Добавить связь",
+				action:"add_contact_link",
+				scope: this,
+			}];
+			this.callParent(arguments);
+		}
+	});

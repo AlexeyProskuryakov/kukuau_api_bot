@@ -33,6 +33,7 @@ function createProfileForm(profileModel){
 
     return profile_window;
 }
+var geocoder = new google.maps.Geocoder();
 
 Ext.define('Console.controller.Profiles', {
     extend: 'Ext.app.Controller',
@@ -225,15 +226,24 @@ Ext.define('Console.controller.Profiles', {
             c_form.loadRecord(record);
             var cl_grid = c_form.getComponent("profile_contact_links");
             cl_grid.reconfigure(record.links());
+
+            var map_cmp = c_form.getComponent("contact_map"),
+            center = {lat:record.get("lat"), lng:record.get("lon")};
+            console.log("center: ",center);
+            if ((record.get("lat") == 0.0) || (record.get("lon") == 0.0)) {
+                center = {lat:54.858088, "lng": 83.110492}
+            }
+            map_cmp.setCenter = center;
+
         }
         c_view.show();
     },
 
     showContactLinkForm: function(button, record){
         var win = button.up('window');
-         cl_view = Ext.widget("contactLinkWindow", {"parent":win}),
-         cl_form = cl_view.down("form"),
-         c_form = win.down("form");
+        cl_view = Ext.widget("contactLinkWindow", {"parent":win}),
+        cl_form = cl_view.down("form"),
+        c_form = win.down("form");
 
         if (!(record instanceof Ext.EventObjectImpl)){
             cl_form.loadRecord(record);
@@ -260,11 +270,7 @@ Ext.define('Console.controller.Profiles', {
         values = form.getValues(),
         parent_form = win.getParent().down("form"),
         c_model = parent_form.getRecord();
-        // if (c_model == undefined){
-        //     c_model = Ext.create("Console.model.Contact", parent_form.getValues());
-        //     parent_form.loadRecord(c_model);
-        //     parent_form.getComponent("profile_contact_links").reconfigure(c_model.links())
-        // }
+
         l_store = c_model.links();
         if (cl_model != undefined){
             var cl_id = cl_model.getId(),
@@ -285,18 +291,18 @@ Ext.define('Console.controller.Profiles', {
 
     saveContact:function(button){
         var win = button.up("window"),
-            form = win.down("form"),
-            c_values = form.getValues(),
-            c_model = form.getRecord();
+        form = win.down("form"),
+        c_values = form.getValues(),
+        c_model = form.getRecord();
         
         if (c_model == undefined){
             c_model = Ext.create("Console.model.Contact", win.down("form").getValues());
         } 
 
         var c_id = c_model.getId(),
-            p_model = win.getParent().down('form').getRecord(),
-            c_store = p_model.contacts(),
-            c_rec = c_store.getById(c_id);
+        p_model = win.getParent().down('form').getRecord(),
+        c_store = p_model.contacts(),
+        c_rec = c_store.getById(c_id);
 
         c_values.id = c_id;
         if (c_rec != null){
