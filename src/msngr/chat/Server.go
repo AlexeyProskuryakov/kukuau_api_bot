@@ -238,22 +238,24 @@ func GetChatMessagesHandler(start_addr string, notifier *ntf.Notifier, db *d.Mai
 			For   string `json:"m_for"`
 			After int64 `json:"after"`
 		}
-		q := NewMessagesReq{}
+		nmReq := NewMessagesReq{}
 		request_body, err := ioutil.ReadAll(req.Body)
 		if err != nil {
 			render.JSON(500, map[string]interface{}{"ok":false, "detail":"can not read request body"})
 			return
 		}
-		err = json.Unmarshal(request_body, &q)
+		err = json.Unmarshal(request_body, &nmReq)
 		if err != nil {
 			render.JSON(500, map[string]interface{}{"ok":false, "detail":fmt.Sprintf("can not unmarshal request body %v \n %s", err, request_body)})
 			return
 		}
-		query := bson.M{"time_stamp":bson.M{"$gt":q.After}}
-		if q.For == "" {
+		//log.Printf("New messages request : %v", nmReq)
+		query := bson.M{"time_stamp":bson.M{"$gt":nmReq.After}}
+		if nmReq.For == ""{
 			query["to"] = config.CompanyId
 		} else {
-			query["from"] = q.For
+			query["from"] = nmReq.For
+			query["to"] = config.CompanyId
 		}
 
 		messages, err := db.Messages.GetMessages(query)
@@ -347,7 +349,6 @@ func GetChatContactsChangeHandler(start_addr string, notifier *ntf.Notifier, db 
 	})
 	return m
 }
-
 
 func GetChatConfigHandler(start_addr, prefix string, db *d.MainDb, config c.ChatConfig) http.Handler {
 	m := getMartini(config.Name, config.CompanyId, prefix, db)

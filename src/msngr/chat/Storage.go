@@ -6,28 +6,17 @@ import (
 	"gopkg.in/mgo.v2/bson"
 )
 
-type chatUser struct {
+type userCompanyMappingElement struct {
 	UserId    string `bson:"user_id"`
 	CompanyId string `bson:"company_id"`
 }
 
-type ChatMessage struct {
-	db.MessageWrapper
-	CompanyId string
-}
-
-type chatCompany struct {
-	Name string `bson:"name"`
-	Id   string `bson:"id"`
-}
 
 type ChatStorage struct {
 	db.DbHelper
 
 	GlobalUsers *db.UserHandler
-
-	Peoples     *mgo.Collection
-	Companies   *mgo.Collection
+	userCompanyMappings     *mgo.Collection
 }
 
 func (s *ChatStorage) ensureIndexes() {
@@ -38,20 +27,7 @@ func (s *ChatStorage) ensureIndexes() {
 		DropDups:   true,
 		Unique: true,
 	})
-	users_collection.EnsureIndex(mgo.Index{
-		Key:        []string{"company_identity"},
-		Background: true,
-		DropDups:   true,
-	})
-	s.Peoples = users_collection
-
-	company_collection := s.Session.DB(s.DbName).C("chat_companies")
-	company_collection.EnsureIndex(mgo.Index{
-		Key:        []string{"identity"},
-		Background: true,
-		DropDups:   true,
-	})
-	s.Companies = company_collection
+	s.userCompanyMappings = users_collection
 }
 
 func NewChatStorage(main_db *db.MainDb) *ChatStorage {
@@ -60,10 +36,10 @@ func NewChatStorage(main_db *db.MainDb) *ChatStorage {
 	return &result
 }
 func (s *ChatStorage) SetUserCompany(userId, companyId string) error {
-	cu := chatUser{}
-	err := s.Peoples.Find(bson.M{"user_id":userId, "company_id":companyId}).One(&cu)
+	cu := userCompanyMappingElement{}
+	err := s.userCompanyMappings.Find(bson.M{"user_id":userId, "company_id":companyId}).One(&cu)
 	if err == mgo.ErrNotFound {
-		err = s.Peoples.Insert(chatUser{UserId:userId, CompanyId:companyId})
+		err = s.userCompanyMappings.Insert(userCompanyMappingElement{UserId:userId, CompanyId:companyId})
 		return err
 	}
 	return err
@@ -71,8 +47,8 @@ func (s *ChatStorage) SetUserCompany(userId, companyId string) error {
 
 func (s *ChatStorage) GetUsersOfCompany(companyId string) ([]db.UserWrapper, error) {
 	result := []db.UserWrapper{}
-	users_mapping := []chatUser{}
-	err := s.Peoples.Find(bson.M{"company_id":companyId}).All(&users_mapping)
+	users_mapping := []userCompanyMappingElement{}
+	err := s.userCompanyMappings.Find(bson.M{"company_id":companyId}).All(&users_mapping)
 	if err != nil {
 		return result, err
 	}

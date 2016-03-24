@@ -61,7 +61,7 @@ function set_contact_new_message(contact_id, count){
 
 function paste_new_contact(contact){
     if (contact.NewMessagesCount != 0){
-        var c_text = "<div class='contact' id='{{ID}}'><a class='a-contact' href='"+url_prefix+"?with={{ID}}'> {{Name}} <span class='small' id='s-{{ID}}' class='new-message-counter' count='{{NewMessagesCount}}'>({{NewMessagesCount}})<span></a></div>";
+        var c_text = "<div class='contact' id='{{ID}}'><a class='a-contact' href='"+url_prefix+"?with={{ID}}'> {{Name}} <span class='small new-message-counter' id='s-{{ID}}' count='{{NewMessagesCount}}'>({{NewMessagesCount}})<span></a></div>";
         var result = Mustache.render(c_text, contact);
         $(result).insertAfter("#write-all")
         playNotification();
