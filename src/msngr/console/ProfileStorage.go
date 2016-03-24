@@ -19,14 +19,15 @@ type ProfileContact struct {
 	ContactId   int64 `json:"id"`
 	Address     string `json:"address"`
 	Description string `json:"description"`
-	Geo         Coordinates `json:"geo"`
+	Lat         float64 `json:"lat"`
+	Lon         float64 `json:"lon"`
 	Links       []ProfileContactLink `json:"links"`
 	OrderNumber int        `json:"order_number"`
 }
 
 func (pc ProfileContact) String() string {
-	return fmt.Sprintf("\n\tContact [%v] position: %v\n\taddress: %v\n\tdescription: %v\n\tgeo: %+v\n\tlinks:%+v\n",
-		pc.ContactId, pc.OrderNumber, pc.Address, pc.Description, pc.Geo, pc.Links,
+	return fmt.Sprintf("\n\tContact [%v] position: %v\n\taddress: %v\n\tdescription: %v\n\tgeo: [lat: %v lon: %v]\n\tlinks:%+v\n",
+		pc.ContactId, pc.OrderNumber, pc.Address, pc.Description, pc.Lat, pc.Lon, pc.Links,
 	)
 }
 
@@ -42,11 +43,6 @@ func (pcl ProfileContactLink) String() string {
 	return fmt.Sprintf("\n\t\tLink [%v] position: %v type: %v\n\t\tvalue: %v\n\t\tdescription: %v\n",
 		pcl.LinkId, pcl.OrderNumber, pcl.Type, pcl.Value, pcl.Description,
 	)
-}
-
-type Coordinates struct {
-	Lat float64 `json:"lat"`
-	Lon float64 `json:"lon"`
 }
 
 type Profile struct {
@@ -143,7 +139,7 @@ func (ph *ProfileDbHandler) GetProfileContacts(userName string) ([]ProfileContac
 		if descr.Valid {
 			description = descr.String
 		}
-		contact := ProfileContact{ContactId:cId, Address:address, Geo:Coordinates{Lat:lat, Lon:lon}, OrderNumber:cOrd, Description:description}
+		contact := ProfileContact{ContactId:cId, Address:address, Lat:lat, Lon:lon, OrderNumber:cOrd, Description:description}
 		links, err := ph.GetContactLinks(contact.ContactId)
 		if err == nil {
 			contact.Links = links
@@ -291,7 +287,7 @@ func (ph *ProfileDbHandler) GetProfileGroups(userName string) ([]ProfileGroup, e
 func (ph *ProfileDbHandler) InsertContact(userName string, contact *ProfileContact) (*ProfileContact, error) {
 	var contactId int64
 	err := ph.db.QueryRow("INSERT INTO profile_contacts (username, address, lat, lon, descr, ord) VALUES ($1, $2, $3, $4, $5, $6) RETURNING id",
-		userName, contact.Address, contact.Geo.Lat, contact.Geo.Lon, contact.Description, contact.OrderNumber).Scan(&contactId)
+		userName, contact.Address, contact.Lat, contact.Lon, contact.Description, contact.OrderNumber).Scan(&contactId)
 	if err != nil {
 		log.Printf("P ERROR at add contact %+v to profile %v", contact, err)
 		return nil, err
@@ -322,7 +318,7 @@ func (ph *ProfileDbHandler) UpsertContact(userName string, newContact *ProfileCo
 		log.Printf("P ERROR at prepare update for change profile contact %v", err)
 		return err
 	}
-	upd_res, err := stmt.Exec(newContact.Address, newContact.Geo.Lat, newContact.Geo.Lon, newContact.Description, newContact.OrderNumber, newContact.ContactId)
+	upd_res, err := stmt.Exec(newContact.Address, newContact.Lat, newContact.Lon, newContact.Description, newContact.OrderNumber, newContact.ContactId)
 	if err != nil {
 		log.Printf("P ERROR at execute update for change profile contact %v", err)
 		return err
@@ -352,10 +348,10 @@ func (ph *ProfileDbHandler) UpsertContact(userName string, newContact *ProfileCo
 		}
 	}
 	links, _ := ph.GetContactLinks(newContact.ContactId)
-	log.Printf("new links: %v, \nold links: %v, \nnew links map: %v\n", newContact.Links, links, new_links_map)
+	//log.Printf("new links: %v, \nold links: %v, \nnew links map: %v\n", newContact.Links, links, new_links_map)
 	for _, stored_link := range links {
 		if _, ok := new_links_map[stored_link.LinkId]; !ok {
-			log.Printf("delete contact link: %v", stored_link)
+			//log.Printf("delete contact link: %v", stored_link)
 			ph.DeleteOneContactLink(stored_link.LinkId)
 		}
 	}
@@ -538,13 +534,13 @@ func (ph *ProfileDbHandler)UpdateProfile(newProfile *Profile) error {
 		log.Printf("Difference in contacts")
 		new_contacts_map := map[int64]ProfileContact{}
 		for _, contact := range newProfile.Contacts {
-			log.Printf("update contact: %+v", contact)
+			//log.Printf("update contact: %+v", contact)
 			ph.UpsertContact(newProfile.UserName, &contact)
 			new_contacts_map[contact.ContactId] = contact
 		}
 
 		contacts, _ := ph.GetProfileContacts(newProfile.UserName)
-		log.Printf("new contacts map : %+v\n updated stored contacts: %+v", new_contacts_map, contacts)
+		//log.Printf("new contacts map : %+v\n updated stored contacts: %+v", new_contacts_map, contacts)
 		for _, stored_contact := range contacts {
 			if _, ok := new_contacts_map[stored_contact.ContactId]; !ok {
 				log.Printf("delete contact: %v", stored_contact)

@@ -22,7 +22,8 @@ var (
 		Address:"test adress",
 		Description:"test descr",
 		OrderNumber:1,
-		Geo:Coordinates{Lat:1, Lon:2},
+		Lat:1,
+		Lon:2,
 		Links:[]ProfileContactLink{
 			ProfileContactLink{Type:"www", Value:"http://", Description:"tututut", OrderNumber:1},
 			ProfileContactLink{Type:"phone", Value:"+79811064022", Description:"tututut", OrderNumber:2},
