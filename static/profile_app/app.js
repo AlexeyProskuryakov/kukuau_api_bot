@@ -19,3 +19,5 @@ Ext.application({
 //todo list of categories
 //todo choose adress at map
 //todo change field names
+
+
