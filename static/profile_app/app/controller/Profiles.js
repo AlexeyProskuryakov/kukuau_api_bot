@@ -232,7 +232,14 @@ Ext.define('Console.controller.Profiles', {
             console.log("center: ",center);
             if ((record.get("lat") == 0.0) || (record.get("lon") == 0.0)) {
                 center = {lat:54.858088, "lng": 83.110492}
+            } else {
+                var marker = new google.maps.Marker({
+                    position: center,
+                    map: map_cmp.getMap()
+                });    
+                map_cmp.addMarkers([center]);
             }
+            
             map_cmp.setCenter = center;
 
         }

@@ -5,8 +5,8 @@ Ext.define("Console.model.Contact",{
 	{name:'id', type:'int'},
 	'address',
 	'description',
-	{name:'lat', type:'float'},
-	{name:'lon', type:'float'},
+	{name:'lat',  type:'float'},
+	{name:'lon',  type:'float'},
 	{name:'order_number', type:'int'}
 	],
 	

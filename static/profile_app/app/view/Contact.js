@@ -19,6 +19,7 @@ Ext.define('Console.view.Contact', {
 			xtype:"form",
 			items: [ {
 				xtype:"textfield",
+				itemId:'address',
 				name:"address",
 				fieldLabel:"Адресс",
 				width: 750,
@@ -53,15 +54,28 @@ Ext.define('Console.view.Contact', {
 				height:400,
 				gmapType: 'map',
 				mapConfOpts: ['enableScrollWheelZoom','enableDoubleClickZoom','enableDragging'],
-				mapControls: ['GSmallMapControl','GMapTypeControl'],
+				mapControls: [],
 				maplisteners: {
 					click: function(mevt){
+						console.log(mevt);
 						var lat = mevt.latLng.lat(),
-						lon = mevt.latLng.lng();
+						lon = mevt.latLng.lng(),
+						geocdr = new google.maps.Geocoder;
+
 						me.down('form').getComponent("lat").setValue(lat);
 						me.down('form').getComponent("lon").setValue(lon);
-						console.log(me, lat, lon, lat_cmp, lon_cmp);
-						// Ext.Msg.alert('Lat/Lng of Click', lat + ' / ' + lon);
+
+						geocdr.geocode({location:mevt.latLng}, function(results, status){
+							console.log(results, status);
+							if (status === google.maps.GeocoderStatus.OK) {	
+								me.down('form').getComponent('address').setValue(results[0].formatted_address);
+							} else {
+								console.log("failed locate because status is ", status)
+							}
+						});
+						this.addMarker(mevt.latLng, mevt.latLng, true);
+						
+						console.log(me, lat, lon);
 					}
 				}
 				
