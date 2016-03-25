@@ -20,8 +20,8 @@ Ext.define('Console.view.Profile', {
                 layout: 'column',
                 defaults: {
                     xtype: 'form',
-                    
                 },
+                fileUpload:true,
                 items:[
                 {
                     xtype: 'image',
@@ -34,7 +34,7 @@ Ext.define('Console.view.Profile', {
                     itemId:"profile_image"
                 },{
                    xtype: 'filefield',
-                   name: 'photo',
+                   name: 'img_file',
                    fieldLabel: 'Фотокарточка',
                    allowBlank: false,
                    width:380,
@@ -48,14 +48,15 @@ Ext.define('Console.view.Profile', {
                     var form = this.up('form').getForm(),
                         p_model = me.down('form').getRecord(),
                         panel = this;
-                        console.log(p_model.get("id"));
+                    console.log(p_model.get("id"));
                     if(form.isValid()){
                         form.submit({
+                            headers: { 'Content-Type': 'multipart/form-data' },
                             url: '/profile/upload_img/'+p_model.get("id"),
                             waitMsg: 'Загрузка фотокарточки...',
                             success: function(form, action) {
                                 console.log(form, action);
-                                panel.getComponent("profile_image").setSrc(action.result.url);
+                                Ext.getCmp("profile_image").setSrc(action.result.url);
                             },
                         });
                     }

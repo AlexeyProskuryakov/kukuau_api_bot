@@ -17,7 +17,9 @@
   "console": {
     "web_port": ":9595",
     "key": "main key",
-    "information": "Привет! Это мы Кличим Чат или Клиент Чат или просто Кличат! Пиши сообщения и Саша тебе ответит:)"
+    "information": "Привет! Это мы Кличим Чат или Клиент Чат или просто Кличат! Пиши сообщения и Саша тебе ответит:)",
+    "profile_img_path": "static",
+    "profile_img_server": ""
   },
   "taxis": {
     "marka": {
@@ -297,20 +299,26 @@
       "key": "Kuku demo_quest_key"
     }
   },
-  "chats": { //актуально для ветки chat
+  "chats": {
+    //актуально для ветки chat
     "1": {
-      "name": "<your company name>", //имя которое будет отображаться в верху
-      "id": "test_company", //идентификатор компании (будет виден в сообщениях)
+      "name": "<your company name>",
+      //имя которое будет отображаться в верху
+      "id": "test_company",
+      //идентификатор компании (будет виден в сообщениях)
       "information": "<some information>",
-      "auto_answer": { //автоматический ответ
+      "auto_answer": {
+        //автоматический ответ
         "enable": true,
         "after_min": 2,
         "text": "<Will answer you later. Wait please>"
       },
-      "bot_answer": "<I receive your message>", //ответ бота на каждое сообщение сразуже
+      "bot_answer": "<I receive your message>",
+      //ответ бота на каждое сообщение сразуже
       "key": "Kuku test_company_key",
-      "user":"user", //логин пароль ползователя для входа в чатик
-      "password":"password"
+      "user": "user",
+      //логин пароль ползователя для входа в чатик
+      "password": "password"
     },
     "2": {
       "name": "<your company name 2>",

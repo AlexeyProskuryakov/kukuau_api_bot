@@ -98,7 +98,6 @@ Ext.define('Console.controller.Profiles', {
         var values = form.getValues();
         var record = form.getRecord();
         if (record != undefined) {
-            console.log("p record is undefined!");
             var id = record.get('id');
             values.id=id;
             cntcts = [];
@@ -231,7 +230,6 @@ Ext.define('Console.controller.Profiles', {
 
             var map_cmp = c_form.getComponent("contact_map"),
             center = {lat:record.get("lat"), lng:record.get("lon")};
-            console.log("center: ",center);
             if ((record.get("lat") == 0.0) || (record.get("lon") == 0.0)) {
                 center = {lat:54.858088, "lng": 83.110492}
             } else {
@@ -241,9 +239,7 @@ Ext.define('Console.controller.Profiles', {
                 });    
                 map_cmp.addMarkers([center]);
             }
-            
             map_cmp.setCenter = center;
-
         }
         c_view.show();
     },
@@ -319,11 +315,7 @@ Ext.define('Console.controller.Profiles', {
         } else {
             c_store.add(c_model);
         }
-
-
         win.hide();
     }
-
-
 
 });

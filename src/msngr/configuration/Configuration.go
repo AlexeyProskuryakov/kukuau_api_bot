@@ -107,9 +107,11 @@ type QuestConfig struct {
 }
 
 type ConsoleConfig struct {
-	WebPort     string `json:"web_port"`
-	Key         string `json:"key"`
-	Information string `json:"information"`
+	WebPort        string `json:"web_port"`
+	Key            string `json:"key"`
+	Information    string `json:"information"`
+	ProfileImgPath string `json:"profile_img_path"`
+	ProfileImgServer string `json:"profile_img_server"`
 }
 
 type Configuration struct {
@@ -181,7 +183,6 @@ func ReadConfigInRecursive() Configuration {
 	return UnmarshallConfig(cdata)
 }
 
-
 func ReadTestConfigInRecursive() Configuration {
 	log.Printf("Path sep: %+v", os.PathSeparator)
 	fn := u.FoundFile("config.test.json")
@@ -196,7 +197,6 @@ func ReadTestConfigInRecursive() Configuration {
 	}
 	return UnmarshallConfig(cdata)
 }
-
 
 func ReadConfig() Configuration {
 	dir, err := os.Getwd()

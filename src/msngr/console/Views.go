@@ -49,19 +49,20 @@ func EnsureWorkWithKeys(r martini.Router, qs *quests.QuestStorage) martini.Route
 	//todo add group and refactor normal
 	r.Post("/load/up", func(render render.Render, request *http.Request) {
 		xlsFileReg := regexp.MustCompile(".+\\.xlsx?")
+		//body, _ := ioutil.ReadAll(request.Body)
+		//log.Printf("header: %+v", request.Header)
+		//log.Printf("body: %s", body)
 		file, header, err := request.FormFile("file")
-
-		log.Printf("Form file information: file: %+v \nheader:%v, %v\nerr:%v", file, header.Filename, header.Header, err)
-
 		if err != nil {
-			render.HTML(200, "quests/new_keys", GetKeysInfo(fmt.Sprintf("Ошибка загрузки файлика: %v", err), qs))
+			render.HTML(200, "new_keys", GetKeysInfo(fmt.Sprintf("Ошибка загрузки файлика: %v", err), qs))
 			return
 		}
+		log.Printf("Form file information: file: %+v \nheader:%v, %v\nerr:%v", file, header.Filename, header.Header, err)
 		defer file.Close()
 
 		data, err := ioutil.ReadAll(file)
 		if err != nil {
-			render.HTML(200, "quests/new_keys", GetKeysInfo(fmt.Sprintf("Ошибка загрузки файлика: %v", err), qs))
+			render.HTML(200, "new_keys", GetKeysInfo(fmt.Sprintf("Ошибка загрузки файлика: %v", err), qs))
 			return
 		}
 
@@ -80,7 +81,7 @@ func EnsureWorkWithKeys(r martini.Router, qs *quests.QuestStorage) martini.Route
 				qs.AddStep(prel[0], prel[1], prel[2])
 			}
 		} else {
-			render.HTML(200, "console/new_keys", GetKeysInfo("Файл имеет не то расширение :(", qs))
+			render.HTML(200, "new_keys", GetKeysInfo("Файл имеет не то расширение :(", qs))
 		}
 
 		render.Redirect("/new_keys")
@@ -134,7 +135,7 @@ func EnsureWorkWithKeys(r martini.Router, qs *quests.QuestStorage) martini.Route
 	return r
 }
 
-func EnsureWorkWithUsers(r martini.Router, db *d.MainDb) martini.Router{
+func EnsureWorkWithUsers(r martini.Router, db *d.MainDb) martini.Router {
 	r.Group("/users", func(r martini.Router) {
 		r.Get("", func(r render.Render, req *http.Request) {
 			r.HTML(200, "users", GetUsersInfo("", db), render.HTMLOptions{Layout:"base"})
