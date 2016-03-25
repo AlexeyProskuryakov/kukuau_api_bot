@@ -14,7 +14,7 @@ var contacts_updated = Math.round( Date.now() / 1000 );
 var message_for = $("#with").prop("value");
 
 function paste_message(message){
-    console.log("p m"); 
+    console.log("p m");
     if ($("#"+message.SID).length != 0){
         return
     }
