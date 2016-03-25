@@ -666,12 +666,12 @@ func (mh *MessageHandler) StoreMessage(from, to, body, message_id string) (*Mess
 	return nil, errors.New(fmt.Sprintf("I have duplicate!%+v", found))
 }
 
-func (mh *MessageHandler) SetMessagesAnswered(from, by string) error {
+func (mh *MessageHandler) SetMessagesAnswered(from, to, by string) error {
 	if !mh.parent.Check() {
 		return errors.New("БД не доступна")
 	}
 	_, err := mh.Collection.UpdateAll(
-		bson.M{"from":from, "not_answered":1},
+		bson.M{"from":from, "to":to, "not_answered":1},
 		bson.M{"$set":bson.M{"not_answered":0, "answered_by":by}},
 	)
 	return err

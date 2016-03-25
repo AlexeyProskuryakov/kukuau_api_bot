@@ -28,7 +28,7 @@ func Watch(messageStore *db.MessageHandler, ntf *msngr.Notifier, config configur
 		for _, message := range messages {
 			if _, ok := froms[message.From]; !ok {
 				ntf.NotifyText(message.From, config.AutoAnswer.Text)
-				messageStore.SetMessagesAnswered(message.From, "bot")
+				messageStore.SetMessagesAnswered(message.From, config.CompanyId, "bot")
 				froms[message.From] = true
 			}
 		}

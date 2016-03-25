@@ -14,7 +14,11 @@ var contacts_updated = Math.round( Date.now() / 1000 );
 var message_for = $("#with").prop("value");
 
 function paste_message(message){
-    var text_message = "<div class='media msg'><div class='media-body'><h4 class='media-heading'>{{From}} <small class='time'>{{time}}</small></h4><div class='col-lg-11'>{{Body}}</div></div></div><hr>";
+    console.log("p m"); 
+    if ($("#"+message.SID).length != 0){
+        return
+    }
+    var text_message = "<div class='msg' id={{SID}}><div class='media-body'><h4 class='media-heading'>{{From}} <small class='time'>{{time}}</small></h4><div class='col-lg-11'>{{Body}}</div></div></div><hr>";
     var result = Mustache.render(text_message, message);
     $(result).insertBefore("#chat-end");
     document.getElementById( 'chat-end' ).scrollIntoView(false);

@@ -190,7 +190,7 @@ func GetChatSendHandler(start_addr string, notifier *ntf.Notifier, db *d.MainDb,
 				if user != nil {
 					go notifier.NotifyText(message.To, message.Body)
 				}
-				db.Messages.SetMessagesAnswered(message.To, config.CompanyId)
+				db.Messages.SetMessagesAnswered(message.To, config.CompanyId, config.CompanyId)
 			}
 			if err != nil {
 				render.JSON(500, map[string]interface{}{"error":err})

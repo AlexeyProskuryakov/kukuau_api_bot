@@ -52,7 +52,7 @@
                 <div class="message-wrap col-lg-8">
                     <div class="msg-wrap" id="chat-wrapper">
                         {{range $message := .messages}}
-                        <div class="msg">
+                        <div class="msg" id="{{$message.SID}}">
                             <h4 class="media-heading">{{$message.From}}
                                 <small class="time">{{stamp_date $message.Time}}</small>
                             </h4>
