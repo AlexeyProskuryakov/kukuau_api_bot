@@ -6,8 +6,8 @@ Ext.define('Console.view.Profile', {
     layout: 'fit',
     autoShow: false,
     autoScroll:false,
-    width:1024,
-    height:900,
+    width:520,
+    height:1024,
 
     initComponent: function() {
         console.log("init profile");
@@ -20,9 +20,7 @@ Ext.define('Console.view.Profile', {
                 layout: 'column',
                 defaults: {
                     xtype: 'form',
-                    columnWidth:0.2,
-                    labelAlign: 'top',
-                    anchor: '80%'
+                    
                 },
                 items:[
                 {
@@ -32,18 +30,38 @@ Ext.define('Console.view.Profile', {
                     height:100,
                     name:'image_url',
                     padding:10,
-                    id:"profile_image"
-                },
-                {
-                    xtype: 'fileuploadfield',
-                    buttonOnly: false,
-                    buttonText: "Загрузить",
-                    fieldLabel: 'Картинка профиля',
-                    name: 'image',
-                    padding:10
-                },
-                ]
-            }),{
+                    id:"profile_image",
+                    itemId:"profile_image"
+                },{
+                   xtype: 'filefield',
+                   name: 'photo',
+                   fieldLabel: 'Фотокарточка',
+                   allowBlank: false,
+                   width:380,
+                   padding:10,
+                   buttonText: 'Выбрать фотокарточку'
+               },
+               ],
+               buttons: [{
+                text: 'Загрузить фотокарточку',
+                handler: function() {
+                    var form = this.up('form').getForm(),
+                        p_model = me.down('form').getRecord(),
+                        panel = this;
+                        console.log(p_model.get("id"));
+                    if(form.isValid()){
+                        form.submit({
+                            url: '/profile/upload_img/'+p_model.get("id"),
+                            waitMsg: 'Загрузка фотокарточки...',
+                            success: function(form, action) {
+                                console.log(form, action);
+                                panel.getComponent("profile_image").setSrc(action.result.url);
+                            },
+                        });
+                    }
+                }
+            }]
+        }),{
                 xtype:'checkbox',
                 inputValue:true,
                 name:'enable',
@@ -72,7 +90,7 @@ Ext.define('Console.view.Profile', {
                 enableSourceEdit:false,
                 enableAlignments:false,
                 enableFont:false,
-                height:70,
+                height:170,
                 grow: true,
                 fieldLabel: 'Слоган',
                 padding:10
@@ -86,6 +104,7 @@ Ext.define('Console.view.Profile', {
                 enableLists:false,
                 enableSourceEdit:false,
                 enableAlignments:false,
+                height:270,
                 grow: true,
                 fieldLabel: 'Описание',
                 padding:10

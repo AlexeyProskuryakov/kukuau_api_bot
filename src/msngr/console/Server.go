@@ -23,6 +23,8 @@ import (
 	"github.com/martini-contrib/auth"
 	"github.com/martini-contrib/render"
 	"gopkg.in/mgo.v2/bson"
+	"os"
+	"io"
 )
 
 const (
@@ -294,6 +296,31 @@ func Run(addr string, notifier *ntf.Notifier, db *d.MainDb, cs c.ConfigStorage, 
 			}
 			ph.DeleteProfile(info.Id)
 			render.JSON(200, map[string]interface{}{"success":true})
+		})
+		r.Post("/upload_img/:profile_id", func(render render.Render, params martini.Params, req *http.Request) {
+			//data, _ := ioutil.ReadAll(req.Body)
+			path_name := params["profile_id"]
+			//log.Printf("params: %+v\nbody:\n[%s]", path_name, data)
+			//req.ParseMultipartForm(32 << 10)
+			log.Printf("mptf: %v", req.MultipartForm)
+			file, handler, err := req.FormFile("file")
+			if err != nil {
+				log.Printf("CS error at forming file %v", err)
+				return
+			}
+			defer file.Close()
+			err = os.Mkdir(path_name, 0666)
+			if err != nil{
+				log.Printf("CS error at mkdir")
+			}
+			f, err := os.OpenFile(fmt.Sprintf("%v/%v", path_name, handler.Filename), os.O_WRONLY | os.O_CREATE, 0666)
+			if err != nil {
+				log.Printf("CS error at open file %v", err)
+				return
+			}
+			defer f.Close()
+			io.Copy(f, file)
+			render.JSON(200, map[string]interface{}{"success":true, "url":"/img/cat.jpg"})
 		})
 	})
 

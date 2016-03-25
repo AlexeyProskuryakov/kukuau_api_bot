@@ -28,8 +28,10 @@ function createProfileForm(profileModel){
     contacts_grid.reconfigure(profileModel.contacts());
     
     var image = Ext.getCmp("profile_image");
-    console.log("setting image for ", image, "...", profileModel.get("image_url"));
-    image.setSrc(profileModel.get("image_url"));
+    image_src = profileModel.get("image_url");
+    if (image_src != ""){
+        image.setSrc(image_src);
+    }
 
     return profile_window;
 }
