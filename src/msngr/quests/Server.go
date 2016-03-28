@@ -642,7 +642,6 @@ func Run(config c.QuestConfig, qs *QuestStorage, ntf *ntf.Notifier, additionalNo
 					"is_found":"$is_found",
 					"next_key":"$next_key",
 					"start_key":"$start_key",
-					"description":"$description",
 				}}}},
 			bson.M{"$sort":bson.M{
 				"team_name":1}},
