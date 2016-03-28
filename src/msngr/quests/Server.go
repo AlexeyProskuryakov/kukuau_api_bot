@@ -657,7 +657,7 @@ func Run(config c.QuestConfig, qs *QuestStorage, ntf *ntf.Notifier, additionalNo
 				keys = append(keys, FoundKey{Name:step.StartKey, Found:step.IsFound, Id:step.ID.Hex(), Description:step.Description})
 			}
 			result[ti].Keys = keys
-			log.Printf("%v keys: %v", teamInfo.TeamName, keys)
+			result[ti].Steps = []Step{}
 		}
 		ren.HTML(200, "quests/info_page", map[string]interface{}{"teams":result})
 	})
