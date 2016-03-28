@@ -21,13 +21,13 @@ Ext.define('Console.view.Contact', {
 				xtype:"textfield",
 				itemId:'address',
 				name:"address",
-				fieldLabel:"Адресс",
+				fieldLabel:"Адрес",
 				width: 750,
 				padding:10
 			},{	
 				xtype:"textfield",
 				name:"description",
-				fieldLabel:"Описание",
+				fieldLabel:"Примечание",
 				width: 750,
 				padding:10
 			},{	

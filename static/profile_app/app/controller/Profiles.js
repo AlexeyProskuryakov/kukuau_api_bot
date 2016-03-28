@@ -221,26 +221,27 @@ Ext.define('Console.controller.Profiles', {
 
     showContactForm: function(button, record){
         var win    = button.up('window');
-        var c_view = Ext.widget("contactWindow", {"parent":win});
+         c_view = Ext.widget("contactWindow", {"parent":win}),
+         map_cmp = c_form.getComponent("contact_map"),
+         center = {lat:54.858088, "lng": 83.110492};
+         
         if (!(record instanceof Ext.EventObjectImpl)){
             var c_form = c_view.down("form");
             c_form.loadRecord(record);
             var cl_grid = c_form.getComponent("profile_contact_links");
             cl_grid.reconfigure(record.links());
 
-            var map_cmp = c_form.getComponent("contact_map"),
-            center = {lat:record.get("lat"), lng:record.get("lon")};
-            if ((record.get("lat") == 0.0) || (record.get("lon") == 0.0)) {
-                center = {lat:54.858088, "lng": 83.110492}
-            } else {
-                var marker = new google.maps.Marker({
-                    position: center,
-                    map: map_cmp.getMap()
-                });    
-                map_cmp.addMarkers([center]);
-            }
-            map_cmp.setCenter = center;
         }
+        
+        if ((record.get("lat") != 0.0) || (record.get("lon") != 0.0)) {
+            center = {lat:record.get("lat"), lng:record.get("lon")};
+        } 
+        var marker = new google.maps.Marker({
+            position: center,
+            map: map_cmp.getMap()
+        });    
+        map_cmp.addMarkers([center]);    
+        map_cmp.setCenter = center;
         c_view.show();
     },
 

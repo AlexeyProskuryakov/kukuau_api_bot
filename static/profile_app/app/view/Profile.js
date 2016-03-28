@@ -48,11 +48,18 @@ Ext.define('Console.view.Profile', {
                     var form = this.up('form').getForm(),
                         p_model = me.down('form').getRecord(),
                         panel = this;
-                    console.log(p_model.get("id"));
+                    var profile_id;
+                    if (p_model == undefined){
+                        profile_id = guid();
+                    } else {
+                        profile_id = p_model.get("id");
+                    }
+                    
+
                     if(form.isValid()){
                         form.submit({
                             headers: { 'Content-Type': 'multipart/form-data' },
-                            url: '/profile/upload_img/'+p_model.get("id"),
+                            url: '/profile/upload_img/'+profile_id,
                             waitMsg: 'Загрузка фотокарточки...',
                             success: function(form, action) {
                                 console.log(form, action);
