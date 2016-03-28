@@ -70,7 +70,7 @@ func (cmp ConsoleMessageProcessor) ProcessMessage(in *s.InPkg) *s.MessageResult 
 				return &s.MessageResult{Type:"chat", Body:step.Description}
 			}
 			if step == nil && err == nil {
-				keys, err := cmp.quest_storage.GetAllStep()
+				keys, err := cmp.quest_storage.GetAllSteps()
 				//log.Printf("CC: keys: %v, err: %v", keys, err)
 				key_s := []string{}
 				for _, k := range keys {

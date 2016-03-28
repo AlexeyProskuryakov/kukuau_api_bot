@@ -69,7 +69,7 @@ func GetKeysErrorInfo(err_text string, qs *QuestStorage) map[string]interface{} 
 	var e error
 	result := map[string]interface{}{}
 
-	keys, e := qs.GetAllStep()
+	keys, e := qs.GetAllSteps()
 
 	if e != nil || err_text != "" {
 		result["is_error"] = true
@@ -97,7 +97,7 @@ func SortSteps(steps []Step) []Step {
 			first_step = step
 		}
 	}
-	log.Printf("QS start key: %+v, \nstep_map_next: %+v\nstep_map_start %+v", first_step, step_map_next, step_map_start)
+	//log.Printf("QS start key: %+v, \nstep_map_next: %+v\nstep_map_start %+v", first_step, step_map_next, step_map_start)
 	sorted = append(sorted, first_step)
 	for {
 		if next_step, ok := step_map_start[first_step.NextKey]; ok {
@@ -112,7 +112,7 @@ func SortSteps(steps []Step) []Step {
 
 func GetKeysTeamsInfo(teams_info map[string]string, qs *QuestStorage) map[string]interface{} {
 	result := map[string]interface{}{}
-	keys, _ := qs.GetAllStep()
+	keys, _ := qs.GetAllSteps()
 	result["keys"] = keys
 	result["is_team_info"] = true
 	result["team_info"] = teams_info
@@ -159,7 +159,7 @@ func Run(config c.QuestConfig, qs *QuestStorage, ntf *ntf.Notifier, additionalNo
 	r := martini.NewRouter()
 
 	r.Get("/", func(user auth.User, render render.Render) {
-		render.HTML(200, "quests/index", map[string]interface{}{})
+		render.HTML(200, "quests/readme", map[string]interface{}{})
 	})
 
 	r.Get("/new_keys", func(render render.Render) {
@@ -618,9 +618,67 @@ func Run(config c.QuestConfig, qs *QuestStorage, ntf *ntf.Notifier, additionalNo
 		steps, _ := qs.GetSteps(bson.M{"for_team":t.Name, "is_found":true})
 		ren.JSON(200, map[string]interface{}{"keys":steps})
 	})
-	log.Printf("Will start web server for quest at: %v", config.WebPort)
+
+	type FoundKey struct {
+		Name        string `bson:"name" json:"name"`
+		Found       bool `bson:"found" json:"found"`
+		Id          string `json:"id"`
+		Description string `json:"description"`
+	}
+	type TeamInfo struct {
+		TeamName string `bson:"team_name" json:"team_name"`
+		Keys     []FoundKey `json:"keys"`
+		Steps    []Step `bson:"steps"`
+	}
+
+	r.Get("/info_page", func(ren render.Render, req *http.Request) {
+		result := []TeamInfo{}
+		err := qs.Steps.Pipe([]bson.M{
+			bson.M{"$group":bson.M{
+				"_id":"$for_team",
+				"team_name":bson.M{"$first":"$for_team"},
+				"steps":bson.M{"$push":bson.M{
+					"_id":"$_id",
+					"is_found":"$is_found",
+					"next_key":"$next_key",
+					"start_key":"$start_key",
+					"description":"$description",
+				}}}},
+			bson.M{"$sort":bson.M{
+				"team_name":1}},
+		}).All(&result)
+		if err != nil {
+			log.Printf("QS Error at aggregate info page %v", err)
+		}
+		for ti, teamInfo := range result {
+			steps := SortSteps(teamInfo.Steps)
+			keys := []FoundKey{}
+			for _, step := range steps {
+				keys = append(keys, FoundKey{Name:step.StartKey, Found:step.IsFound, Id:step.ID.Hex(), Description:step.Description})
+			}
+			result[ti].Keys = keys
+			log.Printf("%v keys: %v", teamInfo.TeamName, keys)
+		}
+		ren.HTML(200, "quests/info_page", map[string]interface{}{"teams":result})
+	})
+	r.Post("/info_page/update", func(ren render.Render, req *http.Request) {
+		found_keys, err := qs.GetSteps(bson.M{"is_found":true})
+		if err != nil {
+			ren.JSON(500, map[string]interface{}{"ok":false, "error":err.Error()})
+		}
+		type UpdateKeyResult struct {
+			Id string `json:"id"`
+		}
+		result := []UpdateKeyResult{}
+		for _, key := range found_keys {
+			result = append(result, UpdateKeyResult{Id:key.ID.Hex()})
+		}
+		ren.JSON(200, map[string]interface{}{"ok":true, "foundKeys":result})
+	})
+
 
 	//m.MapTo(r, (*martini.Routes)(nil))
+	log.Printf("Will start web server for quest at: %v", config.WebPort)
 	m.Action(r.Handle)
 	m.RunOnAddr(config.WebPort)
 }

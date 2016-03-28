@@ -44,7 +44,7 @@ func GetKeysInfo(err_text string, qs *quests.QuestStorage) map[string]interface{
 	var e error
 	result := map[string]interface{}{}
 
-	keys, e = qs.GetAllStep()
+	keys, e = qs.GetAllSteps()
 
 	if e != nil || err_text != "" {
 		result["is_error"] = true
