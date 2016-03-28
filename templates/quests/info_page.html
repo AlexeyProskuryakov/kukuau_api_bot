@@ -19,7 +19,7 @@
                         {{$team.TeamName}}
                     </td>
                     {{range $key := $team.Keys}}
-                    <td id="{{$key.Id}}" class="{{if $key.Found}} key-found {{else}} key-not-found {{end}}" data-placement="bottom" data-trigger="click" data-html="true"  data-toggle="tooltip" title="{{$key.Description}}">
+                    <td id="{{$key.Id}}" class="{{if $key.Found}} key-found {{else}} key-not-found {{end}}">
                         {{$key.Name}}
                     </td>
                     {{end}}

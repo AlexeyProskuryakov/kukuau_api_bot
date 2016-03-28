@@ -654,7 +654,7 @@ func Run(config c.QuestConfig, qs *QuestStorage, ntf *ntf.Notifier, additionalNo
 			steps := SortSteps(teamInfo.Steps)
 			keys := []FoundKey{}
 			for _, step := range steps {
-				keys = append(keys, FoundKey{Name:step.StartKey, Found:step.IsFound, Id:step.ID.Hex(), Description:step.Description})
+				keys = append(keys, FoundKey{Name:step.StartKey, Found:step.IsFound, Id:step.ID.Hex()})
 			}
 			result[ti].Keys = keys
 			result[ti].Steps = []Step{}
