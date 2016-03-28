@@ -322,6 +322,14 @@ func Run(addr string, db *d.MainDb, qs *quests.QuestStorage, ntf *ntf.Notifier, 
 			io.Copy(f, file)
 			file_url := fmt.Sprintf("%v/%v/%v", cfg.Console.ProfileImgServer, profile_id, handler.Filename)
 			log.Printf("CS will form image at: [%v]", file_url)
+
+			profile, _ := ph.GetProfile(profile_id)
+			if profile == nil {
+				profile = &Profile{UserName:profile_id}
+			}
+			profile.ImageURL = file_url
+			ph.UpdateProfile(profile)
+
 			render.JSON(200, map[string]interface{}{"success":true, "url":file_url})
 		})
 	})
