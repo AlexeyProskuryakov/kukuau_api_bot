@@ -99,7 +99,7 @@ func SortSteps(steps []Step) []Step {
 	}
 	//log.Printf("QS start key: %+v, \nstep_map_next: %+v\nstep_map_start %+v", first_step, step_map_next, step_map_start)
 	sorted = append(sorted, first_step)
-	for {
+	for _, _ = range steps {
 		if next_step, ok := step_map_start[first_step.NextKey]; ok {
 			sorted = append(sorted, next_step)
 			first_step = next_step
@@ -642,6 +642,7 @@ func Run(config c.QuestConfig, qs *QuestStorage, ntf *ntf.Notifier, additionalNo
 					"is_found":"$is_found",
 					"next_key":"$next_key",
 					"start_key":"$start_key",
+					"description":"$description",
 				}}}},
 			bson.M{"$sort":bson.M{
 				"team_name":1}},
@@ -653,7 +654,7 @@ func Run(config c.QuestConfig, qs *QuestStorage, ntf *ntf.Notifier, additionalNo
 			steps := SortSteps(teamInfo.Steps)
 			keys := []FoundKey{}
 			for _, step := range steps {
-				keys = append(keys, FoundKey{Name:step.StartKey, Found:step.IsFound, Id:step.ID.Hex()})
+				keys = append(keys, FoundKey{Name:step.StartKey, Found:step.IsFound, Id:step.ID.Hex(), Description:step.Description})
 			}
 			result[ti].Keys = keys
 			result[ti].Steps = []Step{}
