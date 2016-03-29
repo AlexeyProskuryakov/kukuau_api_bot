@@ -4,9 +4,10 @@ Ext.define('Console.view.Profile', {
 
     title: 'Профайл',
     layout: 'fit',
+    autoDestroy:true,
+    
     autoShow: false,
-    autoScroll:false,
-    width:520,
+    width:550,
     height:1024,
 
     initComponent: function() {
@@ -17,6 +18,10 @@ Ext.define('Console.view.Profile', {
             items: [ 
             new Ext.form.FormPanel({
                 frame: true,
+                autoDestroy:true,
+                title:"Фотокарточка",
+                collapsible: true,
+                itemId:"profile_image_wrapper",
                 layout: 'column',
                 defaults: {
                     xtype: 'form',
@@ -33,21 +38,21 @@ Ext.define('Console.view.Profile', {
                     id:"profile_image",
                     itemId:"profile_image"
                 },{
-                   xtype: 'filefield',
-                   name: 'img_file',
-                   fieldLabel: 'Фотокарточка',
-                   allowBlank: false,
-                   width:380,
-                   padding:10,
-                   buttonText: 'Выбрать фотокарточку'
-               },
-               ],
-               buttons: [{
+                 xtype: 'filefield',
+                 name: 'img_file',
+                 fieldLabel: 'Фотокарточка',
+                 allowBlank: false,
+                 width:380,
+                 padding:10,
+                 buttonText: 'Выбрать фотокарточку'
+             },
+             ],
+             buttons: [{
                 text: 'Загрузить фотокарточку',
                 handler: function() {
                     var form = this.up('form').getForm(),
-                        p_model = me.down('form').getRecord(),
-                        panel = this;
+                    p_model = me.down('form').getRecord(),
+                    panel = this;
                     var profile_id;
                     if (p_model == undefined){
                         profile_id = guid();
@@ -57,19 +62,52 @@ Ext.define('Console.view.Profile', {
                     
 
                     if(form.isValid()){
+                        image_cmp = this.up("form").getComponent("profile_image");
                         form.submit({
                             headers: { 'Content-Type': 'multipart/form-data' },
                             url: '/profile/upload_img/'+profile_id,
                             waitMsg: 'Загрузка фотокарточки...',
                             success: function(form, action) {
-                                console.log(form, action);
-                                Ext.getCmp("profile_image").setSrc(action.result.url);
+                                image_cmp.setSrc(action.result.url);
                             },
                         });
                     }
                 }
             }]
-        }),{
+        }),
+            {
+                xtype:"grid",
+                title:"Контакты",
+                itemId:"profile_contacts",
+                store: 'ContactsStore',
+                name:'contacts',
+                collapsible: true,
+                columns:[
+                {header: 'Адрес',  dataIndex: 'address', flex:1},
+                {header: 'Описание', dataIndex: 'description', flex:1},
+                {
+                    xtype : 'actioncolumn',
+                    header : 'Delete',
+                    width : 100,
+                    align : 'center',
+                    action:"delete_contact",
+                    items : [
+                    {
+                        icon:'img/delete-icon.png',
+                        tooltip : 'Delete',
+                        scope : me
+                    }]
+                }
+                ],
+                buttons:[
+                {
+                    text:"Добавить контакт",
+                    action:"add_contact_start",
+                    scope: this,
+                }
+                ]
+            },
+            {
                 xtype:'checkbox',
                 inputValue:true,
                 name:'enable',
@@ -116,31 +154,7 @@ Ext.define('Console.view.Profile', {
                 grow: true,
                 fieldLabel: 'Описание',
                 padding:10
-            },
-            {
-                xtype:"grid",
-                title:"Контакты",
-                itemId:"profile_contacts",
-                store: 'ContactsStore',
-                name:'contacts',
-                columns:[
-                {header: 'Адрес',  dataIndex: 'address', flex:1},
-                {header: 'Описание', dataIndex: 'description', flex:1},
-                {
-                    xtype : 'actioncolumn',
-                    header : 'Delete',
-                    width : 100,
-                    align : 'center',
-                    action:"delete_contact",
-                    items : [
-                    {
-                        icon:'img/delete-icon.png',
-                        tooltip : 'Delete',
-                        scope : me
-                    }]
-                }
-                ],
-            },
+            }
             ]
         }];
 
@@ -152,12 +166,8 @@ Ext.define('Console.view.Profile', {
             text:'Удалить',
             action: 'delete',
             scope: this
-        },
-        {
-            text:"Добавить контакт",
-            action:"add_contact_start",
-            scope: this,
         }
+        
 
         ];
 
