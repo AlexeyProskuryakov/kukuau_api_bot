@@ -306,7 +306,7 @@ func Run(addr string, db *d.MainDb, qs *quests.QuestStorage, ntf *ntf.Notifier, 
 			}
 			defer file.Close()
 
-			err = os.Mkdir(path, 0666)
+			err = os.Mkdir(path, 0774)
 			if err != nil {
 				log.Printf("CS error at mkdir %v", err)
 			}
