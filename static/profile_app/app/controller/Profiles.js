@@ -42,7 +42,7 @@ var geocoder = new google.maps.Geocoder();
 Ext.define('Console.controller.Profiles', {
     extend: 'Ext.app.Controller',
     views: ['ProfileList', 'Profile', 'Contact', 'ContactLink'],
-    stores: ['ProfileStore', 'ContactsStore', 'ContactLinksStore', 'GroupsStore'],
+    stores: ['ProfileStore', 'ContactsStore', 'ContactLinksStore', 'GroupsStore', 'ProfileAllowPhoneStore'],
     models: ['Profile'],
     init: function() {
         this.control({
@@ -88,6 +88,9 @@ Ext.define('Console.controller.Profiles', {
             },
             'contactWindow actioncolumn[action=delete_contact_link]':{
                 click:this.deleteContactLink
+            },
+            'contactWindow address':{
+                blur:this.geocodeAddress
             }
 
         });
@@ -322,6 +325,10 @@ Ext.define('Console.controller.Profiles', {
         } 
 
         win.hide();
+    },
+
+    geocodeAddress:function(th, e, opts){
+        console.log(th,e,opts);
     }
 
 });

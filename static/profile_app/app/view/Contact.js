@@ -24,7 +24,37 @@ Ext.define('Console.view.Contact', {
 				fieldLabel:"Адрес",
 				width: 750,
 				padding:10
-			},{	
+			},
+			{
+				xtype:"button",
+				itemId:"checkAddress",
+				text:"Найти адрес на карте",
+				scale:'small',
+				width: 170,
+				margin:'-5 0 10 50',
+				handler:function(x){
+					var form = this.up("form"),
+						address = form.getValues().address,
+						map = form.getComponent('contact_map'),
+						geocdr = new google.maps.Geocoder;
+						
+					console.log(address, map);
+					geocdr.geocode({address:address}, function(results, status){
+							console.log(results, status);
+							if (status === google.maps.GeocoderStatus.OK) {	
+								var location = results[0].geometry.location,
+									marker = {lat:location.lat(), lng:location.lng()};
+
+								form.getComponent("lat").setValue(marker.lat);
+								form.getComponent("lon").setValue(marker.lng);
+								map.addMarker(marker,marker, true, true);
+							} else {
+								console.log("failed locate because status is ", status)
+							}
+						});
+				}
+			},
+			{	
 				xtype:"textfield",
 				name:"description",
 				fieldLabel:"Примечание",

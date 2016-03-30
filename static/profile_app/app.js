@@ -4,7 +4,6 @@ Ext.application({
  
     appFolder: 'profile_app/app',
     controllers: ['Profiles'],
-    
     launch: function() {
         Ext.create('Ext.container.Viewport', {
             layout: 'fit',

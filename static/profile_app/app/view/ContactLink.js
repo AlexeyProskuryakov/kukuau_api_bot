@@ -16,11 +16,7 @@ Ext.define('Console.view.ContactLink', {
 			data:[
 			{name:"phone", show:"Телефон"},
 			{name:"email",show:"Электронная почта"},
-			{name:"adress",show:"Адресс"},
-			{name:"WWW",show:"Сайт"},
-			{name:"vk",show:"Вконтачъ"},
-			{name:"twitter",show:"Твиттеръ"},
-			{name:"facebook",show:"Фейсбукъ"},
+			{name:"www",show:"Сайт"}
 			]
 		});
 		this.items= [{

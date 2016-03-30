@@ -191,7 +191,6 @@ func Run(addr string, db *d.MainDb, qs *quests.QuestStorage, ntf *ntf.Notifier, 
 				log.Printf("CS Error at getting all profiles: %v", err)
 				render.JSON(500, map[string]interface{}{"success":false, "error":err})
 			}
-			log.Printf("result: %+v", profiles)
 			render.JSON(200, map[string]interface{}{
 				"success":true,
 				"profiles":profiles,
@@ -587,6 +586,10 @@ func Run(addr string, db *d.MainDb, qs *quests.QuestStorage, ntf *ntf.Notifier, 
 
 	r = EnsureWorkWithKeys(r, qs)
 	r = EnsureWorkWithUsers(r, db)
+
+	r.Get("/statistic/taxi", func(render render.Render) {
+		render.HTML(200, "console/statistic", map[string]interface{}{"providers":[]string{"academ"}})
+	})
 
 	m.Action(r.Handle)
 	m.RunOnAddr(addr)

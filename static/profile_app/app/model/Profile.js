@@ -17,7 +17,13 @@ Ext.define('Console.model.Profile', {
 		type:'hasMany',
 		model:'Console.model.Group',
 		name:'groups'
-	}],
+	}, {
+		type:'hasMany', 
+		model:'Console.model.ProfileAllowPhone',
+		name:'phones'
+	}
+
+	],
 	proxy: {
 		type: 'ajax',
 		api: {
