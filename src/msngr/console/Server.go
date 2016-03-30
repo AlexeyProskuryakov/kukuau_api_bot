@@ -306,12 +306,12 @@ func Run(addr string, db *d.MainDb, qs *quests.QuestStorage, ntf *ntf.Notifier, 
 			}
 			defer file.Close()
 
-			err = os.Mkdir(path, 0774)
+			err = os.Mkdir(path, 0664)
 			if err != nil {
 				log.Printf("CS error at mkdir %v", err)
 			}
 			file_path := fmt.Sprintf("%v/%v", path, handler.Filename)
-			f, err := os.OpenFile(file_path, os.O_WRONLY | os.O_CREATE, 0666)
+			f, err := os.OpenFile(file_path, os.O_WRONLY | os.O_CREATE, 0664)
 			if err != nil {
 				log.Printf("CS error at open file %v", err)
 				return
