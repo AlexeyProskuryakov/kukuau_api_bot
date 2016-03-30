@@ -342,7 +342,9 @@ func (ph *ProfileDbHandler) UpsertContact(userName string, newContact *ProfileCo
 	for _, link := range newContact.Links {
 		if c, _ := ph.UpdateContactLink(link); c == 0 {
 			insertedLink, _ := ph.InsertContactLink(&link, newContact.ContactId)
-			new_links_map[insertedLink.LinkId] = link
+			if insertedLink != nil{
+				new_links_map[insertedLink.LinkId] = link
+			}
 		} else {
 			new_links_map[link.LinkId] = link
 		}

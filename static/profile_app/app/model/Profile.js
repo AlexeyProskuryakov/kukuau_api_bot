@@ -22,7 +22,6 @@ Ext.define('Console.model.Profile', {
 		model:'Console.model.ProfileAllowPhone',
 		name:'phones'
 	}
-
 	],
 	proxy: {
 		type: 'ajax',

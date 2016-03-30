@@ -104,8 +104,6 @@ Ext.define('Console.view.Contact', {
 							}
 						});
 						this.addMarker(mevt.latLng, mevt.latLng, true);
-						
-						console.log(me, lat, lon);
 					}
 				}
 				

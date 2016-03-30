@@ -41,7 +41,7 @@ var geocoder = new google.maps.Geocoder();
 
 Ext.define('Console.controller.Profiles', {
     extend: 'Ext.app.Controller',
-    views: ['ProfileList', 'Profile', 'Contact', 'ContactLink'],
+    views: ['ProfileList', 'UserNameCheck', 'Profile', 'Contact', 'ContactLink'],
     stores: ['ProfileStore', 'ContactsStore', 'ContactLinksStore', 'GroupsStore', 'ProfileAllowPhoneStore'],
     models: ['Profile'],
     init: function() {
@@ -50,9 +50,11 @@ Ext.define('Console.controller.Profiles', {
                 itemdblclick: this.editProfile
             },
             'profilelist button[action=new]':{
-                click: this.createProfile
+                click: this.createProfileStart
             },
-
+            'UserNameCheckWindow button[action=newProfile]':{
+                click: this.createProfileEnd
+            },
             'profilewindow button[action=save]': {
                 click: this.updateProfile
             },
@@ -71,14 +73,14 @@ Ext.define('Console.controller.Profiles', {
             'profilewindow actioncolumn[action=delete_contact]':{
                 click: this.deleteContact
             },
-            'contactWindow grid[itemId=profile_contact_links]':{
-                itemdblclick:this.showContactLinkForm
-            },
             'contactLinkWindow button[action=add_contact_end]':{
                 click:this.addContact
             },
             'contactLinkWindow button[action=save_contact_link]':{
                 click:this.saveContactLink
+            },
+            'contactWindow grid[itemId=profile_contact_links]':{
+                itemdblclick:this.showContactLinkForm
             },
             'contactWindow button[action=save_contact]':{
                 click:this.saveContact
@@ -127,7 +129,7 @@ Ext.define('Console.controller.Profiles', {
                 if(data.success){
                     var store = Ext.widget('profilelist').getStore();
                     store.load();
-                    view.hide();
+                    win.destroy();
                 }
                 else{
                     Ext.Msg.alert('Обновление','Что-то пошло не так...');
@@ -136,14 +138,23 @@ Ext.define('Console.controller.Profiles', {
         });
         
     },
+    createProfileStart:function(button){
+        var view = Ext.widget("UserNameCheckWindow");
+        view.show();
+    },
     // создание
-    createProfile: function(button) {
-        view = Ext.widget('profilewindow');
-        var store = Ext.widget('profilelist').getStore(),
-        profile_model = Ext.create("Console.model.Profile", {id:guid(true)});
+    createProfileEnd: function(button) {
+        var win = button.up("window"),
+            id =win.getComponent("user_name").getValue(),
+            view = Ext.widget('profilewindow'),
+            store = Ext.widget('profilelist').getStore(),
+            profile_model = Ext.create("Console.model.Profile", {id:id});
         store.add(profile_model);
         view.down("form").loadRecord(profile_model);
+        win.destroy();
         view.show();
+
+
     },
     // удаление
     deleteProfile: function(button) {
@@ -311,7 +322,6 @@ Ext.define('Console.controller.Profiles', {
             c_values.id = guid();
             c_model = Ext.create("Console.model.Contact", c_values);
             c_store.add(c_model);
-            win.getParent().down('form').getComponent("profile_contacts").reconfigure(c_store);
         } else {
             var c_id = c_model.getId(),
             c_rec = c_store.getById(c_id);
@@ -323,7 +333,7 @@ Ext.define('Console.controller.Profiles', {
                 c_store.add(c_model);
             }
         } 
-
+        win.getParent().down('form').getComponent("profile_contacts").reconfigure(c_store);
         win.hide();
     },
 

@@ -10,6 +10,11 @@
     "pg_database": {
       "connection_string": "postgres://postgres:123@localhost:5432/kuku?sslmode=disable"
     },
+// Настройка для тестового доступа
+//    "pg_database": {
+//      "connection_string": "postgres://testusr:Qwsa+test@localhost:5432/kuku_test?sslmode=disable"
+//    },
+
     //"google_key": "AIzaSyBXW3UaS5e4FtOt-XJqLFHGpvrFlf45DV4",
     "google_key": "AIzaSyBkmvXK-SqfQcyj2XlXgTx-r_B18TJb-vY",
     "elastic_conn": "http://localhost:9200/"
