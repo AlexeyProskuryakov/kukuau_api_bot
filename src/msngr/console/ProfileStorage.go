@@ -25,6 +25,11 @@ type ProfileContact struct {
 	OrderNumber int        `json:"order_number"`
 }
 
+type ProfileAllowedPhone struct {
+	PhoneId int64 `json:"id"`
+	Value   string `json:"value"`
+}
+
 func (pc ProfileContact) String() string {
 	return fmt.Sprintf("\n\tContact [%v] position: %v\n\taddress: %v\n\tdescription: %v\n\tgeo: [lat: %v lon: %v]\n\tlinks:%+v\n",
 		pc.ContactId, pc.OrderNumber, pc.Address, pc.Description, pc.Lat, pc.Lon, pc.Links,
@@ -53,6 +58,7 @@ type Profile struct {
 	TextDescription  string `json:"text_description"`
 	Contacts         []ProfileContact `json:"contacts"`
 	Groups           []ProfileGroup `json:"groups"`
+	AllowedPhones    []ProfileAllowedPhone `json:"phones"`
 	Enable           bool `json:"enable"`
 	Public           bool `json:"public"`
 }
@@ -86,7 +92,44 @@ type ProfileDbHandler struct {
 	db *sql.DB
 }
 
-func (ph *ProfileDbHandler)FillProfileGroupsAndContact(profile *Profile) error {
+func (ph *ProfileDbHandler) GetProfileAllowedPhones(userName string) ([]ProfileAllowedPhone, error) {
+	result := []ProfileAllowedPhone{}
+	phonesRows, err := ph.db.Query("SELECT id, phonenumber FROM profile_preview_access WHERE username = $1", userName)
+	if err != nil {
+		log.Printf("P ERROR at query profile [%v] allowed phones %v", userName, err)
+		return result, err
+	}
+	for phonesRows.Next() {
+		var pId int64
+		var number string
+		err = phonesRows.Scan(&pId, &number)
+		if err != nil {
+			log.Printf("P ERROR at scan profile [%v] contacts %v", userName, err)
+			continue
+		}
+		result = append(result, ProfileAllowedPhone{PhoneId:pId, Value:number})
+	}
+	return result, nil
+}
+
+func (ph *ProfileDbHandler) RemoveProfileAllowedPhone(pId int64) error {
+	return ph.deleteFromTable("profile_preview_access", "id", pId)
+}
+
+func (ph *ProfileDbHandler) InsertProfileAllowedPhone(userName, phone string) (*ProfileAllowedPhone, error) {
+	var phoneId int64
+	result := &ProfileAllowedPhone{}
+	err := ph.db.QueryRow("INSERT INTO profile_preview_access (username, phonenumber) VALUES ($1, $2) RETURNING id;", userName, phone).Scan(&phoneId)
+	if err != nil {
+		log.Printf("P ERROR at inserting allowed phone %v for %v: %v", phone, userName, err)
+		return nil, err
+	}
+	result.PhoneId = phoneId
+	result.Value = phone
+	return result, nil
+}
+
+func (ph *ProfileDbHandler)FillProfile(profile *Profile) error {
 	contacts, err := ph.GetProfileContacts(profile.UserName)
 	if err != nil {
 		log.Printf("P ERROR profile %v error load contacts", profile.UserName)
@@ -99,6 +142,11 @@ func (ph *ProfileDbHandler)FillProfileGroupsAndContact(profile *Profile) error {
 	}
 	profile.Groups = groups
 
+	phones, err := ph.GetProfileAllowedPhones(profile.UserName)
+	if err != nil{
+		log.Printf("P ERROR profile %v error load allowed phones", profile.UserName)
+	}
+	profile.AllowedPhones = phones
 	return nil
 }
 
@@ -114,7 +162,7 @@ func NewProfileDbHandler(connectionString string) (*ProfileDbHandler, error) {
 
 func (ph *ProfileDbHandler) GetContactLinkTypes() []string {
 	return []string{
-		"phone", "WWW", "site",
+		"phone", "www", "site",
 	}
 }
 func (ph *ProfileDbHandler) GetProfileContacts(userName string) ([]ProfileContact, error) {
@@ -158,7 +206,7 @@ func (ph *ProfileDbHandler) GetAllProfiles() ([]Profile, error) {
 	}
 	for profileRows.Next() {
 		profile := NewProfileFromRow(profileRows)
-		ph.FillProfileGroupsAndContact(&profile)
+		ph.FillProfile(&profile)
 		profiles = append(profiles, profile)
 	}
 	return profiles, nil
@@ -172,7 +220,7 @@ func (ph *ProfileDbHandler) GetProfile(username string) (*Profile, error) {
 	}
 	if profileRow.Next() {
 		profile := NewProfileFromRow(profileRow)
-		ph.FillProfileGroupsAndContact(&profile)
+		ph.FillProfile(&profile)
 		return &profile, nil
 	}
 	return nil, nil
@@ -342,7 +390,7 @@ func (ph *ProfileDbHandler) UpsertContact(userName string, newContact *ProfileCo
 	for _, link := range newContact.Links {
 		if c, _ := ph.UpdateContactLink(link); c == 0 {
 			insertedLink, _ := ph.InsertContactLink(&link, newContact.ContactId)
-			if insertedLink != nil{
+			if insertedLink != nil {
 				new_links_map[insertedLink.LinkId] = link
 			}
 		} else {
@@ -556,6 +604,29 @@ func (ph *ProfileDbHandler)UpdateProfile(newProfile *Profile) error {
 		for _, group := range newProfile.Groups {
 			ph.AddGroupToProfile(newProfile.UserName, &group)
 		}
+	}
+
+	if !reflect.DeepEqual(savedProfile.AllowedPhones, newProfile.AllowedPhones){
+		log.Printf("Difference in allowed phones")
+		old_phones_map := map[int64]string{}
+		new_phones_map := map[int64]string{}
+
+		for _, old_phone := range savedProfile.AllowedPhones{
+			old_phones_map[old_phone.PhoneId] = old_phone.Value
+		}
+
+		for _, new_phone := range newProfile.AllowedPhones{
+			new_phones_map[new_phone.PhoneId] = new_phone.Value
+			if _, ok := old_phones_map[new_phone.PhoneId]; !ok{
+				ph.InsertProfileAllowedPhone(newProfile.UserName, new_phone.Value)
+			}
+		}
+		for _, old_phone := range savedProfile.AllowedPhones{
+			if _, ok := new_phones_map[old_phone.PhoneId]; !ok{
+				ph.RemoveProfileAllowedPhone(old_phone.PhoneId)
+			}
+		}
+
 	}
 	return nil
 }
