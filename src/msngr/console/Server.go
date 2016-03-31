@@ -132,6 +132,11 @@ type CollocutorInfo struct {
 	CountOrdersByProvider []OrdersInfo
 }
 
+func ProfileTagClear(p *Profile) *Profile{
+	return p
+}
+
+
 func Run(addr string, db *d.MainDb, qs *quests.QuestStorage, ntf *ntf.Notifier, cfg c.Configuration) {
 	m := martini.New()
 	m.Use(w.NonJsonLogger())
@@ -302,6 +307,7 @@ func Run(addr string, db *d.MainDb, qs *quests.QuestStorage, ntf *ntf.Notifier, 
 			file, handler, err := req.FormFile("img_file")
 			if err != nil {
 				log.Printf("CS error at forming file %v", err)
+				render.JSON(500, map[string]interface{}{"error":err, "success":false})
 				return
 			}
 			defer file.Close()
@@ -309,11 +315,13 @@ func Run(addr string, db *d.MainDb, qs *quests.QuestStorage, ntf *ntf.Notifier, 
 			err = os.Mkdir(path, 0777)
 			if err != nil {
 				log.Printf("CS error at mkdir %v", err)
+				render.JSON(500, map[string]interface{}{"error":err, "success":false})
 			}
 			file_path := fmt.Sprintf("%v/%v", path, handler.Filename)
 			f, err := os.OpenFile(file_path, os.O_WRONLY | os.O_CREATE, 0664)
 			if err != nil {
 				log.Printf("CS error at open file %v", err)
+				render.JSON(500, map[string]interface{}{"error":err, "success":false})
 				return
 			}
 			defer f.Close()
@@ -330,6 +338,15 @@ func Run(addr string, db *d.MainDb, qs *quests.QuestStorage, ntf *ntf.Notifier, 
 			ph.UpdateProfile(profile)
 
 			render.JSON(200, map[string]interface{}{"success":true, "url":file_url})
+		})
+		r.Get("/all_groups", func( ren render.Render){
+			groups, err := ph.GetAllGroups()
+			if err != nil {
+				log.Printf("CS error at groups retrieve: %v", err)
+				ren.JSON(500, map[string]interface{}{"error":err, "success":false})
+				return
+			}
+			ren.JSON(200, map[string]interface{}{"success":true, "groups":groups})
 		})
 	})
 

@@ -24,11 +24,15 @@ function guid(is_str) {
 function createProfileForm(profileModel){
     var profile_window = Ext.widget('profilewindow'),
     form = profile_window.down('form'),
-    contacts_grid = form.getComponent('profile_contacts');
+    contacts_grid = form.getComponent('profile_contacts'), 
+    groups_grid = form.getComponent("profile_groups"),
+    phones_grid = form.getComponent("profile_phones");
 
     form.loadRecord(profileModel);
     contacts_grid.reconfigure(profileModel.contacts());
-    
+    phones_grid.reconfigure(profileModel.phones());
+    groups_grid.reconfigure(profileModel.groups());
+
     var image_src = profileModel.get("image_url");
 
     if (image_src != ""){
@@ -41,7 +45,7 @@ var geocoder = new google.maps.Geocoder();
 
 Ext.define('Console.controller.Profiles', {
     extend: 'Ext.app.Controller',
-    views: ['ProfileList', 'UserNameCheck', 'Profile', 'Contact', 'ContactLink'],
+    views: ['ProfileList', 'UserNameCheck', 'Profile', 'Contact', 'ContactLink', 'Phone', 'Group'],
     stores: ['ProfileStore', 'ContactsStore', 'ContactLinksStore', 'GroupsStore', 'ProfileAllowPhoneStore'],
     models: ['Profile'],
     init: function() {
@@ -64,15 +68,20 @@ Ext.define('Console.controller.Profiles', {
             'profilewindow button[action=clear]': {
                 click: this.clearForm
             },
+
             'profilewindow button[action=add_contact_start]':{
                 click: this.showContactForm
             },
+            
             'profilewindow grid[itemId=profile_contacts]':{
                 itemdblclick: this.showContactForm
             },
+
             'profilewindow actioncolumn[action=delete_contact]':{
                 click: this.deleteContact
             },
+
+            //contact links
             'contactLinkWindow button[action=add_contact_end]':{
                 click:this.addContact
             },
@@ -91,9 +100,33 @@ Ext.define('Console.controller.Profiles', {
             'contactWindow actioncolumn[action=delete_contact_link]':{
                 click:this.deleteContactLink
             },
-            'contactWindow address':{
-                blur:this.geocodeAddress
-            }
+
+            //phones
+            'profilewindow button[action=add_phone_start]':{
+                click:this.addPhoneStart
+            },
+
+            'phoneWindow button[action=add_phone_end]':{
+                click:this.addPhoneEnd
+            },
+
+            'profilewindow actioncolumn[action=delete_phone]':{
+                click: this.deletePhone
+            },
+
+            //groups
+            'profilewindow button[action=add_group_start]':{
+                click:this.addGroupStart
+            },
+
+            'groupWindow button[action=add_group_end]':{
+                click:this.addGroupEnd
+            },
+
+            'profilewindow actioncolumn[action=delete_group]':{
+                click: this.deleteGroup
+            },        
+
 
         });
         Ext.widget('profilelist').getStore().load();
@@ -105,9 +138,11 @@ Ext.define('Console.controller.Profiles', {
         var values = form.getValues();
         var record = form.getRecord();
         if (record != undefined) {
-            var id = record.get('id');
-            values.id=id;
-            cntcts = [];
+            var id = record.get('id'),
+            cntcts = [],
+            phones = [];
+            
+            values.id=id,
             Ext.each(record.contacts().data.items, function(item){
                 var c_data = item.getData();
                 c_data.links = [];
@@ -117,7 +152,12 @@ Ext.define('Console.controller.Profiles', {
                 cntcts.push(c_data);
             });
             values.contacts = cntcts;
-
+            
+            Ext.each(record.phones().data.items, function(p_item){
+                var p_data = p_item.getData();
+                phones.push(p_data);
+            })
+            values.phones = phones;
             values.image_url = form.getComponent("profile_image_wrapper").getComponent("profile_image").src;
         } 
 
@@ -145,10 +185,10 @@ Ext.define('Console.controller.Profiles', {
     // создание
     createProfileEnd: function(button) {
         var win = button.up("window"),
-            id =win.getComponent("user_name").getValue(),
-            view = Ext.widget('profilewindow'),
-            store = Ext.widget('profilelist').getStore(),
-            profile_model = Ext.create("Console.model.Profile", {id:id});
+        id =win.getComponent("user_name").getValue(),
+        view = Ext.widget('profilewindow'),
+        store = Ext.widget('profilelist').getStore(),
+        profile_model = Ext.create("Console.model.Profile", {id:id});
         store.add(profile_model);
         view.down("form").loadRecord(profile_model);
         win.destroy();
@@ -209,16 +249,6 @@ Ext.define('Console.controller.Profiles', {
         var profile_win = win.getParent();
         var profile_form = profile_win.down("form");
         var profile_model = profile_form.getRecord();
-        // if (profile_model == undefined){
-        //     var values = profile_form.getValues();
-        //     values.id = guid();
-        //     var store = Ext.widget('profilelist').getStore();
-        //     profile_model = Ext.create("Console.model.Profile", values);
-        //     store.add(profile_model);
-        //     var contacts_grid = profile_form.getComponent('profile_contacts');
-        //     contacts_grid.reconfigure(profile_model.contacts());
-        //     profile_form.loadRecord(profile_model);
-        // }
         var store = profile_model.contacts();
         var values = form.getValues();
         if (contact_model == undefined) {
@@ -237,7 +267,7 @@ Ext.define('Console.controller.Profiles', {
     },
 
     showContactForm: function(button, record){
-        var win    = button.up('window');
+        var win    = button.up('window'),
         c_view = Ext.widget("contactWindow", {"parent":win}),
         c_form = c_view.down("form"),
         map_cmp = c_form.getComponent("contact_map"),
@@ -262,7 +292,7 @@ Ext.define('Console.controller.Profiles', {
     },
 
     showContactLinkForm: function(button, record){
-        var win = button.up('window');
+        var win = button.up('window'),
         cl_view = Ext.widget("contactLinkWindow", {"parent":win}),
         cl_form = cl_view.down("form"),
         c_form = win.down("form");
@@ -337,8 +367,47 @@ Ext.define('Console.controller.Profiles', {
         win.hide();
     },
 
-    geocodeAddress:function(th, e, opts){
-        console.log(th,e,opts);
-    }
+    addPhoneStart:function(button){
+        var win    = button.up('window'),
+        c_view = Ext.widget("phoneWindow", {"parent":win});
+        c_view.show();
+    },
+
+    addPhoneEnd:function(button){
+        var win = button.up('window'),
+        profile_model = win.getParent().down("form").getRecord(),
+        phone_cmp = win.down('form').getComponent("phone_value");
+        if (phone_cmp.validate()){
+            var phone_model = Ext.create("Console.model.ProfileAllowPhone", {id:guid(), value:phone_cmp.getValue()})
+            profile_model.phones().add(phone_model);
+            win.destroy();
+        }        
+    },
+
+    deletePhone:function(grid, row, index){
+        grid.getStore().removeAt(index);
+    },
+
+    addGroupStart:function(button){
+        var win    = button.up('window'),
+        c_view = Ext.widget("groupWindow", {"parent":win});
+        c_view.show();
+    },
+
+    addGroupEnd:function(button){
+        var win = button.up('window'),
+        profile_model = win.getParent().down("form").getRecord(),
+        phone_cmp = win.down('form').getComponent("phone_value");
+        if (phone_cmp.validate()){
+            var phone_model = Ext.create("Console.model.ProfileAllowPhone", {id:guid(), value:phone_cmp.getValue()})
+            profile_model.phones().add(phone_model);
+            win.destroy();
+        }        
+    },
+
+    deleteGroup:function(grid, row, index){
+        grid.getStore().removeAt(index);
+    }, 
+
 
 });

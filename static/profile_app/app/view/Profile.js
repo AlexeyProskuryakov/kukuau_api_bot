@@ -85,7 +85,7 @@ Ext.define('Console.view.Profile', {
                 collapsed: true,
                 columns: [{
                     header: "Номер телефона",
-                    dataIndex: 'number',
+                    dataIndex: 'value',
                     flex: 1
                 }, {
                     xtype: 'actioncolumn',
@@ -130,7 +130,7 @@ Ext.define('Console.view.Profile', {
                 }],
                 buttons: [{
                     text: "Добавить группу",
-                    action: "add_groups_start",
+                    action: "add_group_start",
                     scope: this,
                 }]
             },{

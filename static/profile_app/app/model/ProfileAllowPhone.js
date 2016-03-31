@@ -3,6 +3,6 @@ Ext.define("Console.model.ProfileAllowPhone",{
 	idProperty:'id',
 	fields:[
 	'id',
-	'phone',
+	'value',
 	]
 });

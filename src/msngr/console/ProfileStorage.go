@@ -25,15 +25,19 @@ type ProfileContact struct {
 	OrderNumber int        `json:"order_number"`
 }
 
+func (pc ProfileContact) String() string {
+	return fmt.Sprintf("\n\tContact [%v] position: %v\n\taddress: %v\n\tdescription: %v\n\tgeo: [lat: %v lon: %v]\n\tlinks:%+v\n",
+		pc.ContactId, pc.OrderNumber, pc.Address, pc.Description, pc.Lat, pc.Lon, pc.Links,
+	)
+}
+
 type ProfileAllowedPhone struct {
 	PhoneId int64 `json:"id"`
 	Value   string `json:"value"`
 }
 
-func (pc ProfileContact) String() string {
-	return fmt.Sprintf("\n\tContact [%v] position: %v\n\taddress: %v\n\tdescription: %v\n\tgeo: [lat: %v lon: %v]\n\tlinks:%+v\n",
-		pc.ContactId, pc.OrderNumber, pc.Address, pc.Description, pc.Lat, pc.Lon, pc.Links,
-	)
+func (pap ProfileAllowedPhone) String() string {
+	return fmt.Sprintf("\n\tphone: [%v] |%v|", pap.PhoneId, pap.Value)
 }
 
 type ProfileContactLink struct {
@@ -67,8 +71,8 @@ func (p *Profile) Equal(p1 *Profile) bool {
 	return reflect.DeepEqual(p, p1)
 }
 func (p Profile) String() string {
-	return fmt.Sprintf("\nPROFILE------------------\n: %v [%v] enable: %v, public: %v \nimg: %v\ndescriptions: %v %v \ncontacts: %+v \ngroups: %v \n----------------------\n",
-		p.Name, p.UserName, p.Enable, p.Public, p.ImageURL, p.ShortDescription, p.TextDescription, p.Contacts, p.Groups,
+	return fmt.Sprintf("\nPROFILE------------------\n: %v [%v] enable: %v, public: %v \nimg: %v\ndescriptions: %v %v \ncontacts: %+v \ngroups: %+v \nallowed phones: %+v \n----------------------\n",
+		p.Name, p.UserName, p.Enable, p.Public, p.ImageURL, p.ShortDescription, p.TextDescription, p.Contacts, p.Groups, p.AllowedPhones,
 	)
 }
 func NewProfileFromRow(row *sql.Rows) Profile {
@@ -109,6 +113,7 @@ func (ph *ProfileDbHandler) GetProfileAllowedPhones(userName string) ([]ProfileA
 		}
 		result = append(result, ProfileAllowedPhone{PhoneId:pId, Value:number})
 	}
+	log.Printf("for %v found phones: %+v", userName, result)
 	return result, nil
 }
 
@@ -143,7 +148,7 @@ func (ph *ProfileDbHandler)FillProfile(profile *Profile) error {
 	profile.Groups = groups
 
 	phones, err := ph.GetProfileAllowedPhones(profile.UserName)
-	if err != nil{
+	if err != nil {
 		log.Printf("P ERROR profile %v error load allowed phones", profile.UserName)
 	}
 	profile.AllowedPhones = phones
@@ -255,6 +260,12 @@ func (ph *ProfileDbHandler) InsertNewProfile(p *Profile) (*Profile, error) {
 			p.Groups[gInd] = *updGroup
 		}
 	}
+
+	for pInd, phone := range p.AllowedPhones {
+		if updPhone, _ := ph.InsertProfileAllowedPhone(p.UserName, phone.Value); updPhone != nil {
+			p.AllowedPhones[pInd] = *updPhone
+		}
+	}
 	return p, err
 }
 func (ph *ProfileDbHandler) BindGroupToProfile(userName string, group *ProfileGroup) error {
@@ -325,6 +336,26 @@ func (ph *ProfileDbHandler) GetProfileGroups(userName string) ([]ProfileGroup, e
 		err = row.Scan(&gId, &name, &descr)
 		if err != nil {
 			log.Printf("P ERROR at get profiles group in scan: %v", err)
+			continue
+		}
+		result = append(result, ProfileGroup{Id:gId, Name:name, Description:descr})
+	}
+	return result, nil
+}
+
+func (ph *ProfileDbHandler) GetAllGroups() ([]ProfileGroup, error) {
+	result := []ProfileGroup{}
+	row, err := ph.db.Query("select g.id, g.name, g.descr from groups g inner join profile_groups pg on pg.group_id = g.id ")
+	if err != nil {
+		log.Printf("P ERROR at get all groups %v", err)
+		return result, err
+	}
+	for row.Next() {
+		var gId int64
+		var name, descr string
+		err = row.Scan(&gId, &name, &descr)
+		if err != nil {
+			log.Printf("P ERROR at get all profiles groups in scan: %v", err)
 			continue
 		}
 		result = append(result, ProfileGroup{Id:gId, Name:name, Description:descr})
@@ -533,7 +564,6 @@ func (ph *ProfileDbHandler)UpdateProfile(newProfile *Profile) error {
 		ph.InsertNewProfile(newProfile)
 		return nil
 	}
-
 	if savedProfile.Enable != newProfile.Enable {
 		enable := 0
 		if newProfile.Enable {
@@ -571,7 +601,6 @@ func (ph *ProfileDbHandler)UpdateProfile(newProfile *Profile) error {
 			log.Printf("Error at execute update for change profile [%v] public %v", newProfile.UserName, err)
 		}
 	}
-
 	if savedProfile.ShortDescription != newProfile.ShortDescription {
 		ph.updateProfileField("profile", "short_text", newProfile.UserName, newProfile.ShortDescription)
 	}
@@ -579,7 +608,6 @@ func (ph *ProfileDbHandler)UpdateProfile(newProfile *Profile) error {
 	if savedProfile.TextDescription != newProfile.TextDescription {
 		ph.updateProfileField("profile", "long_text", newProfile.UserName, newProfile.TextDescription)
 	}
-
 	if !reflect.DeepEqual(savedProfile.Contacts, newProfile.Contacts) {
 		log.Printf("Difference in contacts")
 		new_contacts_map := map[int64]ProfileContact{}
@@ -605,24 +633,23 @@ func (ph *ProfileDbHandler)UpdateProfile(newProfile *Profile) error {
 			ph.AddGroupToProfile(newProfile.UserName, &group)
 		}
 	}
-
-	if !reflect.DeepEqual(savedProfile.AllowedPhones, newProfile.AllowedPhones){
+	if !reflect.DeepEqual(savedProfile.AllowedPhones, newProfile.AllowedPhones) {
 		log.Printf("Difference in allowed phones")
 		old_phones_map := map[int64]string{}
 		new_phones_map := map[int64]string{}
 
-		for _, old_phone := range savedProfile.AllowedPhones{
+		for _, old_phone := range savedProfile.AllowedPhones {
 			old_phones_map[old_phone.PhoneId] = old_phone.Value
 		}
 
-		for _, new_phone := range newProfile.AllowedPhones{
+		for _, new_phone := range newProfile.AllowedPhones {
 			new_phones_map[new_phone.PhoneId] = new_phone.Value
-			if _, ok := old_phones_map[new_phone.PhoneId]; !ok{
+			if _, ok := old_phones_map[new_phone.PhoneId]; !ok {
 				ph.InsertProfileAllowedPhone(newProfile.UserName, new_phone.Value)
 			}
 		}
-		for _, old_phone := range savedProfile.AllowedPhones{
-			if _, ok := new_phones_map[old_phone.PhoneId]; !ok{
+		for _, old_phone := range savedProfile.AllowedPhones {
+			if _, ok := new_phones_map[old_phone.PhoneId]; !ok {
 				ph.RemoveProfileAllowedPhone(old_phone.PhoneId)
 			}
 		}
