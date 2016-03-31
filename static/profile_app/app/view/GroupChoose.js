@@ -1,4 +1,4 @@
-Ext.define('Console.view.Group', {
+Ext.define('Console.view.GroupChoose', {
 	extend: 'Ext.window.Window',
 	alias: 'widget.groupWindow',
 	title: 'Имя группы в которую входит профайл',
@@ -11,35 +11,9 @@ Ext.define('Console.view.Group', {
 	},
 	initComponent: function() {
 		console.log("init group window");
-		var store = Ext.create('Ext.data.Store', {
-			fields: ['name', 'description'],
-			proxy: {
-				type: 'ajax',
-				url: '/profile/all_groups',
-				reader: {
-					type: 'json',
-					root: 'groups',
-					successProperty: 'success'
-				}
-			}
-		});
 		this.items= [{
 			xtype:"form",
 			items:[
-			{
-				xtype: 'combo',
-				name : 'type',
-				store:store,
-				queryMode: 'local',
-				displayField: 'name',
-				valueField: 'name',
-				fieldLabel: 'Имя группы',
-				typeAhead: true,
-				typeAheadDelay: 100,
-				hideTrigger: true,
-				width: 350,
-				padding:10
-			},
 			{
 				xtype: 'textfield',
 				name : 'value',

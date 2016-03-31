@@ -45,7 +45,7 @@ var geocoder = new google.maps.Geocoder();
 
 Ext.define('Console.controller.Profiles', {
     extend: 'Ext.app.Controller',
-    views: ['ProfileList', 'UserNameCheck', 'Profile', 'Contact', 'ContactLink', 'Phone', 'Group'],
+    views: ['ProfileList', 'UserNameCheck', 'Profile', 'Contact', 'ContactLink', 'Phone', 'GroupChoose'],
     stores: ['ProfileStore', 'ContactsStore', 'ContactLinksStore', 'GroupsStore', 'ProfileAllowPhoneStore'],
     models: ['Profile'],
     init: function() {
