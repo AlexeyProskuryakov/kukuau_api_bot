@@ -587,6 +587,7 @@ func (ph *ProfileDbHandler)UpdateProfile(newProfile *Profile) error {
 		ph.updateProfileField("profile_icons", "path", newProfile.UserName, newProfile.ImageURL)
 	}
 	if savedProfile.Name != newProfile.Name {
+		log.Printf("Difference in name")
 		stmt, err := ph.db.Prepare(fmt.Sprintf("UPDATE vcard SET vcard='<vCard xmlns=''vcard-temp''><FN>%v</FN></vCard>' WHERE username=$1", newProfile.Name))
 		defer stmt.Close()
 		if err != nil {
@@ -605,6 +606,8 @@ func (ph *ProfileDbHandler)UpdateProfile(newProfile *Profile) error {
 		if err != nil {
 			log.Printf("Error at execute update for change profile [%v] public %v", newProfile.UserName, err)
 		}
+		ph.updateProfileField("profile", "name", newProfile.UserName, newProfile.Name)
+
 	}
 	if savedProfile.ShortDescription != newProfile.ShortDescription {
 		ph.updateProfileField("profile", "short_text", newProfile.UserName, newProfile.ShortDescription)
