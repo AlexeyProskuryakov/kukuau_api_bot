@@ -115,7 +115,12 @@ Ext.define('Console.view.Profile', {
                 collapsed: true,
                 columns: [{
                     header: "Название группы",
-                    dataIndex: 'number',
+                    dataIndex: 'name',
+                    flex: 1
+
+                }, {
+                    header: "Описание",
+                    dataIndex: 'description',
                     flex: 1
                 }, {
                     xtype: 'actioncolumn',

@@ -16,10 +16,10 @@ Ext.define('Console.view.GroupChoose', {
 			items:[
 			{
 				xtype: "grid",
-				title: "Выберите группу",
+				title: "Выберите группу или добавьте новую",
 				alias: "widget.groupGlobalGrid",
 				itemId: "choose_group_grid",
-				store: 'ProfileAllowPhoneStore',
+				store: 'GroupsGlobalStore',
 				columns: [{
 					header: "Имя группы",
 					dataIndex: 'name',
@@ -28,28 +28,25 @@ Ext.define('Console.view.GroupChoose', {
 					header: "Описание",
 					dataIndex: 'description',
 					flex: 1
-				}, {
-					xtype: 'actioncolumn',
-					header: 'Выбрать',
-					action: "choose_group",
-					editor: {
-						xtype: 'checkbox',
-						cls: 'x-grid-checkheader-editor'
-					}
+				}, { 
+					xtype : 'checkcolumn', 
+					text : 'Выбрать',
+					dataIndex:'_active'
 				}],
-				buttons: [{
-					text: "Добавить новую группу",
-					action: "add_global_group",
-					scope: this,
-				}]
 			},
 			]
 		}];
 		this.buttons = [{
 			text: 'OK',
 			scope: this,
-			action: 'choose_groups'
-		}];
+			action: 'add_group_end'
+		},
+		{
+			text: "Добавить новую группу",
+			action: "add_global_group_start",
+			scope: this,
+		}
+		];
 
 		this.callParent(arguments);
 	}

@@ -45,7 +45,7 @@ var geocoder = new google.maps.Geocoder();
 
 Ext.define('Console.controller.Profiles', {
     extend: 'Ext.app.Controller',
-    views: ['ProfileList', 'UserNameCheck', 'Profile', 'Contact', 'ContactLink', 'Phone', 'GroupChoose'],
+    views: ['ProfileList', 'UserNameCheck', 'Profile', 'Contact', 'ContactLink', 'Phone', 'GroupChoose', 'NewGroupAdd'],
     stores: ['ProfileStore', 'ContactsStore', 'ContactLinksStore', 'GroupsStore', 'GroupsGlobalStore', 'ProfileAllowPhoneStore'],
     models: ['Profile'],
     init: function() {
@@ -126,6 +126,16 @@ Ext.define('Console.controller.Profiles', {
             'profilewindow actioncolumn[action=delete_group]':{
                 click: this.deleteGroup
             },        
+            'groupWindow button[action=add_global_group_start]':{
+                click: this.addGlobalGroupStart
+            },
+            'groupWindow grid[itemId=choose_group_grid]':{
+                itemdblclick: this.changeGlobalGroup
+            },
+
+            'newGroupWindow button[action=add_global_group_end]':{
+                click: this.addGlobalGroupEnd
+            }
 
 
         });
@@ -161,8 +171,14 @@ Ext.define('Console.controller.Profiles', {
             Ext.each(record.phones().data.items, function(p_item){
                 var p_data = p_item.getData();
                 phones.push(p_data);
-            })
+            });
             values.phones = phones;
+
+            groups = [];
+            Ext.each(record.groups().data.items, function(g_item){
+                groups.push(g_item.getData());
+            });
+            values.groups = groups;
             values.image_url = form.getComponent("profile_image_wrapper").getComponent("profile_image").src;
         } 
 
@@ -395,27 +411,50 @@ Ext.define('Console.controller.Profiles', {
 
     addGroupStart:function(button){
         var win    = button.up('window'),
-        c_view = Ext.widget("groupWindow", {"parent":win});
+        c_view = Ext.widget("groupWindow", {"parent":win}),
+        profile_model = win.down("form").getRecord();
+
+        ggs = c_view.down("form").getComponent("choose_group_grid").getStore();
+        ggs.load();
+        ggs.setActives(profile_model.groups());
         c_view.show();
     },
 
     addGroupEnd:function(button){
         var win = button.up('window'),
         profile_model = win.getParent().down("form").getRecord(),
-        phone_cmp = win.down('form').getComponent("phone_value");
-        if (phone_cmp.validate()){
-            var phone_model = Ext.create("Console.model.ProfileAllowPhone", {id:guid(), value:phone_cmp.getValue()})
-            profile_model.phones().add(phone_model);
-            win.destroy();
-        }        
+        ggs = win.down('form').getComponent("choose_group_grid").getStore(),
+        gps = profile_model.groups();
+
+        Ext.each(ggs.data.items, function(item){
+
+            var data = item.getData();
+            if (data['_active'] == true){
+                data['_active'] = false;
+                gps.add(Ext.create('Console.model.Group', data))
+            }
+        })
+        win.destroy();
     },
 
+    addGlobalGroupStart: function(button){
+        var win = button.up('window'),
+        ng_view = Ext.widget("newGroupWindow", {parent:win});
+        ng_view.show();
+    },
+
+    addGlobalGroupEnd: function(button){
+        var win = button.up('window'),
+            ggs = win.getParent().down('form').getComponent('choose_group_grid').getStore(),
+            ggv = win.down('form').getValues();
+        ggv['_active'] = true;
+        
+        var ggm = Ext.create('Console.model.Group', ggv);
+        ggs.add(ggv);
+        win.destroy();
+    },
     deleteGroup:function(grid, row, index){
         grid.getStore().removeAt(index);
     }, 
-
-    chooseGroup:function(){
-        Ext.widget('groupGlobalGrid').getStore().load();
-    }
 
 });
