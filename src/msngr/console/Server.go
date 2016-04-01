@@ -25,6 +25,7 @@ import (
 	"gopkg.in/mgo.v2/bson"
 	"os"
 	"io"
+	"regexp"
 )
 
 const (
@@ -132,7 +133,13 @@ type CollocutorInfo struct {
 	CountOrdersByProvider []OrdersInfo
 }
 
-func ProfileTagClear(p *Profile) *Profile{
+var TAG_REGEXP = regexp.MustCompile(`<\/?[^/br]([^>]*)>`)
+
+func ProfileTextTagClear(p *Profile) *Profile{
+	p.ShortDescription = strings.Replace(p.ShortDescription, "<div>", "<br>", -1)
+	p.TextDescription = strings.Replace(p.TextDescription, "<div>", "<br>", -1)
+	p.ShortDescription = TAG_REGEXP.ReplaceAllString(p.ShortDescription, "")
+	p.TextDescription = TAG_REGEXP.ReplaceAllString(p.TextDescription,"")
 	return p
 }
 
@@ -239,12 +246,13 @@ func Run(addr string, db *d.MainDb, qs *quests.QuestStorage, ntf *ntf.Notifier, 
 			log.Printf("CS CREATE data: %s", data)
 			profile := &Profile{}
 			err = json.Unmarshal(data, profile)
-			log.Printf("CS CREATE profile: %+v", profile)
 			if err != nil {
 				log.Printf("CS CREATE error at unmarshal data at create profile %v", err)
 				render.JSON(500, map[string]interface{}{"error":err, "success":false})
 				return
 			}
+			profile = ProfileTextTagClear(profile)
+			log.Printf("CS CREATE profile: %+v", profile)
 			profile, err = ph.InsertNewProfile(profile)
 			if err != nil {
 				log.Printf("CS CREATE DB are not available")
@@ -273,6 +281,7 @@ func Run(addr string, db *d.MainDb, qs *quests.QuestStorage, ntf *ntf.Notifier, 
 				render.JSON(500, map[string]interface{}{"error":err, "success":false})
 				return
 			}
+			profile = ProfileTextTagClear(profile)
 			log.Printf("CS UPDATE profile: %+v", profile)
 			err = ph.UpdateProfile(profile)
 			if err != nil {
@@ -346,6 +355,7 @@ func Run(addr string, db *d.MainDb, qs *quests.QuestStorage, ntf *ntf.Notifier, 
 				ren.JSON(500, map[string]interface{}{"error":err, "success":false})
 				return
 			}
+			log.Printf("CS forming next groups: %+v", groups)
 			ren.JSON(200, map[string]interface{}{"success":true, "groups":groups})
 		})
 	})

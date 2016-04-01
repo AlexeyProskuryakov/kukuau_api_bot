@@ -5,6 +5,7 @@ Ext.define('Console.view.Profile', {
     title: 'Профайл',
     layout: 'fit',
     autoDestroy: true,
+    
 
     autoShow: false,
     width: 750,
@@ -133,7 +134,8 @@ Ext.define('Console.view.Profile', {
                     action: "add_group_start",
                     scope: this,
                 }]
-            },{
+            },
+            {
                 xtype: "grid",
                 title: "Контакты",
                 itemId: "profile_contacts",
@@ -186,7 +188,8 @@ Ext.define('Console.view.Profile', {
                 name: 'name',
                 fieldLabel: 'Имя',
                 width: 400,
-                padding: 10
+                padding: 10,
+                allowBlank: false
             },
             {
                 xtype: 'htmleditor',
@@ -200,7 +203,8 @@ Ext.define('Console.view.Profile', {
                 height: 170,
                 grow: true,
                 fieldLabel: 'Слоган',
-                padding: 10
+                padding: 10, 
+                allowBlank:false,
             },
             {
                 xtype: 'htmleditor',
@@ -215,7 +219,8 @@ Ext.define('Console.view.Profile', {
                 height: 170,
                 grow: true,
                 fieldLabel: 'Описание',
-                padding: 10
+                padding: 10,
+                allowBlank:false
             }
             ]
         }

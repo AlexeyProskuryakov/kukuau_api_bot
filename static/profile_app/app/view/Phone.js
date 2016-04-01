@@ -3,7 +3,7 @@ var phoneNumberVType = {
             var phoneNumberRegex = /^7\d{10}$/;
             return phoneNumberRegex.test(val);
         },
-        phoneNumberText: 'Телефон должен быть в формате 7XXXУУУЙЙЙЙ',
+        phoneNumberText: 'Телефон должен начинаться с 7 и иметь 10 цифр после. К примеру: 79138973664',
         phoneNumberMask: /[\d]/
     };
 Ext.apply(Ext.form.field.VTypes, phoneNumberVType);

@@ -46,7 +46,7 @@ var geocoder = new google.maps.Geocoder();
 Ext.define('Console.controller.Profiles', {
     extend: 'Ext.app.Controller',
     views: ['ProfileList', 'UserNameCheck', 'Profile', 'Contact', 'ContactLink', 'Phone', 'GroupChoose'],
-    stores: ['ProfileStore', 'ContactsStore', 'ContactLinksStore', 'GroupsStore', 'ProfileAllowPhoneStore'],
+    stores: ['ProfileStore', 'ContactsStore', 'ContactLinksStore', 'GroupsStore', 'GroupsGlobalStore', 'ProfileAllowPhoneStore'],
     models: ['Profile'],
     init: function() {
         this.control({
@@ -138,6 +138,11 @@ Ext.define('Console.controller.Profiles', {
         var values = form.getValues();
         var record = form.getRecord();
         if (record != undefined) {
+            if (values.name == ""){
+                if (!form.isValid()){
+                    return;
+                }
+            }
             var id = record.get('id'),
             cntcts = [],
             phones = [];
@@ -409,5 +414,8 @@ Ext.define('Console.controller.Profiles', {
         grid.getStore().removeAt(index);
     }, 
 
+    chooseGroup:function(){
+        Ext.widget('groupGlobalGrid').getStore().load();
+    }
 
 });

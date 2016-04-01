@@ -204,7 +204,7 @@ func (ph *ProfileDbHandler) GetProfileContacts(userName string) ([]ProfileContac
 
 func (ph *ProfileDbHandler) GetAllProfiles() ([]Profile, error) {
 	profiles := []Profile{}
-	profileRows, err := ph.db.Query("SELECT p.username, p.short_text, p.long_text, i.path, vs.fn, p.enable, p.public FROM profile p INNER JOIN profile_icons i ON p.username = i.username INNER JOIN vcard_search vs ON vs.username = p.username")
+	profileRows, err := ph.db.Query("SELECT p.username, p.short_text, p.long_text, i.path, p.name, p.enable, p.public FROM profile p INNER JOIN profile_icons i ON p.username = i.username")
 	if err != nil {
 		log.Printf("P ERROR at query profiles: %v", err)
 		return profiles, err
@@ -218,7 +218,7 @@ func (ph *ProfileDbHandler) GetAllProfiles() ([]Profile, error) {
 }
 
 func (ph *ProfileDbHandler) GetProfile(username string) (*Profile, error) {
-	profileRow, err := ph.db.Query("SELECT p.username, p.short_text, p.long_text, i.path, vs.fn, p.enable, p.public FROM profile p INNER JOIN profile_icons i ON p.username = i.username INNER JOIN vcard_search vs ON vs.username = p.username WHERE p.username = $1", username)
+	profileRow, err := ph.db.Query("SELECT p.username, p.short_text, p.long_text, i.path, p.name, p.enable, p.public FROM profile p INNER JOIN profile_icons i ON p.username = i.username WHERE p.username = $1", username)
 	if err != nil {
 		log.Printf("P ERROR at query profiles: %v", err)
 		return nil, err
@@ -234,8 +234,13 @@ func (ph *ProfileDbHandler) GetProfile(username string) (*Profile, error) {
 func (ph *ProfileDbHandler) InsertNewProfile(p *Profile) (*Profile, error) {
 	err := ph.db.Ping()
 	ph.db.QueryRow(fmt.Sprintf("INSERT INTO vcard (username, vcard) VALUES ('%v', '<vCard xmlns=''vcard-temp''><FN>%v</FN></vCard>');", p.UserName, p.Name))
-	ph.db.QueryRow(fmt.Sprintf("INSERT INTO vcard_search(username, lusername, fn, lfn, family, lfamily, given, lgiven, middle, lmiddle, nickname, lnickname, bday, lbday, ctry, lctry, locality, llocality, email, lemail, orgname, lorgname, orgunit, lorgunit)  values ('%v', '%v', '%v', '%v', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '');",
-		p.UserName, strings.ToLower(p.UserName), p.Name, strings.ToLower(p.Name)))
+	ph.db.QueryRow(fmt.Sprintf("INSERT INTO vcard_search(username, lusername, fn, lfn, family, lfamily, given, lgiven, middle, lmiddle, nickname, lnickname, bday, lbday, ctry, lctry, locality, llocality, email, lemail, orgname, lorgname, orgunit, lorgunit)  values ('%v', '%v', '%v', '%v', '', '', '', '', '%v', '%v', '', '', '', '', '', '', '', '', '', '', '', '', '', '');",
+		p.UserName,
+		strings.ToLower(p.UserName),
+		strings.ToLower(p.UserName),
+		strings.ToLower(p.UserName),
+		p.Name,
+		strings.ToLower(p.Name)))
 
 	enable := 0
 	if p.Enable {
@@ -245,8 +250,8 @@ func (ph *ProfileDbHandler) InsertNewProfile(p *Profile) (*Profile, error) {
 	if p.Public {
 		public = 1
 	}
-	ph.db.QueryRow(fmt.Sprintf("INSERT INTO profile (username, phonenumber, short_text, long_text, enable, public) VALUES ('%v', NULL, '%v', '%v', '%v', '%v');",
-		p.UserName, p.ShortDescription, p.TextDescription, enable, public))
+	ph.db.QueryRow(fmt.Sprintf("INSERT INTO profile (username, phonenumber, short_text, long_text, name, enable, public) VALUES ('%v', NULL, '%v', '%v', '%v', '%v', '%v');",
+		p.UserName, p.ShortDescription, p.TextDescription, p.Name, enable, public))
 	ph.db.QueryRow(fmt.Sprintf("INSERT INTO profile_icons(username, path, itype) values('%v', '%v', 'profile');", p.UserName, p.ImageURL))
 
 	for cInd, contact := range p.Contacts {
@@ -345,7 +350,7 @@ func (ph *ProfileDbHandler) GetProfileGroups(userName string) ([]ProfileGroup, e
 
 func (ph *ProfileDbHandler) GetAllGroups() ([]ProfileGroup, error) {
 	result := []ProfileGroup{}
-	row, err := ph.db.Query("select g.id, g.name, g.descr from groups g inner join profile_groups pg on pg.group_id = g.id ")
+	row, err := ph.db.Query("select g.id, g.name, g.descr from groups g ")
 	if err != nil {
 		log.Printf("P ERROR at get all groups %v", err)
 		return result, err

@@ -1,4 +1,4 @@
-Ext.define('Console.store.GroupsStore', {
+Ext.define('Console.store.GroupsGlobalStore', {
     extend: 'Ext.data.Store',
     model: 'Console.model.Group',
     autoLoad: true,
