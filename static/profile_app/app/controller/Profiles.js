@@ -56,7 +56,7 @@ Ext.define('Console.controller.Profiles', {
             'profilelist button[action=new]':{
                 click: this.createProfileStart
             },
-            'UserNameCheckWindow button[action=newProfile]':{
+            'UserNameCheckWindow button[action=new_profile]':{
                 click: this.createProfileEnd
             },
             'profilewindow button[action=save]': {
@@ -206,15 +206,20 @@ Ext.define('Console.controller.Profiles', {
     // создание
     createProfileEnd: function(button) {
         var win = button.up("window"),
-        id =win.getComponent("user_name").getValue(),
-        view = Ext.widget('profilewindow'),
-        store = Ext.widget('profilelist').getStore(),
-        profile_model = Ext.create("Console.model.Profile", {id:id});
-        store.add(profile_model);
-        view.down("form").loadRecord(profile_model);
-        win.destroy();
-        view.show();
-
+        cmp = win.getComponent("user_name")
+        id = cmp.getValue();
+        if (id != ""){
+            var view = Ext.widget('profilewindow'),
+                store = Ext.widget('profilelist').getStore(),
+                profile_model = Ext.create("Console.model.Profile", {id:id});
+            
+            store.add(profile_model);
+            view.down("form").loadRecord(profile_model);
+            win.destroy();
+            view.show();
+        } else {
+            cmp.markInvalid("Введите имя, оно необходимо.");
+        }
 
     },
     // удаление
@@ -399,8 +404,12 @@ Ext.define('Console.controller.Profiles', {
         profile_model = win.getParent().down("form").getRecord(),
         phone_cmp = win.down('form').getComponent("phone_value");
         if (phone_cmp.validate()){
-            var phone_model = Ext.create("Console.model.ProfileAllowPhone", {id:guid(), value:phone_cmp.getValue()})
-            profile_model.phones().add(phone_model);
+            var phone_model = Ext.create("Console.model.ProfileAllowPhone", {id:guid(), value:phone_cmp.getValue()}),
+            p_store = profile_model.phones();
+            
+            p_store.add(phone_model);
+            win.getParent().down("form").getComponent('profile_phones').reconfigure(p_store);
+
             win.destroy();
         }        
     },
@@ -447,11 +456,15 @@ Ext.define('Console.controller.Profiles', {
         var win = button.up('window'),
             ggs = win.getParent().down('form').getComponent('choose_group_grid').getStore(),
             ggv = win.down('form').getValues();
-        ggv['_active'] = true;
+        if (ggv['name'] != ''){
+            ggv['_active'] = true;
+            var ggm = Ext.create('Console.model.Group', ggv);
+            ggs.add(ggv);
+            win.destroy();    
+        } else {
+            win.down("form").getComponent("group_name").markInvalid("Имя обязательно!");
+        }
         
-        var ggm = Ext.create('Console.model.Group', ggv);
-        ggs.add(ggv);
-        win.destroy();
     },
     deleteGroup:function(grid, row, index){
         grid.getStore().removeAt(index);

@@ -17,6 +17,7 @@ Ext.define('Console.view.NewGroupAdd', {
        		{
 				xtype: 'textfield',
 				name : 'name',
+				itemId:"group_name",
 				fieldLabel: 'Имя',
 				width: 550,
 				padding:10

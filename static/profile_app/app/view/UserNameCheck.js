@@ -26,6 +26,6 @@ Ext.define('Console.view.UserNameCheck', {
     buttons:[{
         text:"Да",
         scope:this,
-        action:'newProfile'
+        action:'new_profile'
     }]
 });

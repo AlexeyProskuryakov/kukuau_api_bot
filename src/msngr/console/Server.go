@@ -323,8 +323,7 @@ func Run(addr string, db *d.MainDb, qs *quests.QuestStorage, ntf *ntf.Notifier, 
 
 			err = os.Mkdir(path, 0777)
 			if err != nil {
-				log.Printf("CS error at mkdir %v", err)
-				render.JSON(500, map[string]interface{}{"error":err, "success":false})
+				log.Printf("CS warn at mkdir %v", err)
 			}
 			file_path := fmt.Sprintf("%v/%v", path, handler.Filename)
 			f, err := os.OpenFile(file_path, os.O_WRONLY | os.O_CREATE, 0664)

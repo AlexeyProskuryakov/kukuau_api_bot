@@ -9,6 +9,8 @@ import (
 	"reflect"
 )
 
+const MAX_OPEN_CONNECTIONS = 10
+
 type ProfileGroup struct {
 	Name        string `json:"name"`
 	Id          int64 `json:"id"`
@@ -161,6 +163,7 @@ func NewProfileDbHandler(connectionString string) (*ProfileDbHandler, error) {
 		log.Printf("CS Error at connect to db [%v]: %v", connectionString, err)
 		return nil, err
 	}
+	pg.SetMaxOpenConns(MAX_OPEN_CONNECTIONS)
 	ph := &ProfileDbHandler{db:pg}
 	return ph, nil
 }
@@ -205,6 +208,7 @@ func (ph *ProfileDbHandler) GetProfileContacts(userName string) ([]ProfileContac
 func (ph *ProfileDbHandler) GetAllProfiles() ([]Profile, error) {
 	profiles := []Profile{}
 	profileRows, err := ph.db.Query("SELECT p.username, p.short_text, p.long_text, i.path, p.name, p.enable, p.public FROM profile p INNER JOIN profile_icons i ON p.username = i.username")
+	defer profileRows.Close()
 	if err != nil {
 		log.Printf("P ERROR at query profiles: %v", err)
 		return profiles, err
@@ -219,6 +223,7 @@ func (ph *ProfileDbHandler) GetAllProfiles() ([]Profile, error) {
 
 func (ph *ProfileDbHandler) GetProfile(username string) (*Profile, error) {
 	profileRow, err := ph.db.Query("SELECT p.username, p.short_text, p.long_text, i.path, p.name, p.enable, p.public FROM profile p INNER JOIN profile_icons i ON p.username = i.username WHERE p.username = $1", username)
+	defer profileRow.Close()
 	if err != nil {
 		log.Printf("P ERROR at query profiles: %v", err)
 		return nil, err
@@ -311,6 +316,7 @@ func (ph *ProfileDbHandler) AddGroupToProfile(userName string, group *ProfileGro
 		log.Printf("P ERROR add group to profile %v", err)
 		return nil, err
 	}
+	defer row.Close()
 	if row.Next() {
 		var gId int64
 		row.Scan(&gId)
@@ -331,19 +337,20 @@ func (ph *ProfileDbHandler) AddGroupToProfile(userName string, group *ProfileGro
 func (ph *ProfileDbHandler) GetProfileGroups(userName string) ([]ProfileGroup, error) {
 	result := []ProfileGroup{}
 	row, err := ph.db.Query("select g.id, g.name, g.descr from groups g inner join profile_groups pg on pg.group_id = g.id where pg.username=$1", userName)
+	defer row.Close()
 	if err != nil {
 		log.Printf("P ERROR at get profiles group for %v: %v", userName, err)
 		return result, err
 	}
 	for row.Next() {
 		var gId int64
-		var name, descr string
+		var name, descr sql.NullString
 		err = row.Scan(&gId, &name, &descr)
 		if err != nil {
 			log.Printf("P ERROR at get profiles group in scan: %v", err)
 			continue
 		}
-		result = append(result, ProfileGroup{Id:gId, Name:name, Description:descr})
+		result = append(result, ProfileGroup{Id:gId, Name:name.String, Description:descr.String})
 	}
 	return result, nil
 }
@@ -351,19 +358,20 @@ func (ph *ProfileDbHandler) GetProfileGroups(userName string) ([]ProfileGroup, e
 func (ph *ProfileDbHandler) GetAllGroups() ([]ProfileGroup, error) {
 	result := []ProfileGroup{}
 	row, err := ph.db.Query("select g.id, g.name, g.descr from groups g ")
+	defer row.Close()
 	if err != nil {
 		log.Printf("P ERROR at get all groups %v", err)
 		return result, err
 	}
 	for row.Next() {
 		var gId int64
-		var name, descr string
+		var name, descr sql.NullString
 		err = row.Scan(&gId, &name, &descr)
 		if err != nil {
 			log.Printf("P ERROR at get all profiles groups in scan: %v", err)
 			continue
 		}
-		result = append(result, ProfileGroup{Id:gId, Name:name, Description:descr})
+		result = append(result, ProfileGroup{Id:gId, Name:name.String, Description:descr.String})
 	}
 	return result, nil
 }
@@ -464,11 +472,11 @@ func (ph *ProfileDbHandler)InsertContactLink(link *ProfileContactLink, contactId
 
 func (ph *ProfileDbHandler)UpdateContactLink(newLink ProfileContactLink) (int64, error) {
 	stmt, err := ph.db.Prepare("UPDATE contact_links SET ctype=$1, cvalue=$2, descr=$3, ord=$4 WHERE id=$5")
+	defer stmt.Close()
 	if err != nil {
 		log.Printf("P ERROR at prepare update for change profile contact link %v", err)
 		return -1, err
 	}
-	defer stmt.Close()
 	upd_res, err := stmt.Exec(newLink.Type, newLink.Value, newLink.Description, newLink.OrderNumber, newLink.LinkId)
 	if err != nil {
 		log.Printf("P ERROR at execute update for change profile contact %v", err)
@@ -494,6 +502,7 @@ func (ph *ProfileDbHandler)DeleteOneContactLink(linkId int64) error {
 func (ph *ProfileDbHandler) GetContactLinks(contactId int64) ([]ProfileContactLink, error) {
 	links := []ProfileContactLink{}
 	linkRows, err := ph.db.Query("SELECT l.id, l.ctype, l.cvalue, l.descr, l.ord FROM contact_links l WHERE l.contact_id = $1 ORDER BY l.ord ASC", contactId)
+	defer linkRows.Close()
 	if err != nil {
 		log.Printf("P ERROR at query to contact links [%+v] err: %v", contactId, err)
 		return links, err
@@ -520,10 +529,10 @@ func (ph *ProfileDbHandler) GetContactLinks(contactId int64) ([]ProfileContactLi
 
 func (ph *ProfileDbHandler)updateProfileField(tableName, fieldName, userName string, newValue interface{}) {
 	stmt, err := ph.db.Prepare(fmt.Sprintf("UPDATE %v SET %v=$1 WHERE username=$2", tableName, fieldName))
+	defer stmt.Close()
 	if err != nil {
 		log.Printf("Error at prepare update for change profile [%v] %v %v", userName, fieldName, err)
 	}
-	defer stmt.Close()
 	_, err = stmt.Exec(newValue, userName)
 	if err != nil {
 		log.Printf("Error at execute update for change profile [%v] %v %v", userName, fieldName, err)
@@ -532,10 +541,10 @@ func (ph *ProfileDbHandler)updateProfileField(tableName, fieldName, userName str
 
 func (ph *ProfileDbHandler)deleteFromTable(tableName, nameId string, deleteId interface{}) error {
 	stmt, err := ph.db.Prepare(fmt.Sprintf("DELETE FROM %v WHERE %v=$1", tableName, nameId))
+	defer stmt.Close()
 	if err != nil {
 		return err
 	}
-	defer stmt.Close()
 	_, err = stmt.Exec(deleteId)
 	if err != nil {
 		return err
@@ -598,10 +607,11 @@ func (ph *ProfileDbHandler)UpdateProfile(newProfile *Profile) error {
 			log.Printf("Error at execute update for change profile [%v] public %v", newProfile.UserName, err)
 		}
 		stmt_s, err := ph.db.Prepare("UPDATE vcard_search SET fn=$1, lfn=$2 WHERE username=$3")
+		defer stmt_s.Close()
 		if err != nil {
 			log.Printf("Error at prepare update for change profile [%v] public %v", newProfile.UserName, err)
 		}
-		defer stmt_s.Close()
+
 		_, err = stmt_s.Exec(newProfile.Name, strings.ToLower(newProfile.Name), newProfile.UserName)
 		if err != nil {
 			log.Printf("Error at execute update for change profile [%v] public %v", newProfile.UserName, err)
@@ -665,4 +675,3 @@ func (ph *ProfileDbHandler)UpdateProfile(newProfile *Profile) error {
 	}
 	return nil
 }
-
