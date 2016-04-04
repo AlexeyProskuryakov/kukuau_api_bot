@@ -115,6 +115,7 @@ type ConsoleConfig struct {
 type ChatConfig struct {
 	Name        string `json:"name"`
 	CompanyId   string `json:"id"`
+	UrlSalt	    string `json:"url_salt"`
 	Information string `json:"information"`
 	AutoAnswer  struct {
 			    Enable bool `json:"enable"`

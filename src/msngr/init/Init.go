@@ -176,7 +176,13 @@ func StartBot(db *d.MainDb, result chan string) c.Configuration {
 		if chat_conf.AutoAnswer.Enable {
 			go chat.Watch(db.Messages, notifier, chat_conf)
 		}
-		webRoute := fmt.Sprintf("/web/chat/%v", chat_conf.CompanyId)
+		var salt string
+		if chat_conf.UrlSalt != "" {
+			salt = fmt.Sprintf("%v-%v", chat_conf.CompanyId, chat_conf.UrlSalt)
+		} else {
+			salt = chat_conf.CompanyId
+		}
+		webRoute := fmt.Sprintf("/web/chat/%v", salt)
 		http.Handle(webRoute, chat.GetChatMainHandler(webRoute, notifier, db, chat_conf))
 
 		sr := func(s string) string {
