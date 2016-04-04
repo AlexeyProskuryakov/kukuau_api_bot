@@ -155,7 +155,27 @@ Ext.define('Console.view.Profile', {
                 }, {
                     header: 'Описание',
                     dataIndex: 'description',
-                    flex: 1
+                    flex: 1, 
+                    renderer:function(item, meta){
+                        console.log("render item",item, meta);
+                        if (item == "") {
+                            var result = "";
+                            meta.record.links().each(function(r,i){
+                                var sep = ", ";
+                                if (i == 0){
+                                    sep = "";
+                                }
+                                if (r.get('value') != ''){
+                                    result += sep + r.get('value');
+                                }
+                            });
+                            if (result.length > 50){
+                                result = result.substring(0,49) + "...";
+                            }
+                            return result;
+                        }
+                        return item;
+                    }
                 }, {
                     xtype: 'actioncolumn',
                     header: 'Delete',

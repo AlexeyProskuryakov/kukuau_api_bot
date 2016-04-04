@@ -48,6 +48,9 @@ Ext.define('Console.controller.Profiles', {
     views: ['ProfileList', 'UserNameCheck', 'Profile', 'Contact', 'ContactLink', 'Phone', 'GroupChoose', 'NewGroupAdd'],
     stores: ['ProfileStore', 'ContactsStore', 'ContactLinksStore', 'GroupsStore', 'GroupsGlobalStore', 'ProfileAllowPhoneStore'],
     models: ['Profile'],
+    config:{
+        group_global_storage: undefined
+    },
     init: function() {
         this.control({
             'viewport > profilelist': {
@@ -136,10 +139,9 @@ Ext.define('Console.controller.Profiles', {
             'newGroupWindow button[action=add_global_group_end]':{
                 click: this.addGlobalGroupEnd
             }
-
-
         });
         Ext.widget('profilelist').getStore().load();
+        this.group_global_storage = Ext.create("Console.store.GroupsGlobalStore").load();
     },
     // обновление
     updateProfile: function(button) {
@@ -210,8 +212,8 @@ Ext.define('Console.controller.Profiles', {
         id = cmp.getValue();
         if (id != ""){
             var view = Ext.widget('profilewindow'),
-                store = Ext.widget('profilelist').getStore(),
-                profile_model = Ext.create("Console.model.Profile", {id:id});
+            store = Ext.widget('profilelist').getStore(),
+            profile_model = Ext.create("Console.model.Profile", {id:id});
             
             store.add(profile_model);
             view.down("form").loadRecord(profile_model);
@@ -306,6 +308,10 @@ Ext.define('Console.controller.Profiles', {
             if ((record.get("lat") != 0.0) || (record.get("lon") != 0.0)) {
                 center = {lat:record.get("lat"), lng:record.get("lon")};
             } 
+        } else {
+            c_model = Ext.create("Console.model.Contact", {id:guid()});
+            c_form.loadRecord(c_model);
+            c_form.getComponent("profile_contact_links").reconfigure(c_model.links());
         } 
         var p_model = win.down("form").getRecord();  
         var marker = new google.maps.Marker({
@@ -328,14 +334,8 @@ Ext.define('Console.controller.Profiles', {
         } else {
             var onf = cl_form.getForm().findField("order_number"),
             c_model = win.down("form").getRecord();
-            if (c_model == undefined){
-                c_model = Ext.create("Console.model.Contact", c_form.getValues());
-                c_form.loadRecord(c_model);
-                c_form.getComponent("profile_contact_links").reconfigure(c_model.links());
-            } 
             var cl_store = c_model.links();
-            onf.setValue(cl_store.count()+1);
-            
+            onf.setValue(cl_store.count()+1);    
         }
         cl_view.show();
 
@@ -368,6 +368,8 @@ Ext.define('Console.controller.Profiles', {
     },
 
     saveContact:function(button){
+        console.log("saving contact");
+
         var win = button.up("window"),
         c_store = win.getParent().down('form').getRecord().contacts(),
         form = win.down("form"),
@@ -383,6 +385,7 @@ Ext.define('Console.controller.Profiles', {
             c_rec = c_store.getById(c_id);
 
             c_values.id = c_id;
+            c_model.set(c_values);
             if (c_rec != null){
                 c_rec.set(c_values);    
             } else {
@@ -421,11 +424,24 @@ Ext.define('Console.controller.Profiles', {
     addGroupStart:function(button){
         var win    = button.up('window'),
         c_view = Ext.widget("groupWindow", {"parent":win}),
-        profile_model = win.down("form").getRecord();
+        profile_model = win.down("form").getRecord(),
+        new_cgg_store = Ext.create("Console.store.GroupsGlobalStore"),
+        cggCmp = c_view.down("form").getComponent("choose_group_grid");
 
-        ggs = c_view.down("form").getComponent("choose_group_grid").getStore();
-        ggs.load();
-        ggs.setActives(profile_model.groups());
+        var profile_groups = [];
+        Ext.each(profile_model.groups().data.items, function(item){
+            profile_groups.push(item.getData()['name']);
+        });
+        console.log("profile groups is: ", profile_groups);
+        this.group_global_storage.each(function(record, item){
+            if (profile_groups.indexOf(record.get('name')) < 0){
+                record.set("_active", false);
+                record.dirty = false;
+                new_cgg_store.add(record);
+            }
+        });
+        cggCmp.reconfigure(new_cgg_store);
+
         c_view.show();
     },
 
@@ -436,11 +452,11 @@ Ext.define('Console.controller.Profiles', {
         gps = profile_model.groups();
 
         Ext.each(ggs.data.items, function(item){
-
             var data = item.getData();
             if (data['_active'] == true){
                 data['_active'] = false;
-                gps.add(Ext.create('Console.model.Group', data))
+                gps.add(Ext.create('Console.model.Group', data));
+                console.log("add group at profile", data);
             }
         })
         win.destroy();
@@ -454,8 +470,8 @@ Ext.define('Console.controller.Profiles', {
 
     addGlobalGroupEnd: function(button){
         var win = button.up('window'),
-            ggs = win.getParent().down('form').getComponent('choose_group_grid').getStore(),
-            ggv = win.down('form').getValues();
+        ggs = win.getParent().down('form').getComponent('choose_group_grid').getStore(),
+        ggv = win.down('form').getValues();
         if (ggv['name'] != ''){
             ggv['_active'] = true;
             var ggm = Ext.create('Console.model.Group', ggv);

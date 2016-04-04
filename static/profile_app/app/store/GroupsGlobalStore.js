@@ -14,16 +14,18 @@ Ext.define('Console.store.GroupsGlobalStore', {
     setActives:function(profile_store){
         var profile_groups = [];
         Ext.each(profile_store.data.items, function(item){
-            console.log("profile group", item);
             profile_groups.push(item.getData()['name']);
         });
         Ext.each(this.data.items, function(item){
-            console.log("global group", item);
-            var itemName = item.getData().name;
+            var data = item.getData(),
+            itemName = data.name;
             if (profile_groups.indexOf(itemName) >= 0){
-                item.getData['_active'] = true;
+                data['_active'] = true
+                var rec = this.getById(data.id);
+                rec.set(data);
             }
         });
+        console.log("active groups: ", profile_groups, this.data.items);
     }
 });
 
