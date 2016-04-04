@@ -148,6 +148,7 @@ func GetChatMainHandler(start_addr string, notifier *ntf.Notifier, db *d.MainDb,
 
 		result_data["with"] = with
 		result_data["messages"] = messages
+		result_data["companyId"] = config.CompanyId
 
 		if contacts, err := GetContacts(db, config.CompanyId); err == nil {
 			result_data["contacts"] = contacts
@@ -155,6 +156,36 @@ func GetChatMainHandler(start_addr string, notifier *ntf.Notifier, db *d.MainDb,
 		log.Printf("CS result data :%+v", result_data)
 		r.HTML(200, "chat", result_data, render.HTMLOptions{Layout:"base"})
 
+	})
+	return m
+}
+
+func GetChatDeleteMessagesHandler(start_addr string, db *d.MainDb, config c.ChatConfig) http.Handler {
+	m := getMartini(config.Name, config.CompanyId, start_addr, db)
+	m.Delete(start_addr, func(ren render.Render, req *http.Request) {
+		type DeleteInfo struct {
+			From string `json:"from"`
+			To   string `json:"to"`
+		}
+		data, err := ioutil.ReadAll(req.Body)
+		if err != nil {
+			log.Printf("CS QE E: errror at reading req body %v", err)
+			ren.JSON(500, map[string]interface{}{"error":err})
+			return
+		}
+		dInfo := DeleteInfo{}
+		err = json.Unmarshal(data, &dInfo)
+		if err != nil {
+			log.Printf("CS QE E: at unmarshal json messages %v\ndata:%s", err, data)
+			ren.JSON(500, map[string]interface{}{"error":err})
+			return
+		}
+		count, err := db.Messages.DeleteMessages(dInfo.From, dInfo.To)
+		if err != nil {
+			ren.JSON(500, map[string]interface{}{"error":err})
+			return
+		}
+		ren.JSON(200, map[string]interface{}{"success":true, "deleted":count})
 	})
 	return m
 }
@@ -251,7 +282,7 @@ func GetChatMessagesHandler(start_addr string, notifier *ntf.Notifier, db *d.Mai
 		}
 		//log.Printf("New messages request : %v", nmReq)
 		query := bson.M{"time_stamp":bson.M{"$gt":nmReq.After}}
-		if nmReq.For == ""{
+		if nmReq.For == "" {
 			query["to"] = config.CompanyId
 		} else {
 			query["from"] = nmReq.For

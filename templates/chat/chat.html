@@ -7,6 +7,7 @@
 
             {{$with := .with}}
             {{$all := "all"}}
+            {{$companyId := .companyId}}
             {{$all_tm := "all_hash_writers"}}
             <div id="contacts-wrapper" closed="true">
                 <p id="write-all">
@@ -28,23 +29,62 @@
                     </a>
 
                     <div class="name-change form-inline">
-                            <div class="form-group">
-                                <input class="form-control name-change-input" type="text" name="{{$contact.ID}}"
-                                       value="{{$contact.Name}}">
+                        <div class="form-group">
+                            <input class="form-control name-change-input" type="text" name="{{$contact.ID}}"
+                                   value="{{$contact.Name}}">
 
-                                <button class="btn btn-sm btn-default change-name-ok" onclick="applyNewName('{{$contact.ID}}')">
-                                    <span class="glyphicon glyphicon-ok" aria-hidden="true"></span>
-                                </button>
+                            <button class="btn btn-sm btn-default change-name-ok"
+                                    onclick="applyNewName('{{$contact.ID}}')">
+                                <span class="glyphicon glyphicon-ok" aria-hidden="true"></span>
+                            </button>
 
-                                <button class="btn btn-sm btn-default change-name-cancel" onclick="notApplyNewName('{{$contact.ID}}')">
-                                    <span class="glyphicon glyphicon-remove" aria-hidden="true"></span>
-                                </button>
-                            </div>
+                            <button class="btn btn-sm btn-default change-name-cancel"
+                                    onclick="notApplyNewName('{{$contact.ID}}')">
+                                <span class="glyphicon glyphicon-remove" aria-hidden="true"></span>
+                            </button>
+                        </div>
                     </div>
                 </div>
 
                 {{end}}
             </div>
+            {{if eq_s $with "all"}}
+            {{else}}
+            {{range $contact := .contacts}}
+            {{if eq_s $with $contact.ID}}
+
+            <button class="btn btn-default btn-sm" data-toggle="modal" data-target="#delete-messages">Удалить переписку
+            </button>
+            <div class="modal fade" id="delete-messages" tabindex="-1" role="dialog"
+                 aria-labelledby="Удаление переписки">
+                <div class="modal-dialog" role="document">
+                    <div class="modal-content">
+                        <div class="modal-header">
+                            <button type="button" class="close" data-dismiss="modal">&times;</button>
+                            <h3>
+                                <small>Уверены что хотите удалить переписку c пользователем</small>
+                                {{$contact.Name}}
+                                <small>?</small>
+                            </h3>
+                        </div>
+                        <div class="modal-body col-md-6 col-md-offset-4">
+                            <button id="delete-yes" class="btn btn-danger" onclick="delete_messages('{{$with}}', '{{$companyId}}')">Да</button>
+                            <button id="delete-no" class="btn btn-info" data-dismiss="modal">Нет</button>
+                            <br>
+                            <div id="delete-result">
+
+                            </div>
+                        </div>
+                        <div class="modal-footer">
+
+                        </div>
+                    </div>
+                </div>
+            </div>
+            {{end}}
+            {{end}}
+            {{end}}
+
         </div>
 
         <div id="chat-window" class="col-xs-11 col-md-10">
@@ -88,8 +128,9 @@
         </div>
     </div>
 </div>
+
 <form class="form-inline">
-    <div class="checkbox col-md-3">
+    <div class="checkbox col-md-2">
         <label>
             <input id="mute" type="checkbox"> Выключить звук
         </label>
@@ -98,10 +139,16 @@
 <audio id="audio-notification">
     <source src="/static/audio1.mp3" type='audio/mpeg; codecs="mp3"'>
     <source src="/static/audio2.wav" type='audio/wav;'>
-    <!-- здесь - добавить запасные варианты тегов -->
 </audio>
 <script>
     var url_prefix = "{{ prefix }}";
+
+
+
+
+
+
+
 
 
 

@@ -186,13 +186,13 @@ func Run(addr string, db *d.MainDb, cs c.ConfigStorage, qs *quests.QuestStorage,
 			info := ProfileId{}
 			err = json.Unmarshal(data, &info)
 			if err != nil {
-				log.Printf("CS READ error at unmarshal delete data %v", err)
+				log.Printf("CS READ error at unmarshal read data %v", err)
 				render.JSON(500, map[string]interface{}{"error":err, "success":false})
 				return
 			}
 			profile, err := ph.GetProfile(info.Id)
 			if err != nil {
-				log.Printf("CS READ error at unmarshal delete data %v", err)
+				log.Printf("CS READ error at unmarshal read data %v", err)
 				render.JSON(500, map[string]interface{}{"error":err, "success":false})
 				return
 			}
@@ -498,7 +498,7 @@ func Run(addr string, db *d.MainDb, cs c.ConfigStorage, qs *quests.QuestStorage,
 		})
 		r.Get("/delete/:between", func(params martini.Params, render render.Render, req *http.Request) {
 			between := params["between"]
-			db.Messages.Collection.RemoveAll(bson.M{"$or":[]bson.M{bson.M{"from":between}, bson.M{"to":between}}})
+			db.Messages.DeleteMessages(between, ME)
 			render.Redirect(fmt.Sprintf("/chat?with=%v", between))
 		})
 

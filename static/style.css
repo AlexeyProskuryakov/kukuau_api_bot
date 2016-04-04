@@ -195,8 +195,8 @@ body::-webkit-scrollbar {
 
 #contacts-wrapper{
     padding-left: 7px;
-    max-height: 90%;
-    min-height: 90%;
+    max-height: 88%;
+    min-height: 88%;
     overflow:auto;
 }
 

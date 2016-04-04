@@ -92,6 +92,7 @@ type MessageWrapper struct {
 	MessageID        string `bson:"message_id"`
 	MessageStatus    string `bson:"message_status"`
 	MessageCondition string `bson:"message_condition"`
+	IsDeleted        bool `bson:"is_deleted"`
 }
 
 func NewMessageForWeb(from, to, body string) *MessageWrapper {
@@ -657,6 +658,7 @@ func (mh *MessageHandler) StoreMessage(from, to, body, message_id string) (*Mess
 		NotAnswered:1,
 		Unread:1,
 		MessageID:message_id,
+		IsDeleted:false,
 		TimeFormatted: time.Now().Format(time.Stamp),
 	}
 	if found == nil && err == nil {
@@ -693,6 +695,7 @@ func (mh *MessageHandler) GetMessages(query bson.M) ([]MessageWrapper, error) {
 	if !mh.parent.Check() {
 		return result, errors.New("БД не доступна")
 	}
+	query["is_deleted"] = false
 	err := mh.Collection.Find(query).Sort("time_stamp").All(&result)
 	for i, message := range result {
 		result[i].TimeFormatted = message.Time.Format(time.Stamp)
@@ -703,7 +706,7 @@ func (mh *MessageHandler) GetMessages(query bson.M) ([]MessageWrapper, error) {
 
 func (mh *MessageHandler) GetMessageByMessageId(message_id string) (*MessageWrapper, error) {
 	result := MessageWrapper{}
-	err := mh.Collection.Find(bson.M{"message_id":message_id}).One(&result)
+	err := mh.Collection.Find(bson.M{"message_id":message_id, "is_deleted":false}).One(&result)
 	if err == mgo.ErrNotFound {
 		return nil, nil
 	}else if err != nil {
@@ -711,6 +714,16 @@ func (mh *MessageHandler) GetMessageByMessageId(message_id string) (*MessageWrap
 	}
 	result.TimeFormatted = result.Time.Format(time.Stamp)
 	return &result, nil
+}
+
+func (mh *MessageHandler) DeleteMessages(from, to string) (int, error) {
+	info, err := mh.Collection.UpdateAll(
+		bson.M{"$or":[]bson.M{
+				bson.M{"from":from, "to":to},
+				bson.M{"to":from, "from":to}},
+			"is_deleted":false},
+		bson.M{"$set":bson.M{"is_deleted":true}})
+	return info.Updated, err
 }
 func (mh *MessageHandler) UpdateMessageStatus(message_id, status, condition string) error {
 	return mh.Collection.Update(bson.M{"message_id":message_id}, bson.M{"$set":bson.M{"message_status":status, "message_condition":condition}})

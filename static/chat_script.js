@@ -148,7 +148,22 @@ function delete_chat(between){
         }
     });
 }
-
+function delete_messages(from, to){
+    $.ajax({
+        type:"DELETE",
+        url:url_prefix+"/delete_messages",
+        data: JSON.stringify({from:from, to:to}),
+        dataType:"json",
+        success: function(x){
+            if (x.success==true){
+                $("#delete-result").text("Удалено "+x.deleted+" сообщений.");
+                $("#delete-yes").hide();
+                $("#delete-no").text("OK");
+                $("#delete-no").attr("onclick", "window.location.reload()");
+            }
+        }
+    })
+}
 setInterval(function(){
     update_messages();
     update_contacts();
