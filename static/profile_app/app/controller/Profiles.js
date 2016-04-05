@@ -147,19 +147,20 @@ Ext.define('Console.controller.Profiles', {
     updateProfile: function(button) {
         var win    = button.up('window');
         var form   = win.down('form');
-        var values = form.getValues();
+        var profile_main_values = form.getComponent("profile_main_information").getValues();
         var record = form.getRecord();
         if (record != undefined) {
-            if (values.name == ""){
+            if (profile_main_values.name == ""){
                 if (!form.isValid()){
                     return;
                 }
             }
             var id = record.get('id'),
             cntcts = [],
-            phones = [];
+            phones = [],
+            groups = [];
             
-            values.id=id,
+            profile_main_values.id=id,
             Ext.each(record.contacts().data.items, function(item){
                 var c_data = item.getData();
                 c_data.links = [];
@@ -168,25 +169,24 @@ Ext.define('Console.controller.Profiles', {
                 });
                 cntcts.push(c_data);
             });
-            values.contacts = cntcts;
+            profile_main_values.contacts = cntcts;
             
             Ext.each(record.phones().data.items, function(p_item){
                 var p_data = p_item.getData();
                 phones.push(p_data);
             });
-            values.phones = phones;
+            profile_main_values.phones = phones;
 
-            groups = [];
             Ext.each(record.groups().data.items, function(g_item){
                 groups.push(g_item.getData());
             });
-            values.groups = groups;
-            values.image_url = form.getComponent("profile_image_wrapper").getComponent("profile_image").src;
+            profile_main_values.groups = groups;
+            profile_main_values.image_url = form.getComponent("profile_image_wrapper").getComponent("profile_image").src;
         } 
 
         Ext.Ajax.request({
             url: 'profile/update',
-            jsonData: values,
+            jsonData: profile_main_values,
             success: function(response){
                 var data=Ext.decode(response.responseText);
                 if(data.success){
@@ -298,7 +298,7 @@ Ext.define('Console.controller.Profiles', {
         var win    = button.up('window'),
         c_view = Ext.widget("contactWindow", {"parent":win}),
         c_form = c_view.down("form"),
-        map_cmp = c_form.getComponent("contact_map"),
+        map_cmp = c_form.down("form").getComponent("contact_map"),
         center = {lat:54.858088, "lng": 83.110492};
 
         if (!(record instanceof Ext.EventObjectImpl)){   
@@ -347,8 +347,17 @@ Ext.define('Console.controller.Profiles', {
         cl_model = form.getRecord(),
         values = form.getValues(),
         parent_form = win.getParent().down("form"),
-        c_model = parent_form.getRecord();
-
+        c_model = parent_form.getRecord(),
+        cmp_type = form.getComponent('cl_type'),
+        cmp_value = form.getComponent('cl_value');
+        if (!cmp_type.validate()){
+            cmp_type.markInvalid("Указание типа обязательно!");
+            return;
+        }
+        if (!cmp_value.validate()){
+            cmp_value.markInvalid("Указание значения обязательно!");
+            return;
+        }
         l_store = c_model.links();
         if (cl_model != undefined){
             var cl_id = cl_model.getId(),
@@ -406,10 +415,22 @@ Ext.define('Console.controller.Profiles', {
         var win = button.up('window'),
         profile_model = win.getParent().down("form").getRecord(),
         phone_cmp = win.down('form').getComponent("phone_value");
+
         if (phone_cmp.validate()){
-            var phone_model = Ext.create("Console.model.ProfileAllowPhone", {id:guid(), value:phone_cmp.getValue()}),
-            p_store = profile_model.phones();
-            
+            var p_value = phone_cmp.getValue(),
+            p_store = profile_model.phones(),
+            contains = false;
+            p_store.each(function(record, id){
+                if (record.get('value') == p_value){
+                    contains = true;
+                }
+            });
+            if (contains){
+                phone_cmp.markInvalid("Такой телефон уже существует!");
+                return;
+            }
+            var phone_model = Ext.create("Console.model.ProfileAllowPhone", {id:guid(), value:phone_cmp.getValue()});
+
             p_store.add(phone_model);
             win.getParent().down("form").getComponent('profile_phones').reconfigure(p_store);
 

@@ -5,10 +5,14 @@ Ext.define('Console.view.Profile', {
     title: 'Профайл',
     layout: 'fit',
     autoDestroy: true,
-    
-
+    maximizable : true,
+    autoScroll: true,
+    viewConfig: {
+        style: { overflow: 'scroll' }
+    },
+    overflowY:'scroll',
     autoShow: false,
-    width: 750,
+    width: 650,
     height: 750,
 
     initComponent: function() {
@@ -27,6 +31,7 @@ Ext.define('Console.view.Profile', {
                 layout: 'column',
                 defaults: {
                     xtype: 'form',
+                    autoscroll  : true
                 },
                 fileUpload: true,
                 items: [{
@@ -84,6 +89,10 @@ Ext.define('Console.view.Profile', {
                 store: 'ProfileAllowPhoneStore',
                 collapsible: true,
                 collapsed: true,
+                defaults:{
+                    xtype:"panel",
+                    autoscroll  : true
+                },
                 columns: [{
                     header: "Номер телефона",
                     dataIndex: 'value',
@@ -194,59 +203,75 @@ Ext.define('Console.view.Profile', {
                     scope: this,
                 }]
             },
-            {
-                xtype: 'checkbox',
-                inputValue: true,
-                name: 'enable',
-                fieldLabel: "Включен",
-                padding: 10
-            },
-            {
-                xtype: 'checkbox',
-                name: 'public',
-                inputValue: true,
-                fieldLabel: "Публичен",
-                padding: 10
-            },
-            {
-                xtype: 'textfield',
-                name: 'name',
-                fieldLabel: 'Имя',
-                width: 400,
-                padding: 10,
-                allowBlank: false
-            },
-            {
-                xtype: 'htmleditor',
-                name: 'short_description',
-                enableColors: false,
-                enableFontSize: false,
-                enableLists: false,
-                enableSourceEdit: false,
-                enableAlignments: false,
-                enableFont: false,
-                height: 170,
-                grow: true,
-                fieldLabel: 'Слоган',
-                padding: 10, 
-                allowBlank:false,
-            },
-            {
-                xtype: 'htmleditor',
-                name: 'text_description',
-                height: 100,
-                enableFont: false,
-                enableColors: false,
-                enableFontSize: false,
-                enableLists: false,
-                enableSourceEdit: false,
-                enableAlignments: false,
-                height: 170,
-                grow: true,
-                fieldLabel: 'Описание',
-                padding: 10,
-                allowBlank:false
-            }
+            new Ext.form.FormPanel({
+                frame: true,
+                autoDestroy: true,
+                title: "Основная информация",
+                collapsible: true,
+                collapsed: false,
+                itemId: "profile_main_information",
+                layout: 'column',
+                defaults: {
+                    xtype: 'form',
+                },
+                items: [
+                {
+                    xtype: 'checkbox',
+                    inputValue: true,
+                    name: 'enable',
+                    fieldLabel: "Включен",
+                    padding: 10
+                },
+                {
+                    xtype: 'checkbox',
+                    name: 'public',
+                    inputValue: true,
+                    fieldLabel: "Публичен",
+                    padding: 10
+                },
+                {
+                    xtype: 'textfield',
+                    name: 'name',
+                    fieldLabel: 'Имя',
+                    width: 400,
+                    padding: 10,
+                    allowBlank: false
+                },
+                {
+                    xtype: 'htmleditor',
+                    name: 'short_description',
+                    enableColors: false,
+                    enableFontSize: false,
+                    enableLists: false,
+                    enableSourceEdit: false,
+                    enableAlignments: false,
+                    enableFont: false,
+                    height: 170,
+                    width:600,
+                    grow: true,
+                    fieldLabel: 'Слоган',
+                    padding: 10, 
+                    allowBlank:false,
+                },
+                {
+                    xtype: 'htmleditor',
+                    name: 'text_description',
+                    enableFont: false,
+                    enableColors: false,
+                    enableFontSize: false,
+                    enableLists: false,
+                    enableSourceEdit: false,
+                    enableAlignments: false,
+                    height: 170,
+                    width:600,
+                    grow: true,
+                    fieldLabel: 'Описание',
+                    padding: 10,
+                    allowBlank:false
+                }
+                ]
+            }),
+            
             ]
         }
         ];

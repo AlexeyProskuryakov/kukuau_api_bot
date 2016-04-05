@@ -31,6 +31,7 @@ Ext.define('Console.view.Phone', {
 				itemId: 'phone_value',
 				width: 250,
 				padding:10,
+				allowBlank:false,
 				vtype:'phoneNumber'
 			}
 			]

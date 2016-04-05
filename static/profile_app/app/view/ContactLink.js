@@ -35,13 +35,17 @@ Ext.define('Console.view.ContactLink', {
 				typeAheadDelay: 100,
 				hideTrigger: true,
 				width: 350,
-				padding:10
+				padding:10,
+				allowBlank:false,
+				itemId:'cl_type'
 			}, 		{
 				xtype: 'textfield',
 				name : 'value',
 				fieldLabel: 'Значение',
 				width: 550,
-				padding:10
+				padding:10,
+				allowBlank:false,
+				itemId:'cl_value'
 			},{
 				xtype: 'textfield',
 				name : 'description',

@@ -4,6 +4,11 @@ Ext.define('Console.view.Contact', {
 	title: 'Контакт',
 	layout: 'fit',
 	autoShow: false,
+	autoScroll:true,
+	viewConfig: {
+		style: { overflow: 'scroll' }
+	},
+	overflowY:'scroll',
 	width:900,
 	height:900,
 	config:{
@@ -17,33 +22,45 @@ Ext.define('Console.view.Contact', {
 
 		this.items= [{
 			xtype:"form",
-			items: [ {
-				xtype:"textfield",
-				itemId:'address',
-				name:"address",
-				fieldLabel:"Адрес",
-				width: 750,
-				padding:10
-			},
-			{
-				xtype:"button",
-				itemId:"checkAddress",
-				text:"Найти адрес на карте",
-				scale:'small',
-				width: 170,
-				margin:'-5 0 10 50',
-				handler:function(x){
-					var form = this.up("form"),
+			items: [ 
+			new Ext.form.FormPanel({
+				frame: true,
+				autoDestroy: true,
+				title: "Информация об адресе",
+				collapsible: true,
+				collapsed: false,
+				itemId: "contact_address_form",
+				layout: 'column',
+				defaults: {
+					xtype: 'form',
+					autoscroll  : true
+				},
+				items:[
+				{
+					xtype:"textfield",
+					itemId:'address',
+					name:"address",
+					fieldLabel:"Адрес",
+					width: 750,
+					padding:10
+				},
+				{
+					xtype:"button",
+					itemId:"checkAddress",
+					text:"Найти адрес на карте",
+					scale:'small',
+					width: 170,
+					margin:'-5 0 10 50',
+					handler:function(x){
+						var form = this.up("form"),
 						address = form.getValues().address,
 						map = form.getComponent('contact_map'),
 						geocdr = new google.maps.Geocoder;
-						
-					console.log(address, map);
-					geocdr.geocode({address:address}, function(results, status){
+						geocdr.geocode({address:address}, function(results, status){
 							console.log(results, status);
 							if (status === google.maps.GeocoderStatus.OK) {	
 								var location = results[0].geometry.location,
-									marker = {lat:location.lat(), lng:location.lng()};
+								marker = {lat:location.lat(), lng:location.lng()};
 
 								form.getComponent("lat").setValue(marker.lat);
 								form.getComponent("lon").setValue(marker.lng);
@@ -52,62 +69,68 @@ Ext.define('Console.view.Contact', {
 								console.log("failed locate because status is ", status)
 							}
 						});
-				}
-			},
-			{	
-				xtype:"textfield",
-				name:"description",
-				fieldLabel:"Примечание",
-				width: 750,
-				padding:10
-			},{	
-				xtype:"textfield",
-				name:"lat",
-				itemId:"lat",
-				fieldLabel:"Долгота",
-				width: 250,
-				padding:10
-			},{	
-				xtype:"textfield",
-				itemId:'lon',
-				name:"lon",
-				fieldLabel:"Широта",
-				width: 250,
-				padding:10
-			},
-
-			{
-				xtype: 'gmappanel',
-				itemId: 'contact_map',
-				zoomLevel: 14,
-				width:880,
-				height:400,
-				gmapType: 'map',
-				mapConfOpts: ['enableScrollWheelZoom','enableDoubleClickZoom','enableDragging'],
-				mapControls: [],
-				maplisteners: {
-					click: function(mevt){
-						console.log(mevt);
-						var lat = mevt.latLng.lat(),
-						lon = mevt.latLng.lng(),
-						geocdr = new google.maps.Geocoder;
-
-						me.down('form').getComponent("lat").setValue(lat);
-						me.down('form').getComponent("lon").setValue(lon);
-
-						geocdr.geocode({location:mevt.latLng}, function(results, status){
-							console.log(results, status);
-							if (status === google.maps.GeocoderStatus.OK) {	
-								me.down('form').getComponent('address').setValue(results[0].formatted_address);
-							} else {
-								console.log("failed locate because status is ", status)
-							}
-						});
-						this.addMarker(mevt.latLng, mevt.latLng, true);
 					}
-				}
-				
-			},
+				},
+				{	
+					xtype:"textfield",
+					name:"description",
+					fieldLabel:"Примечание",
+					width: 750,
+					padding:10
+				},{	
+					xtype:"textfield",
+					name:"lat",
+					itemId:"lat",
+					fieldLabel:"Долгота",
+					width: 250,
+					padding:10
+				},{	
+					xtype:"textfield",
+					itemId:'lon',
+					name:"lon",
+					fieldLabel:"Широта",
+					width: 250,
+					padding:10
+				},
+
+				{
+					xtype: 'gmappanel',
+					itemId: 'contact_map',
+					zoomLevel: 14,
+					width:880,
+					height:400,
+					gmapType: 'map',
+					mapConfOpts: ['enableScrollWheelZoom','enableDoubleClickZoom','enableDragging'],
+					mapControls: [],
+					maplisteners: {
+						click: function(mevt){
+							console.log(mevt);
+							var lat = mevt.latLng.lat(),
+							lon = mevt.latLng.lng(),
+							geocdr = new google.maps.Geocoder;
+							form = me.down('form').down('form');
+
+							form.getComponent("lat").setValue(lat);
+							form.getComponent("lon").setValue(lon);
+
+							geocdr.geocode({location:mevt.latLng}, function(results, status){
+								console.log(results, status);
+								if (status === google.maps.GeocoderStatus.OK) {	
+									form.getComponent('address').setValue(results[0].formatted_address);
+								} else {
+									console.log("failed locate because status is ", status)
+								}
+							});
+							this.addMarker(mevt.latLng, mevt.latLng, true);
+						}
+					}
+
+				},
+				]
+			}),
+
+
+			
 			{
 				xtype:"grid",
 				title:"Способы связи",
