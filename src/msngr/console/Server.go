@@ -135,14 +135,13 @@ type CollocutorInfo struct {
 
 var TAG_REGEXP = regexp.MustCompile(`<\/?[^/bruia]([^>]*)>`)
 
-func ProfileTextTagClear(p *Profile) *Profile{
+func ProfileTextTagClear(p *Profile) *Profile {
 	p.ShortDescription = strings.Replace(p.ShortDescription, "<div>", "<br>", -1)
 	p.TextDescription = strings.Replace(p.TextDescription, "<div>", "<br>", -1)
 	p.ShortDescription = TAG_REGEXP.ReplaceAllString(p.ShortDescription, "")
-	p.TextDescription = TAG_REGEXP.ReplaceAllString(p.TextDescription,"")
+	p.TextDescription = TAG_REGEXP.ReplaceAllString(p.TextDescription, "")
 	return p
 }
-
 
 func Run(addr string, db *d.MainDb, qs *quests.QuestStorage, ntf *ntf.Notifier, cfg c.Configuration) {
 	m := martini.New()
@@ -314,12 +313,17 @@ func Run(addr string, db *d.MainDb, qs *quests.QuestStorage, ntf *ntf.Notifier, 
 			profile_id := params["profile_id"]
 			path := fmt.Sprintf("%v/%v", cfg.Console.ProfileImgPath, profile_id)
 			file, handler, err := req.FormFile("img_file")
+			defer file.Close()
 			if err != nil {
 				log.Printf("CS error at forming file %v", err)
 				render.JSON(500, map[string]interface{}{"error":err, "success":false})
 				return
 			}
-			defer file.Close()
+
+			if !strings.Contains(handler.Header.Get("Content-Type"), "image") {
+				render.JSON(200, map[string]interface{}{"error":"Вы загружаете не картинку", "success":false})
+				return
+			}
 
 			err = os.Mkdir(path, 0777)
 			if err != nil {
@@ -327,12 +331,12 @@ func Run(addr string, db *d.MainDb, qs *quests.QuestStorage, ntf *ntf.Notifier, 
 			}
 			file_path := fmt.Sprintf("%v/%v", path, handler.Filename)
 			f, err := os.OpenFile(file_path, os.O_WRONLY | os.O_CREATE, 0664)
+			defer f.Close()
 			if err != nil {
 				log.Printf("CS error at open file %v", err)
 				render.JSON(500, map[string]interface{}{"error":err, "success":false})
 				return
 			}
-			defer f.Close()
 			log.Printf("CS will save file at: [%v]", file_path)
 			io.Copy(f, file)
 			file_url := fmt.Sprintf("%v/%v/%v", cfg.Console.ProfileImgServer, profile_id, handler.Filename)
@@ -347,7 +351,7 @@ func Run(addr string, db *d.MainDb, qs *quests.QuestStorage, ntf *ntf.Notifier, 
 
 			render.JSON(200, map[string]interface{}{"success":true, "url":file_url})
 		})
-		r.Get("/all_groups", func( ren render.Render){
+		r.Get("/all_groups", func(ren render.Render) {
 			groups, err := ph.GetAllGroups()
 			if err != nil {
 				log.Printf("CS error at groups retrieve: %v", err)
@@ -419,7 +423,6 @@ func Run(addr string, db *d.MainDb, qs *quests.QuestStorage, ntf *ntf.Notifier, 
 			result_data["messages"] = messages
 
 			if contacts, err := GetContacts(db, START_DT); err == nil {
-				log.Printf("CS contacts: %+v", contacts)
 				result_data["contacts"] = contacts
 			}
 			log.Printf("CS result data :%+v", result_data)

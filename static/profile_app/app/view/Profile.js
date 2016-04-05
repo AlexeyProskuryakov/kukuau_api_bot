@@ -71,8 +71,15 @@ Ext.define('Console.view.Profile', {
                                 url: '/profile/upload_img/' + profile_id,
                                 waitMsg: 'Жульк жульк...',
                                 success: function(form, action) {
+                                    if (action.result.success == false){
+                                        Ext.Msg.alert("Ошибка",action.result.error);
+                                        return;
+                                    }
                                     image_cmp.setSrc(action.result.url);
                                 },
+                                failure:function(form, action){
+                                    Ext.Msg.alert("Ошибка", action.result.error);
+                                }
                             });
                         }
                     }

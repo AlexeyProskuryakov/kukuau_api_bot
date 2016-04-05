@@ -78,13 +78,14 @@ func (p Profile) String() string {
 	)
 }
 func NewProfileFromRow(row *sql.Rows) Profile {
-	var id, short_text, long_text, image, name string
+	var id, short_text, long_text, name string
+	var image sql.NullString
 	var enable, public int
 	err := row.Scan(&id, &short_text, &long_text, &image, &name, &enable, &public)
 	if err != nil {
 		log.Printf("P Error at scan profile data %v", err)
 	}
-	profile := Profile{UserName:id, ShortDescription:short_text, TextDescription:long_text, ImageURL:image, Name:name}
+	profile := Profile{UserName:id, ShortDescription:short_text, TextDescription:long_text, ImageURL:image.String, Name:name}
 	if enable != 0 {
 		profile.Enable = true
 	}
