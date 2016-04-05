@@ -7,9 +7,6 @@ Ext.define('Console.view.Profile', {
     autoDestroy: true,
     maximizable : true,
     autoScroll: true,
-    viewConfig: {
-        style: { overflow: 'scroll' }
-    },
     overflowY:'scroll',
     autoShow: false,
     width: 650,
@@ -47,7 +44,6 @@ Ext.define('Console.view.Profile', {
                     xtype: 'filefield',
                     name: 'img_file',
                     fieldLabel: 'Иконка',
-                    allowBlank: false,
                     width: 380,
                     padding: 10,
                     buttonText: 'Выбрать иконку'
@@ -155,6 +151,7 @@ Ext.define('Console.view.Profile', {
                 itemId: "profile_contacts",
                 store: 'ContactsStore',
                 name: 'contacts',
+                markDirty: false,
                 collapsible: true,
                 collapsed: true,
                 columns: [{
@@ -164,6 +161,7 @@ Ext.define('Console.view.Profile', {
                 }, {
                     header: 'Описание',
                     dataIndex: 'description',
+                    markDirty: false,
                     flex: 1, 
                     renderer:function(item, meta){
                         console.log("render item",item, meta);

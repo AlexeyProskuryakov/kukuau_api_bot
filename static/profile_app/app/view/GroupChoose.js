@@ -16,6 +16,7 @@ Ext.define('Console.view.GroupChoose', {
 			items:[
 			{
 				xtype: "grid",
+				markDirty:false,
 				title: "Выберите группу или добавьте новую",
 				alias: "widget.groupGlobalGrid",
 				itemId: "choose_group_grid",

@@ -133,7 +133,7 @@ type CollocutorInfo struct {
 	CountOrdersByProvider []OrdersInfo
 }
 
-var TAG_REGEXP = regexp.MustCompile(`<\/?[^/br]([^>]*)>`)
+var TAG_REGEXP = regexp.MustCompile(`<\/?[^/bruia]([^>]*)>`)
 
 func ProfileTextTagClear(p *Profile) *Profile{
 	p.ShortDescription = strings.Replace(p.ShortDescription, "<div>", "<br>", -1)

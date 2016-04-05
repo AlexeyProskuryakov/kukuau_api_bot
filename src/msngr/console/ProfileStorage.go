@@ -115,7 +115,6 @@ func (ph *ProfileDbHandler) GetProfileAllowedPhones(userName string) ([]ProfileA
 		}
 		result = append(result, ProfileAllowedPhone{PhoneId:pId, Value:number})
 	}
-	log.Printf("for %v found phones: %+v", userName, result)
 	return result, nil
 }
 
@@ -279,11 +278,12 @@ func (ph *ProfileDbHandler) InsertNewProfile(p *Profile) (*Profile, error) {
 	return p, err
 }
 func (ph *ProfileDbHandler) BindGroupToProfile(userName string, group *ProfileGroup) error {
-	_, err := ph.db.Exec("INSERT INTO profile_groups (username, group_id) VALUES ($1, $2)", userName, group.Id)
+	r, err := ph.db.Exec("INSERT INTO profile_groups (username, group_id) VALUES ($1, $2)", userName, group.Id)
 	if err != nil {
-		//log.Printf("P ERROR at binding profile %v and group %+v: %v", userName, group, err)
+		log.Printf("P ERROR at binding profile %v and group %+v: %v", userName, group, err)
 		return err
 	}
+	log.Printf("P result of bind group %v to %v is: %+v", group, userName, r)
 	return nil
 }
 
@@ -293,10 +293,11 @@ func (ph *ProfileDbHandler) UnbindGroupsFromProfile(userName string) error {
 		return err
 	}
 	defer stmt.Close()
-	_, err = stmt.Exec(userName)
+	r, err := stmt.Exec(userName)
 	if err != nil {
 		return err
 	}
+	log.Printf("P unbind group for %v result is: %+v", userName, r)
 	return nil
 }
 
@@ -326,11 +327,13 @@ func (ph *ProfileDbHandler) AddGroupToProfile(userName string, group *ProfileGro
 		if err != nil {
 			return nil, err
 		}
+		log.Printf("P insert group %v", group)
 	}
 	err = ph.BindGroupToProfile(userName, group)
 	if err != nil {
 		return nil, err
 	}
+	log.Printf("")
 	return group, nil
 }
 
@@ -646,6 +649,7 @@ func (ph *ProfileDbHandler)UpdateProfile(newProfile *Profile) error {
 	}
 	if !reflect.DeepEqual(savedProfile.Groups, newProfile.Groups) {
 		log.Printf("Difference in groups")
+
 		ph.UnbindGroupsFromProfile(newProfile.UserName)
 		for _, group := range newProfile.Groups {
 			ph.AddGroupToProfile(newProfile.UserName, &group)
