@@ -9,7 +9,7 @@ import (
 
 func GetFakeInfinityOwnAddressHandler() *OwnAddressHandler {
 	conf := configuration.ReadConfigInRecursive()
-	ext := infinity.GetInfinityAddressSupplier(conf.Taxis["fake"].Api)
+	ext := infinity.GetInfinityAddressSupplier(conf.Taxis["fake"].Api, "fake")
 	own_ah := NewOwnAddressHandler(conf.Main.ElasticConn, conf.Taxis["fake"].Api.GeoOrbit, ext)
 	return own_ah
 }

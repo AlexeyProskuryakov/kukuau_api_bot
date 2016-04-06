@@ -107,10 +107,10 @@ type QuestConfig struct {
 }
 
 type ConsoleConfig struct {
-	WebPort        string `json:"web_port"`
-	Key            string `json:"key"`
-	Information    string `json:"information"`
-	ProfileImgPath string `json:"profile_img_path"`
+	WebPort          string `json:"web_port"`
+	Key              string `json:"key"`
+	Information      string `json:"information"`
+	ProfileImgPath   string `json:"profile_img_path"`
 	ProfileImgServer string `json:"profile_img_server"`
 }
 
@@ -137,6 +137,9 @@ type Configuration struct {
 			ExternalUrl string `json:"external_url"`
 			WorkUrl     string `json:"work_url"`
 		} `json:"ru_post"`
+	Vote    struct {
+			DictUrl string `json:"dict_url"`
+		} `json:"vote"`
 }
 
 func (conf *Configuration) SetLogFile(fn string) {

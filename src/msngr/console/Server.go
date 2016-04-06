@@ -78,7 +78,6 @@ func (s ByContactsLastMessageTime) Swap(i, j int) {
 }
 func (s ByContactsLastMessageTime) Less(i, j int) bool {
 	return s[i].LastMessageTime > s[j].LastMessageTime
-
 }
 
 func send_messages_to_peoples(people []d.UserWrapper, ntf *ntf.Notifier, text string) {

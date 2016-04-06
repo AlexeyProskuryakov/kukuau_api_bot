@@ -19,6 +19,8 @@ import (
 	i "msngr/taxi/infinity"
 	"msngr/taxi/sedi"
 	"msngr/taxi/geo"
+	v "msngr/voting"
+	"github.com/derekparker/delve/config"
 )
 
 func GetTaxiAPI(params c.TaxiApiParams, for_name string) (t.TaxiInterface, error) {
@@ -141,18 +143,31 @@ func StartBot(db *d.MainDb, result chan string) c.Configuration {
 		result <- fmt.Sprintf("quest_%v", q_name)
 	}
 
-	server_address := fmt.Sprintf(":%v", conf.Main.Port)
-	log.Printf("\nStart listen and serving at: %v\n", server_address)
-	server := &http.Server{
-		Addr: server_address,
-	}
-
 	if conf.Console.WebPort != "" && conf.Console.Key != "" {
 		log.Printf("Will handling requests from /console")
 		bc := cnsl.FormConsoleBotContext(conf, db, cs)
 		cc := m.FormBotController(bc, db)
 		http.HandleFunc("/console", cc)
 		result <- "console"
+	}
+
+	if conf.Vote.DictUrl != "" {
+		vdh, _ := v.NewVotingHandler(conf.Main.Database.ConnString, conf.Main.Database.Name)
+		for _, el := range []string{"name", "city", "service"} {
+			http.HandleFunc(fmt.Sprintf("%v/%v", conf.Vote.DictUrl, el), func(w http.ResponseWriter, r *http.Request) {
+				v.AutocompleteController(w, r, vdh, el)
+			})
+		}
+		voteBot := v.FormVoteBotContext(conf)
+		voteBotController := m.FormBotController(voteBot, db)
+		http.HandleFunc("/vote", voteBotController)
+		result <- "vote"
+	}
+
+	server_address := fmt.Sprintf(":%v", conf.Main.Port)
+	log.Printf("\nStart listen and serving at: %v\n", server_address)
+	server := &http.Server{
+		Addr: server_address,
 	}
 
 	result <- "listen"

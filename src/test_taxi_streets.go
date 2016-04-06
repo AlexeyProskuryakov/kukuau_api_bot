@@ -4,7 +4,7 @@ import (
 	c "msngr/configuration"
 	g "msngr/taxi/geo"
 	s "msngr/structs"
-	"msngr/taxi/set"
+	"msngr/utils/set"
 	"fmt"
 	"msngr/utils"
 	"log"

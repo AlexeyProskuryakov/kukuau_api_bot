@@ -3,6 +3,7 @@ package console
 import (
 	"testing"
 	"msngr/configuration"
+	tu "msngr/test"
 )
 
 var (
@@ -33,11 +34,6 @@ var (
 	profileWithGroup = Profile{UserName:"test_w_g", Name:"with group", Groups:[]ProfileGroup{group}}
 )
 
-func check_err(t *testing.T, err error, i string) {
-	if err != nil {
-		t.Errorf("ERROR: [%v]\n%v", i, err)
-	}
-}
 
 func deleteAll(ph *ProfileDbHandler) {
 	profiles, _ := ph.GetAllProfiles()
@@ -90,7 +86,7 @@ func check_contacts(t *testing.T, profile *Profile) bool {
 func TestProfilesCounts(t *testing.T) {
 	t.SkipNow()
 	ph, err := NewProfileDbHandler(config.Main.PGDatabase.ConnString)
-	check_err(t, err, "init")
+	tu.CheckErr(t, err, "init")
 	deleteAll(ph)
 	testProfilesCount(t, ph, 0)
 	ph.InsertNewProfile(&profile1)
@@ -116,7 +112,7 @@ func TestProfilesCounts(t *testing.T) {
 func TestElements(t *testing.T) {
 	t.SkipNow()
 	ph, err := NewProfileDbHandler(config.Main.PGDatabase.ConnString)
-	check_err(t, err, "init")
+	tu.CheckErr(t, err, "init")
 	deleteAll(ph)
 
 	inserted_profile, _ := ph.InsertNewProfile(&profile1)
@@ -125,13 +121,13 @@ func TestElements(t *testing.T) {
 	}
 
 	inserted_group, err := ph.AddGroupToProfile(inserted_profile.UserName, &ProfileGroup{Name:"test_group", Description:"test_group_description"})
-	check_err(t, err, "insert group")
+	tu.CheckErr(t, err, "insert group")
 	if inserted_group.Id == 0 {
 		t.Error("after insert group must be have id")
 	}
 
 	inserted_contact, err := ph.AddContactToProfile(inserted_profile.UserName, &contact)
-	check_err(t, err, "insert contact")
+	tu.CheckErr(t, err, "insert contact")
 	if inserted_contact.ContactId == 0 {
 		t.Error("after insert contact must have id")
 	}
@@ -140,7 +136,7 @@ func TestElements(t *testing.T) {
 func TestProfilesUpdateGroups(t *testing.T) {
 	t.SkipNow()
 	ph, err := NewProfileDbHandler(config.Main.PGDatabase.ConnString)
-	check_err(t, err, "init")
+	tu.CheckErr(t, err, "init")
 	deleteAll(ph)
 
 	profile1PtrAfterInsert, _ := ph.InsertNewProfile(&profileWithGroup)
@@ -155,24 +151,24 @@ func TestProfilesUpdateGroups(t *testing.T) {
 	//add equal group and at result it must be one group
 	profileWithGroup.Groups = append(profileWithGroup.Groups, group)
 	err = ph.UpdateProfile(&profileWithGroup)
-	check_err(t, err, "add group update")
+	tu.CheckErr(t, err, "add group update")
 	savedProfile2AfterUpdate, err := ph.GetProfile(profileWithGroup.UserName)
-	check_err(t, err, "get updated group profile")
+	tu.CheckErr(t, err, "get updated group profile")
 	check_groups(t, savedProfile2AfterUpdate, 1)
 
 	//add another group
 	profileWithGroup.Groups = append(profileWithGroup.Groups, ProfileGroup{Name:"test_Gr_2", Description:"foooooo"})
 	err = ph.UpdateProfile(&profileWithGroup)
-	check_err(t, err, "add group update")
+	tu.CheckErr(t, err, "add group update")
 	savedProfile3AfterUpdate, err := ph.GetProfile(profileWithGroup.UserName)
-	check_err(t, err, "get updated group profile")
+	tu.CheckErr(t, err, "get updated group profile")
 	check_groups(t, savedProfile3AfterUpdate, 2)
 }
 
 func TestProfilesUpdateContacts(t *testing.T) {
 	t.SkipNow()
 	ph, err := NewProfileDbHandler(config.Main.PGDatabase.ConnString)
-	check_err(t, err, "init")
+	tu.CheckErr(t, err, "init")
 	deleteAll(ph)
 
 	pwc, _ := ph.InsertNewProfile(&profileWithContacts)
@@ -185,9 +181,9 @@ func TestProfilesUpdateContacts(t *testing.T) {
 
 	profileWithContacts.Contacts[0].Links[0].Description = "another_description"
 	err = ph.UpdateProfile(&profileWithContacts)
-	check_err(t, err, "update link description")
+	tu.CheckErr(t, err, "update link description")
 	saved, err := ph.GetProfile(profileWithContacts.UserName)
-	check_err(t, err, "get saved update link description")
+	tu.CheckErr(t, err, "get saved update link description")
 	if saved.Contacts[0].Links[0].Description != profileWithContacts.Contacts[0].Links[0].Description {
 		t.Error("links description are not changed!", saved.Contacts[0].Links[0].Description, profileWithContacts.Contacts[0].Links[0].Description)
 	}
@@ -197,9 +193,9 @@ func TestProfilesUpdateContacts(t *testing.T) {
 
 	profileWithContacts.Contacts[0].Description = "another_description"
 	err = ph.UpdateProfile(&profileWithContacts)
-	check_err(t, err, "update description")
+	tu.CheckErr(t, err, "update description")
 	saved, err = ph.GetProfile(profileWithContacts.UserName)
-	check_err(t, err, "get saved update description")
+	tu.CheckErr(t, err, "get saved update description")
 	if saved.Contacts[0].Description != profileWithContacts.Contacts[0].Description {
 		t.Error("description are not changed!", saved.Contacts[0].Description, profileWithContacts.Contacts[0].Description)
 	}
@@ -210,9 +206,9 @@ func TestProfilesUpdateContacts(t *testing.T) {
 	profileWithContacts.Contacts[0].Lat = 123.456
 	profileWithContacts.Contacts[0].Lon = 456.123
 	err = ph.UpdateProfile(&profileWithContacts)
-	check_err(t, err, "update geo")
+	tu.CheckErr(t, err, "update geo")
 	saved, err = ph.GetProfile(profileWithContacts.UserName)
-	check_err(t, err, "get saved update geo")
+	tu.CheckErr(t, err, "get saved update geo")
 	if saved.Contacts[0].Lat != profileWithContacts.Contacts[0].Lat || saved.Contacts[0].Lon != profileWithContacts.Contacts[0].Lon {
 		t.Error("geo are not changed!")
 	}
@@ -222,9 +218,9 @@ func TestProfilesUpdateContacts(t *testing.T) {
 
 	profileWithContacts.Contacts[0].OrderNumber = 100500
 	err = ph.UpdateProfile(&profileWithContacts)
-	check_err(t, err, "update OrderNumber")
+	tu.CheckErr(t, err, "update OrderNumber")
 	saved, err = ph.GetProfile(profileWithContacts.UserName)
-	check_err(t, err, "get saved update OrderNumber")
+	tu.CheckErr(t, err, "get saved update OrderNumber")
 	if saved.Contacts[0].OrderNumber != profileWithContacts.Contacts[0].OrderNumber {
 		t.Error("OrderNumber are not changed!")
 	}
@@ -236,7 +232,7 @@ func TestProfilesUpdateContacts(t *testing.T) {
 func TestProfilesUpdateFields(t *testing.T) {
 	t.SkipNow()
 	ph, err := NewProfileDbHandler(config.Main.PGDatabase.ConnString)
-	check_err(t, err, "init")
+	tu.CheckErr(t, err, "init")
 	deleteAll(ph)
 	spe, _ := ph.InsertNewProfile(&profileEnabled)
 	if !spe.Enable {
@@ -248,54 +244,54 @@ func TestProfilesUpdateFields(t *testing.T) {
 	}
 	spe.ShortDescription = "ttrtt"
 	err = ph.UpdateProfile(spe)
-	check_err(t, err, "short descr changed")
+	tu.CheckErr(t, err, "short descr changed")
 	supe, err := ph.GetProfile(spe.UserName)
-	check_err(t, err, "short upd descr changed")
+	tu.CheckErr(t, err, "short upd descr changed")
 	if supe.ShortDescription != spe.ShortDescription {
 		t.Error("short descr not changed")
 	}
 
 	sppe.TextDescription = "ttttttt"
 	err = ph.UpdateProfile(sppe)
-	check_err(t, err, "long descr changed")
+	tu.CheckErr(t, err, "long descr changed")
 	susppe, err := ph.GetProfile(sppe.UserName)
-	check_err(t, err, "short upd descr changed")
+	tu.CheckErr(t, err, "short upd descr changed")
 	if susppe.TextDescription != sppe.TextDescription {
 		t.Error("long descr not changed")
 	}
 
 	sppe.Public = false
 	err = ph.UpdateProfile(sppe)
-	check_err(t, err, "public changed")
+	tu.CheckErr(t, err, "public changed")
 	susppe, err = ph.GetProfile(sppe.UserName)
-	check_err(t, err, "public upd changed")
+	tu.CheckErr(t, err, "public upd changed")
 	if susppe.Public != sppe.Public {
 		t.Error("public not changed")
 	}
 
 	sppe.Enable = true
 	err = ph.UpdateProfile(sppe)
-	check_err(t, err, "Enable changed")
+	tu.CheckErr(t, err, "Enable changed")
 	susppe, err = ph.GetProfile(sppe.UserName)
-	check_err(t, err, "Enable upd changed")
+	tu.CheckErr(t, err, "Enable upd changed")
 	if susppe.Enable != sppe.Enable {
 		t.Error("Enable not changed")
 	}
 
 	sppe.ImageURL = "fooo"
 	err = ph.UpdateProfile(sppe)
-	check_err(t, err, "ImageURL changed")
+	tu.CheckErr(t, err, "ImageURL changed")
 	susppe, err = ph.GetProfile(sppe.UserName)
-	check_err(t, err, "ImageURL upd changed")
+	tu.CheckErr(t, err, "ImageURL upd changed")
 	if susppe.ImageURL != sppe.ImageURL {
 		t.Error("ImageURL not changed")
 	}
 
 	sppe.Name = "aaaaaaaaaa"
 	err = ph.UpdateProfile(sppe)
-	check_err(t, err, "Name changed")
+	tu.CheckErr(t, err, "Name changed")
 	susppe, err = ph.GetProfile(sppe.UserName)
-	check_err(t, err, "Name upd changed")
+	tu.CheckErr(t, err, "Name upd changed")
 	if susppe.Name != sppe.Name {
 		t.Error("Name not changed")
 	}
@@ -303,7 +299,7 @@ func TestProfilesUpdateFields(t *testing.T) {
 
 func TestPhones(t *testing.T) {
 	ph, err := NewProfileDbHandler(config.Main.PGDatabase.ConnString)
-	check_err(t, err, "init")
+	tu.CheckErr(t, err, "init")
 	deleteAll(ph)
 	phone_value := "79811064022"
 	phone_value2 := "79138973664"
@@ -311,7 +307,7 @@ func TestPhones(t *testing.T) {
 	p.AllowedPhones = append(p.AllowedPhones, ProfileAllowedPhone{Value:phone_value})
 
 	new_p, err := ph.InsertNewProfile(p)
-	check_err(t, err, "insert profile with phone")
+	tu.CheckErr(t, err, "insert profile with phone")
 	if len(new_p.AllowedPhones) != 1{
 		t.Errorf("Except one phone but %v",len(new_p.AllowedPhones))
 	}
@@ -322,7 +318,7 @@ func TestPhones(t *testing.T) {
 	ph.UpdateProfile(new_p)
 
 	new_p, err = ph.GetProfile("test_phone")
-	check_err(t,err, "get profile with two phones")
+	tu.CheckErr(t,err, "get profile with two phones")
 
 	if len(new_p.AllowedPhones) != 2{
 		t.Errorf("Except two phones but %v",len(new_p.AllowedPhones))
