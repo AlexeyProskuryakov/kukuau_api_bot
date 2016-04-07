@@ -39,6 +39,7 @@ function createProfileForm(profileModel){
         form.getComponent("profile_image_wrapper").getComponent("profile_image").setSrc(image_src);
     }
 
+    profile_window.setTitle(profile_window.title+" ("+profileModel.get("id")+")");
     return profile_window;
 }
 var geocoder = new google.maps.Geocoder();
@@ -218,6 +219,7 @@ Ext.define('Console.controller.Profiles', {
             store.add(profile_model);
             view.down("form").loadRecord(profile_model);
             win.destroy();
+            view.setTitle(view.title+" ("+id+")");
             view.show();
         } else {
             cmp.markInvalid("Введите имя, оно необходимо.");
