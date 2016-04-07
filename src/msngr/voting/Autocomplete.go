@@ -26,10 +26,10 @@ func (s ByFuzzyEquals) Swap(i, j int) {
 	s.Data[i], s.Data[j] = s.Data[j], s.Data[i]
 }
 func (s ByFuzzyEquals) Less(i, j int) bool {
-	return fs.RankMatchFold(s.Data[i], s.Center) > fs.RankMatchFold(s.Data[j], s.Center)
+	return fs.RankMatchFold(s.Center, s.Data[i]) > fs.RankMatchFold(s.Center, s.Data[j])
 }
 
-func AutocompleteController(w http.ResponseWriter, r *http.Request, storage *VotingDataHandler, fieldName string) {
+func AutocompleteController(w http.ResponseWriter, r *http.Request, storage *VotingDataHandler, fieldName string, additionalVariants []string) {
 	w.Header().Set("Content-type", "application/json")
 	w.WriteHeader(http.StatusOK)
 	if r.Method == "GET" {
@@ -45,6 +45,11 @@ func AutocompleteController(w http.ResponseWriter, r *http.Request, storage *Vot
 			res_map := map[string]bool{}
 
 			for _, splitEl := range splitted {
+				for _, variant := range additionalVariants{
+					if fs.RankMatchFold(splitEl, variant) > 0 {
+						strResult = append(strResult, variant)
+					}
+				}
 				res, err := storage.TextFoundByCompanyField(splitEl, fieldName)
 				if err != nil {
 					log.Printf("Autocomplete controller ERROR at get data from db: %v", err)
@@ -56,6 +61,7 @@ func AutocompleteController(w http.ResponseWriter, r *http.Request, storage *Vot
 						strResult = append(strResult, foundEl)
 					}
 				}
+				log.Printf("res_map: %+v", res_map)
 			}
 			by := ByFuzzyEquals{Data:strResult, Center:query}
 			sort.Sort(by)

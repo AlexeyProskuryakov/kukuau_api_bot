@@ -20,7 +20,6 @@ import (
 	"msngr/taxi/sedi"
 	"msngr/taxi/geo"
 	v "msngr/voting"
-	"github.com/derekparker/delve/config"
 )
 
 func GetTaxiAPI(params c.TaxiApiParams, for_name string) (t.TaxiInterface, error) {
@@ -153,13 +152,19 @@ func StartBot(db *d.MainDb, result chan string) c.Configuration {
 
 	if conf.Vote.DictUrl != "" {
 		vdh, _ := v.NewVotingHandler(conf.Main.Database.ConnString, conf.Main.Database.Name)
-		for _, el := range []string{"name", "city", "service"} {
-			http.HandleFunc(fmt.Sprintf("%v/%v", conf.Vote.DictUrl, el), func(w http.ResponseWriter, r *http.Request) {
-				v.AutocompleteController(w, r, vdh, el)
-			})
-		}
+		http.HandleFunc("/vote/autocomplete/name", func(w http.ResponseWriter, r *http.Request) {
+			v.AutocompleteController(w, r, vdh, "name", []string{})
+		})
+		http.HandleFunc("/vote/autocomplete/city", func(w http.ResponseWriter, r *http.Request) {
+			v.AutocompleteController(w, r, vdh, "city", conf.Vote.Cities)
+		})
+		http.HandleFunc("/vote/autocomplete/service", func(w http.ResponseWriter, r *http.Request) {
+			v.AutocompleteController(w, r, vdh, "service", conf.Vote.Services)
+		})
+
 		voteBot := v.FormVoteBotContext(conf)
 		voteBotController := m.FormBotController(voteBot, db)
+		log.Printf("Will handling requests for /vote")
 		http.HandleFunc("/vote", voteBotController)
 		result <- "vote"
 	}

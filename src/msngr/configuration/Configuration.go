@@ -139,6 +139,8 @@ type Configuration struct {
 		} `json:"ru_post"`
 	Vote    struct {
 			DictUrl string `json:"dict_url"`
+			Cities []string `json:"cities"`
+			Services []string `json:"services"`
 		} `json:"vote"`
 }
 
