@@ -45,9 +45,9 @@ func TestVoteCompany(t *testing.T) {
 	}
 	test.CheckCount(companies, 1, t, "companies count")
 	test.CheckCount(companies[0].VoteInfo.Voters, 2, t, "voters at company")
-	test.CheckEquals(companies[0].Get("name"), "test company", t, "name field must be equals")
-	test.CheckEquals(companies[0].Get("city"), "NSK", t, "name field must be equals")
-	test.CheckEquals(companies[0].Get("service"), "test", t, "name field must be equals")
+	test.CheckEquals(companies[0].GetFieldValue("name"), "test company", t, "name field must be equals")
+	test.CheckEquals(companies[0].GetFieldValue("city"), "NSK", t, "name field must be equals")
+	test.CheckEquals(companies[0].GetFieldValue("service"), "test", t, "name field must be equals")
 
 	vdh.ConsiderCompany("test company 2", "NSK", "", "", "test_user", "")
 	all_companies, err := vdh.GetCompanies(bson.M{})
@@ -126,4 +126,17 @@ func TestUserVotes(t *testing.T) {
 	test.CheckErr(t, err, "get votes error")
 	test.CheckCount(cmps, 4, t, "for u2 must be 4 votes")
 
+}
+
+func TestLastCompanyOfUser(t *testing.T){
+	vdh := PrepObj()
+	vdh.ConsiderCompany("abc", "NSK", "abc", "foo", "u1", "")
+	vdh.ConsiderCompany("abc1", "NSK", "abc", "foo", "u1", "")
+	vdh.ConsiderCompany("abc2", "NSK", "abc2", "foo2", "u1", "")
+
+	lc, err := vdh.GetLastVote("u1")
+	test.CheckErr(t, err ,"last vote err")
+	if lc.Name != "abc2" || lc.City != "NSK" || lc.Service != "abc2"{
+		t.Errorf("Return not last consider company")
+	}
 }

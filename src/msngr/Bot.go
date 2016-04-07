@@ -328,7 +328,7 @@ func FormBotController(context *BotContext, db *db.MainDb) controllerHandler {
 					if non_commands_processor, ok := context.Message_commands[""]; ok {
 						out, isDeferred, message_error = process_message(non_commands_processor, out, in)
 					} else {
-						log.Printf("warn will sended message without commands: %v\n from %v (userdata: %v)", in.Message, in.From, in.UserData)
+						log.Printf("warn will sended message without commands: %+v\n from %v (userdata: %+v)", in.Message, in.From, in.UserData)
 					}
 				} else {
 					out, isDeferred, message_error = process_message_pkg(out, in, context)

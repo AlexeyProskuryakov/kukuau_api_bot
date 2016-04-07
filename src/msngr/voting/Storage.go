@@ -8,11 +8,13 @@ import (
 	"fmt"
 	"msngr/utils"
 	"reflect"
+	"time"
 )
 
 type Voter struct {
 	UserName string `bson:"user_name"`
 	Role     string `bson:"role,omitempty"`
+	VoteTime time.Time `bson:"vote_time"`
 }
 
 func (v Voter) String() string {
@@ -48,7 +50,7 @@ type CompanyModel struct {
 	Description string `bson:"description"`
 }
 
-func (cm CompanyModel) Get(fieldBsonName string) string {
+func (cm CompanyModel) GetFieldValue(fieldBsonName string) string {
 	v := reflect.ValueOf(cm)
 	typ := v.Type()
 	for i := 0; i < v.NumField(); i++ {
@@ -60,6 +62,21 @@ func (cm CompanyModel) Get(fieldBsonName string) string {
 	}
 	return ""
 }
+
+func (cm CompanyModel) GetVoter(userName string) *Voter{
+	for _, voter := range cm.VoteInfo.Voters{
+		if voter.UserName == userName{
+			return &voter
+		}
+	}
+	return nil
+}
+
+type UserCompaniesMapping struct {
+	UserName         string `bson:"user_name"`
+	LastCompanyAdded bson.ObjectId `bson:"last_company_added"`
+}
+
 func (cm CompanyModel) String() string {
 	return fmt.Sprintf("\n-------------------\nCompany: [%v] \nName:%v\nCity:%v\nDescription:%v\nVotes:%+v\n-------------------\n",
 		cm.ID, cm.Name, cm.City, cm.Description, cm.VoteInfo)
@@ -85,6 +102,16 @@ func (vdh *VotingDataHandler) ensureIndexes() {
 	})
 	companiesCollection.EnsureIndex(mgo.Index{
 		Key:        []string{"vote.voters.role"},
+		Background: true,
+		Unique:    false,
+	})
+	companiesCollection.EnsureIndex(mgo.Index{
+		Key:        []string{"vote.voters.vote_time"},
+		Background: true,
+		Unique:    false,
+	})
+	companiesCollection.EnsureIndex(mgo.Index{
+		Key:        []string{"vote.vote_count"},
 		Background: true,
 		Unique:    false,
 	})
@@ -116,6 +143,14 @@ func NewVotingHandler(conn, dbName string) (*VotingDataHandler, error) {
 	return nil, errors.New("Can not connect to db, try it next time")
 }
 
+type AlreadyConsider struct {
+	S string
+}
+
+func (ac AlreadyConsider) Error() string {
+	return ac.S
+}
+
 func (vdh *VotingDataHandler) ConsiderCompany(name, city, service, description, userName, userRole string) error {
 	found := CompanyModel{}
 	err := vdh.Companies.Find(bson.M{"name":name, "city":city, "service":service}).One(&found)
@@ -127,14 +162,14 @@ func (vdh *VotingDataHandler) ConsiderCompany(name, city, service, description, 
 			Service:service,
 			VoteInfo:VoteObject{
 				Voters:[]Voter{
-					Voter{UserName:userName, Role: userRole}},
+					Voter{UserName:userName, Role: userRole, VoteTime:time.Now()}},
 				VoteCount:1,
 			},
 		})
 		return err
 	} else {
 		if found.VoteInfo.ContainUserName(userName) {
-			return errors.New("This user already vote this")
+			return AlreadyConsider{S:"Пользователь уже добавил эту компанию"}
 		}
 		voter := Voter{UserName:userName, Role:userRole}
 		vdh.Companies.UpdateId(found.ID, bson.M{
@@ -151,6 +186,18 @@ func (vdh *VotingDataHandler) GetCompanies(q bson.M) ([]CompanyModel, error) {
 	return result, err
 }
 
+func (vdh *VotingDataHandler) GetLastVote(userName string) (*CompanyModel, error) {
+	result := CompanyModel{}
+	err := vdh.Companies.Find(bson.M{"vote.voters.user_name":userName}).Sort("-vote.voters.vote_time").One(&result)
+	if err == mgo.ErrNotFound {
+		return nil, nil
+	}
+	if err != nil {
+		return nil, err
+	}
+	return &result, nil
+}
+
 func (vdh *VotingDataHandler) TextFoundByCompanyField(q, field string) ([]string, error) {
 	result := []string{}
 	qResult := []CompanyModel{}
@@ -164,7 +211,7 @@ func (vdh *VotingDataHandler) TextFoundByCompanyField(q, field string) ([]string
 		return result, nil
 	}
 	for _, cm := range qResult {
-		result = append(result, cm.Get(field))
+		result = append(result, cm.GetFieldValue(field))
 	}
 	return result, nil
 }
