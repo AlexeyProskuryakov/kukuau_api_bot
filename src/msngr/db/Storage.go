@@ -48,6 +48,7 @@ type OrderWrapper struct {
 }
 
 type UserWrapper struct {
+	ID         bson.ObjectId `bson:"_id,omitempty"`
 	States     map[string]string `bson:"states"`
 	UserId     string `bson:"user_id"`
 	UserName   string `bson:"user_name"`
@@ -487,11 +488,19 @@ func (uh *UserHandler) AddUser(user_id, name, phone, email string) error {
 	return errors.New(fmt.Sprintf("Duplicate user! [%v] %v {%v}", user_id, name, phone))
 }
 
-func (uh UserHandler) AddUserObject(uw UserWrapper) error {
+func (uh UserHandler) AddOrUpdateUserObject(uw UserWrapper) error {
 	if !uh.parent.Check() {
 		return errors.New("БД не доступна")
 	}
-	err := uh.Collection.Insert(uw)
+	obj := UserWrapper{}
+	err := uh.Collection.Find(bson.M{"user_id":uw.UserId}).One(&obj)
+	if err == mgo.ErrNotFound {
+		err = uh.Collection.Insert(uw)
+		return err
+	}else {
+		err = uh.Collection.UpdateId(obj.ID, uw)
+		return err
+	}
 	return err
 }
 
@@ -719,8 +728,8 @@ func (mh *MessageHandler) GetMessageByMessageId(message_id string) (*MessageWrap
 func (mh *MessageHandler) DeleteMessages(from, to string) (int, error) {
 	info, err := mh.Collection.UpdateAll(
 		bson.M{"$or":[]bson.M{
-				bson.M{"from":from, "to":to},
-				bson.M{"to":from, "from":to}},
+			bson.M{"from":from, "to":to},
+			bson.M{"to":from, "from":to}},
 			"is_deleted":false},
 		bson.M{"$set":bson.M{"is_deleted":true}})
 	return info.Updated, err

@@ -198,7 +198,7 @@ func StartBot(db *d.MainDb, result chan string) c.Configuration {
 
 		log.Printf("I will handling web requests for chat at : [%v]", webRoute)
 
-		db.Users.AddUserObject(d.UserWrapper{UserName:chat_conf.User, Password:utils.PHash(chat_conf.Password), Role:users.MANAGER, UserId:chat_conf.User})
+		db.Users.AddOrUpdateUserObject(d.UserWrapper{UserName:chat_conf.User, Password:utils.PHash(chat_conf.Password), Role:users.MANAGER, UserId:chat_conf.User})
 	}
 
 	result <- "listen"
