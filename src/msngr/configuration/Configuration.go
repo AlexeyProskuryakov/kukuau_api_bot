@@ -138,9 +138,11 @@ type Configuration struct {
 			WorkUrl     string `json:"work_url"`
 		} `json:"ru_post"`
 	Vote    struct {
-			DictUrl string `json:"dict_url"`
-			Cities []string `json:"cities"`
+			DictUrl  string `json:"dict_url"`
+			Cities   []string `json:"cities"`
 			Services []string `json:"services"`
+			Roles    []string `json:"roles"`
+			Answers  []string `json:"answers"`
 		} `json:"vote"`
 }
 

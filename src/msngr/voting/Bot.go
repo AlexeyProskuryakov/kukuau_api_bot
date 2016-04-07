@@ -5,6 +5,7 @@ import (
 	c "msngr/configuration"
 	m "msngr"
 	"fmt"
+	"log"
 )
 
 func FormVoteBotContext(conf c.Configuration) *m.BotContext {
@@ -21,7 +22,7 @@ func FormVoteBotContext(conf c.Configuration) *m.BotContext {
 		"commands": &VoteCommandProcessor{DictUrl: conf.Vote.DictUrl},
 	}
 	context.Message_commands = map[string]s.MessageCommandProcessor{
-		"add_company": &VoteMessageProcessor{Storage:vh},
+		"add_company": &VoteMessageProcessor{Storage:vh, DictUrl:conf.Vote.DictUrl, Answers:conf.Vote.Answers},
 	}
 	return &context
 }
@@ -76,7 +77,7 @@ func getCommands(dictUrlPrefix string) []s.OutCommand {
 						},
 					},
 					s.OutField{
-						Name: "user_role",
+						Name: "role",
 						Type: "dict",
 						Attributes: s.FieldAttribute{
 							Required: false,
@@ -100,10 +101,60 @@ func (vcp *VoteCommandProcessor) ProcessRequest(in *s.InPkg) *s.RequestResult {
 }
 
 type VoteMessageProcessor struct {
+	DictUrl string
 	Storage *VotingDataHandler
+	Answers []string
 }
 
 func (vmp *VoteMessageProcessor) ProcessMessage(in *s.InPkg) *s.MessageResult {
 	result := &s.MessageResult{}
+	userName := in.From
+
+	if in.Message.Commands != nil {
+		cmdsPtr := in.Message.Commands
+		for _, command := range *cmdsPtr {
+			if command.Action == "add_company" {
+				commands := getCommands(vmp.DictUrl)
+				name, nOk := command.Form.GetValue("name")
+				service, sOk := command.Form.GetValue("service")
+				if !nOk && !sOk {
+					return &s.MessageResult{
+						Body:"Нужно ввестии хотябы имя компании и/или название услуги, а то че так-то :(",
+						Commands:&commands,
+					}
+				}
+				city, _ := command.Form.GetValue("city")
+				description, _ := command.Form.GetValue("description")
+				role, _ := command.Form.GetValue("role")
+				log.Printf("VB Receive name: %v, service: %v, city: %v, descr: %v, role: %v", name, service, city, description, role)
+				err := vmp.Storage.ConsiderCompany(name, service, city, description, userName, role)
+				if err != nil {
+					log.Printf("VB ERROR at conside company! %v", err)
+					return &s.MessageResult{
+						Body:"Упс. Что-то пошло не так.",
+						Commands:&commands,
+					}
+				}
+				votes, err := vmp.Storage.GetUserVotes(userName)
+
+				var text string
+				if err != nil {
+					log.Printf("VB ERROR at getting user votes")
+					text = vmp.Answers[0]
+				}else {
+					if len(votes) >= len(vmp.Answers) {
+						text = vmp.Answers[len(vmp.Answers) - 1]
+					}else {
+						text = vmp.Answers[len(votes) - 1]
+					}
+				}
+				return &s.MessageResult{
+					Body:text,
+					Commands:&commands,
+				}
+
+			}
+		}
+	}
 	return result
 }

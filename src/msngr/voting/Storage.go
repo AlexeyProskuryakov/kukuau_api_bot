@@ -81,25 +81,26 @@ func (vdh *VotingDataHandler) ensureIndexes() {
 	companiesCollection.EnsureIndex(mgo.Index{
 		Key:        []string{"vote.voters.user_name"},
 		Background: true,
-		DropDups:   true,
+		Unique:    false,
+	})
+	companiesCollection.EnsureIndex(mgo.Index{
+		Key:        []string{"vote.voters.role"},
+		Background: true,
 		Unique:    false,
 	})
 	companiesCollection.EnsureIndex(mgo.Index{
 		Key:        []string{"name"},
 		Background: true,
-		DropDups:   true,
 		Unique:    false,
 	})
 	companiesCollection.EnsureIndex(mgo.Index{
 		Key:        []string{"city"},
 		Background: true,
-		DropDups:   true,
 		Unique:    false,
 	})
 	companiesCollection.EnsureIndex(mgo.Index{
 		Key:        []string{"service"},
 		Background: true,
-		DropDups:   true,
 		Unique:    false,
 	})
 	vdh.Companies = companiesCollection
@@ -153,7 +154,7 @@ func (vdh *VotingDataHandler) GetCompanies(q bson.M) ([]CompanyModel, error) {
 func (vdh *VotingDataHandler) TextFoundByCompanyField(q, field string) ([]string, error) {
 	result := []string{}
 	qResult := []CompanyModel{}
-	if !utils.InS(field, []string{"name", "city", "service"}) {
+	if !utils.InS(field, []string{"name", "city", "service", "vote.voters.role"}) {
 		return result, errors.New("field invalid")
 	}
 	err := vdh.Companies.Find(bson.M{field:bson.RegEx{fmt.Sprintf(".*%v.*", q), ""}}).All(&qResult)
