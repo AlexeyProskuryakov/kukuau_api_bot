@@ -154,7 +154,7 @@ type VoteConsiderCompanyProcessor struct {
 	Answers     []string
 }
 
-func prepareMessageText(role string, cmp *CompanyModel) string {
+func prepareMessageText(role, phone string, cmp *CompanyModel) string {
 	text := "Я"
 	if role != "" {
 		text = fmt.Sprintf("%v, являясь %vом, хочу добавить", text, strings.ToLower(role))
@@ -162,9 +162,9 @@ func prepareMessageText(role string, cmp *CompanyModel) string {
 		text = fmt.Sprintf("%v хочу добавить", text)
 	}
 	if cmp.Name != "" {
-		text = fmt.Sprintf("%v компанию:", text)
+		text = fmt.Sprintf("%v компанию. Мой телефон: %v", text, phone)
 	}else {
-		text = fmt.Sprintf("%v услугу:", text)
+		text = fmt.Sprintf("%v услугу.", text)
 	}
 	return text
 }
@@ -210,7 +210,7 @@ func (vmp *VoteConsiderCompanyProcessor) ProcessMessage(in *s.InPkg) *s.MessageR
 					MessageID:in.Message.ID,
 					From:userName,
 					To:"me",
-					Body:prepareMessageText(role, cmp),
+					Body:prepareMessageText(role, in.UserData.Phone, cmp),
 					Unread:1,
 					NotAnswered:1,
 					Time:time.Now(),
