@@ -17,7 +17,7 @@ build(){
     ${EXEC} get github.com/martini-contrib/render
     ${EXEC} get gopkg.in/olivere/elastic.v2
     ${EXEC} get github.com/lib/pq
-    ${EXEC} get github.com/jinzhu/gorm
+    ${EXEC} get github.com/renstrom/fuzzysearch/fuzzy
 
 
     #building
