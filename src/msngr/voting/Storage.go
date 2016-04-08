@@ -243,3 +243,15 @@ func (vdh *VotingDataHandler) GetTopVotes(limit int) ([]CompanyModel, error) {
 	err := q.All(&result)
 	return result, err
 }
+
+func (vdh *VotingDataHandler) IsUserVote(userName string) (bool, error) {
+	result := CompanyModel{}
+	err := vdh.Companies.Find(bson.M{"vote.voters.user_name":userName}).One(&result)
+	if err != nil {
+		if err == mgo.ErrNotFound {
+			return false, nil
+		}
+		return false, err
+	}
+	return true, nil
+}

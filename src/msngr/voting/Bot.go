@@ -32,16 +32,17 @@ func FormVoteBotContext(conf c.Configuration, db_handler *d.MainDb) *m.BotContex
 		return "", false
 	}
 	context.Request_commands = map[string]s.RequestCommandProcessor{
-		"commands": &VoteCommandProcessor{DictUrl: conf.Vote.DictUrl},
+		"commands": &VoteCommandProcessor{DictUrl: conf.Vote.DictUrl, Storage:vh},
 	}
 	context.Message_commands = map[string]s.MessageCommandProcessor{
 		"add_company": &VoteConsiderCompanyProcessor{Storage:vh, DictUrl:conf.Vote.DictUrl, Answers:conf.Vote.Answers, MainStorage:db_handler},
+		"show_results": &VoteResultsProcessor{Storage:vh, DictUrl:conf.Vote.DictUrl},
 		"information": &VoteInformationProcessor{Storage:vh, DictUrl:conf.Vote.DictUrl},
 	}
 	return &context
 }
 
-func getCommands(dictUrlPrefix string) []s.OutCommand {
+func getCommands(dictUrlPrefix string, withResults bool) []s.OutCommand {
 	nameSearchUrl := fmt.Sprintf("%v/name", dictUrlPrefix)
 	serviceSearchUrl := fmt.Sprintf("%v/service", dictUrlPrefix)
 	citySearchUrl := fmt.Sprintf("%v/city", dictUrlPrefix)
@@ -102,15 +103,24 @@ func getCommands(dictUrlPrefix string) []s.OutCommand {
 			},
 		},
 	}
+	if withResults {
+		commands = append(commands, s.OutCommand{
+			Title: "Посмотреть TOP компаний",
+			Action: "show_results",
+			Position:1,
+		})
+	}
 	return commands
 }
 
 type VoteCommandProcessor struct {
+	Storage *VotingDataHandler
 	DictUrl string
 }
 
 func (vcp *VoteCommandProcessor) ProcessRequest(in *s.InPkg) *s.RequestResult {
-	commands := getCommands(vcp.DictUrl)
+	isVote, _ := vcp.Storage.IsUserVote(in.From)
+	commands := getCommands(vcp.DictUrl, isVote)
 	return &s.RequestResult{Commands:&commands}
 }
 
@@ -120,7 +130,8 @@ type VoteInformationProcessor struct {
 }
 
 func (vip *VoteInformationProcessor) ProcessMessage(in *s.InPkg) *s.MessageResult {
-	commands := getCommands(vip.DictUrl)
+	isVote, _ := vip.Storage.IsUserVote(in.From)
+	commands := getCommands(vip.DictUrl, isVote)
 	userName := in.From
 	cm, _ := vip.Storage.GetLastVote(userName)
 	if cm != nil {
@@ -173,7 +184,8 @@ func (vmp *VoteConsiderCompanyProcessor) ProcessMessage(in *s.InPkg) *s.MessageR
 		cmdsPtr := in.Message.Commands
 		for _, command := range *cmdsPtr {
 			if command.Action == "add_company" {
-				commands := getCommands(vmp.DictUrl)
+				isVote, _ := vmp.Storage.IsUserVote(in.From)
+				commands := getCommands(vmp.DictUrl, isVote)
 				name, nOk := command.Form.GetValue("name")
 				service, sOk := command.Form.GetValue("service")
 				if !nOk && !sOk {
@@ -246,4 +258,33 @@ func (vmp *VoteConsiderCompanyProcessor) ProcessMessage(in *s.InPkg) *s.MessageR
 		}
 	}
 	return result
+}
+
+type VoteResultsProcessor struct {
+	Storage *VotingDataHandler
+	DictUrl string
+}
+
+func (vrp *VoteResultsProcessor) ProcessMessage(in *s.InPkg) *s.MessageResult {
+	commands := getCommands(vrp.DictUrl, true)
+	votes, err := vrp.Storage.GetTopVotes(100)
+	if err != nil {
+		log.Printf("VB ERROR at getting top! %v", err)
+		return &s.MessageResult{
+			Body:ERROR_MESSAGE,
+			Commands:&commands,
+		}
+	}
+	var text string
+	for _, vote := range votes {
+		if vote.Name != "" {
+			text = fmt.Sprintf("%vИмя: %v; Услуга:%v; Город: %v, Голоса: %v\n", text, vote.Name, vote.Service, vote.City, vote.VoteInfo.VoteCount)
+		}else {
+			text = fmt.Sprintf("%vУслуга:%v; Город: %v, Голоса: %v\n", text, vote.Service, vote.City, vote.VoteInfo.VoteCount)
+		}
+	}
+	return &s.MessageResult{
+		Body:text,
+		Commands:&commands,
+	}
 }
