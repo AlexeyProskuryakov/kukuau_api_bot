@@ -233,3 +233,13 @@ func (vdh *VotingDataHandler) GetUserVotes(username string) ([]CompanyModel, err
 	err := vdh.Companies.Find(bson.M{"vote.voters.user_name":username}).Sort("-vote.voters.vote_time").All(&result)
 	return result, err
 }
+
+func (vdh *VotingDataHandler) GetTopVotes(limit int) ([]CompanyModel, error) {
+	result := []CompanyModel{}
+	q := vdh.Companies.Find(bson.M{}).Sort("-vote.vote_count")
+	if limit > 0 {
+		q.Limit(limit)
+	}
+	err := q.All(&result)
+	return result, err
+}

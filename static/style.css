@@ -225,6 +225,13 @@ body::-webkit-scrollbar {
 
 }
 
+table.sortable thead {
+    background-color:#eee;
+    color:#666666;
+    font-weight: bold;
+    cursor: default;
+}
+
 .navbar-default {
   background-color: #16a4d8;
   border-color: #6da5ff;

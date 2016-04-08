@@ -26,6 +26,7 @@ import (
 	"os"
 	"io"
 	"regexp"
+	"msngr/voting"
 )
 
 const (
@@ -81,7 +82,6 @@ func (s ByContactsLastMessageTime) Less(i, j int) bool {
 func GetContacts(db *d.MainDb) ([]usrs.Contact, error) {
 	resp := []usrs.Contact{}
 	err := db.Messages.Collection.Pipe([]bson.M{
-		bson.M{"$match": bson.M{"unread":bson.M{"$ne":0}}},
 		bson.M{"$group": bson.M{"_id":"$from", "unread_count":bson.M{"$sum":"$unread"}, "name":bson.M{"$first":"$from"}, "time":bson.M{"$max":"$time_stamp"}}}}).All(&resp)
 	if err != nil {
 		return resp, err
@@ -132,7 +132,7 @@ func ProfileTextTagClear(p *Profile) *Profile {
 	return p
 }
 
-func Run(addr string, db *d.MainDb, qs *quests.QuestStorage, ntf *ntf.Notifier, cfg c.Configuration) {
+func Run(addr string, db *d.MainDb, qs *quests.QuestStorage, vdh *voting.VotingDataHandler, ntf *ntf.Notifier, cfg c.Configuration) {
 	m := martini.New()
 	m.Use(w.NonJsonLogger())
 
@@ -635,6 +635,14 @@ func Run(addr string, db *d.MainDb, qs *quests.QuestStorage, ntf *ntf.Notifier, 
 			}
 			render.JSON(200, map[string]interface{}{"ok":true})
 		})
+	})
+
+	r.Get("/vote_result", func(ren render.Render) {
+		votes, err := vdh.GetTopVotes(-1)
+		if err != nil{
+			log.Printf("CS ERROR at retrieving votes %v", err)
+		}
+		ren.HTML(200, "vote_result", map[string]interface{}{"votes":votes}, render.HTMLOptions{Layout:"base"})
 	})
 
 	r = EnsureWorkWithKeys(r, qs)

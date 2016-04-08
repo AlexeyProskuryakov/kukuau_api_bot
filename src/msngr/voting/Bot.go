@@ -4,12 +4,10 @@ import (
 	s "msngr/structs"
 	c "msngr/configuration"
 	m "msngr"
-	cns "msngr/console"
 	d  "msngr/db"
 	"fmt"
 	"log"
 	"gopkg.in/mgo.v2"
-	"msngr/quests"
 	"time"
 	"strings"
 )
@@ -33,14 +31,12 @@ func FormVoteBotContext(conf c.Configuration, db_handler *d.MainDb) *m.BotContex
 		}
 		return "", false
 	}
-	qs := quests.NewQuestStorage(conf.Main.Database.ConnString, conf.Main.Database.Name)
 	context.Request_commands = map[string]s.RequestCommandProcessor{
 		"commands": &VoteCommandProcessor{DictUrl: conf.Vote.DictUrl},
 	}
 	context.Message_commands = map[string]s.MessageCommandProcessor{
 		"add_company": &VoteConsiderCompanyProcessor{Storage:vh, DictUrl:conf.Vote.DictUrl, Answers:conf.Vote.Answers, MainStorage:db_handler},
 		"information": &VoteInformationProcessor{Storage:vh, DictUrl:conf.Vote.DictUrl},
-		"":cns.ConsoleMessageProcessor{MainDb:*db_handler, QuestStorage:qs},
 	}
 	return &context
 }

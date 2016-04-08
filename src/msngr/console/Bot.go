@@ -11,6 +11,7 @@ import (
 	"regexp"
 	"msngr/quests"
 	"fmt"
+	"msngr/voting"
 )
 
 const (
@@ -71,7 +72,6 @@ func (cmp ConsoleMessageProcessor) ProcessMessage(in *s.InPkg) *s.MessageResult 
 			}
 			if step == nil && err == nil {
 				keys, err := cmp.QuestStorage.GetAllStep()
-				//log.Printf("CC: keys: %v, err: %v", keys, err)
 				key_s := []string{}
 				for _, k := range keys {
 					key_s = append(key_s, k.StartKey)
@@ -101,8 +101,8 @@ func FormConsoleBotContext(conf c.Configuration, db_handler *d.MainDb, cs c.Conf
 
 	notifier := n.NewNotifier(conf.Main.CallbackAddr, conf.Console.Key, db_handler)
 
-
-	go Run(conf.Console.WebPort, db_handler, qs, notifier, conf)
+	vdh, _ := voting.NewVotingHandler(conf.Main.Database.ConnString, conf.Main.Database.Name)
+	go Run(conf.Console.WebPort, db_handler, qs, vdh, notifier, conf)
 
 	return &result
 }
