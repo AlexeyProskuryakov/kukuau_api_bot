@@ -169,7 +169,7 @@ func StartBot(db *d.MainDb, result chan string) c.Configuration {
 			v.AutocompleteController(w, r, vdh, "vote.voters.role", conf.Vote.Roles)
 		})
 
-		voteBot := v.FormVoteBotContext(conf)
+		voteBot := v.FormVoteBotContext(conf, db)
 		voteBotController := m.FormBotController(voteBot, db)
 		log.Printf("Will handling requests for /vote")
 		http.HandleFunc("/vote", voteBotController)

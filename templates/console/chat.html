@@ -9,17 +9,17 @@
             {{$all := "all"}}
             {{$all_tm := "all_hash_writers"}}
             <div id="contacts-wrapper" closed="true">
-                <p>
+                <p id="write-all">
                     <a class="bg-danger a-contact {{if eq_s $with $all}} c-active {{end}}"
-                       href="/chat?with={{$all}}">
+                       href="{{ chat_with $all}}">
                         Написать всем
                     </a>
                 </p>
                 <br>
                 {{range $contact := .contacts}}
-                <p class="contact" id="{{$contact.ID}}">
+                <div class="contact" id="{{$contact.ID}}">
                     <a id="a-{{$contact.ID}}" class="a-contact {{if eq_s $with $contact.ID}} c-active {{end}}"
-                       href="/chat?with={{$contact.ID}}">
+                       href='{{ chat_with $contact.ID }}'>
                         {{$contact.Name}}
                         <small id="s-{{$contact.ID}}" class="new-message-counter" count="{{$contact.NewMessagesCount}}">
                             {{if $contact.NewMessagesCount}}
@@ -27,10 +27,64 @@
                             {{end}}
                         </small>
                     </a>
-                    <input class="name-change" type="text" name="{{$contact.ID}}" value="{{$contact.Name}}">
-                </p>
+
+                    <div class="name-change form-inline">
+                        <div class="form-group">
+                            <input class="form-control name-change-input" type="text" name="{{$contact.ID}}"
+                                   value="{{$contact.Name}}">
+
+                            <button class="btn btn-sm btn-default change-name-ok"
+                                    onclick="applyNewName('{{$contact.ID}}')">
+                                <span class="glyphicon glyphicon-ok" aria-hidden="true"></span>
+                            </button>
+
+                            <button class="btn btn-sm btn-default change-name-cancel"
+                                    onclick="notApplyNewName('{{$contact.ID}}')">
+                                <span class="glyphicon glyphicon-remove" aria-hidden="true"></span>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
                 {{end}}
             </div>
+            {{if eq_s $with "all"}}
+            {{else}}
+            {{range $contact := .contacts}}
+            {{if eq_s $with $contact.ID}}
+
+            <button class="btn btn-default btn-sm" data-toggle="modal" data-target="#delete-messages">Удалить переписку
+            </button>
+            <div class="modal fade" id="delete-messages" tabindex="-1" role="dialog"
+                 aria-labelledby="Удаление переписки">
+                <div class="modal-dialog" role="document">
+                    <div class="modal-content">
+                        <div class="modal-header">
+                            <button type="button" class="close" data-dismiss="modal">&times;</button>
+                            <h3>
+                                <small>Уверены что хотите удалить переписку c пользователем</small>
+                                {{$contact.Name}}
+                                <small>?</small>
+                            </h3>
+                        </div>
+                        <div class="modal-body col-md-6 col-md-offset-4">
+                            <button id="delete-yes" class="btn btn-danger" onclick="delete_messages('{{$with}}', '{{ me }}')">Да</button>
+                            <button id="delete-no" class="btn btn-info" data-dismiss="modal">Нет</button>
+                            <br>
+                            <div id="delete-result">
+
+                            </div>
+                        </div>
+                        <div class="modal-footer">
+
+                        </div>
+                    </div>
+                </div>
+            </div>
+            {{end}}
+            {{end}}
+            {{end}}
+
         </div>
 
         <div id="chat-window" class="col-xs-11 col-md-10">
@@ -38,7 +92,7 @@
                 <div class="message-wrap col-lg-8">
                     <div class="msg-wrap" id="chat-wrapper">
                         {{range $message := .messages}}
-                        <div class="msg">
+                        <div class="msg" id="{{$message.SID}}">
                             <h4 class="media-heading">{{$message.From}}
                                 <small class="time">{{stamp_date $message.Time}}</small>
                             </h4>
@@ -65,7 +119,7 @@
                             </button>
                         </div>
                         <div class="form-group">
-                            <input type="hidden" name="from" id="from" value="me">
+                            <input type="hidden" name="from" id="from" value="{{ me }}">
                             <input type="hidden" name="to" value="{{$with}}" id="with">
                         </div>
                     </form>
@@ -75,7 +129,7 @@
     </div>
 </div>
 <form class="form-inline">
-    <div class="checkbox col-md-3">
+    <div class="checkbox col-md-2">
         <label>
             <input id="mute" type="checkbox"> Выключить звук
         </label>
@@ -86,7 +140,9 @@
     <source src="audio2.wav" type='audio/wav;'>
     <!-- здесь - добавить запасные варианты тегов -->
 </audio>
-
+<script>
+    var url_prefix = "chat";
+</script>
 <script src="chat_script.js"></script>
 
 {{end}}

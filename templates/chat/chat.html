@@ -68,7 +68,7 @@
                             </h3>
                         </div>
                         <div class="modal-body col-md-6 col-md-offset-4">
-                            <button id="delete-yes" class="btn btn-danger" onclick="delete_messages('{{$with}}', '{{$companyId}}')">Да</button>
+                            <button id="delete-yes" class="btn btn-danger" onclick="delete_messages('{{$with}}', '{{ me }}')">Да</button>
                             <button id="delete-no" class="btn btn-info" data-dismiss="modal">Нет</button>
                             <br>
                             <div id="delete-result">
@@ -142,17 +142,6 @@
 </audio>
 <script>
     var url_prefix = "{{ prefix }}";
-
-
-
-
-
-
-
-
-
-
-
 </script>
 <script src="/static/chat_script.js"></script>
 
