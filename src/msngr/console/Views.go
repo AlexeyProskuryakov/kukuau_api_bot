@@ -151,7 +151,7 @@ func EnsureWorkWithUsers(r martini.Router, db *d.MainDb) martini.Router {
 
 			log.Printf("CONSOLE WEB add user [%s]  '%s' +%s %s |%v| {%s}", u_id, u_name, u_phone, u_email, u_role, u_pwd)
 			if u_name != "" && u_id != "" {
-				db.Users.AddUserObject(d.UserWrapper{UserId:u_id, UserName:u_name, Email:u_email, Phone:u_phone, Role:u_role, Password:u.PHash(u_pwd), LastUpdate:time.Now()})
+				db.Users.AddOrUpdateUserObject(d.UserWrapper{UserId:u_id, UserName:u_name, Email:u_email, Phone:u_phone, Role:u_role, Password:u.PHash(u_pwd), LastUpdate:time.Now()})
 				render.Redirect("/users")
 			} else {
 				render.HTML(200, "users", GetUsersInfo("Невалидные значения имени и (или) идентификатора добавляемого пользователя", db))

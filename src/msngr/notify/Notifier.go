@@ -17,13 +17,18 @@ type Notifier struct {
 	address string
 	key     string
 	_db     *db.MainDb
+	from	string
 }
 
 func NewNotifier(addr, key string, dbh *db.MainDb) *Notifier {
 	return &Notifier{address: addr, key: key, _db:dbh}
 }
 
-func (n Notifier) Notify(outPkg s.OutPkg) error {
+func (n *Notifier) SetFrom(from string){
+	n.from = from
+}
+
+func (n *Notifier) Notify(outPkg s.OutPkg) error {
 	jsoned_out, err := json.Marshal(&outPkg)
 	if err != nil {
 		log.Printf("NTF error at unmarshal %v", err)
@@ -42,7 +47,11 @@ func (n Notifier) Notify(outPkg s.OutPkg) error {
 
 	log.Printf("N >> %+v \n>>%+v \n>>%s", n.address, req.Header, jsoned_out)
 
-	n._db.Messages.StoreMessage("me", outPkg.To, outPkg.Message.Body, outPkg.Message.ID)
+	if n.from == ""{
+		n._db.Messages.StoreMessage("me", outPkg.To, outPkg.Message.Body, outPkg.Message.ID)
+	} else{
+		n._db.Messages.StoreMessage(n.from, outPkg.To, outPkg.Message.Body, outPkg.Message.ID)
+	}
 
 	client := &http.Client{}
 	resp, err := client.Do(req)
@@ -63,15 +72,24 @@ func (n Notifier) Notify(outPkg s.OutPkg) error {
 			n._db.Messages.UpdateMessageStatus(outPkg.Message.ID, "sended", "ok")
 		}
 		defer resp.Body.Close()
-	}else{
+	}else {
 		n._db.Messages.UpdateMessageStatus(outPkg.Message.ID, "error", "404")
 		return errors.New("404")
 	}
 	return nil
 }
 
-func (n Notifier) NotifyText(to, text string) (*s.OutPkg, error) {
+func (n *Notifier) NotifyText(to, text string) (*s.OutPkg, error) {
 	result := s.OutPkg{To:to, Message:&s.OutMessage{ID:utils.GenId(), Type:"chat", Body:text}}
 	err := n.Notify(result)
 	return &result, err
 }
+
+func (n *Notifier)SendMessageToPeople(people []db.UserWrapper, text string) {
+	go func() {
+		for _, user := range people {
+			n.NotifyText(user.UserId, text)
+		}
+	}()
+}
+

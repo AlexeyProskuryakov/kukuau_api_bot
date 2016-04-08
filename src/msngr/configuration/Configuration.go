@@ -114,6 +114,22 @@ type ConsoleConfig struct {
 	ProfileImgServer string `json:"profile_img_server"`
 }
 
+type ChatConfig struct {
+	Name        string `json:"name"`
+	CompanyId   string `json:"id"`
+	UrlSalt	    string `json:"url_salt"`
+	Information string `json:"information"`
+	AutoAnswer  struct {
+			    Enable bool `json:"enable"`
+			    After  int `json:"after_min"`
+			    Text   string `json:"text"`
+		    } `json:"auto_answer"`
+	BotAnswer   string `json:"bot_answer"`
+	Key         string `json:"key"`
+	User        string `json:"user"`
+	Password    string `json:"password"`
+}
+
 type Configuration struct {
 	Main    struct {
 			Port         int    `json:"port"`
@@ -137,6 +153,7 @@ type Configuration struct {
 			ExternalUrl string `json:"external_url"`
 			WorkUrl     string `json:"work_url"`
 		} `json:"ru_post"`
+
 	Vote    struct {
 			DictUrl  string `json:"dict_url"`
 			Cities   []string `json:"cities"`
@@ -144,6 +161,7 @@ type Configuration struct {
 			Roles    []string `json:"roles"`
 			Answers  []string `json:"answers"`
 		} `json:"vote"`
+	Chats   map[string]ChatConfig `json:"chats"`
 }
 
 func (conf *Configuration) SetLogFile(fn string) {

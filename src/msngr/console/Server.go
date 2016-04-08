@@ -68,6 +68,7 @@ func GetUsersInfo(err_text string, db *d.MainDb) map[string]interface{} {
 	return result
 }
 
+
 type ByContactsLastMessageTime []usrs.Contact
 
 func (s ByContactsLastMessageTime) Len() int {
@@ -112,7 +113,7 @@ func GetContacts(db *d.MainDb, after int64) ([]usrs.Contact, error) {
 			result = append(result, resp[i])
 		}
 	}
-	sort.Sort(ByContactsLastMessageTime(result))
+	sort.Sort(usrs.ByContactsLastMessageTime(result))
 	return result, nil
 }
 
@@ -131,6 +132,7 @@ type CollocutorInfo struct {
 	CountOrdersAll        int
 	CountOrdersByProvider []OrdersInfo
 }
+
 
 var TAG_REGEXP = regexp.MustCompile(`<\/?[^/bruia]([^>]*)>`)
 
@@ -167,11 +169,11 @@ func Run(addr string, db *d.MainDb, qs *quests.QuestStorage, ntf *ntf.Notifier, 
 		},
 	}))
 	m.Use(auth.BasicFunc(func(username, password string) bool {
-		usr, _ := db.Users.GetUser(bson.M{"user_name":username, "role":MANAGER})
+		usr, _ := db.Users.GetUser(bson.M{"user_name":username, "role":usrs.MANAGER})
 		if usr != nil {
 			return u.PHash(password) == usr.Password
 		}
-		return username == default_user && password == default_pwd
+		return username == usrs.DEFAULT_USER && password == usrs.DEFAULT_PWD
 	}))
 
 	m.Use(martini.Static("static"))
@@ -218,13 +220,13 @@ func Run(addr string, db *d.MainDb, qs *quests.QuestStorage, ntf *ntf.Notifier, 
 			info := ProfileId{}
 			err = json.Unmarshal(data, &info)
 			if err != nil {
-				log.Printf("CS READ error at unmarshal delete data %v", err)
+				log.Printf("CS READ error at unmarshal read data %v", err)
 				render.JSON(500, map[string]interface{}{"error":err, "success":false})
 				return
 			}
 			profile, err := ph.GetProfile(info.Id)
 			if err != nil {
-				log.Printf("CS READ error at unmarshal delete data %v", err)
+				log.Printf("CS READ error at unmarshal read data %v", err)
 				render.JSON(500, map[string]interface{}{"error":err, "success":false})
 				return
 			}
@@ -450,11 +452,11 @@ func Run(addr string, db *d.MainDb, qs *quests.QuestStorage, ntf *ntf.Notifier, 
 			if message.From != "" && message.To != "" && message.Body != "" {
 				if message.To == ALL {
 					peoples, _ := db.Users.GetBy(bson.M{})
-					send_messages_to_peoples(peoples, ntf, message.Body)
+					ntf.SendMessageToPeople(peoples, message.Body)
 
 				} else if message.To == "all_hash_writers" {
 					peoples, _ := db.Users.GetBy(bson.M{"last_marker":bson.M{"$exists":true}})
-					send_messages_to_peoples(peoples, ntf, message.Body)
+					ntf.SendMessageToPeople(peoples, message.Body)
 
 				} else {
 					user, _ := db.Users.GetUserById(message.To)
@@ -583,7 +585,7 @@ func Run(addr string, db *d.MainDb, qs *quests.QuestStorage, ntf *ntf.Notifier, 
 		})
 		r.Get("/delete/:between", func(params martini.Params, render render.Render, req *http.Request) {
 			between := params["between"]
-			db.Messages.Collection.RemoveAll(bson.M{"$or":[]bson.M{bson.M{"from":between}, bson.M{"to":between}}})
+			db.Messages.DeleteMessages(between, ME)
 			render.Redirect(fmt.Sprintf("/chat?with=%v", between))
 		})
 

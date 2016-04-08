@@ -1,67 +1,10 @@
 var storage = localStorage;
 
-var chat_message_container = $("#chat-form-message");
-
-function getNewMessagesCount(){
-    var result = 0;
-    $(".new-message-counter").each(function(x, el){
-        result+=parseInt(el.attributes.getNamedItem("count").value);
-    });
-    return result;
-}
-
-var countNewMessages = getNewMessagesCount();
-
-function playNotification(for_element){
-    console.log("will play notification... ",($("#mute:checked").length == 0), (countNewMessages < getNewMessagesCount()), "before messages:", countNewMessages, "now messages", getNewMessagesCount());
-    if (($("#mute:checked").length == 0) && (countNewMessages < getNewMessagesCount())){
+function playNotification(){
+    if ($("#mute:checked").length == 0){
         var au = document.getElementById("audio-notification");
         au.play();
     }
-}
-
-if (storage.getItem("k_audio_muted") == 'true'){
-    $("#mute").prop("checked", true);
-}
-
-$("#mute").change(function() {
-    if(this.checked) {
-        localStorage.setItem("k_audio_muted", true);
-    } else {
-        localStorage.setItem("k_audio_muted", false);
-    }
-});
-
-chat_message_container.focus();
-chat_message_container.keydown(function(e){
-    if (e.ctrlKey && e.keyCode == 13) {
-        $("#chat-form").submit();
-    }
-});
-chat_message_container.focus(function(e){
-        var with_id = $("#with").val();
-        set_messages_read(with_id);
-})
-
-
-function set_messages_read(from){
-    data = {from:from};
-    $.ajax({type:"POST",
-        url:            "/chat/messages_read",
-        contentType:    'application/json',
-        data:           JSON.stringify(data),
-        dataType:       'json',
-        success:        function(x){
-            if (x.ok==true){
-                $("#s-"+from).text("");
-            }
-        }
-    });
-    return true;
-}
-var chat_end = document.getElementById( 'chat-end' );
-if (chat_end != null){
-    chat_end.scrollIntoView(false);
 }
 
 var messages_updated = Math.round( Date.now() / 1000 );
@@ -71,7 +14,11 @@ var contacts_updated = Math.round( Date.now() / 1000 );
 var message_for = $("#with").prop("value");
 
 function paste_message(message){
-    var text_message = "<div class='media msg'><div class='media-body'><h4 class='media-heading'>{{From}} <small class='time'>{{time}}</small></h4><div class='col-lg-11'>{{Body}}</div></div></div><hr>";
+    console.log("p m");
+    if ($("#"+message.SID).length != 0){
+        return
+    }
+    var text_message = "<div class='msg' id={{SID}}><div class='media-body'><h4 class='media-heading'>{{From}} <small class='time'>{{time}}</small></h4><div class='col-lg-11'>{{Body}}</div></div></div><hr>";
     var result = Mustache.render(text_message, message);
     $(result).insertBefore("#chat-end");
     document.getElementById( 'chat-end' ).scrollIntoView(false);
@@ -80,7 +27,7 @@ function paste_message(message){
 function update_messages(){
     data = {m_for: message_for, after:messages_updated}
     $.ajax({type:"POST",
-        url:            "/chat/messages",
+        url:            url_prefix+"/messages",
         contentType:    'application/json',
         data:           JSON.stringify(data),
         dataType:       'json',
@@ -97,25 +44,30 @@ function update_messages(){
 
 
 function set_contact_new_message(contact_id, count){
-    var c_w = $("#s-"+contact_id);
-    if (parseInt(c_w.attr("count")) != count){
-        c_w.text("("+count+")");
-        c_w.attr("count", count);
-        playNotification();
+    var c_wrapper = $("#"+contact_id),
+        cntr_wrapper= c_wrapper.find(".new-message-counter"),
+        a = cntr_wrapper.parent();
+    if (a.hasClass('c-active')){
+        return;
+    }
+    if (parseInt(cntr_wrapper.attr("count")) != count){
+        if (count == 0){
+            cntr_wrapper.text("");
+        } else {
+            cntr_wrapper.text("("+count+")");
+            playNotification();
+            c_wrapper.remove();
+            c_wrapper.insertAfter("#write-all")
+        }
+        cntr_wrapper.attr("count", count);
     }
 }
 
-function paste_contact(contact){
+function paste_new_contact(contact){
     if (contact.NewMessagesCount != 0){
-        if (contact.IsTeam == true) {
-            var c_text = "<div class='contact' id='{{ID}}'><a class='bg-success a-contact' href='/chat?with={{ID}}'>  Команда {{Name}} <span class='small' id='s-{{ID}}' class='new-message-counter' count='{{NewMessagesCount}}'>({{NewMessagesCount}})<span></a></div>";
-            var result = Mustache.render(c_text, contact);
-            $("#team-contacts").prepend(result);
-        } else {
-            var c_text = "<div class='contact' id='{{ID}}'><a class='bg-success a-contact' href='/chat?with={{ID}}'> {{Name}} <span class='small' id='s-{{ID}}' class='new-message-counter' count='{{NewMessagesCount}}'>({{NewMessagesCount}})<span></a></div>";
-            var result = Mustache.render(c_text, contact);
-            $("#man-contacts").prepend(result);
-        }
+        var c_text = "<div class='contact' id='{{ID}}'><a class='a-contact' href='"+url_prefix+"?with={{ID}}'> {{Name}} <span class='small new-message-counter' id='s-{{ID}}' count='{{NewMessagesCount}}'>({{NewMessagesCount}})<span></a></div>";
+        var result = Mustache.render(c_text, contact);
+        $(result).insertAfter("#write-all")
         playNotification();
     }
 }
@@ -130,22 +82,31 @@ function update_contacts(){
     }
     data = {after: contacts_updated, exist:ex_values}
     $.ajax({type:"POST",
-        url:            "/chat/contacts",
+        url:            url_prefix+"/contacts",
         contentType:    'application/json',
         data:           JSON.stringify(data),
         dataType:       'json',
         success:        function(x){
-
-            x['old'].forEach(function(c){
-                console.log("old:",c);
-                if (c.NewMessagesCount > 0){
+            if (x.ok){
+                var update = [];
+                x['old'].forEach(function(c){
+                    console.log("old: ",c);
                     set_contact_new_message(c.ID, c.NewMessagesCount);
-                }
-            });
-            x['new'].forEach(function(c){
-                console.log("new",c);
-                paste_contact(c);
-            });
+                    update.push(c.ID);
+                });
+                x['new'].forEach(function(c){
+                    console.log("new: ",c);
+                    paste_new_contact(c);
+                    update.push(c.ID);
+                });
+                $(".new-message-counter").each(function(i,el){
+                    var id = el.attributes.getNamedItem("id").value.substring(2);
+                    if (update.indexOf(id) == -1){
+                        $(el).text("");
+                        $(el).attr("count", 0);
+                    }
+                });
+            }
         }
     });
     return true;
@@ -160,7 +121,7 @@ $("#chat-form").on("submit", function(e){
     console.log("body: ", body, "from: ", from, "to: ", to)
     $.ajax({
         type:           "POST",
-        url:            "/chat/send",
+        url:            url_prefix+"/send",
         data:           JSON.stringify({from:from, to:to, body:body}),
         dataType:       'json',
         success:        function(x){
@@ -179,7 +140,7 @@ $("#chat-form").on("submit", function(e){
 function delete_chat(between){
     $.ajax({
         type:"POST",
-        url:"/chat/delete/"+between,
+        url:"/delete/"+between,
         dataType:"json",
         success: function(x){
             $("#removed").text(x.removed);
@@ -187,7 +148,22 @@ function delete_chat(between){
         }
     });
 }
-
+function delete_messages(from, to){
+    $.ajax({
+        type:"DELETE",
+        url:url_prefix+"/delete_messages",
+        data: JSON.stringify({from:from, to:to}),
+        dataType:"json",
+        success: function(x){
+            if (x.success==true){
+                $("#delete-result").text("Удалено "+x.deleted+" сообщений.");
+                $("#delete-yes").hide();
+                $("#delete-no").text("OK");
+                $("#delete-no").attr("onclick", "window.location.reload()");
+            }
+        }
+    })
+}
 setInterval(function(){
     update_messages();
     update_contacts();
@@ -267,7 +243,7 @@ var DELAY = 700, clicks = 0, timer = null;
             console.log("dbl click");
 
             var    id = this.parentNode.attributes.getNamedItem("id").value,
-                input = $("#"+id+" input.name-change"),
+                input = $("#"+id+" div.name-change"),
                 name = a.text.trim();
 
 
@@ -282,31 +258,95 @@ var DELAY = 700, clicks = 0, timer = null;
         e.preventDefault();  //cancel system double-click event
 });
 
-
-$("input.name-change").keydown(function(e){
-    if (e.keyCode == 13){
-        //send to change name
-        var a = $(e.target).parent().find("a"),
-            id = $(e.target).parent().attr("id"),
-            new_name = $(e.target).val();
+function applyNewName(id){
+            var wrapper = $('#'+id),
+            a = wrapper.find('a'),
+            form = wrapper.find('.name-change'),
+            new_name = wrapper.find(".name-change-input").val();
 
         $.ajax({
             type:           "POST",
-            url:            "/chat/contacts/change",
+            url:            url_prefix+"/contacts_change",
             data:           JSON.stringify({'id':id, 'new_name':new_name}),
             dataType:       'json',
             success:        function(x){
                             console.log(x);
                             if (x.ok == true) {
                                 a.text(new_name);
-                                $(e.target).hide();
+                                form.hide();
                                 a.show();
                             } else {
                                 console.log(x);
                             }
             }
         });
+
+}
+
+function notApplyNewName(id){
+            var wrapper = $('#'+id),
+            a = wrapper.find('a'),
+            form = wrapper.find('.name-change');
+
+            form.hide();
+            a.show();
+}
+
+$(".name-change-input").keydown(function(e){
+    var for_id = $(e.target).attr("name");
+    if (e.keyCode == 13){
+        applyNewName(for_id);
     }
+    if (e.keyCode == 27){
+        notApplyNewName(for_id);
+    }
+
 })
 
+if (storage.getItem("k_audio_muted") == 'true'){
+    $("#mute").prop("checked", true);
+}
+
+$("#mute").change(function() {
+    if(this.checked) {
+        localStorage.setItem("k_audio_muted", true);
+    } else {
+        localStorage.setItem("k_audio_muted", false);
+    }
+});
+
+var chat_message_container = $("#chat-form-message");
+chat_message_container.focus();
+chat_message_container.keydown(function(e){
+    if (e.ctrlKey && e.keyCode == 13) {
+        $("#chat-form").submit();
+    }
+});
+
+chat_message_container.focus(function(e){
+        var with_id = $("#with").val();
+        set_messages_read(with_id);
+})
+
+
+function set_messages_read(from){
+    data = {from:from};
+    $.ajax({type:"POST",
+        url:            url_prefix+"/messages_read",
+        contentType:    'application/json',
+        data:           JSON.stringify(data),
+        dataType:       'json',
+        success:        function(x){
+            if (x.ok==true){
+                $("#s-"+from).text("");
+            }
+        }
+    });
+    return true;
+}
+
+var chat_end = document.getElementById( 'chat-end' );
+if (chat_end != null){
+    chat_end.scrollIntoView(false);
+}
 

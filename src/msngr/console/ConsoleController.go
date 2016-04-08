@@ -101,7 +101,9 @@ func FormConsoleBotContext(conf c.Configuration, db_handler *d.MainDb, cs c.Conf
 
 	notifier := n.NewNotifier(conf.Main.CallbackAddr, conf.Console.Key, db_handler)
 
+
 	go Run(conf.Console.WebPort, db_handler, qs, notifier, conf)
+
 	return &result
 }
 

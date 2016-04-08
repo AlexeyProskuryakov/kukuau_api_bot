@@ -178,10 +178,6 @@ const (
 	ERR_UNEXPECTED_REQUEST_CANCEL = "unexpected-request_cancel"
 )
 
-func GetErrorName(code, condition string) {
-
-}
-
 var ERRORS_MAP = map[string]func() (int, string){
 	ERR_BAD_FORMAT: func() (int, string) {
 		return 406, "modify"
@@ -313,6 +309,11 @@ func FormBotController(context *BotContext, db *db.MainDb) controllerHandler {
 				out, request_error = process_request_pkg(out, in, context)
 			}
 			if in.Message != nil {
+				storedMessage, _ := db.Messages.GetMessageByMessageId(in.Message.ID)
+				if storedMessage != nil{
+					log.Printf("BOT: Have duplicate message. Will be quiet ignoring it...")
+					return
+				}
 				if in.Message.Error != nil {
 					if val, ok := ERRORS_MAP[in.Message.Error.Condition]; ok {
 						_, err_type := val()
