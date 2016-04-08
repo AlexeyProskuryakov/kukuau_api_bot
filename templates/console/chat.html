@@ -8,6 +8,8 @@
             {{$with := .with}}
             {{$all := "all"}}
             {{$all_tm := "all_hash_writers"}}
+            {{$vote := "vote"}}
+
             <div id="contacts-wrapper" closed="true">
                 <p id="write-all">
                     <a class="bg-danger a-contact {{if eq_s $with $all}} c-active {{end}}"
@@ -68,7 +70,9 @@
                             </h3>
                         </div>
                         <div class="modal-body col-md-6 col-md-offset-4">
-                            <button id="delete-yes" class="btn btn-danger" onclick="delete_messages('{{$with}}', '{{ me }}')">Да</button>
+                            <button id="delete-yes" class="btn btn-danger"
+                                    onclick="delete_messages('{{$with}}', '{{ me }}')">Да
+                            </button>
                             <button id="delete-no" class="btn btn-info" data-dismiss="modal">Нет</button>
                             <br>
                             <div id="delete-result">
@@ -92,13 +96,46 @@
                 <div class="message-wrap col-lg-8">
                     <div class="msg-wrap" id="chat-wrapper">
                         {{range $message := .messages}}
+                        {{if is_message_ $message $vote}}
+                        <div class="msg-vote" id="{{$message.SID}}">
+                            <h4 class="media-heading">{{$message.From}}
+                                <small class="time">{{stamp_date $message.Time}}</small>
+                            </h4>
+                            <div class="col-lg-11 msg-vote">{{$message.Body}}
+                                <table class="table table-condensed table-bordered table-hover table-little-text">
+                                    <tr>
+                                        <td>Имя</td>
+                                        <td>{{$message.AdditionalData.name}}</td>
+                                    </tr>
+                                    <tr>
+
+                                        <td>Услуга</td>
+                                        <td>{{$message.AdditionalData.service}}</td>
+                                    </tr>
+                                    <tr>
+
+                                        <td>Город</td>
+                                        <td>{{$message.AdditionalData.city}}</td>
+                                    </tr>
+                                    <tr>
+
+                                        <td>Описание</td>
+                                        <td>{{$message.AdditionalData.description}}</td>
+                                    </tr>
+
+                                </table>
+                            </div>
+                        </div>
+                        {{else}}
                         <div class="msg" id="{{$message.SID}}">
                             <h4 class="media-heading">{{$message.From}}
                                 <small class="time">{{stamp_date $message.Time}}</small>
                             </h4>
-                            <div class="col-lg-11">{{$message.Body}}</div>
+                            <div class="col-lg-11">{{noescape $message.Body}}</div>
                         </div>
+                        {{end}}
                         <hr>
+
                         {{end}}
                         <div id="chat-end"></div>
                     </div>
@@ -142,6 +179,9 @@
 </audio>
 <script>
     var url_prefix = "chat";
+
+
+
 </script>
 <script src="chat_script.js"></script>
 

@@ -38,8 +38,17 @@
     padding:5px;
     margin:0;
 }
-.msg-wrap {
+.msg-vote{
+    padding:5px;
+    margin:0;
+    background-color: #5DFF5D;
+    height:20%;
+}
 
+.table-little-text{
+    font-size: 13px;
+}
+.msg-wrap {
     max-height: 75%;
     min-height: 75%;
     overflow: auto;
@@ -47,7 +56,7 @@
 
 .time
 {
-    color:#bfbfbf;
+    color:#16A4D8;
 
 }
 
@@ -195,8 +204,8 @@ body::-webkit-scrollbar {
 
 #contacts-wrapper{
     padding-left: 7px;
-    max-height: 88%;
-    min-height: 88%;
+    max-height: 86%;
+    min-height: 86%;
     overflow:auto;
 }
 

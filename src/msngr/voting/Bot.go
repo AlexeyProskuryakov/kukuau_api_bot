@@ -10,6 +10,8 @@ import (
 	"log"
 	"gopkg.in/mgo.v2"
 	"msngr/quests"
+	"time"
+	"strings"
 )
 
 const (
@@ -36,7 +38,7 @@ func FormVoteBotContext(conf c.Configuration, db_handler *d.MainDb) *m.BotContex
 		"commands": &VoteCommandProcessor{DictUrl: conf.Vote.DictUrl},
 	}
 	context.Message_commands = map[string]s.MessageCommandProcessor{
-		"add_company": &VoteConsiderCompanyProcessor{Storage:vh, DictUrl:conf.Vote.DictUrl, Answers:conf.Vote.Answers},
+		"add_company": &VoteConsiderCompanyProcessor{Storage:vh, DictUrl:conf.Vote.DictUrl, Answers:conf.Vote.Answers, MainStorage:db_handler},
 		"information": &VoteInformationProcessor{Storage:vh, DictUrl:conf.Vote.DictUrl},
 		"":cns.ConsoleMessageProcessor{MainDb:*db_handler, QuestStorage:qs},
 	}
@@ -146,9 +148,25 @@ func (vip *VoteInformationProcessor) ProcessMessage(in *s.InPkg) *s.MessageResul
 }
 
 type VoteConsiderCompanyProcessor struct {
-	DictUrl string
-	Storage *VotingDataHandler
-	Answers []string
+	DictUrl     string
+	Storage     *VotingDataHandler
+	MainStorage *d.MainDb
+	Answers     []string
+}
+
+func prepareMessageText(role string, cmp *CompanyModel) string {
+	text := "Я"
+	if role != "" {
+		text = fmt.Sprintf("%v, являясь %vом, хочу добавить", text, strings.ToLower(role))
+	}else {
+		text = fmt.Sprintf("%v хочу добавить", text)
+	}
+	if cmp.Name != "" {
+		text = fmt.Sprintf("%v компанию:", text)
+	}else {
+		text = fmt.Sprintf("%v услугу:", text)
+	}
+	return text
 }
 
 func (vmp *VoteConsiderCompanyProcessor) ProcessMessage(in *s.InPkg) *s.MessageResult {
@@ -172,7 +190,7 @@ func (vmp *VoteConsiderCompanyProcessor) ProcessMessage(in *s.InPkg) *s.MessageR
 				description, _ := command.Form.GetValue("description")
 				role, _ := command.Form.GetValue("role")
 				log.Printf("VB Receive name: %v, service: %v, city: %v, descr: %v, role: %v", name, service, city, description, role)
-				err := vmp.Storage.ConsiderCompany(name, service, city, description, userName, role)
+				cmp, err := vmp.Storage.ConsiderCompany(name, city, service, description, userName, role)
 				if err != nil {
 					if _, ok := err.(AlreadyConsider); ok {
 						return &s.MessageResult{
@@ -186,6 +204,23 @@ func (vmp *VoteConsiderCompanyProcessor) ProcessMessage(in *s.InPkg) *s.MessageR
 							Commands:&commands,
 						}
 					}
+				}
+				vmp.MainStorage.Users.StoreUser(userName, in.UserData.Name, in.UserData.Phone, in.UserData.Email)
+				vmp.MainStorage.Messages.StoreMessageObject(d.MessageWrapper{
+					MessageID:in.Message.ID,
+					From:userName,
+					To:"me",
+					Body:prepareMessageText(role, cmp),
+					Unread:1,
+					NotAnswered:1,
+					Time:time.Now(),
+					TimeStamp:time.Now().Unix(),
+					TimeFormatted: time.Now().Format(time.Stamp),
+					Attributes:[]string{"vote"},
+					AdditionalData:cmp.ToMap(),
+				})
+				if err != nil {
+					log.Printf("VB ERROR when storing message")
 				}
 				if role == ROLE_CLIENT {
 					return &s.MessageResult{

@@ -94,6 +94,12 @@ type MessageWrapper struct {
 	MessageStatus    string `bson:"message_status"`
 	MessageCondition string `bson:"message_condition"`
 	IsDeleted        bool `bson:"is_deleted"`
+	Attributes       []string `bson:"attributes"`
+	AdditionalData   map[string]string `bson:"additional_data"`
+}
+
+func (mw MessageWrapper) IsAttrPresent(attrName string) bool {
+	return utils.InS(attrName, mw.Attributes)
 }
 
 func NewMessageForWeb(from, to, body string) *MessageWrapper {
@@ -488,6 +494,17 @@ func (uh *UserHandler) AddUser(user_id, name, phone, email string) error {
 	return errors.New(fmt.Sprintf("Duplicate user! [%v] %v {%v}", user_id, name, phone))
 }
 
+func (uh *UserHandler) StoreUser(user_id, name, phone, email string) error {
+	if !uh.parent.Check() {
+		return errors.New("БД не доступна")
+	}
+	if u, _ := uh.GetUserById(user_id); u == nil {
+		return uh.Collection.Insert(&UserWrapper{UserId: user_id, UserName:name, Email:email, Phone: phone, LastUpdate: time.Now()})
+	} else {
+		return uh.UpdateUserData(user_id, name, phone, email)
+	}
+}
+
 func (uh UserHandler) AddOrUpdateUserObject(uw UserWrapper) error {
 	if !uh.parent.Check() {
 		return errors.New("БД не доступна")
@@ -658,23 +675,34 @@ func (mh *MessageHandler) StoreMessage(from, to, body, message_id string) (*Mess
 		return nil, errors.New("БД не доступна")
 	}
 	found, err := mh.GetMessageByMessageId(message_id)
-	result := MessageWrapper{
-		From:from,
-		To:to,
-		Body:body,
-		TimeStamp:time.Now().Unix(),
-		Time:time.Now(),
-		NotAnswered:1,
-		Unread:1,
-		MessageID:message_id,
-		IsDeleted:false,
-		TimeFormatted: time.Now().Format(time.Stamp),
-	}
 	if found == nil && err == nil {
+		result := MessageWrapper{
+			From:from,
+			To:to,
+			Body:body,
+			TimeStamp:time.Now().Unix(),
+			Time:time.Now(),
+			NotAnswered:1,
+			Unread:1,
+			MessageID:message_id,
+			IsDeleted:false,
+			TimeFormatted: time.Now().Format(time.Stamp),
+		}
 		err := mh.Collection.Insert(&result)
 		return &result, err
 	}
 	return nil, errors.New(fmt.Sprintf("I have duplicate!%+v", found))
+}
+func (mh *MessageHandler) StoreMessageObject(message MessageWrapper) (error) {
+	if !mh.parent.Check() {
+		return errors.New("БД не доступна")
+	}
+	found, err := mh.GetMessageByMessageId(message.MessageID)
+	if found == nil && err == nil {
+		err := mh.Collection.Insert(message)
+		return err
+	}
+	return errors.New("Already exists")
 }
 
 func (mh *MessageHandler) SetMessagesAnswered(from, to, by string) error {

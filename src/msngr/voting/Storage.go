@@ -63,9 +63,9 @@ func (cm CompanyModel) GetFieldValue(fieldBsonName string) string {
 	return ""
 }
 
-func (cm CompanyModel) GetVoter(userName string) *Voter{
-	for _, voter := range cm.VoteInfo.Voters{
-		if voter.UserName == userName{
+func (cm CompanyModel) GetVoter(userName string) *Voter {
+	for _, voter := range cm.VoteInfo.Voters {
+		if voter.UserName == userName {
 			return &voter
 		}
 	}
@@ -77,6 +77,15 @@ type UserCompaniesMapping struct {
 	LastCompanyAdded bson.ObjectId `bson:"last_company_added"`
 }
 
+func (cm CompanyModel) ToMap() map[string]string {
+	result := map[string]string{}
+	result["name"] = cm.Name
+	result["city"] = cm.City
+	result["service"] = cm.Service
+	result["description"] = cm.Description
+	result["vote_count"] = fmt.Sprintf("%v человек", cm.VoteInfo.VoteCount)
+	return result
+}
 func (cm CompanyModel) String() string {
 	return fmt.Sprintf("\n-------------------\nCompany: [%v] \nName:%v\nCity:%v\nDescription:%v\nVotes:%+v\n-------------------\n",
 		cm.ID, cm.Name, cm.City, cm.Description, cm.VoteInfo)
@@ -151,11 +160,11 @@ func (ac AlreadyConsider) Error() string {
 	return ac.S
 }
 
-func (vdh *VotingDataHandler) ConsiderCompany(name, city, service, description, userName, userRole string) error {
+func (vdh *VotingDataHandler) ConsiderCompany(name, city, service, description, userName, userRole string) (*CompanyModel, error) {
 	found := CompanyModel{}
 	err := vdh.Companies.Find(bson.M{"name":name, "city":city, "service":service}).One(&found)
 	if err == mgo.ErrNotFound {
-		err = vdh.Companies.Insert(CompanyModel{
+		toInsert := CompanyModel{
 			Name:name,
 			City:city,
 			Description:description,
@@ -165,19 +174,22 @@ func (vdh *VotingDataHandler) ConsiderCompany(name, city, service, description, 
 					Voter{UserName:userName, Role: userRole, VoteTime:time.Now()}},
 				VoteCount:1,
 			},
-		})
-		return err
-	} else {
+		}
+		err = vdh.Companies.Insert(&toInsert)
+		return &toInsert, err
+	} else if err == nil {
 		if found.VoteInfo.ContainUserName(userName) {
-			return AlreadyConsider{S:"Пользователь уже добавил эту компанию"}
+			return nil, AlreadyConsider{S:"Пользователь уже добавил эту компанию"}
 		}
 		voter := Voter{UserName:userName, Role:userRole}
-		vdh.Companies.UpdateId(found.ID, bson.M{
+		err = vdh.Companies.UpdateId(found.ID, bson.M{
 			"$inc":bson.M{"vote.vote_count": 1},
 			"$addToSet":bson.M{"vote.voters":voter},
 		})
+	} else {
+		return nil, err
 	}
-	return nil
+	return &found, err
 }
 
 func (vdh *VotingDataHandler) GetCompanies(q bson.M) ([]CompanyModel, error) {
@@ -218,6 +230,6 @@ func (vdh *VotingDataHandler) TextFoundByCompanyField(q, field string) ([]string
 
 func (vdh *VotingDataHandler) GetUserVotes(username string) ([]CompanyModel, error) {
 	result := []CompanyModel{}
-	err := vdh.Companies.Find(bson.M{"vote.voters.user_name":username}).All(&result)
+	err := vdh.Companies.Find(bson.M{"vote.voters.user_name":username}).Sort("-vote.voters.vote_time").All(&result)
 	return result, err
 }

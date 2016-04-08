@@ -18,7 +18,32 @@ function paste_message(message){
     if ($("#"+message.SID).length != 0){
         return
     }
-    var text_message = "<div class='msg' id={{SID}}><div class='media-body'><h4 class='media-heading'>{{From}} <small class='time'>{{time}}</small></h4><div class='col-lg-11'>{{Body}}</div></div></div><hr>";
+    var text_message = "";
+
+
+    text_message =      "<div class='msg' id={{SID}}>"+
+                                "<h4 class='media-heading'>{{From}} <small class='time'>{{time}}</small></h4>"+
+                                "<div class='col-lg-11'>{{Body}}</div>"+
+                        "</div>"+
+                        "<hr>";
+
+    if (message.Attributes != null && message.Attributes.indexOf('vote') > 0) {
+        text_message =  "<div class='msg-vote' id={{SID}}>"+
+                            "<h4 class='media-heading'>{{From}}"+
+                                "<small class='time'>{{stamp_date $message.Time}}</small>"+
+                        "</h4>"+
+                            "<div class='col-lg-11 msg-vote'>{{Body}}"+
+                                "<table class='table table-condensed table-bordered table-hover table-little-text'>"+
+                                    "<tr><td>Имя</td><td>{{AdditionalData.name}}</td></tr>"+
+                                    "<tr><td>Услуга</td><td>{{AdditionalData.service}}</td></tr>"+
+                                    "<tr><td>Город</td><td>{{AdditionalData.city}}</td></tr>"+
+                                    "<tr><td>Описание</td><td>{{AdditionalData.description}}</td></tr>"+
+                                "</table>"+
+                            "</div>"+
+                        "</div>";
+
+    }
+
     var result = Mustache.render(text_message, message);
     $(result).insertBefore("#chat-end");
     document.getElementById( 'chat-end' ).scrollIntoView(false);

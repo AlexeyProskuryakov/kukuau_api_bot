@@ -32,8 +32,6 @@ const (
 	ALL = "all"
 )
 
-var START_DT = time.Now().Unix() - 3600 * 24 * 365 * 5
-
 func GetKeysInfo(err_text string, qs *quests.QuestStorage) map[string]interface{} {
 	var keys []quests.Step
 	var e error
@@ -83,7 +81,7 @@ func (s ByContactsLastMessageTime) Less(i, j int) bool {
 func GetContacts(db *d.MainDb) ([]usrs.Contact, error) {
 	resp := []usrs.Contact{}
 	err := db.Messages.Collection.Pipe([]bson.M{
-		bson.M{"$match":bson.M{"to":ME}},
+		bson.M{"$match": bson.M{"unread":bson.M{"$ne":0}}},
 		bson.M{"$group": bson.M{"_id":"$from", "unread_count":bson.M{"$sum":"$unread"}, "name":bson.M{"$first":"$from"}, "time":bson.M{"$max":"$time_stamp"}}}}).All(&resp)
 	if err != nil {
 		return resp, err
@@ -162,6 +160,12 @@ func Run(addr string, db *d.MainDb, qs *quests.QuestStorage, ntf *ntf.Notifier, 
 				},
 				"me":func() string {
 					return ME
+				},
+				"is_message_":func(msg d.MessageWrapper, attrName string) bool {
+					return msg.IsAttrPresent(attrName)
+				},
+				"noescape": func(s string) template.HTML {
+					return template.HTML(s)
 				},
 			},
 		},
@@ -459,8 +463,10 @@ func Run(addr string, db *d.MainDb, qs *quests.QuestStorage, ntf *ntf.Notifier, 
 				} else {
 					user, _ := db.Users.GetUserById(message.To)
 					if user != nil {
+						db.Messages.SetMessagesRead(user.UserId)
 						go ntf.NotifyText(message.To, message.Body)
 					}
+
 				}
 				if err != nil {
 					render.JSON(500, map[string]interface{}{"error":err})
