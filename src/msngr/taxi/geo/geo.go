@@ -12,7 +12,8 @@ import (
 
 	u "msngr/utils"
 	t "msngr/taxi"
-	s "msngr/taxi/set"
+	s "msngr/utils/set"
+	st "msngr/structs"
 
 
 )
@@ -30,7 +31,7 @@ func StreetsSearchController(w http.ResponseWriter, r *http.Request, i t.Address
 		params := r.URL.Query()
 		query := params.Get("q")
 
-		var results []DictItem
+		var results []st.AutocompleteDictItem
 		if query != "" {
 			if !i.IsConnected() {
 				ans, _ := json.Marshal(map[string]string{"error":"true", "details":"service is not avaliable"})
@@ -44,7 +45,7 @@ func StreetsSearchController(w http.ResponseWriter, r *http.Request, i t.Address
 			}
 //			log.Printf("was returned: %v rows", len(*rows))
 			for _, nitem := range *rows {
-				var item DictItem
+				var item st.AutocompleteDictItem
 
 				var key string
 				if nitem.GID != "" {
@@ -91,11 +92,7 @@ func GetSetOfAddressF(a t.AddressF) s.Set {
 }
 
 
-type DictItem struct {
-	Key      string `json:"key"`
-	Title    string `json:"title"`
-	SubTitle string `json:"subtitle"`
-}
+
 
 type InPlace struct {
 	StreetId   int64 `json:"ID"`

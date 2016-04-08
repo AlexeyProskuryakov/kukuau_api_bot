@@ -48,6 +48,7 @@ type OrderWrapper struct {
 }
 
 type UserWrapper struct {
+	ID         bson.ObjectId `bson:"_id,omitempty"`
 	States     map[string]string `bson:"states"`
 	UserId     string `bson:"user_id"`
 	UserName   string `bson:"user_name"`
@@ -62,6 +63,13 @@ type UserWrapper struct {
 func (uw *UserWrapper) GetStateValue(state_key string) (string, bool) {
 	res, ok := uw.States[state_key]
 	return res, ok
+}
+
+func (uw *UserWrapper) GetName() string {
+	if uw.ShowedName != "" {
+		return uw.ShowedName
+	}
+	return uw.UserName
 }
 
 type ErrorWrapper struct {
@@ -80,10 +88,18 @@ type MessageWrapper struct {
 	TimeStamp        int64 `bson:"time_stamp"`
 	TimeFormatted    string `bson:",omitempty" json:"time"`
 	NotAnswered      int `bson:"not_answered"`
+	AnsweredBy       string `bson:"answered_by"`
 	Unread           int `bson:"unread"`
 	MessageID        string `bson:"message_id"`
 	MessageStatus    string `bson:"message_status"`
 	MessageCondition string `bson:"message_condition"`
+	IsDeleted        bool `bson:"is_deleted"`
+	Attributes       []string `bson:"attributes"`
+	AdditionalData   map[string]string `bson:"additional_data"`
+}
+
+func (mw MessageWrapper) IsAttrPresent(attrName string) bool {
+	return utils.InS(attrName, mw.Attributes)
 }
 
 func NewMessageForWeb(from, to, body string) *MessageWrapper {
@@ -91,7 +107,7 @@ func NewMessageForWeb(from, to, body string) *MessageWrapper {
 	return &result
 }
 
-type messageHandler struct {
+type MessageHandler struct {
 	Collection *mgo.Collection
 	parent     *MainDb
 }
@@ -99,7 +115,7 @@ type orderHandler struct {
 	Collection *mgo.Collection
 	parent     *MainDb
 }
-type userHandler struct {
+type UserHandler struct {
 	Collection *mgo.Collection
 	parent     *MainDb
 }
@@ -111,6 +127,7 @@ type errorHandler struct {
 type CheckedMixin interface {
 	Check() bool
 }
+
 type DbHelper struct {
 	sync.Mutex
 	CheckedMixin
@@ -131,9 +148,9 @@ func NewDbHelper(conn, dbname string) *DbHelper {
 type MainDb struct {
 	DbHelper
 	Orders   *orderHandler
-	Users    *userHandler
+	Users    *UserHandler
 	Errors   *errorHandler
-	Messages *messageHandler
+	Messages *MessageHandler
 }
 
 var DELETE_DB = false
@@ -285,10 +302,10 @@ func NewMainDb(conn, dbname string) *MainDb {
 	helper := DbHelper{Conn:conn, DbName:dbname}
 	odbh := MainDb{DbHelper:helper}
 
-	odbh.Users = &userHandler{parent:&odbh}
+	odbh.Users = &UserHandler{parent:&odbh}
 	odbh.Orders = &orderHandler{parent:&odbh}
 	odbh.Errors = &errorHandler{parent:&odbh}
-	odbh.Messages = &messageHandler{parent:&odbh}
+	odbh.Messages = &MessageHandler{parent:&odbh}
 
 	log.Printf("start reconnecting")
 	odbh.reConnect()
@@ -450,7 +467,7 @@ func (oh *orderHandler) GetOrders(q bson.M) ([]OrderWrapper, error) {
 	return result, nil
 }
 
-func (uh *userHandler) GetUser(req bson.M) (*UserWrapper, error) {
+func (uh *UserHandler) GetUser(req bson.M) (*UserWrapper, error) {
 	if !uh.parent.Check() {
 		return nil, errors.New("БД не доступна")
 	}
@@ -465,7 +482,7 @@ func (uh *userHandler) GetUser(req bson.M) (*UserWrapper, error) {
 	return &tmp, nil
 }
 
-func (uh *userHandler) AddUser(user_id, name, phone, email string) error {
+func (uh *UserHandler) AddUser(user_id, name, phone, email string) error {
 	if !uh.parent.Check() {
 		return errors.New("БД не доступна")
 	}
@@ -477,15 +494,34 @@ func (uh *userHandler) AddUser(user_id, name, phone, email string) error {
 	return errors.New(fmt.Sprintf("Duplicate user! [%v] %v {%v}", user_id, name, phone))
 }
 
-func (uh userHandler) AddUserObject(uw UserWrapper) error {
+func (uh *UserHandler) StoreUser(user_id, name, phone, email string) error {
 	if !uh.parent.Check() {
 		return errors.New("БД не доступна")
 	}
-	err := uh.Collection.Insert(uw)
+	if u, _ := uh.GetUserById(user_id); u == nil {
+		return uh.Collection.Insert(&UserWrapper{UserId: user_id, UserName:name, Email:email, Phone: phone, LastUpdate: time.Now()})
+	} else {
+		return uh.UpdateUserData(user_id, name, phone, email)
+	}
+}
+
+func (uh UserHandler) AddOrUpdateUserObject(uw UserWrapper) error {
+	if !uh.parent.Check() {
+		return errors.New("БД не доступна")
+	}
+	obj := UserWrapper{}
+	err := uh.Collection.Find(bson.M{"user_id":uw.UserId}).One(&obj)
+	if err == mgo.ErrNotFound {
+		err = uh.Collection.Insert(uw)
+		return err
+	}else {
+		err = uh.Collection.UpdateId(obj.ID, uw)
+		return err
+	}
 	return err
 }
 
-func (uh *userHandler) SetUserState(user_id, state_key, state_value string) error {
+func (uh *UserHandler) SetUserState(user_id, state_key, state_value string) error {
 	/**
 	Выставление сосотяние по определенному аспекту. к примеру для квестов. Или для еще какой хуйни, посему требуется ключ да значение.
 	Отличается от просто SetUserState тем что там выставляется состояние глобальное
@@ -506,7 +542,7 @@ func (uh *userHandler) SetUserState(user_id, state_key, state_value string) erro
 	}
 }
 
-func (uh *userHandler) GetUserMultiplyState(user_id, state_key string) (string, error) {
+func (uh *UserHandler) GetUserMultiplyState(user_id, state_key string) (string, error) {
 	if !uh.parent.Check() {
 		return "", errors.New("БД не доступна")
 	}
@@ -521,7 +557,7 @@ func (uh *userHandler) GetUserMultiplyState(user_id, state_key string) (string, 
 	}
 }
 
-func (uh *userHandler) SetUserPassword(username, password string) error {
+func (uh *UserHandler) SetUserPassword(username, password string) error {
 	if !uh.parent.Check() {
 		return errors.New("БД не доступна")
 	}
@@ -540,7 +576,7 @@ func (uh *userHandler) SetUserPassword(username, password string) error {
 	return nil
 }
 
-func (uh *userHandler) CheckUserPassword(username, password string) (bool, error) {
+func (uh *UserHandler) CheckUserPassword(username, password string) (bool, error) {
 	if !uh.parent.Check() {
 		return false, errors.New("БД не доступна")
 	}
@@ -549,7 +585,7 @@ func (uh *userHandler) CheckUserPassword(username, password string) (bool, error
 	return err != nil, err
 }
 
-func (uh *userHandler) GetUserById(user_id string) (*UserWrapper, error) {
+func (uh *UserHandler) GetUserById(user_id string) (*UserWrapper, error) {
 	if !uh.parent.Check() {
 		return nil, errors.New("БД не доступна")
 	}
@@ -564,7 +600,7 @@ func (uh *userHandler) GetUserById(user_id string) (*UserWrapper, error) {
 	return &result, err
 }
 
-func (uh *userHandler) SetUserShowedName(user_id, new_name string) error {
+func (uh *UserHandler) SetUserShowedName(user_id, new_name string) error {
 	if !uh.parent.Check() {
 		return errors.New("БД не доступна")
 	}
@@ -576,7 +612,7 @@ func (uh *userHandler) SetUserShowedName(user_id, new_name string) error {
 	return errors.New("User not found :(")
 }
 
-func (uh *userHandler) UpdateUserData(user_id, name, phone, email string) error {
+func (uh *UserHandler) UpdateUserData(user_id, name, phone, email string) error {
 	if !uh.parent.Check() {
 		return errors.New("БД не доступна")
 	}
@@ -594,12 +630,12 @@ func (uh *userHandler) UpdateUserData(user_id, name, phone, email string) error 
 	err := uh.Collection.Update(bson.M{"user_id":user_id}, bson.M{"$set":to_upd})
 	return err
 }
-func (uh *userHandler) Count() int {
+func (uh *UserHandler) Count() int {
 	r, _ := uh.Collection.Count()
 	return r
 }
 
-func (uh *userHandler) GetBy(req bson.M) ([]UserWrapper, error) {
+func (uh *UserHandler) GetBy(req bson.M) ([]UserWrapper, error) {
 	if !uh.parent.Check() {
 		return nil, errors.New("БД не доступна")
 	}
@@ -634,67 +670,80 @@ func (eh *errorHandler) GetBy(req bson.M) (*[]ErrorWrapper, error) {
 }
 
 //MESSAGES
-func (mh *messageHandler) StoreMessage(from, to, body, message_id string) (*MessageWrapper, error) {
+func (mh *MessageHandler) StoreMessage(from, to, body, message_id string) (*MessageWrapper, error) {
 	if !mh.parent.Check() {
 		return nil, errors.New("БД не доступна")
 	}
 	found, err := mh.GetMessageByMessageId(message_id)
-	result := MessageWrapper{
-		From:from,
-		To:to,
-		Body:body,
-		TimeStamp:time.Now().Unix(),
-		Time:time.Now(),
-		NotAnswered:1,
-		Unread:1,
-		MessageID:message_id,
-		MessageStatus:"sended",
-		TimeFormatted: time.Now().Format(time.Stamp),
-	}
 	if found == nil && err == nil {
+		result := MessageWrapper{
+			From:from,
+			To:to,
+			Body:body,
+			TimeStamp:time.Now().Unix(),
+			Time:time.Now(),
+			NotAnswered:1,
+			Unread:1,
+			MessageID:message_id,
+			IsDeleted:false,
+			TimeFormatted: time.Now().Format(time.Stamp),
+		}
 		err := mh.Collection.Insert(&result)
 		return &result, err
 	}
 	return nil, errors.New(fmt.Sprintf("I have duplicate!%+v", found))
 }
+func (mh *MessageHandler) StoreMessageObject(message MessageWrapper) (error) {
+	if !mh.parent.Check() {
+		return errors.New("БД не доступна")
+	}
+	found, err := mh.GetMessageByMessageId(message.MessageID)
+	if found == nil && err == nil {
+		err := mh.Collection.Insert(message)
+		return err
+	}
+	return errors.New("Already exists")
+}
 
-func (mh *messageHandler) SetMessagesAnswered(from, by string) error {
+func (mh *MessageHandler) SetMessagesAnswered(from, to, by string) error {
 	if !mh.parent.Check() {
 		return errors.New("БД не доступна")
 	}
 	_, err := mh.Collection.UpdateAll(
-		bson.M{"from":from, "not_answered":bson.M{"$ne":0}},
+		bson.M{"from":from, "to":to, "not_answered":1},
 		bson.M{"$set":bson.M{"not_answered":0, "answered_by":by}},
 	)
 	return err
 }
 
-func (mh *messageHandler) SetMessagesRead(from string) error {
+func (mh *MessageHandler) SetMessagesRead(from string) error {
 	if !mh.parent.Check() {
 		return errors.New("БД не доступна")
 	}
 	_, err := mh.Collection.UpdateAll(
-		bson.M{"from":from, "unread":bson.M{"$ne":0}},
+		bson.M{"from":from, "unread":1},
 		bson.M{"$set":bson.M{"unread":0}},
 	)
 	return err
 }
 
-func (mh *messageHandler) GetMessages(query bson.M) ([]MessageWrapper, error) {
+func (mh *MessageHandler) GetMessages(query bson.M) ([]MessageWrapper, error) {
 	result := []MessageWrapper{}
 	if !mh.parent.Check() {
 		return result, errors.New("БД не доступна")
 	}
+	query["is_deleted"] = false
 	err := mh.Collection.Find(query).Sort("time_stamp").All(&result)
 	for i, message := range result {
 		result[i].TimeFormatted = message.Time.Format(time.Stamp)
+		result[i].SID = message.ID.Hex()
 	}
 	return result, err
 }
 
-func (mh *messageHandler) GetMessageByMessageId(message_id string) (*MessageWrapper, error) {
+func (mh *MessageHandler) GetMessageByMessageId(message_id string) (*MessageWrapper, error) {
 	result := MessageWrapper{}
-	err := mh.Collection.Find(bson.M{"message_id":message_id}).One(&result)
+	err := mh.Collection.Find(bson.M{"message_id":message_id, "is_deleted":false}).One(&result)
 	if err == mgo.ErrNotFound {
 		return nil, nil
 	}else if err != nil {
@@ -703,6 +752,16 @@ func (mh *messageHandler) GetMessageByMessageId(message_id string) (*MessageWrap
 	result.TimeFormatted = result.Time.Format(time.Stamp)
 	return &result, nil
 }
-func (mh *messageHandler) UpdateMessageStatus(message_id, status, condition string) error {
+
+func (mh *MessageHandler) DeleteMessages(from, to string) (int, error) {
+	info, err := mh.Collection.UpdateAll(
+		bson.M{"$or":[]bson.M{
+			bson.M{"from":from, "to":to},
+			bson.M{"to":from, "from":to}},
+			"is_deleted":false},
+		bson.M{"$set":bson.M{"is_deleted":true}})
+	return info.Updated, err
+}
+func (mh *MessageHandler) UpdateMessageStatus(message_id, status, condition string) error {
 	return mh.Collection.Update(bson.M{"message_id":message_id}, bson.M{"$set":bson.M{"message_status":status, "message_condition":condition}})
 }

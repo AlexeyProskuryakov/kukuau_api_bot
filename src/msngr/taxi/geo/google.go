@@ -10,7 +10,7 @@ import (
 	t "msngr/taxi"
 	u "msngr/utils"
 	c "msngr/configuration"
-	s "msngr/taxi/set"
+	s "msngr/utils/set"
 	"msngr/utils"
 )
 

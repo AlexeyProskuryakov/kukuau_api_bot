@@ -11,6 +11,9 @@ import (
 	"errors"
 	"os"
 	"msngr"
+	"msngr/utils"
+	"testing"
+	"reflect"
 )
 
 const (
@@ -121,6 +124,25 @@ func HandleAddress(address, port string, errors chan s.MessageError) chan string
 	return result
 }
 
-func FakeAddressSupplier() {
+func CheckCount(slice interface{}, expected int, t *testing.T, descr string) {
+	slice_ := utils.InterfaceSlice(slice)
+	if len(slice_) != expected {
+		t.Errorf("%v expected %v, have %v", descr, expected, len(slice_))
+	}
+}
+func CheckEquals(one, two interface{}, t *testing.T, descr string) {
+	if !reflect.DeepEqual(one, two) {
+		t.Errorf("ERROR %+v != %+v %v", one, two, descr)
+	}
+}
 
+func CheckNotEquals(one, two interface{}, t *testing.T, descr string) {
+	if reflect.DeepEqual(one, two) {
+		t.Errorf("ERROR %+v != %+v %v", one, two, descr)
+	}
+}
+func CheckErr(t *testing.T, err error, descr string) {
+	if err != nil {
+		t.Errorf("ERROR: [%v]\n%v", descr, err)
+	}
 }

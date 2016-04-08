@@ -178,10 +178,6 @@ const (
 	ERR_UNEXPECTED_REQUEST_CANCEL = "unexpected-request_cancel"
 )
 
-func GetErrorName(code, condition string) {
-
-}
-
 var ERRORS_MAP = map[string]func() (int, string){
 	ERR_BAD_FORMAT: func() (int, string) {
 		return 406, "modify"
@@ -297,14 +293,14 @@ func FormBotController(context *BotContext, db *db.MainDb) controllerHandler {
 		var isError, isDeferred bool
 		var global_error, request_error, message_error error
 
-		//check := context.Check
-		//if check != nil {
-		//	if detail, ok := check(); !ok {
-		//		out.Message = &s.OutMessage{Type: "chat", Thread: "0", ID: u.GenId(), Body: fmt.Sprintln(detail)}
-		//		PutOutPackage(w, out, true, false)
-		//		return
-		//	}
-		//}
+		check := context.Check
+		if check != nil {
+			if detail, ok := check(); !ok {
+				out.Message = &s.OutMessage{Type: "chat", Thread: "0", ID: u.GenId(), Body: fmt.Sprintln(detail)}
+				PutOutPackage(w, out, true, false)
+				return
+			}
+		}
 
 		in, global_error = FormInPackage(r)
 		if in != nil {
@@ -313,6 +309,11 @@ func FormBotController(context *BotContext, db *db.MainDb) controllerHandler {
 				out, request_error = process_request_pkg(out, in, context)
 			}
 			if in.Message != nil {
+				storedMessage, _ := db.Messages.GetMessageByMessageId(in.Message.ID)
+				if storedMessage != nil{
+					log.Printf("BOT: Have duplicate message. Will be quiet ignoring it...")
+					return
+				}
 				if in.Message.Error != nil {
 					if val, ok := ERRORS_MAP[in.Message.Error.Condition]; ok {
 						_, err_type := val()
@@ -328,7 +329,7 @@ func FormBotController(context *BotContext, db *db.MainDb) controllerHandler {
 					if non_commands_processor, ok := context.Message_commands[""]; ok {
 						out, isDeferred, message_error = process_message(non_commands_processor, out, in)
 					} else {
-						log.Printf("warn will sended message without commands: %v\n from %v (userdata: %v)", in.Message, in.From, in.UserData)
+						log.Printf("warn will sended message without commands: %+v\n from %v (userdata: %+v)", in.Message, in.From, in.UserData)
 					}
 				} else {
 					out, isDeferred, message_error = process_message_pkg(out, in, context)

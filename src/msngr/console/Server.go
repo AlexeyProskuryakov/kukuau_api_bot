@@ -32,8 +32,6 @@ const (
 	ALL = "all"
 )
 
-var START_DT = time.Now().Unix() - 3600 * 24 * 365 * 5
-
 func GetKeysInfo(err_text string, qs *quests.QuestStorage) map[string]interface{} {
 	var keys []quests.Step
 	var e error
@@ -78,21 +76,12 @@ func (s ByContactsLastMessageTime) Swap(i, j int) {
 }
 func (s ByContactsLastMessageTime) Less(i, j int) bool {
 	return s[i].LastMessageTime > s[j].LastMessageTime
-
 }
 
-func send_messages_to_peoples(people []d.UserWrapper, ntf *ntf.Notifier, text string) {
-	go func() {
-		for _, user := range people {
-			ntf.NotifyText(user.UserId, text)
-		}
-	}()
-}
-
-func GetContacts(db *d.MainDb, after int64) ([]usrs.Contact, error) {
+func GetContacts(db *d.MainDb) ([]usrs.Contact, error) {
 	resp := []usrs.Contact{}
 	err := db.Messages.Collection.Pipe([]bson.M{
-		bson.M{"$match":bson.M{"time_stamp":bson.M{"$gt":after}}},
+		bson.M{"$match": bson.M{"unread":bson.M{"$ne":0}}},
 		bson.M{"$group": bson.M{"_id":"$from", "unread_count":bson.M{"$sum":"$unread"}, "name":bson.M{"$first":"$from"}, "time":bson.M{"$max":"$time_stamp"}}}}).All(&resp)
 	if err != nil {
 		return resp, err
@@ -113,7 +102,7 @@ func GetContacts(db *d.MainDb, after int64) ([]usrs.Contact, error) {
 			result = append(result, resp[i])
 		}
 	}
-	sort.Sort(ByContactsLastMessageTime(result))
+	sort.Sort(usrs.ByContactsLastMessageTime(result))
 	return result, nil
 }
 
@@ -164,15 +153,29 @@ func Run(addr string, db *d.MainDb, qs *quests.QuestStorage, ntf *ntf.Notifier, 
 				"stamp_date":func(t time.Time) string {
 					return t.Format(time.Stamp)
 				},
+				"chat_with":func(with string) string {
+					result := fmt.Sprintf("/chat?with=%v", with)
+					log.Printf("chat with: %v", result)
+					return result
+				},
+				"me":func() string {
+					return ME
+				},
+				"is_message_":func(msg d.MessageWrapper, attrName string) bool {
+					return msg.IsAttrPresent(attrName)
+				},
+				"noescape": func(s string) template.HTML {
+					return template.HTML(s)
+				},
 			},
 		},
 	}))
 	m.Use(auth.BasicFunc(func(username, password string) bool {
-		usr, _ := db.Users.GetUser(bson.M{"user_name":username, "role":MANAGER})
+		usr, _ := db.Users.GetUser(bson.M{"user_name":username, "role":usrs.MANAGER})
 		if usr != nil {
 			return u.PHash(password) == usr.Password
 		}
-		return username == default_user && password == default_pwd
+		return username == usrs.DEFAULT_USER && password == usrs.DEFAULT_PWD
 	}))
 
 	m.Use(martini.Static("static"))
@@ -219,13 +222,13 @@ func Run(addr string, db *d.MainDb, qs *quests.QuestStorage, ntf *ntf.Notifier, 
 			info := ProfileId{}
 			err = json.Unmarshal(data, &info)
 			if err != nil {
-				log.Printf("CS READ error at unmarshal delete data %v", err)
+				log.Printf("CS READ error at unmarshal read data %v", err)
 				render.JSON(500, map[string]interface{}{"error":err, "success":false})
 				return
 			}
 			profile, err := ph.GetProfile(info.Id)
 			if err != nil {
-				log.Printf("CS READ error at unmarshal delete data %v", err)
+				log.Printf("CS READ error at unmarshal read data %v", err)
 				render.JSON(500, map[string]interface{}{"error":err, "success":false})
 				return
 			}
@@ -422,7 +425,7 @@ func Run(addr string, db *d.MainDb, qs *quests.QuestStorage, ntf *ntf.Notifier, 
 			result_data["with"] = with
 			result_data["messages"] = messages
 
-			if contacts, err := GetContacts(db, START_DT); err == nil {
+			if contacts, err := GetContacts(db); err == nil {
 				result_data["contacts"] = contacts
 			}
 			log.Printf("CS result data :%+v", result_data)
@@ -451,17 +454,19 @@ func Run(addr string, db *d.MainDb, qs *quests.QuestStorage, ntf *ntf.Notifier, 
 			if message.From != "" && message.To != "" && message.Body != "" {
 				if message.To == ALL {
 					peoples, _ := db.Users.GetBy(bson.M{})
-					send_messages_to_peoples(peoples, ntf, message.Body)
+					ntf.SendMessageToPeople(peoples, message.Body)
 
 				} else if message.To == "all_hash_writers" {
 					peoples, _ := db.Users.GetBy(bson.M{"last_marker":bson.M{"$exists":true}})
-					send_messages_to_peoples(peoples, ntf, message.Body)
+					ntf.SendMessageToPeople(peoples, message.Body)
 
 				} else {
 					user, _ := db.Users.GetUserById(message.To)
 					if user != nil {
+						db.Messages.SetMessagesRead(user.UserId)
 						go ntf.NotifyText(message.To, message.Body)
 					}
+
 				}
 				if err != nil {
 					render.JSON(500, map[string]interface{}{"error":err})
@@ -543,7 +548,6 @@ func Run(addr string, db *d.MainDb, qs *quests.QuestStorage, ntf *ntf.Notifier, 
 
 		r.Post("/contacts", func(render render.Render, req *http.Request) {
 			type NewContactsReq struct {
-				After int64 `json:"after"`
 				Exist []string `json:"exist"`
 			}
 			cr := NewContactsReq{}
@@ -557,7 +561,7 @@ func Run(addr string, db *d.MainDb, qs *quests.QuestStorage, ntf *ntf.Notifier, 
 				render.JSON(500, map[string]interface{}{"ok":false, "detail":fmt.Sprintf("can not unmarshal request body %v \n %s", err, request_body)})
 				return
 			}
-			contacts, err := GetContacts(db, cr.After)
+			contacts, err := GetContacts(db)
 			if err != nil {
 				render.JSON(500, map[string]interface{}{"ok":false, "detail":fmt.Sprintf("db err body %v", err)})
 				return
@@ -582,13 +586,33 @@ func Run(addr string, db *d.MainDb, qs *quests.QuestStorage, ntf *ntf.Notifier, 
 			})
 
 		})
-		r.Get("/delete/:between", func(params martini.Params, render render.Render, req *http.Request) {
-			between := params["between"]
-			db.Messages.Collection.RemoveAll(bson.M{"$or":[]bson.M{bson.M{"from":between}, bson.M{"to":between}}})
-			render.Redirect(fmt.Sprintf("/chat?with=%v", between))
+		r.Delete("/delete_messages", func(params martini.Params, ren render.Render, req *http.Request) {
+			type DeleteInfo struct {
+				From string `json:"from"`
+				To   string `json:"to"`
+			}
+			data, err := ioutil.ReadAll(req.Body)
+			if err != nil {
+				log.Printf("CS QE E: errror at reading req body %v", err)
+				ren.JSON(500, map[string]interface{}{"error":err})
+				return
+			}
+			dInfo := DeleteInfo{}
+			err = json.Unmarshal(data, &dInfo)
+			if err != nil {
+				log.Printf("CS QE E: at unmarshal json messages %v\ndata:%s", err, data)
+				ren.JSON(500, map[string]interface{}{"error":err})
+				return
+			}
+			count, err := db.Messages.DeleteMessages(dInfo.From, dInfo.To)
+			if err != nil {
+				ren.JSON(500, map[string]interface{}{"error":err})
+				return
+			}
+			ren.JSON(200, map[string]interface{}{"success":true, "deleted":count})
 		})
 
-		r.Post("/contacts/change", func(render render.Render, req *http.Request) {
+		r.Post("/contacts_change", func(render render.Render, req *http.Request) {
 			type NewContactName struct {
 				Id      string `json:"id"`
 				NewName string `json:"new_name"`
