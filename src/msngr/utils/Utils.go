@@ -23,6 +23,12 @@ func GenId() string {
 	r := rand.New(s)
 	return fmt.Sprintf("%d", r.Int63())
 }
+func GenIntId() int64{
+	t := time.Now().UnixNano()
+	s := rand.NewSource(t)
+	r := rand.New(s)
+	return r.Int63()
+}
 
 func PHash(pwd string) (string) {
 	input := []byte(pwd)

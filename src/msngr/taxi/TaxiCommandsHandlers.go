@@ -61,10 +61,10 @@ func FormTaxiBotContext(im *ExternalApiMixin, db_handler *d.MainDb, tc c.TaxiCon
 	context.Commands = EnsureAvailableCommands(context.Commands, tc.AvailableCommands)
 
 	context.Name = tc.Name
-	context.Request_commands = map[string]s.RequestCommandProcessor{
+	context.RequestProcessors = map[string]s.RequestCommandProcessor{
 		"commands": &TaxiCommandsProcessor{MainDb: *db_handler, context: &context},
 	}
-	context.Message_commands = map[string]s.MessageCommandProcessor{
+	context.MessageProcessors = map[string]s.MessageCommandProcessor{
 		"information":      &TaxiInformationProcessor{information:&(tc.Information.Text)},
 		"new_order":        &TaxiNewOrderProcessor{ExternalApiMixin: *im, MainDb: *db_handler, context:&context, AddressHandler:ah, Config: tc},
 		"cancel_order":     &TaxiCancelOrderProcessor{ExternalApiMixin: *im, MainDb: *db_handler, context:&context, alert_phone:tc.Information.Phone},
@@ -646,7 +646,7 @@ func (nop *TaxiNewOrderProcessor) ProcessMessage(in *s.InPkg) *s.MessageResult {
 		}
 		log.Printf("Order was created! %+v \n with content: %+v", ans, ans.Content)
 
-		err = nop.Orders.AddOrderObject(&d.OrderWrapper{OrderState:ORDER_CREATED, Whom:in.From, OrderId:ans.Content.Id, Source:nop.context.Name})
+		err = nop.Orders.AddOrderObject(d.OrderWrapper{OrderState:ORDER_CREATED, Whom:in.From, OrderId:ans.Content.Id, Source:nop.context.Name})
 		err = nop.Orders.SetActive(ans.Content.Id, nop.context.Name, true)
 		if err != nil {
 			ok, message, _ := nop.API.CancelOrder(ans.Content.Id)

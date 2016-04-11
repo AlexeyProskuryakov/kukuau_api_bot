@@ -22,6 +22,8 @@ import (
 
 	v "msngr/voting"
 	"msngr/chat"
+	"msngr/coffee"
+
 	"msngr/utils"
 	"msngr/users"
 )
@@ -156,16 +158,16 @@ func StartBot(db *d.MainDb, result chan string) c.Configuration {
 
 	if conf.Vote.DictUrl != "" {
 		vdh, _ := v.NewVotingHandler(conf.Main.Database.ConnString, conf.Main.Database.Name)
-		http.HandleFunc("/vote/autocomplete/name", func(w http.ResponseWriter, r *http.Request) {
+		http.HandleFunc("/autocomplete/vote/name", func(w http.ResponseWriter, r *http.Request) {
 			v.AutocompleteController(w, r, vdh, "name", []string{})
 		})
-		http.HandleFunc("/vote/autocomplete/city", func(w http.ResponseWriter, r *http.Request) {
+		http.HandleFunc("/autocomplete/vote/city", func(w http.ResponseWriter, r *http.Request) {
 			v.AutocompleteController(w, r, vdh, "city", conf.Vote.Cities)
 		})
-		http.HandleFunc("/vote/autocomplete/service", func(w http.ResponseWriter, r *http.Request) {
+		http.HandleFunc("/autocomplete/vote/service", func(w http.ResponseWriter, r *http.Request) {
 			v.AutocompleteController(w, r, vdh, "service", conf.Vote.Services)
 		})
-		http.HandleFunc("/vote/autocomplete/role", func(w http.ResponseWriter, r *http.Request) {
+		http.HandleFunc("/autocomplete/vote/role", func(w http.ResponseWriter, r *http.Request) {
 			v.AutocompleteController(w, r, vdh, "vote.voters.role", conf.Vote.Roles)
 		})
 
@@ -175,7 +177,59 @@ func StartBot(db *d.MainDb, result chan string) c.Configuration {
 		http.HandleFunc("/vote", voteBotController)
 		result <- "vote"
 	}
+	if len(conf.Coffee) > 0 {
+		for _, c_conf := range conf.Coffee {
+			cbc := coffee.FormBotCoffeeContext(c_conf, db)
+			cntrl := m.FormBotController(cbc, db)
+			route := fmt.Sprintf("/bot/coffee/%v", c_conf.Name)
+			http.HandleFunc(route, cntrl)
 
+			c_store := coffee.NewCoffeeConfigHandler(db)
+			c_store.LoadFromConfig(c_conf)
+
+			http.HandleFunc(fmt.Sprintf("/autocomplete/coffee/%v/drink", c_conf.Name), func(w http.ResponseWriter, r *http.Request) {
+				coffee.AutocompleteController(w, r, c_store, "drinks", c_conf.Name)
+			})
+
+			http.HandleFunc(fmt.Sprintf("/autocomplete/coffee/%v/volume", c_conf.Name), func(w http.ResponseWriter, r *http.Request) {
+				coffee.AutocompleteController(w, r, c_store, "volumes", c_conf.Name)
+			})
+
+			http.HandleFunc(fmt.Sprintf("/autocomplete/coffee/%v/bake", c_conf.Name), func(w http.ResponseWriter, r *http.Request) {
+				coffee.AutocompleteController(w, r, c_store, "bakes", c_conf.Name)
+			})
+
+			http.HandleFunc(fmt.Sprintf("/autocomplete/coffee/%v/additive", c_conf.Name), func(w http.ResponseWriter, r *http.Request) {
+				coffee.AutocompleteController(w, r, c_store, "addititves", c_conf.Name)
+			})
+			var salt string
+			if c_conf.Salt != "" {
+				salt = fmt.Sprintf("%v-%v", c_conf.Name, c_conf.Salt)
+			} else {
+				salt = c_conf.Name
+			}
+
+			notifier := n.NewNotifier(conf.Main.CallbackAddr, c_conf.Key, db)
+			notifier.SetFrom(c_conf.Name)
+
+			webRoute := fmt.Sprintf("/web/coffee/%v", salt)
+			http.Handle(webRoute, chat.GetChatMainHandler(webRoute, notifier, db, c_conf.Chat))
+
+			sr := func(s string) string {
+				return fmt.Sprintf("%v%v", webRoute, s)
+			}
+			http.Handle(sr("/send"), chat.GetChatSendHandler(sr("/send"), notifier, db, c_conf.Chat, chat.NewChatStorage(db)))
+			http.Handle(sr("/messages"), chat.GetChatMessagesHandler(sr("/messages"), notifier, db, c_conf.Chat))
+			http.Handle(sr("/messages_read"), chat.GetChatMessageReadHandler(sr("/messages_read"), notifier, db, c_conf.Chat))
+			http.Handle(sr("/contacts"), chat.GetChatContactsHandler(sr("/contacts"), notifier, db, c_conf.Chat))
+			http.Handle(sr("/contacts_change"), chat.GetChatContactsChangeHandler(sr("/contacts_change"), notifier, db, c_conf.Chat))
+			http.Handle(sr("/config"), chat.GetChatConfigHandler(sr("/config"), webRoute, db, c_conf.Chat))
+			http.Handle(sr("/delete_messages"), chat.GetChatDeleteMessagesHandler(sr("/delete_messages"), db, c_conf.Chat))
+
+			log.Printf("I will handling web requests for coffee at : [%v]", webRoute)
+		}
+		result <- "coffee"
+	}
 	if len(conf.Chats) > 0 {
 		fs := http.FileServer(http.Dir("static"))
 		http.Handle("/static/", http.StripPrefix("/static/", fs))

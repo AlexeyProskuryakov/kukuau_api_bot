@@ -164,8 +164,11 @@ func Run(addr string, db *d.MainDb, qs *quests.QuestStorage, vdh *voting.VotingD
 				"is_message_":func(msg d.MessageWrapper, attrName string) bool {
 					return msg.IsAttrPresent(attrName)
 				},
-				"noescape": func(s string) template.HTML {
-					return template.HTML(s)
+				"has_additional_data":func(msg d.MessageWrapper) bool {
+					return len(msg.AdditionalData) > 0
+				},
+				"is_additional_data_valid":func(ad d.AdditionalDataElement) bool{
+					return ad.Value != ""
 				},
 			},
 		},

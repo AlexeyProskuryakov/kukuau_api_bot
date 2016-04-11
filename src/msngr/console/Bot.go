@@ -89,12 +89,12 @@ func (cmp ConsoleMessageProcessor) ProcessMessage(in *s.InPkg) *s.MessageResult 
 
 func FormConsoleBotContext(conf c.Configuration, db_handler *d.MainDb, cs c.ConfigStorage) *m.BotContext {
 	result := m.BotContext{}
-	result.Request_commands = map[string]s.RequestCommandProcessor{
+	result.RequestProcessors = map[string]s.RequestCommandProcessor{
 		"commands":&ConsoleRequestProcessor{},
 	}
 	qs := quests.NewQuestStorage(conf.Main.Database.ConnString, conf.Main.Database.Name)
 
-	result.Message_commands = map[string]s.MessageCommandProcessor{
+	result.MessageProcessors = map[string]s.MessageCommandProcessor{
 		"information":&ConsoleInformationProcessor{Information:conf.Console.Information},
 		"":ConsoleMessageProcessor{MainDb:*db_handler, QuestStorage:qs},
 	}

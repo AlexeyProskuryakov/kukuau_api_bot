@@ -5,29 +5,13 @@ import (
 	"encoding/json"
 	"log"
 	"fmt"
-	"regexp"
+
 
 	st "msngr/structs"
 	fs "github.com/renstrom/fuzzysearch/fuzzy"
+	m "msngr"
 	"sort"
 )
-
-var reg = regexp.MustCompile("[^A-Za-z0-9А-Яа-я]")
-
-type ByFuzzyEquals struct {
-	Data   []string
-	Center string
-}
-
-func (s ByFuzzyEquals) Len() int {
-	return len(s.Data)
-}
-func (s ByFuzzyEquals) Swap(i, j int) {
-	s.Data[i], s.Data[j] = s.Data[j], s.Data[i]
-}
-func (s ByFuzzyEquals) Less(i, j int) bool {
-	return fs.RankMatchFold(s.Center, s.Data[i]) > fs.RankMatchFold(s.Center, s.Data[j])
-}
 
 func AutocompleteController(w http.ResponseWriter, r *http.Request, storage *VotingDataHandler, fieldName string, additionalVariants []string) {
 	w.Header().Set("Content-type", "application/json")
@@ -39,7 +23,7 @@ func AutocompleteController(w http.ResponseWriter, r *http.Request, storage *Vot
 
 		var results []st.AutocompleteDictItem
 		if query != "" {
-			splitted := reg.Split(query, -1)
+			splitted := m.AutocompleteSplitter.Split(query, -1)
 			strResult := []string{}
 
 			res_map := map[string]bool{}
@@ -63,11 +47,9 @@ func AutocompleteController(w http.ResponseWriter, r *http.Request, storage *Vot
 				}
 				log.Printf("res_map: %+v", res_map)
 			}
-			by := ByFuzzyEquals{Data:strResult, Center:query}
+			by := m.ByFuzzyEquals{Data:strResult, Center:query}
 			sort.Sort(by)
-			for _, resEl := range by.Data {
-				results = append(results, st.AutocompleteDictItem{Key:resEl, Title:resEl})
-			}
+			results = m.ToAutocompleteItems(by.Data)
 		}
 		ans, err := json.Marshal(results)
 		if err != nil {

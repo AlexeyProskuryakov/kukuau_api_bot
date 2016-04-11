@@ -234,11 +234,11 @@ func FormQuestBotContext(conf c.Configuration, qname string, cs c.ConfigStorage,
 		panic(fmt.Sprintf("Quest configuration with name %v is not exist :(", qname))
 	}
 
-	result.Request_commands = map[string]s.RequestCommandProcessor{
+	result.RequestProcessors = map[string]s.RequestCommandProcessor{
 		"commands":&QuestCommandRequestProcessor{Storage:qs, ConfigStorage:cs},
 	}
 
-	result.Message_commands = map[string]s.MessageCommandProcessor{
+	result.MessageProcessors = map[string]s.MessageCommandProcessor{
 		"information":&QuestInfoMessageProcessor{Information:qconf.Info},
 		"":QuestMessageProcessor{Storage:qs, ConfigStorage:cs},
 	}

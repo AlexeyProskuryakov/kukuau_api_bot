@@ -11,12 +11,12 @@ import (
 	"gopkg.in/mgo.v2/bson"
 
 	"msngr/utils"
+	s "msngr/structs"
 )
 
 const (
 	LOGOUT = "LOGOUT"
 	LOGIN = "LOGIN"
-	REGISTERED = "REGISTERED"
 )
 
 type OrderData struct {
@@ -39,12 +39,12 @@ func (odh *OrderData) Get(key string) interface{} {
 type OrderWrapper struct {
 	OrderState int   `bson:"order_state"`
 	OrderId    int64 `bson:"order_id"`
-	When       time.Time
-	Whom       string
+	When       time.Time `bson:"when"`
+	Whom       string  `bson:"whom"`
 	OrderData  OrderData `bson:"data"`
-	Feedback   string
-	Source     string
-	Active     bool
+	Feedback   string `bson:"feedback,omitempty"`
+	Source     string `bson:"source"`
+	Active     bool `bson:"is_active"`
 }
 
 type UserWrapper struct {
@@ -78,6 +78,12 @@ type ErrorWrapper struct {
 	Time     time.Time
 }
 
+type AdditionalDataElement struct {
+	Key string
+	Value string
+	Name string
+}
+
 type MessageWrapper struct {
 	ID               bson.ObjectId `bson:"_id,omitempty"`
 	SID              string
@@ -95,7 +101,7 @@ type MessageWrapper struct {
 	MessageCondition string `bson:"message_condition"`
 	IsDeleted        bool `bson:"is_deleted"`
 	Attributes       []string `bson:"attributes"`
-	AdditionalData   map[string]string `bson:"additional_data"`
+	AdditionalData   []AdditionalDataElement `bson:"additional_data"`
 }
 
 func (mw MessageWrapper) IsAttrPresent(attrName string) bool {
@@ -210,7 +216,7 @@ func (odbh *MainDb) ensureIndexes() {
 		Background: true,
 	})
 	orders_collection.EnsureIndex(mgo.Index{
-		Key:[]string{"active"},
+		Key:[]string{"is_active"},
 		Background:true,
 	})
 	orders_collection.EnsureIndex(mgo.Index{
@@ -335,7 +341,7 @@ func (oh *orderHandler) SetActive(order_id int64, source string, state bool) err
 		})
 		return nil
 	}
-	err := oh.Collection.Update(bson.M{"order_id": order_id, "source":source}, bson.M{"$set":bson.M{"active":state}})
+	err := oh.Collection.Update(bson.M{"order_id": order_id, "source":source}, bson.M{"$set":bson.M{"is_active":state}})
 	if err == mgo.ErrNotFound {
 		log.Printf("DB: update not existed %v %v to active %v", order_id, source, state)
 	}
@@ -403,7 +409,7 @@ func (oh *orderHandler) AddOrder(order_id int64, whom string, source string) err
 	return err
 }
 
-func (oh *orderHandler) AddOrderObject(order *OrderWrapper) error {
+func (oh *orderHandler) AddOrderObject(order OrderWrapper) error {
 	if !oh.parent.Check() {
 		return errors.New("БД не доступна")
 	}
@@ -446,7 +452,7 @@ func (oh *orderHandler) GetByOwner(whom, source string, active bool) (*OrderWrap
 		return nil, errors.New("БД не доступна")
 	}
 	result := OrderWrapper{}
-	err := oh.Collection.Find(bson.M{"whom": whom, "source":source, "active":true}).Sort("-when").One(&result)
+	err := oh.Collection.Find(bson.M{"whom": whom, "source":source, "is_active":true}).Sort("-when").One(&result)
 	if err == mgo.ErrNotFound {
 		return nil, nil
 	}else if err != nil {
@@ -504,6 +510,18 @@ func (uh *UserHandler) StoreUser(user_id, name, phone, email string) error {
 		return uh.UpdateUserData(user_id, name, phone, email)
 	}
 }
+
+func (uh *UserHandler) StoreUserData(user_id string, user_data *s.InUserData) error {
+	if !uh.parent.Check() {
+		return errors.New("БД не доступна")
+	}
+	if u, _ := uh.GetUserById(user_id); u == nil {
+		return uh.Collection.Insert(&UserWrapper{UserId: user_id, UserName:user_data.Name, Email:user_data.Email, Phone: user_data.Phone, LastUpdate: time.Now()})
+	} else {
+		return uh.UpdateUserData(user_id, user_data.Name, user_data.Phone, user_data.Email)
+	}
+}
+
 
 func (uh UserHandler) AddOrUpdateUserObject(uw UserWrapper) error {
 	if !uh.parent.Check() {

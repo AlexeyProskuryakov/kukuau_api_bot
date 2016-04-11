@@ -8,7 +8,6 @@
             {{$with := .with}}
             {{$all := "all"}}
             {{$all_tm := "all_hash_writers"}}
-            {{$vote := "vote"}}
 
             <div id="contacts-wrapper" closed="true">
                 <p id="write-all">
@@ -96,33 +95,21 @@
                 <div class="message-wrap col-lg-8">
                     <div class="msg-wrap" id="chat-wrapper">
                         {{range $message := .messages}}
-                        {{if is_message_ $message $vote}}
+                        {{if has_additional_data $message }}
                         <div class="msg-vote" id="{{$message.SID}}">
                             <h4 class="media-heading">{{$message.From}}
                                 <small class="time">{{stamp_date $message.Time}}</small>
                             </h4>
                             <div class="col-lg-11 msg-vote">{{$message.Body}}
                                 <table class="table table-condensed table-bordered table-hover table-little-text">
+                                    {{range $addDataEl := .message.AdditionalData}}
+                                    {{if is_additional_data_valid $addDataEl }}
                                     <tr>
-                                        <td>Имя</td>
-                                        <td>{{$message.AdditionalData.name}}</td>
+                                        <td>{{$addDataEl.Name}}</td>
+                                        <td>{{$addDataEl.Value}}</td>
                                     </tr>
-                                    <tr>
-
-                                        <td>Услуга</td>
-                                        <td>{{$message.AdditionalData.service}}</td>
-                                    </tr>
-                                    <tr>
-
-                                        <td>Город</td>
-                                        <td>{{$message.AdditionalData.city}}</td>
-                                    </tr>
-                                    <tr>
-
-                                        <td>Описание</td>
-                                        <td>{{$message.AdditionalData.description}}</td>
-                                    </tr>
-
+                                    {{end}}
+                                    {{end}}
                                 </table>
                             </div>
                         </div>
@@ -131,7 +118,7 @@
                             <h4 class="media-heading">{{$message.From}}
                                 <small class="time">{{stamp_date $message.Time}}</small>
                             </h4>
-                            <div class="col-lg-11">{{noescape $message.Body}}</div>
+                            <div class="col-lg-11">{{$message.Body}}</div>
                         </div>
                         {{end}}
                         <hr>
@@ -165,6 +152,7 @@
         </div>
     </div>
 </div>
+
 <form class="form-inline">
     <div class="checkbox col-md-2">
         <label>
@@ -179,6 +167,7 @@
 </audio>
 <script>
     var url_prefix = "chat";
+
 
 
 

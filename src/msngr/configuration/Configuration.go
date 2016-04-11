@@ -117,7 +117,7 @@ type ConsoleConfig struct {
 type ChatConfig struct {
 	Name        string `json:"name"`
 	CompanyId   string `json:"id"`
-	UrlSalt	    string `json:"url_salt"`
+	UrlSalt     string `json:"url_salt"`
 	Information string `json:"information"`
 	AutoAnswer  struct {
 			    Enable bool `json:"enable"`
@@ -128,6 +128,19 @@ type ChatConfig struct {
 	Key         string `json:"key"`
 	User        string `json:"user"`
 	Password    string `json:"password"`
+}
+
+type CoffeeConfig struct {
+	Name    string `json:"name"`
+	Salt	string `json:"salt"`
+	Key	string `json:"key"`
+	DictUrl string `json:"dict_url"`
+	Information string `json:"information"`
+	Bakes []string `json:"bakes"`
+	Drinks []string `json:"drinks"`
+	Volumes []string `json:"volumes"`
+	Additives []string `json:"additives"`
+	Chat ChatConfig `json:"chat"`
 }
 
 type Configuration struct {
@@ -162,6 +175,7 @@ type Configuration struct {
 			Answers  []string `json:"answers"`
 		} `json:"vote"`
 	Chats   map[string]ChatConfig `json:"chats"`
+	Coffee  map[string]CoffeeConfig `json:"coffee"`
 }
 
 func (conf *Configuration) SetLogFile(fn string) {

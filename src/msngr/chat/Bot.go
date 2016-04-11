@@ -5,15 +5,11 @@ import (
 	"msngr/db"
 	s "msngr/structs"
 
-	"errors"
 	"msngr/configuration"
+	m "msngr"
 	"log"
 )
 
-var (
-	DB_ERROR = errors.New("Ошибка на стороне базы данных, попробуйте позже.")
-	DB_ERROR_RESULT = &s.MessageResult{Type:"chat", Body:DB_ERROR.Error()}
-)
 
 type ChatRequestProcessor struct {
 	Commands *[]s.OutCommand
@@ -47,7 +43,7 @@ func (cmp ChatMessageProcessor) ProcessMessage(in *s.InPkg) *s.MessageResult {
 		user, err := cmp.Storage.GlobalUsers.GetUserById(in.From)
 		if err != nil {
 			log.Printf("CB ERROR after getting user %v", err)
-			return DB_ERROR_RESULT
+			return m.DB_ERROR_RESULT
 		}
 		if user == nil {
 			cmp.Storage.GlobalUsers.AddUser(in.From, userData.Name, userData.Phone, userData.Email)
@@ -71,7 +67,7 @@ func (cmp ChatMessageProcessor) ProcessMessage(in *s.InPkg) *s.MessageResult {
 
 func FormChatBotContext(config configuration.ChatConfig, store *db.MainDb) *msngr.BotContext {
 	result := msngr.BotContext{}
-	result.Request_commands = map[string]s.RequestCommandProcessor{
+	result.RequestProcessors = map[string]s.RequestCommandProcessor{
 		"commands":&ChatRequestProcessor{
 			Commands:&[]s.OutCommand{
 				s.OutCommand{
@@ -84,7 +80,7 @@ func FormChatBotContext(config configuration.ChatConfig, store *db.MainDb) *msng
 	}
 	chatStorage := NewChatStorage(store)
 
-	result.Message_commands = map[string]s.MessageCommandProcessor{
+	result.MessageProcessors = map[string]s.MessageCommandProcessor{
 		"information":&ChatInformationProcessor{Information:config.Information},
 		"":&ChatMessageProcessor{Storage:chatStorage, CompanyId:config.CompanyId, MessageStorage:store.Messages, Answer:config.BotAnswer},
 	}
