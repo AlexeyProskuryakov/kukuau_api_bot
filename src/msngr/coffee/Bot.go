@@ -8,6 +8,7 @@ import (
 	c "msngr/configuration"
 	"msngr/db"
 	"time"
+	"log"
 )
 
 func getCommands(dictUrlPrefix string) *[]s.OutCommand {
@@ -117,6 +118,7 @@ type OrderDrinkProcessor struct {
 }
 
 func (odp *OrderDrinkProcessor) ProcessMessage(in *s.InPkg) *s.MessageResult {
+	log.Printf("CB : in: %+v, %+v, %+v", in.UserData, in.Message, in.Message.Commands)
 	if in.UserData != nil && in.Message != nil && in.Message.Commands != nil {
 		err := odp.Storage.Users.StoreUserData(in.From, in.UserData)
 		if err != nil {

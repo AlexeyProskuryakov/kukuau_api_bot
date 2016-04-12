@@ -24,8 +24,10 @@ func AutocompleteController(w http.ResponseWriter, r *http.Request, storage *Cof
 			if err != nil {
 				log.Printf("coffee autocomplete retrieve data ERROR: %v", err)
 			}
-			result := coffeeConfig.Autocomplete(query, fieldName)
-			results = m.ToAutocompleteItems(result)
+			if coffeeConfig != nil{
+				result := coffeeConfig.Autocomplete(query, fieldName)
+				results = m.ToAutocompleteItems(result)
+			}
 		}
 		ans, err := json.Marshal(results)
 		if err != nil {

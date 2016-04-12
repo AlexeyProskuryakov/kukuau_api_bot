@@ -183,7 +183,7 @@ func StartBot(db *d.MainDb, result chan string) c.Configuration {
 			cntrl := m.FormBotController(cbc, db)
 			route := fmt.Sprintf("/bot/coffee/%v", c_conf.Name)
 			http.HandleFunc(route, cntrl)
-
+			log.Printf("will handling bot messages for coffee %v at %v", c_conf.Name, route)
 			c_store := coffee.NewCoffeeConfigHandler(db)
 			c_store.LoadFromConfig(c_conf)
 
@@ -203,8 +203,8 @@ func StartBot(db *d.MainDb, result chan string) c.Configuration {
 				coffee.AutocompleteController(w, r, c_store, "addititves", c_conf.Name)
 			})
 			var salt string
-			if c_conf.Salt != "" {
-				salt = fmt.Sprintf("%v-%v", c_conf.Name, c_conf.Salt)
+			if c_conf.Chat.UrlSalt != "" {
+				salt = fmt.Sprintf("%v-%v", c_conf.Name, c_conf.Chat.UrlSalt)
 			} else {
 				salt = c_conf.Name
 			}
@@ -226,7 +226,8 @@ func StartBot(db *d.MainDb, result chan string) c.Configuration {
 			http.Handle(sr("/config"), chat.GetChatConfigHandler(sr("/config"), webRoute, db, c_conf.Chat))
 			http.Handle(sr("/delete_messages"), chat.GetChatDeleteMessagesHandler(sr("/delete_messages"), db, c_conf.Chat))
 
-			log.Printf("I will handling web requests for coffee at : [%v]", webRoute)
+			log.Printf("I will handling web requests for coffee %v at : [%v]", c_conf.Name, webRoute)
+			db.Users.AddOrUpdateUserObject(d.UserWrapper{UserId:c_conf.Chat.User, Password:utils.PHash(c_conf.Chat.Password), Role:users.MANAGER})
 		}
 		result <- "coffee"
 	}

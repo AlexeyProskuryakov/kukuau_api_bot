@@ -263,6 +263,7 @@ func process_message_pkg(buff *s.OutPkg, in *s.InPkg, context *BotContext) (*s.O
 	for _, command := range *in_commands {
 		action := command.Action
 		if commandProcessor, ok := context.MessageProcessors[action]; ok {
+			log.Printf("BOT found [%v] action", action)
 			buff, isDeferred, err = process_message(commandProcessor, buff, in)
 		} else {
 			err = errors.New("Команда не поддерживается.")
@@ -309,6 +310,7 @@ func FormBotController(context *BotContext, db *db.MainDb) controllerHandler {
 			}
 			if in.Message != nil {
 				storedMessage, _ := db.Messages.GetMessageByMessageId(in.Message.ID)
+				log.Printf("BOT in message id %v", in.Message.ID)
 				if storedMessage != nil {
 					log.Printf("BOT: Have duplicate message. Will be quiet ignoring it...")
 					return

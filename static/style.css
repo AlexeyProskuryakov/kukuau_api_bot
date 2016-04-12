@@ -38,11 +38,10 @@
     padding:5px;
     margin:0;
 }
-.msg-vote{
+.msg-with-data{
     padding:5px;
     margin:0;
     background-color: #5DFF5D;
-    height:20%;
 }
 
 .table-little-text{

@@ -1,54 +1,21 @@
 {
   "message": {
+    "id":"test_01",
     "commands": [
       {
         "form": {
+          "name":  "order_bake_form",
           "fields": [
             {
               "data": {
-                "value": "test n",
-                "text": "test name"
+                "value": "Донат Шоколадный"
               },
               "type": "dict",
-              "name": "name"
-            },
-            {
-              "data": {
-                "value": "test s",
-                "text": "test serv"
-              },
-              "type": "dict",
-              "name": "service"
-            },
-            {
-              "data": {
-                "value": "test c",
-                "text": "test city"
-              },
-              "type": "dict",
-              "name": "city"
-            },
-            {
-              "data": {
-                "value": "test d",
-                "text": "test description"
-              },
-              "type": "text",
-              "name": "description"
-            },
-            {
-              "data": {
-                "value": "test r",
-                "text": "test role"
-              },
-              "type": "dict",
-              "name": "role"
+              "name": "bake"
             }
           ]
         },
-        "repeated": "true",
-        "fixed": "false",
-        "action": "add_company"
+        "action": "order_drink"
       }
     ]
   },

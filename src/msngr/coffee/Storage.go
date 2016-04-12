@@ -187,6 +187,12 @@ func (cch *CoffeeConfigHandler) GetConfig(name string) (*CoffeeHouseConfiguratio
 }
 
 func (cch *CoffeeConfigHandler) LoadFromConfig(conf configuration.CoffeeConfig) {
+	f := CoffeeHouseConfiguration{}
+	cch.Configuration.Find(bson.M{"name":conf.Name}).One(&f)
+	if f.Name != conf.Name{
+		cch.Configuration.Insert(bson.M{"name":conf.Name})
+	}
+
 	for _, bake := range conf.Bakes {
 		cch.RemoveBake(conf.Name, bake)
 		cch.AddBake(conf.Name, bake)
