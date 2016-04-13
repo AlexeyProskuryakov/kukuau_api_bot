@@ -36,7 +36,7 @@ func WRONG_TEAM_MEMBER(bad, good string) string {
 	return fmt.Sprintf("Вы не являетесь участником группы %s. Вы учасник группы %s.", bad, good)
 }
 
-func getCommands(qs QuestStorage, user_id string) *[]s.OutCommand {
+func getCommands(qs *QuestStorage, user_id string) *[]s.OutCommand {
 	result := []s.OutCommand{
 		s.OutCommand{
 			Title:    "Информация",
