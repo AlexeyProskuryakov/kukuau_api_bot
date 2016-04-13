@@ -178,6 +178,9 @@ func StartBot(db *d.MainDb, result chan string) c.Configuration {
 		result <- "vote"
 	}
 	if len(conf.Coffee) > 0 {
+		fs := http.FileServer(http.Dir("static"))
+		http.Handle("/static/", http.StripPrefix("/static/", fs))
+
 		for _, c_conf := range conf.Coffee {
 			cbc := coffee.FormBotCoffeeContext(c_conf, db)
 			cntrl := m.FormBotController(cbc, db)
@@ -227,13 +230,15 @@ func StartBot(db *d.MainDb, result chan string) c.Configuration {
 			http.Handle(sr("/delete_messages"), chat.GetChatDeleteMessagesHandler(sr("/delete_messages"), db, c_conf.Chat))
 
 			log.Printf("I will handling web requests for coffee %v at : [%v]", c_conf.Name, webRoute)
-			db.Users.AddOrUpdateUserObject(d.UserWrapper{UserId:c_conf.Chat.User, Password:utils.PHash(c_conf.Chat.Password), Role:users.MANAGER})
+			db.Users.AddOrUpdateUserObject(d.UserWrapper{UserId:c_conf.Chat.User, UserName:c_conf.Chat.User, Password:utils.PHash(c_conf.Chat.Password), Role:users.MANAGER})
 		}
 		result <- "coffee"
 	}
 	if len(conf.Chats) > 0 {
-		fs := http.FileServer(http.Dir("static"))
-		http.Handle("/static/", http.StripPrefix("/static/", fs))
+		if len(conf.Coffee) == 0{
+			fs := http.FileServer(http.Dir("static"))
+			http.Handle("/static/", http.StripPrefix("/static/", fs))
+		}
 
 		for _, chat_conf := range conf.Chats {
 			chatBotContext := chat.FormChatBotContext(chat_conf, db)

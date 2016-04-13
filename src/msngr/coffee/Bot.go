@@ -27,13 +27,13 @@ func getCommands(dictUrlPrefix string) *[]s.OutCommand {
 				Title: "Заказ напитка",
 				Type:  "form",
 				Name:  "order_drink_form",
-				Text:  "Какой напиток: ?(drink);\nОбъем: ?(volume);\nДобавка: ?(additive);",
+				Text:  "Какой ?(drink) его ?(volume) и ?(additive).",
 				Fields: []s.OutField{
 					s.OutField{
 						Name: "drink",
 						Type: "dict",
 						Attributes: s.FieldAttribute{
-							Label:    "",
+							Label:    "напиток",
 							Required: true,
 							URL:      &drinkSearchUrl,
 						},
@@ -42,15 +42,16 @@ func getCommands(dictUrlPrefix string) *[]s.OutCommand {
 						Name: "volume",
 						Type: "dict",
 						Attributes: s.FieldAttribute{
+							Label:"объем",
 							Required: false,
 							URL:      &volumeSearchUrl,
-							Label:"0.5 или 0.25",
 						},
 					},
 					s.OutField{
 						Name: "additive",
 						Type: "dict",
 						Attributes: s.FieldAttribute{
+							Label:    "добавка",
 							Required: false,
 							URL:      &additiveSearchUrl,
 						},
@@ -67,13 +68,13 @@ func getCommands(dictUrlPrefix string) *[]s.OutCommand {
 				Title: "Заказ выпечки",
 				Type:  "form",
 				Name:  "order_bake_form",
-				Text:  "Какая выпечка: ?(bake)",
+				Text:  "Какая ?(bake) ?",
 				Fields: []s.OutField{
 					s.OutField{
 						Name: "bake",
 						Type: "dict",
 						Attributes: s.FieldAttribute{
-							Label:    "",
+							Label:    "выпечка",
 							Required: true,
 							URL:      &bakeSearchUrl,
 						},
