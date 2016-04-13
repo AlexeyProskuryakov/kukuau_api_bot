@@ -10,6 +10,20 @@ import (
 	"gopkg.in/mgo.v2/bson"
 )
 
+var config = cfg.ReadConfig()
+
+func getDbsWithOrders()[]string{
+	//todo 
+	dbHelper := d.NewDbHelper(config.Main.Database.ConnString, "local")
+	result := []string{}
+	if names, err := dbHelper.Session.DatabaseNames(); err == nil{
+		for _, name := range names{
+			log.Printf("db name: %v", name)
+		}
+	}
+	return result
+}
+
 func EnsureStatistic() {
 	var file *xlsx.File
 	var sheet *xlsx.Sheet
@@ -17,7 +31,7 @@ func EnsureStatistic() {
 	var cell *xlsx.Cell
 	var err error
 
-	config := cfg.ReadConfig()
+
 	db := d.NewMainDb(config.Main.Database.ConnString, config.Main.Database.Name)
 
 	file = xlsx.NewFile()
