@@ -132,6 +132,7 @@ func Run(config c.QuestConfig, qs *QuestStorage, ntf *ntf.Notifier, additionalNo
 	m.Use(w.NonJsonLogger())
 	m.Use(martini.Recovery())
 	m.Use(render.Renderer(render.Options{
+		Directory:"templates/quests",
 		Layout: "quests/layout",
 		Extensions: []string{".tmpl", ".html"},
 		Charset: "UTF-8",
