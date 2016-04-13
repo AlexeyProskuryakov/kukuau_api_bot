@@ -57,13 +57,13 @@ func getCommands(dictUrlPrefix string, withResults bool) []s.OutCommand {
 				Title: "Форма добавления компании",
 				Type:  "form",
 				Name:  "add_company_form",
-				Text:  "Название компании: ?(name);\nНазвание услуги: ?(service);\nГород: ?(city)\nВаш статус в компании: ?(user_role);\nОписание и/или комментарий: ?(description).",
+				Text:  "Название ?(name), название ?(service), в каком ?(city), ваш ?(user_role) в этой компании и ?(description).",
 				Fields: []s.OutField{
 					s.OutField{
 						Name: "name",
 						Type: "dict",
 						Attributes: s.FieldAttribute{
-							Label:    "компания",
+							Label:    "компании",
 							Required: false,
 							URL:      &nameSearchUrl,
 						},
@@ -72,7 +72,7 @@ func getCommands(dictUrlPrefix string, withResults bool) []s.OutCommand {
 						Name: "service",
 						Type: "dict",
 						Attributes: s.FieldAttribute{
-							Label:    "услуга",
+							Label:    "услуги",
 							Required: false,
 							URL:      &serviceSearchUrl,
 						},
@@ -81,7 +81,7 @@ func getCommands(dictUrlPrefix string, withResults bool) []s.OutCommand {
 						Name: "city",
 						Type: "dict",
 						Attributes: s.FieldAttribute{
-							Label:    "город",
+							Label:    "городе",
 							Required: false,
 							URL:      &citySearchUrl,
 						},
@@ -98,7 +98,7 @@ func getCommands(dictUrlPrefix string, withResults bool) []s.OutCommand {
 						Name: "user_role",
 						Type: "dict",
 						Attributes: s.FieldAttribute{
-							Label:    "роль",
+							Label:    "статус",
 							Required: false,
 							URL:      &roleSearchUrl,
 						},
@@ -188,19 +188,22 @@ func (vmp *VoteConsiderCompanyProcessor) ProcessMessage(in *s.InPkg) *s.MessageR
 		cmdsPtr := in.Message.Commands
 		for _, command := range *cmdsPtr {
 			if command.Action == "add_company" {
-				isVote, _ := vmp.Storage.IsUserVote(in.From)
+				isVote, err := vmp.Storage.IsUserVote(in.From)
+				if err != nil{
+					log.Printf("VB ERROR at is user vote %v", err)
+				}
 				commands := getCommands(vmp.DictUrl, isVote)
-				name, nOk := command.Form.GetValue("name")
-				service, sOk := command.Form.GetValue("service")
+				name, nOk := command.Form.GetAny("name")
+				service, sOk := command.Form.GetAny("service")
 				if !nOk && !sOk {
 					return &s.MessageResult{
 						Body:NEED_NAME_OR_SERVICE,
 						Commands:&commands,
 					}
 				}
-				city, _ := command.Form.GetValue("city")
-				description, _ := command.Form.GetValue("description")
-				role, _ := command.Form.GetValue("role")
+				city, _ := command.Form.GetAny("city")
+				description, _ := command.Form.GetAny("description")
+				role, _ := command.Form.GetAny("user_role")
 				log.Printf("VB Receive name: %v, service: %v, city: %v, descr: %v, role: %v", name, service, city, description, role)
 				cmp, err := vmp.Storage.ConsiderCompany(name, city, service, description, userName, role)
 				if err != nil {
