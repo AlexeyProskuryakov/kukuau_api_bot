@@ -95,7 +95,7 @@ func getCommands(dictUrlPrefix string, withResults bool) []s.OutCommand {
 						},
 					},
 					s.OutField{
-						Name: "role",
+						Name: "user_role",
 						Type: "dict",
 						Attributes: s.FieldAttribute{
 							Label:    "роль",
