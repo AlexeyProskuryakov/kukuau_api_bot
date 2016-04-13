@@ -235,8 +235,10 @@ func StartBot(db *d.MainDb, result chan string) c.Configuration {
 		result <- "coffee"
 	}
 	if len(conf.Chats) > 0 {
-		fs := http.FileServer(http.Dir("static"))
-		http.Handle("/static/", http.StripPrefix("/static/", fs))
+		if len(conf.Coffee) == 0{
+			fs := http.FileServer(http.Dir("static"))
+			http.Handle("/static/", http.StripPrefix("/static/", fs))
+		}
 
 		for _, chat_conf := range conf.Chats {
 			chatBotContext := chat.FormChatBotContext(chat_conf, db)
