@@ -178,6 +178,9 @@ func StartBot(db *d.MainDb, result chan string) c.Configuration {
 		result <- "vote"
 	}
 	if len(conf.Coffee) > 0 {
+		fs := http.FileServer(http.Dir("static"))
+		http.Handle("/static/", http.StripPrefix("/static/", fs))
+
 		for _, c_conf := range conf.Coffee {
 			cbc := coffee.FormBotCoffeeContext(c_conf, db)
 			cntrl := m.FormBotController(cbc, db)
