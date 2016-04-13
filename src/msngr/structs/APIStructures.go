@@ -213,3 +213,9 @@ func StartAfter(check CheckFunc, what func()) {
 	}
 	go what()
 }
+
+type AutocompleteDictItem struct {
+	Key      string `json:"key"`
+	Title    string `json:"title"`
+	SubTitle string `json:"subtitle"`
+}

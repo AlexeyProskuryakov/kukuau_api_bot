@@ -6,18 +6,25 @@
     "database": {
       "name": "bot",
       "connection_string": "localhost:27017"
-    },
+      },
     "pg_database": {
       "connection_string": "postgres://postgres:123@localhost:5432/kuku?sslmode=disable"
     },
-     //"google_key": "AIzaSyBXW3UaS5e4FtOt-XJqLFHGpvrFlf45DV4",
+// Настройка для тестового доступа
+//    "pg_database": {
+//      "connection_string": "postgres://testusr:Qwsa+test@localhost:5432/kuku_test?sslmode=disable"
+//    },
+
+    //"google_key": "AIzaSyBXW3UaS5e4FtOt-XJqLFHGpvrFlf45DV4",
     "google_key": "AIzaSyBkmvXK-SqfQcyj2XlXgTx-r_B18TJb-vY",
     "elastic_conn": "http://localhost:9200/"
   },
   "console": {
     "web_port": ":9595",
     "key": "main key",
-    "information": "Привет! Это мы Кличим Чат или Клиент Чат или просто Кличат! Пиши сообщения и Саша тебе ответит:)"
+    "information": "Привет! Это мы Кличим Чат или Клиент Чат или просто Кличат! Пиши сообщения и Саша тебе ответит:)",
+    "profile_img_path": "static",
+    "profile_img_server": ""
   },
   "taxis": {
     "marka": {
@@ -295,6 +302,40 @@
       "information": "Квесты - хуесты. Ищешь в помойках коды получаешь деньги!",
       "web_port": ":9696",
       "key": "Kuku demo_quest_key"
+    }
+  },
+  "chats": {
+    //актуально для ветки chat
+    "1": {
+      "name": "<your company name>",
+      //имя которое будет отображаться в верху
+      "id": "test_company",
+      //идентификатор компании (будет виден в сообщениях)
+      "information": "<some information>",
+      "auto_answer": {
+        //автоматический ответ
+        "enable": true,
+        "after_min": 2,
+        "text": "<Will answer you later. Wait please>"
+      },
+      "bot_answer": "<I receive your message>",
+      //ответ бота на каждое сообщение сразуже
+      "key": "Kuku test_company_key",
+      "user": "user",
+      //логин пароль ползователя для входа в чатик
+      "password": "password"
+    },
+    "2": {
+      "name": "<your company name 2>",
+      "id": "test_company_2",
+      "information": "<some information_2>",
+      "auto_answer": {
+        "enable": true,
+        "after_min": 1,
+        "text": "<Will answer you later. Wait please>"
+      },
+      "bot_answer": "<I receive your message>",
+      "key": "Kuku test_company_2_key"
     }
   }
 }

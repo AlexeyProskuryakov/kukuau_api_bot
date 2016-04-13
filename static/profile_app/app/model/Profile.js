@@ -6,8 +6,8 @@ Ext.define('Console.model.Profile', {
 	'name', 
 	'short_description', 
 	'text_description', 
-	'enable',
-	'public'
+	{ name: 'enable', type:"boolean"},
+	{ name: 'public', type:"boolean"}
 	],
 	associations: [{
 		type: 'hasMany',
@@ -17,7 +17,12 @@ Ext.define('Console.model.Profile', {
 		type:'hasMany',
 		model:'Console.model.Group',
 		name:'groups'
-	}],
+	}, {
+		type:'hasMany', 
+		model:'Console.model.ProfileAllowPhone',
+		name:'phones'
+	}
+	],
 	proxy: {
 		type: 'ajax',
 		api: {

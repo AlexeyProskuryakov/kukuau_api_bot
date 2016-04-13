@@ -5,5 +5,6 @@ Ext.define("Console.model.Group",{
 	'id',
 	'name',
 	'description',
+	'_active'
 	]
 });

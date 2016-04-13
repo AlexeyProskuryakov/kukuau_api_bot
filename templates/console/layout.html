@@ -1,50 +1,53 @@
 {{ define "base" }}
 <html lang="ru">
-    {{template "head" . }}
-  <body>
-  {{template "head_menu" . }}
+{{template "head" . }}
+<body>
+{{template "head_menu" . }}
 
-  {{ yield }}
+{{ yield }}
 
-  </body>
+</body>
 </html>
 {{end}}
 
 {{ define "head" }}
-  <head>
+<head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Klichat консоль</title>
     <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.5/css/bootstrap.min.css">
-    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.5/css/bootstrap-theme.min.css">
     <link rel="stylesheet" href="style.css">
+    <link rel="shortcut icon" href="/favicon.ico">
     <script src="https://ajax.googleapis.com/ajax/libs/jquery/2.1.4/jquery.min.js"></script>
     <script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.5/js/bootstrap.min.js"></script>
     <script src="mustache.min.js"></script>
-  </head>
+    <script src="sorttable.js"></script>
+</head>
 {{ end}}
 
 
 {{define "head_menu"}}
-     <nav class="navbar navbar-inverse navbar-static-top">
-      <div class="container">
+<nav class="navbar navbar-default navbar-static-top">
+    <div class="container">
         <div class="navbar-header">
-        <button type="button" class="navbar-toggle collapsed" data-toggle="collapse" data-target="#navbar" aria-expanded="false" aria-controls="navbar">
-         <span class="sr-only">Toggle navigation</span>
-            <span class="icon-bar"></span>
-            <span class="icon-bar"></span>
-            <span class="icon-bar"></span>
-        </button>
-          <a class="navbar-brand" href="/">Консоль</a>
+            <button type="button" class="navbar-toggle collapsed" data-toggle="collapse" data-target="#navbar"
+                    aria-expanded="false" aria-controls="navbar">
+                <span class="sr-only">Toggle navigation</span>
+                <span class="icon-bar"></span>
+                <span class="icon-bar"></span>
+                <span class="icon-bar"></span>
+            </button>
+            <a class="navbar-brand" href="/">Консоль</a>
         </div>
         <div id="navbar" class="collapse navbar-collapse visible-xs-*">
-          <ul class="nav navbar-nav">
-            <li><a href="/new_keys">Добавить информационные ключи</a></li>
-            <li><a href="/chat">Сообщения</a></li>
-            <li><a href="/users">Пользователи</a></li>
-            <li><a href="/profile">Профайлы</a></li>
-          </ul>
+            <ul class="nav navbar-nav">
+                <li><a href="/new_keys">Добавить информационные ключи</a></li>
+                <li><a href="/chat">Сообщения</a></li>
+                <li><a href="/users">Пользователи</a></li>
+                <li><a href="/profile">Профайлы</a></li>
+                <li><a href="/vote_result">Результаты голосования</a></li>
+            </ul>
         </div>
-      </div>
-    </nav>
-  {{end}}
+    </div>
+</nav>
+{{end}}

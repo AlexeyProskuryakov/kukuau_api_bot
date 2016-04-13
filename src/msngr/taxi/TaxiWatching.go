@@ -212,7 +212,7 @@ func TaxiOrderWatch(taxiContext *TaxiContext, botContext *m.BotContext) {
 	refresh_time := botContext.Settings["refresh_orders_time_step"].(time.Duration)
 	log.Printf("WATCH start watching...")
 	for {
-		if saved_orders, err := taxiContext.DataBase.Orders.GetOrders(bson.M{"active":true, "source":botContext.Name}); err == nil && len(saved_orders) > 0 {
+		if saved_orders, err := taxiContext.DataBase.Orders.GetOrders(bson.M{"is_active":true, "source":botContext.Name}); err == nil && len(saved_orders) > 0 {
 			log.Printf("WATCH OK, found %v orders in db", len(saved_orders))
 			db_orders_map := map[int64]d.OrderWrapper{}
 			for _, o := range saved_orders {

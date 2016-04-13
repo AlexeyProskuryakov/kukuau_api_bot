@@ -1,84 +1,26 @@
 {
-  "settings": {
-    "index": {
-      "analysis": {
-        "char_filter": {
-          "e_map": {
-            "type": "mapping",
-            "mappings": [
-              "ё=>е"
-            ]
-          }
+  "message": {
+    "id":"test_01",
+    "commands": [
+      {
+        "form": {
+          "name":  "order_bake_form",
+          "fields": [
+            {
+              "data": {
+                "value": "Донат Шоколадный"
+              },
+              "type": "dict",
+              "name": "bake"
+            }
+          ]
         },
-        "analyzer": {
-          "autocomplete_analyzer": {
-            "type": "custom",
-            "tokenizer": [
-              "lowercase",
-              "nGram"
-            ],
-            "filter": [
-              "lowercase",
-              "worddelimiter",
-              "app_ngram",
-              "snowball"
-            ],
-            "char_filter": [
-              "e_map"
-            ]
-          },
-          "autocomplete_search_analyzer": {
-            "type": "custom",
-            "tokenizer": "standart",
-            "filter": [
-              "lowercase",
-              "worddelimiter",
-              "app_ngram",
-              "snowball"
-            ]
-          }
-        },
-        "tokenizer": {
-          "nGram": {
-            "type": "nGram",
-            "min_gram": 2,
-            "max_gram": 15
-          }
-        },
-        "filter": {
-          "app_ngram": {
-            "type": "nGram",
-            "min_gram": 2,
-            "max_gram": 15
-          },
-          "worddelimeter": {
-            "type": "word_delimeter"
-          },
-          "snowball": {
-            "type": "snowball",
-            "language": "Russian"
-          }
-        }
+        "action": "order_drink"
       }
-    }
+    ]
   },
-  "mappings": {
-    "name": {
-      "_all": {
-        "enabled": false
-      },
-      "properties": {
-        "name": {
-          "type": "string",
-          "analyzer": "autocomplete_analyzer"
-        },
-        "osm_id": {
-          "type": "long"
-        },
-        "location": {
-          "type": "geo_point"
-        }
-      }
-    }
+  "from": "TEST",
+  "userdata": {
+    "phone": "TESTPHONE"
   }
 }

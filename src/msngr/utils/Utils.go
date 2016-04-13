@@ -23,6 +23,12 @@ func GenId() string {
 	r := rand.New(s)
 	return fmt.Sprintf("%d", r.Int63())
 }
+func GenIntId() int64{
+	t := time.Now().UnixNano()
+	s := rand.NewSource(t)
+	r := rand.New(s)
+	return r.Int63()
+}
 
 func PHash(pwd string) (string) {
 	input := []byte(pwd)
@@ -214,4 +220,19 @@ func DoDeferred(after time.Duration, what func()) {
 		time.Sleep(after)
 		what()
 	}()
+}
+
+func InterfaceSlice(slice interface{}) []interface{} {
+	s := reflect.ValueOf(slice)
+	if s.Kind() != reflect.Slice {
+		panic("InterfaceSlice() given a non-slice type")
+	}
+
+	ret := make([]interface{}, s.Len())
+
+	for i := 0; i < s.Len(); i++ {
+		ret[i] = s.Index(i).Interface()
+	}
+
+	return ret
 }

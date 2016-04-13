@@ -46,8 +46,8 @@ func TestLogInOut(t *testing.T) {
 			time.Sleep(1 * time.Second)
 		}
 		bot_context := FormShopCommands(db, &shop_conf)
-		request_commands := bot_context.Request_commands
-		message_commands := bot_context.Message_commands
+		request_commands := bot_context.RequestProcessors
+		message_commands := bot_context.MessageProcessors
 
 		in := s.InPkg{From:"TEST", UserData:&s.InUserData{Phone:"TEST123"}, Request:&s.InRequest{ID:"1234", Type:"get"}}
 		in.Request.Query.Action = "COMMANDS"

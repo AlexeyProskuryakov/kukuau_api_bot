@@ -13,7 +13,6 @@ import (
 	u "msngr/utils"
 	"msngr/configuration"
 	db "msngr/db"
-
 )
 
 var DEBUG bool
@@ -22,13 +21,13 @@ var TEST bool
 
 
 type BotContext struct {
-	Name             string
-	Check            s.CheckFunc
-	Request_commands map[string]s.RequestCommandProcessor
-	Message_commands map[string]s.MessageCommandProcessor
-	Commands         map[string]*[]s.OutCommand
-	CommandsStorage  configuration.ConfigStorage
-	Settings         map[string]interface{}
+	Name              string
+	Check             s.CheckFunc
+	RequestProcessors map[string]s.RequestCommandProcessor
+	MessageProcessors map[string]s.MessageCommandProcessor
+	Commands          map[string]*[]s.OutCommand
+	CommandsStorage   configuration.ConfigStorage
+	Settings          map[string]interface{}
 }
 
 func (bc BotContext) String() string {
@@ -41,7 +40,7 @@ func (bc BotContext) String() string {
 		}
 		available_cmds += fmt.Sprintf("\n\tFor state: [%v] next commands: \n\t%v", name, strings.Join(cmds_represent, "\n\t"))
 	}
-	return fmt.Sprintf("\nBot context for %v\nChecked?: %v (%v)\nRequestCommands: %+v\nMessageCommands: %+v\nAvailable commands: %+v\nSettings: %+v\n", bc.Name, ok, check, bc.Request_commands, bc.Message_commands, available_cmds, bc.Settings)
+	return fmt.Sprintf("\nBot context for %v\nChecked?: %v (%v)\nRequestCommands: %+v\nMessageCommands: %+v\nAvailable commands: %+v\nSettings: %+v\n", bc.Name, ok, check, bc.RequestProcessors, bc.MessageProcessors, available_cmds, bc.Settings)
 }
 
 func FormInPackage(r *http.Request) (*s.InPkg, error) {
@@ -94,7 +93,7 @@ func process_request_pkg(buff *s.OutPkg, in *s.InPkg, context *BotContext) (*s.O
 	buff.Request.Query.Action = action
 	buff.Request.Type = "result"
 
-	if commandProcessor, ok := context.Request_commands[action]; ok {
+	if commandProcessor, ok := context.RequestProcessors[action]; ok {
 		requestResult := commandProcessor.ProcessRequest(in)
 		if requestResult.Error != nil {
 			err := requestResult.Error
@@ -177,10 +176,6 @@ const (
 
 	ERR_UNEXPECTED_REQUEST_CANCEL = "unexpected-request_cancel"
 )
-
-func GetErrorName(code, condition string) {
-
-}
 
 var ERRORS_MAP = map[string]func() (int, string){
 	ERR_BAD_FORMAT: func() (int, string) {
@@ -267,7 +262,8 @@ func process_message_pkg(buff *s.OutPkg, in *s.InPkg, context *BotContext) (*s.O
 	in_commands := in.Message.Commands
 	for _, command := range *in_commands {
 		action := command.Action
-		if commandProcessor, ok := context.Message_commands[action]; ok {
+		if commandProcessor, ok := context.MessageProcessors[action]; ok {
+			log.Printf("BOT found [%v] action", action)
 			buff, isDeferred, err = process_message(commandProcessor, buff, in)
 		} else {
 			err = errors.New("Команда не поддерживается.")
@@ -297,14 +293,14 @@ func FormBotController(context *BotContext, db *db.MainDb) controllerHandler {
 		var isError, isDeferred bool
 		var global_error, request_error, message_error error
 
-		//check := context.Check
-		//if check != nil {
-		//	if detail, ok := check(); !ok {
-		//		out.Message = &s.OutMessage{Type: "chat", Thread: "0", ID: u.GenId(), Body: fmt.Sprintln(detail)}
-		//		PutOutPackage(w, out, true, false)
-		//		return
-		//	}
-		//}
+		check := context.Check
+		if check != nil {
+			if detail, ok := check(); !ok {
+				out.Message = &s.OutMessage{Type: "chat", Thread: "0", ID: u.GenId(), Body: fmt.Sprintln(detail)}
+				PutOutPackage(w, out, true, false)
+				return
+			}
+		}
 
 		in, global_error = FormInPackage(r)
 		if in != nil {
@@ -313,6 +309,12 @@ func FormBotController(context *BotContext, db *db.MainDb) controllerHandler {
 				out, request_error = process_request_pkg(out, in, context)
 			}
 			if in.Message != nil {
+				storedMessage, _ := db.Messages.GetMessageByMessageId(in.Message.ID)
+				log.Printf("BOT in message id %v", in.Message.ID)
+				if storedMessage != nil {
+					log.Printf("BOT: Have duplicate message. Will be quiet ignoring it...")
+					return
+				}
 				if in.Message.Error != nil {
 					if val, ok := ERRORS_MAP[in.Message.Error.Condition]; ok {
 						_, err_type := val()
@@ -325,10 +327,10 @@ func FormBotController(context *BotContext, db *db.MainDb) controllerHandler {
 					return
 				}
 				if in.Message.Commands == nil {
-					if non_commands_processor, ok := context.Message_commands[""]; ok {
+					if non_commands_processor, ok := context.MessageProcessors[""]; ok {
 						out, isDeferred, message_error = process_message(non_commands_processor, out, in)
 					} else {
-						log.Printf("warn will sended message without commands: %v\n from %v (userdata: %v)", in.Message, in.From, in.UserData)
+						log.Printf("warn will sended message without commands: %+v\n from %v (userdata: %+v)", in.Message, in.From, in.UserData)
 					}
 				} else {
 					out, isDeferred, message_error = process_message_pkg(out, in, context)

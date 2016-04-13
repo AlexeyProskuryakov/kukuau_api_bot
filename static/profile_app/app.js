@@ -4,7 +4,6 @@ Ext.application({
  
     appFolder: 'profile_app/app',
     controllers: ['Profiles'],
-    
     launch: function() {
         Ext.create('Ext.container.Viewport', {
             layout: 'fit',
@@ -14,8 +13,8 @@ Ext.application({
         });
     }
 });
-//todo click to pickture for loading it
-//todo change html editor and configutre it
-//todo list of categories
-//todo choose adress at map
-//todo change field names
+//not work at new contact
+//test creating new profile
+//add group binding
+//add phone binding
+

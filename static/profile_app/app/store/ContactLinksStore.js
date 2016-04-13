@@ -14,6 +14,10 @@ Ext.define('Console.store.ContactLinksStore', {
             type: 'json',
             root: 'data',
         },
-    }
+    },
+    sorters: [{
+         property: 'order_number',
+         direction: 'ASC'
+     }]
 });
 

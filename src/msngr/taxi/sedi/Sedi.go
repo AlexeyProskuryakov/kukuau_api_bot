@@ -15,7 +15,7 @@ import (
 	"sync"
 
 	t "msngr/taxi"
-	s "msngr/taxi/set"
+	s "msngr/utils/set"
 	cfg "msngr/configuration"
 	g "msngr/taxi/geo"
 

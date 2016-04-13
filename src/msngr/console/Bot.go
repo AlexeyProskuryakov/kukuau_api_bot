@@ -11,6 +11,7 @@ import (
 	"regexp"
 	"msngr/quests"
 	"fmt"
+	"msngr/voting"
 )
 
 const (
@@ -28,8 +29,9 @@ func (crp *ConsoleRequestProcessor)ProcessRequest(in *s.InPkg) *s.RequestResult 
 		s.OutCommand{
 			Title:    "Информация",
 			Action:   "information",
-			Position: 0,
+			Position: 1,
 		},
+
 	},
 	}
 	return &result
@@ -46,7 +48,7 @@ func (cip ConsoleInformationProcessor) ProcessMessage(in *s.InPkg) *s.MessageRes
 
 type ConsoleMessageProcessor struct {
 	d.MainDb
-	quest_storage *quests.QuestStorage
+	QuestStorage *quests.QuestStorage
 }
 
 func (cmp ConsoleMessageProcessor) ProcessMessage(in *s.InPkg) *s.MessageResult {
@@ -64,14 +66,14 @@ func (cmp ConsoleMessageProcessor) ProcessMessage(in *s.InPkg) *s.MessageResult 
 		r_body = strings.ToLower(strings.TrimSpace(r_body))
 		if key_reg.MatchString(r_body) {
 			log.Printf("CC: Here is key: %v", r_body)
-			step, err := cmp.quest_storage.GetStepByStartKey(r_body)
+			step, err := cmp.QuestStorage.GetStepByStartKey(r_body)
 			if step != nil {
 				cmp.Users.SetUserState(in.From, "last_marker", r_body)
 				return &s.MessageResult{Type:"chat", Body:step.Description}
 			}
 			if step == nil && err == nil {
-				keys, err := cmp.quest_storage.GetAllSteps()
-				//log.Printf("CC: keys: %v, err: %v", keys, err)
+
+				keys, err := cmp.QuestStorage.GetAllSteps()
 				key_s := []string{}
 				for _, k := range keys {
 					key_s = append(key_s, k.StartKey)
@@ -89,20 +91,20 @@ func (cmp ConsoleMessageProcessor) ProcessMessage(in *s.InPkg) *s.MessageResult 
 
 func FormConsoleBotContext(conf c.Configuration, db_handler *d.MainDb, cs c.ConfigStorage) *m.BotContext {
 	result := m.BotContext{}
-	result.Request_commands = map[string]s.RequestCommandProcessor{
+	result.RequestProcessors = map[string]s.RequestCommandProcessor{
 		"commands":&ConsoleRequestProcessor{},
 	}
 	qs := quests.NewQuestStorage(conf.Main.Database.ConnString, conf.Main.Database.Name)
 
-	result.Message_commands = map[string]s.MessageCommandProcessor{
+	result.MessageProcessors = map[string]s.MessageCommandProcessor{
 		"information":&ConsoleInformationProcessor{Information:conf.Console.Information},
-		"":ConsoleMessageProcessor{MainDb:*db_handler, quest_storage:qs},
+		"":ConsoleMessageProcessor{MainDb:*db_handler, QuestStorage:qs},
 	}
 
 	notifier := n.NewNotifier(conf.Main.CallbackAddr, conf.Console.Key, db_handler)
 
-	go Run(conf.Console.WebPort, notifier, db_handler, cs, qs, notifier, conf)
-	//go RunProfileServer(conf.Console.WebPort, db_handler)
+	vdh, _ := voting.NewVotingHandler(conf.Main.Database.ConnString, conf.Main.Database.Name)
+	go Run(conf.Console.WebPort, db_handler, qs, vdh, notifier, conf)
 
 	return &result
 }

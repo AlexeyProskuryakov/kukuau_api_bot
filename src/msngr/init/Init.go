@@ -19,6 +19,13 @@ import (
 	i "msngr/taxi/infinity"
 	"msngr/taxi/sedi"
 	"msngr/taxi/geo"
+
+	v "msngr/voting"
+	"msngr/chat"
+	"msngr/coffee"
+
+	"msngr/utils"
+	"msngr/users"
 )
 
 func GetTaxiAPI(params c.TaxiApiParams, for_name string) (t.TaxiInterface, error) {
@@ -141,12 +148,6 @@ func StartBot(db *d.MainDb, result chan string) c.Configuration {
 		result <- fmt.Sprintf("quest_%v", q_name)
 	}
 
-	server_address := fmt.Sprintf(":%v", conf.Main.Port)
-	log.Printf("\nStart listen and serving at: %v\n", server_address)
-	server := &http.Server{
-		Addr: server_address,
-	}
-
 	if conf.Console.WebPort != "" && conf.Console.Key != "" {
 		log.Printf("Will handling requests from /console")
 		bc := cnsl.FormConsoleBotContext(conf, db, cs)
@@ -155,6 +156,129 @@ func StartBot(db *d.MainDb, result chan string) c.Configuration {
 		result <- "console"
 	}
 
+	if conf.Vote.DictUrl != "" {
+		vdh, _ := v.NewVotingHandler(conf.Main.Database.ConnString, conf.Main.Database.Name)
+		http.HandleFunc("/autocomplete/vote/name", func(w http.ResponseWriter, r *http.Request) {
+			v.AutocompleteController(w, r, vdh, "name", []string{})
+		})
+		http.HandleFunc("/autocomplete/vote/city", func(w http.ResponseWriter, r *http.Request) {
+			v.AutocompleteController(w, r, vdh, "city", conf.Vote.Cities)
+		})
+		http.HandleFunc("/autocomplete/vote/service", func(w http.ResponseWriter, r *http.Request) {
+			v.AutocompleteController(w, r, vdh, "service", conf.Vote.Services)
+		})
+		http.HandleFunc("/autocomplete/vote/role", func(w http.ResponseWriter, r *http.Request) {
+			v.AutocompleteController(w, r, vdh, "vote.voters.role", conf.Vote.Roles)
+		})
+
+		voteBot := v.FormVoteBotContext(conf, db)
+		voteBotController := m.FormBotController(voteBot, db)
+		log.Printf("Will handling requests for /vote")
+		http.HandleFunc("/vote", voteBotController)
+		result <- "vote"
+	}
+	if len(conf.Coffee) > 0 {
+		for _, c_conf := range conf.Coffee {
+			cbc := coffee.FormBotCoffeeContext(c_conf, db)
+			cntrl := m.FormBotController(cbc, db)
+			route := fmt.Sprintf("/bot/coffee/%v", c_conf.Name)
+			http.HandleFunc(route, cntrl)
+			log.Printf("will handling bot messages for coffee %v at %v", c_conf.Name, route)
+			c_store := coffee.NewCoffeeConfigHandler(db)
+			c_store.LoadFromConfig(c_conf)
+
+			http.HandleFunc(fmt.Sprintf("/autocomplete/coffee/%v/drink", c_conf.Name), func(w http.ResponseWriter, r *http.Request) {
+				coffee.AutocompleteController(w, r, c_store, "drinks", c_conf.Name)
+			})
+
+			http.HandleFunc(fmt.Sprintf("/autocomplete/coffee/%v/volume", c_conf.Name), func(w http.ResponseWriter, r *http.Request) {
+				coffee.AutocompleteController(w, r, c_store, "volumes", c_conf.Name)
+			})
+
+			http.HandleFunc(fmt.Sprintf("/autocomplete/coffee/%v/bake", c_conf.Name), func(w http.ResponseWriter, r *http.Request) {
+				coffee.AutocompleteController(w, r, c_store, "bakes", c_conf.Name)
+			})
+
+			http.HandleFunc(fmt.Sprintf("/autocomplete/coffee/%v/additive", c_conf.Name), func(w http.ResponseWriter, r *http.Request) {
+				coffee.AutocompleteController(w, r, c_store, "addititves", c_conf.Name)
+			})
+			var salt string
+			if c_conf.Chat.UrlSalt != "" {
+				salt = fmt.Sprintf("%v-%v", c_conf.Name, c_conf.Chat.UrlSalt)
+			} else {
+				salt = c_conf.Name
+			}
+
+			notifier := n.NewNotifier(conf.Main.CallbackAddr, c_conf.Key, db)
+			notifier.SetFrom(c_conf.Name)
+
+			webRoute := fmt.Sprintf("/web/coffee/%v", salt)
+			http.Handle(webRoute, chat.GetChatMainHandler(webRoute, notifier, db, c_conf.Chat))
+
+			sr := func(s string) string {
+				return fmt.Sprintf("%v%v", webRoute, s)
+			}
+			http.Handle(sr("/send"), chat.GetChatSendHandler(sr("/send"), notifier, db, c_conf.Chat, chat.NewChatStorage(db)))
+			http.Handle(sr("/messages"), chat.GetChatMessagesHandler(sr("/messages"), notifier, db, c_conf.Chat))
+			http.Handle(sr("/messages_read"), chat.GetChatMessageReadHandler(sr("/messages_read"), notifier, db, c_conf.Chat))
+			http.Handle(sr("/contacts"), chat.GetChatContactsHandler(sr("/contacts"), notifier, db, c_conf.Chat))
+			http.Handle(sr("/contacts_change"), chat.GetChatContactsChangeHandler(sr("/contacts_change"), notifier, db, c_conf.Chat))
+			http.Handle(sr("/config"), chat.GetChatConfigHandler(sr("/config"), webRoute, db, c_conf.Chat))
+			http.Handle(sr("/delete_messages"), chat.GetChatDeleteMessagesHandler(sr("/delete_messages"), db, c_conf.Chat))
+
+			log.Printf("I will handling web requests for coffee %v at : [%v]", c_conf.Name, webRoute)
+			db.Users.AddOrUpdateUserObject(d.UserWrapper{UserId:c_conf.Chat.User, Password:utils.PHash(c_conf.Chat.Password), Role:users.MANAGER})
+		}
+		result <- "coffee"
+	}
+	if len(conf.Chats) > 0 {
+		fs := http.FileServer(http.Dir("static"))
+		http.Handle("/static/", http.StripPrefix("/static/", fs))
+
+		for _, chat_conf := range conf.Chats {
+			chatBotContext := chat.FormChatBotContext(chat_conf, db)
+			chatBotController := m.FormBotController(chatBotContext, db)
+			route := fmt.Sprintf("/bot/chat/%v", chat_conf.CompanyId)
+			http.HandleFunc(route, chatBotController)
+			log.Printf("I will serving message for chat bot at : [%v]", route)
+
+			notifier := n.NewNotifier(conf.Main.CallbackAddr, chat_conf.Key, db)
+			notifier.SetFrom(chat_conf.CompanyId)
+
+			if chat_conf.AutoAnswer.Enable {
+				go chat.Watch(db.Messages, notifier, chat_conf)
+			}
+			var salt string
+			if chat_conf.UrlSalt != "" {
+				salt = fmt.Sprintf("%v-%v", chat_conf.CompanyId, chat_conf.UrlSalt)
+			} else {
+				salt = chat_conf.CompanyId
+			}
+			webRoute := fmt.Sprintf("/web/chat/%v", salt)
+			http.Handle(webRoute, chat.GetChatMainHandler(webRoute, notifier, db, chat_conf))
+
+			sr := func(s string) string {
+				return fmt.Sprintf("%v%v", webRoute, s)
+			}
+			http.Handle(sr("/send"), chat.GetChatSendHandler(sr("/send"), notifier, db, chat_conf, chat.NewChatStorage(db)))
+			http.Handle(sr("/messages"), chat.GetChatMessagesHandler(sr("/messages"), notifier, db, chat_conf))
+			http.Handle(sr("/messages_read"), chat.GetChatMessageReadHandler(sr("/messages_read"), notifier, db, chat_conf))
+			http.Handle(sr("/contacts"), chat.GetChatContactsHandler(sr("/contacts"), notifier, db, chat_conf))
+			http.Handle(sr("/contacts_change"), chat.GetChatContactsChangeHandler(sr("/contacts_change"), notifier, db, chat_conf))
+			http.Handle(sr("/config"), chat.GetChatConfigHandler(sr("/config"), webRoute, db, chat_conf))
+			http.Handle(sr("/delete_messages"), chat.GetChatDeleteMessagesHandler(sr("/delete_messages"), db, chat_conf))
+
+			log.Printf("I will handling web requests for chat at : [%v]", webRoute)
+
+			db.Users.AddOrUpdateUserObject(d.UserWrapper{UserName:chat_conf.User, Password:utils.PHash(chat_conf.Password), Role:users.MANAGER, UserId:chat_conf.User})
+		}
+	}
+
+	server_address := fmt.Sprintf(":%v", conf.Main.Port)
+	log.Printf("\nStart listen and serving at: %v\n", server_address)
+	server := &http.Server{
+		Addr: server_address,
+	}
 	result <- "listen"
 	log.Fatal(server.ListenAndServe())
 	return conf

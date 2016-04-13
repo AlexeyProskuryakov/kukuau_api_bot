@@ -24,6 +24,8 @@ SOFTWARE.
 */
 package set
 
+import "msngr/utils"
+
 type Set interface {
 	// Adds an element to the set. Returns whether
 	// the item was added.
@@ -137,9 +139,10 @@ func NewSet() Set {
 }
 
 // Creates and returns a reference to a set from an existing slice
-func NewSetFromSlice(s []interface{}) Set {
+func NewSetFromSlice(s interface{}) Set {
 	a := NewSet()
-	for _, item := range s {
+	slice := utils.InterfaceSlice(s)
+	for _, item := range slice {
 		a.Add(item)
 	}
 	return a

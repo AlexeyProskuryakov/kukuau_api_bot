@@ -12,7 +12,7 @@ import (
 	"gopkg.in/olivere/elastic.v2"
 
 	t "msngr/taxi"
-	s "msngr/taxi/set"
+	s "msngr/utils/set"
 	c "msngr/configuration"
 )
 

@@ -107,9 +107,39 @@ type QuestConfig struct {
 }
 
 type ConsoleConfig struct {
-	WebPort     string `json:"web_port"`
-	Key         string `json:"key"`
+	WebPort          string `json:"web_port"`
+	Key              string `json:"key"`
+	Information      string `json:"information"`
+	ProfileImgPath   string `json:"profile_img_path"`
+	ProfileImgServer string `json:"profile_img_server"`
+}
+
+type ChatConfig struct {
+	Name        string `json:"name"`
+	CompanyId   string `json:"id"`
+	UrlSalt     string `json:"url_salt"`
 	Information string `json:"information"`
+	AutoAnswer  struct {
+			    Enable bool `json:"enable"`
+			    After  int `json:"after_min"`
+			    Text   string `json:"text"`
+		    } `json:"auto_answer"`
+	BotAnswer   string `json:"bot_answer"`
+	Key         string `json:"key"`
+	User        string `json:"user"`
+	Password    string `json:"password"`
+}
+
+type CoffeeConfig struct {
+	Name    string `json:"name"`
+	Key	string `json:"key"`
+	DictUrl string `json:"dict_url"`
+	Information string `json:"information"`
+	Bakes []string `json:"bakes"`
+	Drinks []string `json:"drinks"`
+	Volumes []string `json:"volumes"`
+	Additives []string `json:"additives"`
+	Chat ChatConfig `json:"chat"`
 }
 
 type Configuration struct {
@@ -135,6 +165,16 @@ type Configuration struct {
 			ExternalUrl string `json:"external_url"`
 			WorkUrl     string `json:"work_url"`
 		} `json:"ru_post"`
+
+	Vote    struct {
+			DictUrl  string `json:"dict_url"`
+			Cities   []string `json:"cities"`
+			Services []string `json:"services"`
+			Roles    []string `json:"roles"`
+			Answers  []string `json:"answers"`
+		} `json:"vote"`
+	Chats   map[string]ChatConfig `json:"chats"`
+	Coffee  map[string]CoffeeConfig `json:"coffee"`
 }
 
 func (conf *Configuration) SetLogFile(fn string) {
@@ -181,7 +221,6 @@ func ReadConfigInRecursive() Configuration {
 	return UnmarshallConfig(cdata)
 }
 
-
 func ReadTestConfigInRecursive() Configuration {
 	log.Printf("Path sep: %+v", os.PathSeparator)
 	fn := u.FoundFile("config.test.json")
@@ -196,7 +235,6 @@ func ReadTestConfigInRecursive() Configuration {
 	}
 	return UnmarshallConfig(cdata)
 }
-
 
 func ReadConfig() Configuration {
 	dir, err := os.Getwd()
