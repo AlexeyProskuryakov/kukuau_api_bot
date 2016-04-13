@@ -456,9 +456,13 @@ func (ph *ProfileDbHandler) UpsertContact(userName string, newContact *ProfileCo
 	return nil
 }
 
-func (ph *ProfileDbHandler)DeleteContact(contactId int64) {
-	ph.DeleteContactLinks(contactId)
-	ph.deleteFromTable("profile_contacts", "id", contactId)
+func (ph *ProfileDbHandler)DeleteContact(contactId int64) error {
+	err := ph.DeleteContactLinks(contactId)
+	if err != nil {
+		log.Printf("ph error delete contact when delete contact link %v", err)
+	}
+	err = ph.deleteFromTable("profile_contacts", "id", contactId)
+	return err
 }
 
 func (ph *ProfileDbHandler)InsertContactLink(link *ProfileContactLink, contactId int64) (*ProfileContactLink, error) {
@@ -558,19 +562,38 @@ func (ph *ProfileDbHandler)deleteFromTable(tableName, nameId string, deleteId in
 
 func (ph *ProfileDbHandler)DeleteProfile(userName string) error {
 	//name
-	ph.deleteFromTable("vcard", "username", userName)
-	ph.deleteFromTable("vcard_search", "username", userName)
+	err := ph.deleteFromTable("vcard", "username", userName)
+	if err != nil {
+		log.Printf("ph del at vcard %v", err)
+	}
+	err = ph.deleteFromTable("vcard_search", "username", userName)
+	if err != nil {
+		log.Printf("ph del at vcard_search %v", err)
+	}
 	//contacts
 	contacts, _ := ph.GetProfileContacts(userName)
 	for _, contact := range contacts {
-		ph.DeleteContact(contact.ContactId)
+		err = ph.DeleteContact(contact.ContactId)
+		if err != nil {
+			log.Printf("ph del at delete contact %v", err)
+		}
 	}
-	ph.deleteFromTable("profile_contacts", "username", userName)
+
+	err = ph.deleteFromTable("profile_contacts", "username", userName)
+	if err != nil {
+		log.Printf("ph del at profile_contacts %v", err)
+	}
 	//groups
-	ph.UnbindGroupsFromProfile(userName)
+	err = ph.UnbindGroupsFromProfile(userName)
+	if err != nil {
+		log.Printf("ph del at unbind group %v", err)
+	}
 	//data
-	ph.deleteFromTable("profile", "username", userName)
-	return nil
+	err = ph.deleteFromTable("profile", "username", userName)
+	if err != nil {
+		log.Printf("ph del at profile %v", err)
+	}
+	return err
 }
 
 func (ph *ProfileDbHandler)UpdateProfile(newProfile *Profile) error {
