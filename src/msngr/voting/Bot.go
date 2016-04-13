@@ -63,7 +63,7 @@ func getCommands(dictUrlPrefix string, withResults bool) []s.OutCommand {
 						Name: "name",
 						Type: "dict",
 						Attributes: s.FieldAttribute{
-							Label:    "",
+							Label:    "компания",
 							Required: false,
 							URL:      &nameSearchUrl,
 						},
@@ -72,6 +72,7 @@ func getCommands(dictUrlPrefix string, withResults bool) []s.OutCommand {
 						Name: "service",
 						Type: "dict",
 						Attributes: s.FieldAttribute{
+							Label:    "услуга",
 							Required: false,
 							URL:      &serviceSearchUrl,
 						},
@@ -80,6 +81,7 @@ func getCommands(dictUrlPrefix string, withResults bool) []s.OutCommand {
 						Name: "city",
 						Type: "dict",
 						Attributes: s.FieldAttribute{
+							Label:    "город",
 							Required: false,
 							URL:      &citySearchUrl,
 						},
@@ -88,6 +90,7 @@ func getCommands(dictUrlPrefix string, withResults bool) []s.OutCommand {
 						Name: "description",
 						Type: "text",
 						Attributes: s.FieldAttribute{
+							Label:    "описание",
 							Required: false,
 						},
 					},
@@ -95,6 +98,7 @@ func getCommands(dictUrlPrefix string, withResults bool) []s.OutCommand {
 						Name: "role",
 						Type: "dict",
 						Attributes: s.FieldAttribute{
+							Label:    "роль",
 							Required: false,
 							URL:      &roleSearchUrl,
 						},

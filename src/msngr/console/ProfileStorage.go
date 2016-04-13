@@ -703,3 +703,14 @@ func (ph *ProfileDbHandler)UpdateProfile(newProfile *Profile) error {
 	}
 	return nil
 }
+
+type ProfileFeature struct {
+	Id int64
+	Name string
+	Description string
+
+}
+
+func (ph *ProfileDbHandler) GetAllFeatures() ([]ProfileFeature, error){
+	ph.db.Query("SELECT f.id, f.ctype, l.cvalue, l.descr, l.ord FROM features f")
+}
