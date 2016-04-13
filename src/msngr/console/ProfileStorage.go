@@ -713,4 +713,5 @@ type ProfileFeature struct {
 
 func (ph *ProfileDbHandler) GetAllFeatures() ([]ProfileFeature, error){
 	ph.db.Query("SELECT f.id, f.ctype, l.cvalue, l.descr, l.ord FROM features f")
+	return []ProfileFeature{}, nil
 }
