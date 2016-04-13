@@ -167,7 +167,7 @@ func Run(addr string, db *d.MainDb, qs *quests.QuestStorage, vdh *voting.VotingD
 				"has_additional_data":func(msg d.MessageWrapper) bool {
 					return len(msg.AdditionalData) > 0
 				},
-				"is_additional_data_valid":func(ad d.AdditionalDataElement) bool{
+				"is_additional_data_valid":func(ad d.AdditionalDataElement) bool {
 					return ad.Value != ""
 				},
 			},
@@ -312,7 +312,12 @@ func Run(addr string, db *d.MainDb, qs *quests.QuestStorage, vdh *voting.VotingD
 				render.JSON(500, map[string]interface{}{"error":err, "success":false})
 				return
 			}
-			ph.DeleteProfile(info.Id)
+			err = ph.DeleteProfile(info.Id)
+			if err != nil {
+				log.Printf("CS DELETE error at which return storage %v", err)
+				render.JSON(500, map[string]interface{}{"error":err, "success":false})
+				return
+			}
 			render.JSON(200, map[string]interface{}{"success":true})
 		})
 		r.Post("/upload_img/:profile_id", func(render render.Render, params martini.Params, req *http.Request) {
@@ -642,7 +647,7 @@ func Run(addr string, db *d.MainDb, qs *quests.QuestStorage, vdh *voting.VotingD
 
 	r.Get("/vote_result", func(ren render.Render) {
 		votes, err := vdh.GetTopVotes(-1)
-		if err != nil{
+		if err != nil {
 			log.Printf("CS ERROR at retrieving votes %v", err)
 		}
 		ren.HTML(200, "vote_result", map[string]interface{}{"votes":votes}, render.HTMLOptions{Layout:"base"})
