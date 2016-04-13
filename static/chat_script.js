@@ -27,18 +27,19 @@ function paste_message(message){
                         "</div>"+
                         "<hr>";
 
-    if (message.Attributes != null && message.Attributes.indexOf('vote') > 0) {
-        text_message =  "<div class='msg-vote' id={{SID}}>"+
+    if (message.Attributes.length > 0 && message.AdditionalData.length > 0) {
+        text_message =  "<div class='msg' id={{SID}}>"+
                             "<h4 class='media-heading'>{{From}}"+
                                 "<small class='time'>{{stamp_date $message.Time}}</small>"+
                         "</h4>"+
-                            "<div class='col-lg-11 msg-vote'>{{Body}}"+
+                            "<div class='msg-with-data'>{{Body}}"+
                                 "<table class='table table-condensed table-bordered table-hover table-little-text'>"+
-                                    "<tr><td>Имя</td><td>{{AdditionalData.name}}</td></tr>"+
-                                    "<tr><td>Услуга</td><td>{{AdditionalData.service}}</td></tr>"+
-                                    "<tr><td>Город</td><td>{{AdditionalData.city}}</td></tr>"+
-                                    "<tr><td>Описание</td><td>{{AdditionalData.description}}</td></tr>"+
-                                "</table>"+
+                                "{{#AdditionalData}}"+
+                                "{{#Value}}"+
+                                    "<tr><td>{{Name}}</td><td>{{Value}}</td></tr>"+
+                                   "{{/Value}}"+
+                                "{{/AdditionalData}}"+
+                                 "</table>"+
                             "</div>"+
                         "</div>";
 

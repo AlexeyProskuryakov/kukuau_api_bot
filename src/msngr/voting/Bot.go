@@ -31,10 +31,10 @@ func FormVoteBotContext(conf c.Configuration, db_handler *d.MainDb) *m.BotContex
 		}
 		return "", false
 	}
-	context.Request_commands = map[string]s.RequestCommandProcessor{
+	context.RequestProcessors = map[string]s.RequestCommandProcessor{
 		"commands": &VoteCommandProcessor{DictUrl: conf.Vote.DictUrl, Storage:vh},
 	}
-	context.Message_commands = map[string]s.MessageCommandProcessor{
+	context.MessageProcessors = map[string]s.MessageCommandProcessor{
 		"add_company": &VoteConsiderCompanyProcessor{Storage:vh, DictUrl:conf.Vote.DictUrl, Answers:conf.Vote.Answers, MainStorage:db_handler},
 		"show_results": &VoteResultsProcessor{Storage:vh, DictUrl:conf.Vote.DictUrl},
 		"information": &VoteInformationProcessor{Storage:vh, DictUrl:conf.Vote.DictUrl},
@@ -225,7 +225,7 @@ func (vmp *VoteConsiderCompanyProcessor) ProcessMessage(in *s.InPkg) *s.MessageR
 					TimeStamp:time.Now().Unix(),
 					TimeFormatted: time.Now().Format(time.Stamp),
 					Attributes:[]string{"vote"},
-					AdditionalData:cmp.ToMap(),
+					AdditionalData:cmp.ToAdditionalData(),
 				})
 				if err != nil {
 					log.Printf("VB ERROR when storing message")

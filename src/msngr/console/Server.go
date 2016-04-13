@@ -38,7 +38,7 @@ func GetKeysInfo(err_text string, qs *quests.QuestStorage) map[string]interface{
 	var e error
 	result := map[string]interface{}{}
 
-	keys, e = qs.GetAllStep()
+	keys, e = qs.GetAllSteps()
 
 	if e != nil || err_text != "" {
 		result["is_error"] = true
@@ -164,8 +164,11 @@ func Run(addr string, db *d.MainDb, qs *quests.QuestStorage, vdh *voting.VotingD
 				"is_message_":func(msg d.MessageWrapper, attrName string) bool {
 					return msg.IsAttrPresent(attrName)
 				},
-				"noescape": func(s string) template.HTML {
-					return template.HTML(s)
+				"has_additional_data":func(msg d.MessageWrapper) bool {
+					return len(msg.AdditionalData) > 0
+				},
+				"is_additional_data_valid":func(ad d.AdditionalDataElement) bool{
+					return ad.Value != ""
 				},
 			},
 		},

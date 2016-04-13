@@ -9,6 +9,7 @@
             {{$all := "all"}}
             {{$companyId := .companyId}}
             {{$all_tm := "all_hash_writers"}}
+
             <div id="contacts-wrapper" closed="true">
                 <p id="write-all">
                     <a class="bg-danger a-contact {{if eq_s $with $all}} c-active {{end}}"
@@ -16,6 +17,7 @@
                         Написать всем
                     </a>
                 </p>
+                <br>
                 {{range $contact := .contacts}}
                 <div class="contact" id="{{$contact.ID}}">
                     <a id="a-{{$contact.ID}}" class="a-contact {{if eq_s $with $contact.ID}} c-active {{end}}"
@@ -68,7 +70,9 @@
                             </h3>
                         </div>
                         <div class="modal-body col-md-6 col-md-offset-4">
-                            <button id="delete-yes" class="btn btn-danger" onclick="delete_messages('{{$with}}', '{{ me }}')">Да</button>
+                            <button id="delete-yes" class="btn btn-danger"
+                                    onclick="delete_messages('{{$with}}', '{{ me }}')">Да
+                            </button>
                             <button id="delete-no" class="btn btn-info" data-dismiss="modal">Нет</button>
                             <br>
                             <div id="delete-result">
@@ -92,13 +96,34 @@
                 <div class="message-wrap col-lg-8">
                     <div class="msg-wrap" id="chat-wrapper">
                         {{range $message := .messages}}
+                        {{if has_additional_data $message }}
+                        <div class="msg-vote" id="{{$message.SID}}">
+                            <h4 class="media-heading">{{$message.From}}
+                                <small class="time">{{stamp_date $message.Time}}</small>
+                            </h4>
+                            <div class="msg-with-data">{{$message.Body}}
+                                <table class="table table-condensed table-bordered table-hover table-little-text">
+                                    {{range $addDataEl := $message.AdditionalData}}
+                                    {{if is_additional_data_valid $addDataEl }}
+                                    <tr>
+                                        <td>{{$addDataEl.Name}}</td>
+                                        <td>{{$addDataEl.Value}}</td>
+                                    </tr>
+                                    {{end}}
+                                    {{end}}
+                                </table>
+                            </div>
+                        </div>
+                        {{else}}
                         <div class="msg" id="{{$message.SID}}">
                             <h4 class="media-heading">{{$message.From}}
                                 <small class="time">{{stamp_date $message.Time}}</small>
                             </h4>
                             <div class="col-lg-11">{{$message.Body}}</div>
                         </div>
+                        {{end}}
                         <hr>
+
                         {{end}}
                         <div id="chat-end"></div>
                     </div>

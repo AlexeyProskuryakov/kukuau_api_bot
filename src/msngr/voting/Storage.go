@@ -77,13 +77,14 @@ type UserCompaniesMapping struct {
 	LastCompanyAdded bson.ObjectId `bson:"last_company_added"`
 }
 
-func (cm CompanyModel) ToMap() map[string]string {
-	result := map[string]string{}
-	result["name"] = cm.Name
-	result["city"] = cm.City
-	result["service"] = cm.Service
-	result["description"] = cm.Description
-	result["vote_count"] = fmt.Sprintf("%v человек", cm.VoteInfo.VoteCount)
+func (cm CompanyModel) ToAdditionalData() []d.AdditionalDataElement {
+	result := []d.AdditionalDataElement{
+		d.AdditionalDataElement{Key:"name", Value: cm.Name, Name:"Имя"},
+		d.AdditionalDataElement{Key:"city", Value: cm.City, Name:"Город"},
+		d.AdditionalDataElement{Key:"service", Value: cm.Service, Name:"Услуга"},
+		d.AdditionalDataElement{Key:"description", Value: cm.Description, Name:"Описание"},
+		d.AdditionalDataElement{Key:"vote_count", Value: fmt.Sprintf("%v человек", cm.VoteInfo.VoteCount), Name:"Количество голосов"},
+	}
 	return result
 }
 func (cm CompanyModel) String() string {

@@ -81,6 +81,12 @@ func getRenderer(cName, cId, start_addr string) martini.Handler {
 				"chat_with":func(with string) string {
 					return fmt.Sprintf("%v?with=%v", start_addr, with)
 				},
+				"has_additional_data":func(msg d.MessageWrapper) bool {
+					return len(msg.AdditionalData) > 0
+				},
+				"is_additional_data_valid":func(ad d.AdditionalDataElement) bool {
+					return ad.Value != ""
+				},
 			},
 		},
 	})

@@ -114,10 +114,10 @@ func (rptp RuPostTrackingProcessor) ProcessMessage(in *s.InPkg) *s.MessageResult
 
 func FormRPBotContext(conf c.Configuration) *m.BotContext {
 	result := m.BotContext{}
-	result.Request_commands = map[string]s.RequestCommandProcessor{
+	result.RequestProcessors = map[string]s.RequestCommandProcessor{
 		"commands":RuPostCommandsProcessor{},
 	}
-	result.Message_commands = map[string]s.MessageCommandProcessor{
+	result.MessageProcessors = map[string]s.MessageCommandProcessor{
 		"tracking":RuPostTrackingProcessor{Url:conf.RuPost.ExternalUrl},
 	}
 	return &result

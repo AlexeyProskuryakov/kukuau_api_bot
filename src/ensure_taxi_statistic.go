@@ -56,7 +56,7 @@ func EnsureStatistic() {
 			cell.Value = h_cell
 		}
 
-		orders, err := db.Orders.GetBy(bson.M{"active":false, "source":source.Name})
+		orders, err := db.Orders.GetBy(bson.M{"is_active":false, "source":source.Name})
 		if err != nil {
 			log.Printf("Error at getting orders from %+v is: %v", config.Main.Database, err)
 			return
