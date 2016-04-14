@@ -100,12 +100,24 @@ type InPkg struct {
 	Request  *InRequest  `json:"request"`
 }
 
+type FieldItemContent struct {
+	Title    string `json:"title"`
+	Subtitle string `json:"subtitle"`
+	Icon     string `json:"icon"`
+}
+
+type FieldItem struct {
+	Value   string `json:"value"`
+	Content FieldItemContent `json:"content"`
+}
+
 type OutField struct {
 	Name       string `json:"name",bson:"name"`
 	Type       string `json:"type,omitempty",bson:"type,omitempty"`
 	Data       *struct {
 	} `json:"data,omitempty",bson:"data,omitempty"`
 	Attributes FieldAttribute `json:"attrs",bson:"attrs"`
+	Items      []FieldItem `json:"items"`
 }
 
 type OutForm struct {
@@ -189,7 +201,7 @@ type MessageCommandProcessor interface {
 func ExceptionMessageResult(err error) *MessageResult {
 	return &MessageResult{Body:fmt.Sprintf("Ошибка! %v \n Попробуйте еще раз позже.", err), Type:"error"}
 }
-//todo
+
 func ErrorMessageResult(err error, commands *[]OutCommand) *MessageResult {
 	result := MessageResult{Body:fmt.Sprintf("Ошибка! %v", err), Type:"chat"}
 	if commands != nil {

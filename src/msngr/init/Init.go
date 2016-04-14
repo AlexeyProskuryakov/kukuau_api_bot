@@ -182,13 +182,16 @@ func StartBot(db *d.MainDb, result chan string) c.Configuration {
 		http.Handle("/static/", http.StripPrefix("/static/", fs))
 
 		for _, c_conf := range conf.Coffee {
-			cbc := coffee.FormBotCoffeeContext(c_conf, db)
+			c_store := coffee.NewCoffeeConfigHandler(db)
+			coffeeHouseConfiguration, err := c_store.LoadFromConfig(c_conf)
+			if err != nil {
+				log.Printf("INIT ERROR at init coffee %v is %v", c_conf.Name, err)
+			}
+			cbc := coffee.FormBotCoffeeContext(c_conf, db, coffeeHouseConfiguration)
 			cntrl := m.FormBotController(cbc, db)
 			route := fmt.Sprintf("/bot/coffee/%v", c_conf.Name)
 			http.HandleFunc(route, cntrl)
 			log.Printf("will handling bot messages for coffee %v at %v", c_conf.Name, route)
-			c_store := coffee.NewCoffeeConfigHandler(db)
-			c_store.LoadFromConfig(c_conf)
 
 			http.HandleFunc(fmt.Sprintf("/autocomplete/coffee/%v/drink", c_conf.Name), func(w http.ResponseWriter, r *http.Request) {
 				coffee.AutocompleteController(w, r, c_store, "drinks", c_conf.Name)
@@ -203,7 +206,7 @@ func StartBot(db *d.MainDb, result chan string) c.Configuration {
 			})
 
 			http.HandleFunc(fmt.Sprintf("/autocomplete/coffee/%v/additive", c_conf.Name), func(w http.ResponseWriter, r *http.Request) {
-				coffee.AutocompleteController(w, r, c_store, "addititves", c_conf.Name)
+				coffee.AutocompleteController(w, r, c_store, "additives", c_conf.Name)
 			})
 			var salt string
 			if c_conf.Chat.UrlSalt != "" {

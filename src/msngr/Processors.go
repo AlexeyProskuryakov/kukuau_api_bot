@@ -17,13 +17,13 @@ var (
 	GLOBAL_ERROR_RESULT = &s.MessageResult{Type:"chat", Body:GLOBAL_ERROR.Error()}
 )
 
-type Func func(in *s.InPkg) (*[]s.OutCommand, error)
+type CommandsGenerator func(in *s.InPkg) (*[]s.OutCommand, error)
 
 type FuncTextBodyProcessor struct {
-	Storage *db.MainDb
-	F Func
+	Storage                  *db.MainDb
+	F                        CommandsGenerator
 	MessageRecipientIdentity string
-	AnswerText *string
+	AnswerText               *string
 }
 
 
@@ -63,6 +63,10 @@ func NewSimpleTextBodyProcessor(storage *db.MainDb, commands *[]s.OutCommand, re
 	return result
 }
 
+func NewFuncTextBodyProcessor(storage *db.MainDb, function CommandsGenerator, recipientId string, answerText *string) *FuncTextBodyProcessor{
+	result := &FuncTextBodyProcessor{Storage:storage, F:function, MessageRecipientIdentity:recipientId, AnswerText:answerText}
+	return result
+}
 
 type InformationProcessor struct {
 	Information string
