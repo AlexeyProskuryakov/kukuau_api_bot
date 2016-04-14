@@ -185,11 +185,12 @@ body::-webkit-scrollbar {
 }
 
 .key-found{
-    background-color: green;
+    background-color: rgb(0, 183, 0);
+    color:white;
 }
 
 .key-not-found{
-    background-color: gray;
+    background-color: #eee;
 }
 
 .key-found a, .key-not-found a {

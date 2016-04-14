@@ -69,7 +69,7 @@ func GetKeysErrorInfo(err_text string, qs *QuestStorage) map[string]interface{} 
 	var e error
 	result := map[string]interface{}{}
 
-	keys, e := qs.GetAllStep()
+	keys, e := qs.GetAllSteps()
 
 	if e != nil || err_text != "" {
 		result["is_error"] = true
@@ -97,9 +97,9 @@ func SortSteps(steps []Step) []Step {
 			first_step = step
 		}
 	}
-	log.Printf("QS start key: %+v, \nstep_map_next: %+v\nstep_map_start %+v", first_step, step_map_next, step_map_start)
+	//log.Printf("QS start key: %+v, \nstep_map_next: %+v\nstep_map_start %+v", first_step, step_map_next, step_map_start)
 	sorted = append(sorted, first_step)
-	for {
+	for _, _ = range steps {
 		if next_step, ok := step_map_start[first_step.NextKey]; ok {
 			sorted = append(sorted, next_step)
 			first_step = next_step
@@ -112,7 +112,7 @@ func SortSteps(steps []Step) []Step {
 
 func GetKeysTeamsInfo(teams_info map[string]string, qs *QuestStorage) map[string]interface{} {
 	result := map[string]interface{}{}
-	keys, _ := qs.GetAllStep()
+	keys, _ := qs.GetAllSteps()
 	result["keys"] = keys
 	result["is_team_info"] = true
 	result["team_info"] = teams_info
@@ -133,7 +133,7 @@ func Run(config c.QuestConfig, qs *QuestStorage, ntf *ntf.Notifier, additionalNo
 	m.Use(martini.Recovery())
 	m.Use(render.Renderer(render.Options{
 		Directory:"templates/quests",
-		Layout: "quests/layout",
+		Layout: "layout",
 		Extensions: []string{".tmpl", ".html"},
 		Charset: "UTF-8",
 		IndentJSON: true,
@@ -160,11 +160,11 @@ func Run(config c.QuestConfig, qs *QuestStorage, ntf *ntf.Notifier, additionalNo
 	r := martini.NewRouter()
 
 	r.Get("/", func(user auth.User, render render.Render) {
-		render.HTML(200, "quests/index", map[string]interface{}{})
+		render.HTML(200, "readme", map[string]interface{}{})
 	})
 
 	r.Get("/new_keys", func(render render.Render) {
-		render.HTML(200, "quests/new_keys", GetKeysErrorInfo("", qs))
+		render.HTML(200, "new_keys", GetKeysErrorInfo("", qs))
 	})
 
 	r.Post("/add_key", func(user auth.User, render render.Render, request *http.Request) {
@@ -176,12 +176,12 @@ func Run(config c.QuestConfig, qs *QuestStorage, ntf *ntf.Notifier, additionalNo
 		if start_key != "" && description != "" {
 			key, err := qs.AddStep(start_key, description, next_key)
 			if key != nil &&err != nil {
-				render.HTML(200, "quests/new_keys", GetKeysErrorInfo("Такой ключ уже существует. Используйте изменение ключа если хотите его изменить.", qs))
+				render.HTML(200, "new_keys", GetKeysErrorInfo("Такой ключ уже существует. Используйте изменение ключа если хотите его изменить.", qs))
 				return
 			}
 		} else {
 
-			render.HTML(200, "quests/new_keys", GetKeysErrorInfo("Невалидные значения ключа или ответа", qs))
+			render.HTML(200, "new_keys", GetKeysErrorInfo("Невалидные значения ключа или ответа", qs))
 			return
 		}
 		render.Redirect("/new_keys")
@@ -219,14 +219,14 @@ func Run(config c.QuestConfig, qs *QuestStorage, ntf *ntf.Notifier, additionalNo
 		log.Printf("QS: Form file information: file: %+v \nheader:%v, %v\nerr:%v", file, header.Filename, header.Header, err)
 
 		if err != nil {
-			render.HTML(200, "quests/new_keys", GetKeysErrorInfo(fmt.Sprintf("Ошибка загрузки файлика: %v", err), qs))
+			render.HTML(200, "new_keys", GetKeysErrorInfo(fmt.Sprintf("Ошибка загрузки файлика: %v", err), qs))
 			return
 		}
 		defer file.Close()
 
 		data, err := ioutil.ReadAll(file)
 		if err != nil {
-			render.HTML(200, "quests/new_keys", GetKeysErrorInfo(fmt.Sprintf("Ошибка загрузки файлика: %v", err), qs))
+			render.HTML(200, "new_keys", GetKeysErrorInfo(fmt.Sprintf("Ошибка загрузки файлика: %v", err), qs))
 			return
 		}
 
@@ -234,32 +234,32 @@ func Run(config c.QuestConfig, qs *QuestStorage, ntf *ntf.Notifier, additionalNo
 			xlFile, err := xlsx.OpenBinary(data)
 
 			if err != nil || xlFile == nil {
-				render.HTML(200, "quests/new_keys", GetKeysErrorInfo(fmt.Sprintf("Ошибка обработки файлика: %v", err), qs))
+				render.HTML(200, "new_keys", GetKeysErrorInfo(fmt.Sprintf("Ошибка обработки файлика: %v", err), qs))
 				return
 			}
 			skip_rows, errsr := strconv.Atoi(request.FormValue("skip-rows"))
 			skip_cols, errsc := strconv.Atoi(request.FormValue("skip-cols"))
 			if errsr != nil || errsc != nil {
-				render.HTML(200, "quests/new_keys", GetKeysErrorInfo("Не могу распознать количества столбцов и строк пропускаемых :(", qs))
+				render.HTML(200, "new_keys", GetKeysErrorInfo("Не могу распознать количества столбцов и строк пропускаемых :(", qs))
 				return
 			}
 			log.Printf("QS: Will process file: %+v, err: %v \n with skipped rows: %v, cols: %v", xlFile, err, skip_rows, skip_cols)
 			parse_res, errp := w.ParseExportXlsx(xlFile, skip_rows, skip_cols)
 			if errp != nil {
-				render.HTML(200, "quests/new_keys", GetKeysErrorInfo("Ошибка в парсинге файла:(", qs))
+				render.HTML(200, "new_keys", GetKeysErrorInfo("Ошибка в парсинге файла:(", qs))
 				return
 			}
 			res, val_err := ValidateKeys(parse_res)
 			if val_err != nil {
-				render.HTML(200, "quests/new_keys", GetKeysErrorInfo(val_err.Error(), qs))
+				render.HTML(200, "new_keys", GetKeysErrorInfo(val_err.Error(), qs))
 				return
 			}
 			for _, prel := range parse_res {
 				qs.AddStep(prel[0], prel[1], prel[2])
 			}
-			render.HTML(200, "quests/new_keys", GetKeysTeamsInfo(res, qs))
+			render.HTML(200, "new_keys", GetKeysTeamsInfo(res, qs))
 		} else {
-			render.HTML(200, "quests/new_keys", GetKeysErrorInfo("Файл имеет не то расширение :(", qs))
+			render.HTML(200, "new_keys", GetKeysErrorInfo("Файл имеет не то расширение :(", qs))
 		}
 
 		render.Redirect("/new_keys")
@@ -357,7 +357,7 @@ func Run(config c.QuestConfig, qs *QuestStorage, ntf *ntf.Notifier, additionalNo
 			result_data["contacts"] = contacts
 		}
 
-		render.HTML(200, "quests/chat", result_data)
+		render.HTML(200, "chat", result_data)
 	})
 
 	r.Post("/send_message", func(render render.Render, req *http.Request) {
@@ -505,7 +505,7 @@ func Run(config c.QuestConfig, qs *QuestStorage, ntf *ntf.Notifier, additionalNo
 		if err != nil {
 			log.Printf("QS E: Can not load teams for manage: %v", err)
 		}
-		render.HTML(200, "quests/manage", map[string]interface{}{"teams":teams})
+		render.HTML(200, "manage", map[string]interface{}{"teams":teams})
 	})
 
 	r.Get("/delete_chat/:between", func(params martini.Params, render render.Render, req *http.Request) {
@@ -619,9 +619,67 @@ func Run(config c.QuestConfig, qs *QuestStorage, ntf *ntf.Notifier, additionalNo
 		steps, _ := qs.GetSteps(bson.M{"for_team":t.Name, "is_found":true})
 		ren.JSON(200, map[string]interface{}{"keys":steps})
 	})
-	log.Printf("Will start web server for quest at: %v", config.WebPort)
+
+	type FoundKey struct {
+		Name        string `bson:"name" json:"name"`
+		Found       bool `bson:"found" json:"found"`
+		Id          string `json:"id"`
+		Description string `json:"description"`
+	}
+	type TeamInfo struct {
+		TeamName string `bson:"team_name" json:"team_name"`
+		Keys     []FoundKey `json:"keys"`
+		Steps    []Step `bson:"steps"`
+	}
+
+	r.Get("/info_page", func(ren render.Render, req *http.Request) {
+		result := []TeamInfo{}
+		err := qs.Steps.Pipe([]bson.M{
+			bson.M{"$group":bson.M{
+				"_id":"$for_team",
+				"team_name":bson.M{"$first":"$for_team"},
+				"steps":bson.M{"$push":bson.M{
+					"_id":"$_id",
+					"is_found":"$is_found",
+					"next_key":"$next_key",
+					"start_key":"$start_key",
+					"description":"$description",
+				}}}},
+			bson.M{"$sort":bson.M{
+				"team_name":1}},
+		}).All(&result)
+		if err != nil {
+			log.Printf("QS Error at aggregate info page %v", err)
+		}
+		for ti, teamInfo := range result {
+			steps := SortSteps(teamInfo.Steps)
+			keys := []FoundKey{}
+			for _, step := range steps {
+				keys = append(keys, FoundKey{Name:step.StartKey, Found:step.IsFound, Id:step.ID.Hex(), Description:step.Description})
+			}
+			result[ti].Keys = keys
+			result[ti].Steps = []Step{}
+		}
+		ren.HTML(200, "info_page", map[string]interface{}{"teams":result})
+	})
+	r.Post("/info_page/update", func(ren render.Render, req *http.Request) {
+		found_keys, err := qs.GetSteps(bson.M{"is_found":true})
+		if err != nil {
+			ren.JSON(500, map[string]interface{}{"ok":false, "error":err.Error()})
+		}
+		type UpdateKeyResult struct {
+			Id string `json:"id"`
+		}
+		result := []UpdateKeyResult{}
+		for _, key := range found_keys {
+			result = append(result, UpdateKeyResult{Id:key.ID.Hex()})
+		}
+		ren.JSON(200, map[string]interface{}{"ok":true, "foundKeys":result})
+	})
+
 
 	//m.MapTo(r, (*martini.Routes)(nil))
+	log.Printf("Will start web server for quest at: %v", config.WebPort)
 	m.Action(r.Handle)
 	m.RunOnAddr(config.WebPort)
 }

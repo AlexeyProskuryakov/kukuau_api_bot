@@ -29,8 +29,9 @@ func (crp *ConsoleRequestProcessor)ProcessRequest(in *s.InPkg) *s.RequestResult 
 		s.OutCommand{
 			Title:    "Информация",
 			Action:   "information",
-			Position: 0,
+			Position: 1,
 		},
+
 	},
 	}
 	return &result
@@ -71,7 +72,8 @@ func (cmp ConsoleMessageProcessor) ProcessMessage(in *s.InPkg) *s.MessageResult 
 				return &s.MessageResult{Type:"chat", Body:step.Description}
 			}
 			if step == nil && err == nil {
-				keys, err := cmp.QuestStorage.GetAllStep()
+
+				keys, err := cmp.QuestStorage.GetAllSteps()
 				key_s := []string{}
 				for _, k := range keys {
 					key_s = append(key_s, k.StartKey)

@@ -21,7 +21,7 @@ func AutocompleteController(w http.ResponseWriter, r *http.Request, storage *Vot
 		params := r.URL.Query()
 		query := params.Get("q")
 
-		var results []st.AutocompleteDictItem
+		results := []st.AutocompleteDictItem{}
 		if query != "" {
 			splitted := m.AutocompleteSplitter.Split(query, -1)
 			strResult := []string{}

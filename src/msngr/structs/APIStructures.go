@@ -42,6 +42,23 @@ func (i_f InForm) GetText(fieldName string) (string, bool) {
 	return "", false
 }
 
+func (i_f InForm) GetAny(fieldName string) (string, bool) {
+	for _, f := range i_f.Fields {
+		if f.Name == fieldName {
+			log.Printf("IN FORM Found [%v] %+v", fieldName, f)
+			if f.Data.Text != "" {
+				return f.Data.Text, true
+			} else if f.Data.Value != "" {
+				return f.Data.Value, true
+			} else {
+				return "", false
+			}
+
+		}
+	}
+	return "", false
+}
+
 type InField struct {
 	Name string `json:"name"`
 	Type string `json:"type,omitempty"`

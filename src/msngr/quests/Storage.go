@@ -27,7 +27,7 @@ type Message struct {
 
 type Step struct {
 	ID          bson.ObjectId `bson:"_id,omitempty"`
-	SID         string
+	SID         string `bson:"SID"`
 	IsFound     bool `bson:"is_found"`
 	FoundedBy   string `bson:"found_by"`
 	StartKey    string `bson:"start_key"`
@@ -222,7 +222,7 @@ func (qs *QuestStorage) GetStepByNextKey(next_key string) (*Step, error) {
 	return &result, nil
 }
 
-func (qks *QuestStorage) GetAllStep() ([]Step, error) {
+func (qks *QuestStorage) GetAllSteps() ([]Step, error) {
 	result := []Step{}
 	err := qks.Steps.Find(bson.M{}).All(&result)
 	for i, key := range result {

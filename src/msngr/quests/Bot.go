@@ -36,20 +36,77 @@ func WRONG_TEAM_MEMBER(bad, good string) string {
 	return fmt.Sprintf("Вы не являетесь участником группы %s. Вы учасник группы %s.", bad, good)
 }
 
+func getCommands(qs *QuestStorage, user_id string) *[]s.OutCommand {
+	result := []s.OutCommand{
+		s.OutCommand{
+			Title:    "Информация",
+			Action:   "information",
+			Position: 0,
+		},
+	}
+	teamMember, err := qs.GetTeamMemberByUserId(user_id)
+	if err != nil {
+		log.Printf("QB Error at getting team member at process request")
+	}
+	if teamMember != nil && teamMember.Passersby == false &&teamMember.TeamName != "" {
+		result = append(result, s.OutCommand{
+			Title:"Записаться на квест",
+			Action:"enroll",
+			Position:1,
+			Form: &s.OutForm{
+				Title: "Форма записи на квест",
+				Type:  "form",
+				Name:  "enroll_form",
+				Text:  "Имя: ?(name)\nФамилия: ?(sername)\nДата рождения: ?(birthday)\nНа какую дату: ?(quest_date)",
+				Fields: []s.OutField{
+					s.OutField{
+						Name: "name",
+						Type: "text",
+						Attributes: s.FieldAttribute{
+							Label:    "",
+							Required: true,
+						},
+					},
+					s.OutField{
+						Name: "sername",
+						Type: "text",
+						Attributes: s.FieldAttribute{
+							Label:    "",
+							Required: true,
+						},
+					},
+					s.OutField{
+						Name: "birthday",
+						Type: "text",
+						Attributes: s.FieldAttribute{
+							Label:    "",
+							Required: true,
+						},
+					},
+					s.OutField{
+						Name: "quest_date",
+						Type: "text",
+						Attributes: s.FieldAttribute{
+							Label:    "",
+							Required: true,
+						},
+					},
+				},
+			},
+		})
+	}
+
+	return &result
+}
+
 type QuestCommandRequestProcessor struct {
 	c.ConfigStorage
 	Storage *QuestStorage
 }
 
 func (qcp *QuestCommandRequestProcessor) ProcessRequest(in *s.InPkg) *s.RequestResult {
-	result := s.RequestResult{Commands:&[]s.OutCommand{
-		s.OutCommand{
-			Title:    "Информация",
-			Action:   "information",
-			Position: 0,
-		},
-	},
-	}
+	commands := getCommands(qcp.Storage, in.From)
+	result := s.RequestResult{Commands: commands}
 	return &result
 }
 
@@ -116,6 +173,8 @@ func GetTeamNameFromKey(key string) (string, error) {
 }
 
 func (qmpp QuestMessageProcessor) ProcessMessage(in *s.InPkg) *s.MessageResult {
+	commands := getCommands(qmpp.Storage, in.From)
+
 	if in.Message.Body != nil {
 		pkey := in.Message.Body
 		key := *pkey
@@ -175,9 +234,9 @@ func (qmpp QuestMessageProcessor) ProcessMessage(in *s.InPkg) *s.MessageResult {
 					log.Printf("Q:will change team at member [%v]  %v -> %v", member.Name, member.TeamName, team_name)
 					qmpp.Storage.AddTeamMember(in.From, in.UserData.Name, in.UserData.Phone, team)
 				} else if !member.Passersby && member.TeamName != "" && member.TeamSID != "" && member.TeamName != team_name {
-					return &s.MessageResult{Type:"chat", Body:WRONG_TEAM_MEMBER(team_name, member.TeamName)}
+					return &s.MessageResult{Type:"chat", Body:WRONG_TEAM_MEMBER(team_name, member.TeamName), Commands:commands}
 				} else if member.Passersby && prev_key != nil {
-					return &s.MessageResult{Type:"chat", Body:NOT_TEAM_MEMBER}
+					return &s.MessageResult{Type:"chat", Body:NOT_TEAM_MEMBER, Commands:commands}
 				}
 			}
 			descr, err, ok := ValidateKeyBySequent(team, key_info, qmpp.Storage)
@@ -201,7 +260,7 @@ func (qmpp QuestMessageProcessor) ProcessMessage(in *s.InPkg) *s.MessageResult {
 					log.Printf("Q E : can not store that team %v is winner, because %v", team_name, err)
 				}
 			}
-			return &s.MessageResult{Type:"chat", Body:descr, }
+			return &s.MessageResult{Type:"chat", Body:descr, Commands:commands}
 		} else {
 			var from string
 			log.Printf("Q: From %v is message: [%v]", in.From, key)
@@ -222,9 +281,9 @@ func (qmpp QuestMessageProcessor) ProcessMessage(in *s.InPkg) *s.MessageResult {
 			qmpp.Storage.StoreMessage(from, ME, key, false)
 		}
 	} else {
-		return &s.MessageResult{Type:"chat", Body:"Сообщения нет :( ", }
+		return &s.MessageResult{Type:"chat", Body:"Сообщения нет :( ", Commands:commands}
 	}
-	return &s.MessageResult{Type:"chat", Body:"Ваше сообщение доставлено. Скоро вам ответят.", }
+	return &s.MessageResult{Type:"chat", Body:"Ваше сообщение доставлено. Скоро вам ответят.", Commands:commands}
 }
 
 func FormQuestBotContext(conf c.Configuration, qname string, cs c.ConfigStorage, qs *QuestStorage, db *db.MainDb) *m.BotContext {

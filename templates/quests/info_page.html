@@ -1,0 +1,33 @@
+<div class="container-fluid">
+    <div class="row">
+        <div class="col-md-12">
+            <table class="table table-striped table-hover table-condensed" id="team-info-table">
+                <thead>
+                <tr class="success">
+                    <td>
+                        Комманда
+                    </td>
+                    <td>
+                        Найденные ключи ->
+                    </td>
+                </tr>
+                </thead>
+                <tbody class="table-hover" id="team-info-body">
+                {{range $team := .teams}}
+                <tr class="table-hover" id="{{$team.TeamName}}">
+                    <td>
+                        {{$team.TeamName}}
+                    </td>
+                    {{range $key := $team.Keys}}
+                    <td id="{{$key.Id}}" class="{{if $key.Found}} key-found {{else}} key-not-found {{end}}" data-toggle="tooltip" data-placement="right" data-trigger="click" title="{{$key.Description}}">
+                        {{$key.Name}}
+                    </td>
+                    {{end}}
+                </tr>
+                {{end}}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+<script src="info_page_script.js"></script>
