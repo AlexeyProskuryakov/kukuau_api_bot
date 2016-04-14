@@ -133,7 +133,7 @@ func Run(config c.QuestConfig, qs *QuestStorage, ntf *ntf.Notifier, additionalNo
 	m.Use(martini.Recovery())
 	m.Use(render.Renderer(render.Options{
 		Directory:"templates/quests",
-		Layout: "quests/layout",
+		Layout: "layout",
 		Extensions: []string{".tmpl", ".html"},
 		Charset: "UTF-8",
 		IndentJSON: true,
@@ -160,11 +160,11 @@ func Run(config c.QuestConfig, qs *QuestStorage, ntf *ntf.Notifier, additionalNo
 	r := martini.NewRouter()
 
 	r.Get("/", func(user auth.User, render render.Render) {
-		render.HTML(200, "quests/readme", map[string]interface{}{})
+		render.HTML(200, "readme", map[string]interface{}{})
 	})
 
 	r.Get("/new_keys", func(render render.Render) {
-		render.HTML(200, "quests/new_keys", GetKeysErrorInfo("", qs))
+		render.HTML(200, "new_keys", GetKeysErrorInfo("", qs))
 	})
 
 	r.Post("/add_key", func(user auth.User, render render.Render, request *http.Request) {
@@ -176,12 +176,12 @@ func Run(config c.QuestConfig, qs *QuestStorage, ntf *ntf.Notifier, additionalNo
 		if start_key != "" && description != "" {
 			key, err := qs.AddStep(start_key, description, next_key)
 			if key != nil &&err != nil {
-				render.HTML(200, "quests/new_keys", GetKeysErrorInfo("Такой ключ уже существует. Используйте изменение ключа если хотите его изменить.", qs))
+				render.HTML(200, "new_keys", GetKeysErrorInfo("Такой ключ уже существует. Используйте изменение ключа если хотите его изменить.", qs))
 				return
 			}
 		} else {
 
-			render.HTML(200, "quests/new_keys", GetKeysErrorInfo("Невалидные значения ключа или ответа", qs))
+			render.HTML(200, "new_keys", GetKeysErrorInfo("Невалидные значения ключа или ответа", qs))
 			return
 		}
 		render.Redirect("/new_keys")
@@ -219,14 +219,14 @@ func Run(config c.QuestConfig, qs *QuestStorage, ntf *ntf.Notifier, additionalNo
 		log.Printf("QS: Form file information: file: %+v \nheader:%v, %v\nerr:%v", file, header.Filename, header.Header, err)
 
 		if err != nil {
-			render.HTML(200, "quests/new_keys", GetKeysErrorInfo(fmt.Sprintf("Ошибка загрузки файлика: %v", err), qs))
+			render.HTML(200, "new_keys", GetKeysErrorInfo(fmt.Sprintf("Ошибка загрузки файлика: %v", err), qs))
 			return
 		}
 		defer file.Close()
 
 		data, err := ioutil.ReadAll(file)
 		if err != nil {
-			render.HTML(200, "quests/new_keys", GetKeysErrorInfo(fmt.Sprintf("Ошибка загрузки файлика: %v", err), qs))
+			render.HTML(200, "new_keys", GetKeysErrorInfo(fmt.Sprintf("Ошибка загрузки файлика: %v", err), qs))
 			return
 		}
 
@@ -234,32 +234,32 @@ func Run(config c.QuestConfig, qs *QuestStorage, ntf *ntf.Notifier, additionalNo
 			xlFile, err := xlsx.OpenBinary(data)
 
 			if err != nil || xlFile == nil {
-				render.HTML(200, "quests/new_keys", GetKeysErrorInfo(fmt.Sprintf("Ошибка обработки файлика: %v", err), qs))
+				render.HTML(200, "new_keys", GetKeysErrorInfo(fmt.Sprintf("Ошибка обработки файлика: %v", err), qs))
 				return
 			}
 			skip_rows, errsr := strconv.Atoi(request.FormValue("skip-rows"))
 			skip_cols, errsc := strconv.Atoi(request.FormValue("skip-cols"))
 			if errsr != nil || errsc != nil {
-				render.HTML(200, "quests/new_keys", GetKeysErrorInfo("Не могу распознать количества столбцов и строк пропускаемых :(", qs))
+				render.HTML(200, "new_keys", GetKeysErrorInfo("Не могу распознать количества столбцов и строк пропускаемых :(", qs))
 				return
 			}
 			log.Printf("QS: Will process file: %+v, err: %v \n with skipped rows: %v, cols: %v", xlFile, err, skip_rows, skip_cols)
 			parse_res, errp := w.ParseExportXlsx(xlFile, skip_rows, skip_cols)
 			if errp != nil {
-				render.HTML(200, "quests/new_keys", GetKeysErrorInfo("Ошибка в парсинге файла:(", qs))
+				render.HTML(200, "new_keys", GetKeysErrorInfo("Ошибка в парсинге файла:(", qs))
 				return
 			}
 			res, val_err := ValidateKeys(parse_res)
 			if val_err != nil {
-				render.HTML(200, "quests/new_keys", GetKeysErrorInfo(val_err.Error(), qs))
+				render.HTML(200, "new_keys", GetKeysErrorInfo(val_err.Error(), qs))
 				return
 			}
 			for _, prel := range parse_res {
 				qs.AddStep(prel[0], prel[1], prel[2])
 			}
-			render.HTML(200, "quests/new_keys", GetKeysTeamsInfo(res, qs))
+			render.HTML(200, "new_keys", GetKeysTeamsInfo(res, qs))
 		} else {
-			render.HTML(200, "quests/new_keys", GetKeysErrorInfo("Файл имеет не то расширение :(", qs))
+			render.HTML(200, "new_keys", GetKeysErrorInfo("Файл имеет не то расширение :(", qs))
 		}
 
 		render.Redirect("/new_keys")
@@ -357,7 +357,7 @@ func Run(config c.QuestConfig, qs *QuestStorage, ntf *ntf.Notifier, additionalNo
 			result_data["contacts"] = contacts
 		}
 
-		render.HTML(200, "quests/chat", result_data)
+		render.HTML(200, "chat", result_data)
 	})
 
 	r.Post("/send_message", func(render render.Render, req *http.Request) {
@@ -505,7 +505,7 @@ func Run(config c.QuestConfig, qs *QuestStorage, ntf *ntf.Notifier, additionalNo
 		if err != nil {
 			log.Printf("QS E: Can not load teams for manage: %v", err)
 		}
-		render.HTML(200, "quests/manage", map[string]interface{}{"teams":teams})
+		render.HTML(200, "manage", map[string]interface{}{"teams":teams})
 	})
 
 	r.Get("/delete_chat/:between", func(params martini.Params, render render.Render, req *http.Request) {
@@ -660,7 +660,7 @@ func Run(config c.QuestConfig, qs *QuestStorage, ntf *ntf.Notifier, additionalNo
 			result[ti].Keys = keys
 			result[ti].Steps = []Step{}
 		}
-		ren.HTML(200, "quests/info_page", map[string]interface{}{"teams":result})
+		ren.HTML(200, "info_page", map[string]interface{}{"teams":result})
 	})
 	r.Post("/info_page/update", func(ren render.Render, req *http.Request) {
 		found_keys, err := qs.GetSteps(bson.M{"is_found":true})

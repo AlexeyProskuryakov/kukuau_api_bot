@@ -27,7 +27,7 @@ function paste_message(message){
                         "</div>"+
                         "<hr>";
 
-    if ((message.Attributes != nil && message.AdditionalData != nil) && (message.Attributes.length > 0 && message.AdditionalData.length > 0)) {
+    if ((message.Attributes != null && message.AdditionalData != null) && (message.Attributes.length > 0 && message.AdditionalData.length > 0)) {
         text_message =  "<div class='msg' id={{SID}}>"+
                             "<h4 class='media-heading'>{{From}}"+
                                 "<small class='time'>{{stamp_date $message.Time}}</small>"+

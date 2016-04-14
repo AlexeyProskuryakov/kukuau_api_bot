@@ -96,11 +96,11 @@
                     <div class="msg-wrap" id="chat-wrapper">
                         {{range $message := .messages}}
                         {{if has_additional_data $message }}
-                        <div class="msg-vote" id="{{$message.SID}}">
+                        <div class="msg" id="{{$message.SID}}">
                             <h4 class="media-heading">{{$message.From}}
                                 <small class="time">{{stamp_date $message.Time}}</small>
                             </h4>
-                            <div class="col-lg-11 msg-with-data">{{$message.Body}}
+                            <div class="msg-with-data">{{$message.Body}}
                                 <table class="table table-condensed table-bordered table-hover table-little-text">
                                     {{range $addDataEl := $message.AdditionalData}}
                                     {{if is_additional_data_valid $addDataEl }}
