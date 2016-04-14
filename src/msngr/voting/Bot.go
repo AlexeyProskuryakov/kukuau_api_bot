@@ -57,13 +57,13 @@ func getCommands(dictUrlPrefix string, withResults bool) []s.OutCommand {
 				Title: "Форма добавления компании",
 				Type:  "form",
 				Name:  "add_company_form",
-				Text:  "Название ?(name), название ?(service), в каком ?(city), ваш ?(user_role) в этой компании и ?(description).",
+				Text:  "?(name) ?(service) ?(city) ?(user_role) ?(description).",
 				Fields: []s.OutField{
 					s.OutField{
 						Name: "name",
 						Type: "dict",
 						Attributes: s.FieldAttribute{
-							Label:    "компании",
+							Label:    "Назавние компании",
 							Required: false,
 							URL:      &nameSearchUrl,
 						},
@@ -72,7 +72,7 @@ func getCommands(dictUrlPrefix string, withResults bool) []s.OutCommand {
 						Name: "service",
 						Type: "dict",
 						Attributes: s.FieldAttribute{
-							Label:    "услуги",
+							Label:    "какая услуга",
 							Required: false,
 							URL:      &serviceSearchUrl,
 						},
@@ -81,26 +81,26 @@ func getCommands(dictUrlPrefix string, withResults bool) []s.OutCommand {
 						Name: "city",
 						Type: "dict",
 						Attributes: s.FieldAttribute{
-							Label:    "городе",
+							Label:    "в каком городе",
 							Required: false,
 							URL:      &citySearchUrl,
-						},
-					},
-					s.OutField{
-						Name: "description",
-						Type: "text",
-						Attributes: s.FieldAttribute{
-							Label:    "описание",
-							Required: false,
 						},
 					},
 					s.OutField{
 						Name: "user_role",
 						Type: "dict",
 						Attributes: s.FieldAttribute{
-							Label:    "статус",
+							Label:    "ваш статус в этой компании",
 							Required: false,
 							URL:      &roleSearchUrl,
+						},
+					},
+					s.OutField{
+						Name: "description",
+						Type: "text",
+						Attributes: s.FieldAttribute{
+							Label:    "комментарий",
+							Required: false,
 						},
 					},
 				},
