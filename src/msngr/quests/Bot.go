@@ -57,13 +57,13 @@ func getCommands(qs *QuestStorage, user_id string) *[]s.OutCommand {
 				Title: "Форма записи на квест",
 				Type:  "form",
 				Name:  "enroll_form",
-				Text:  "Имя: ?(name)\nФамилия: ?(sername)\nДата рождения: ?(birthday)\nНа какую дату: ?(quest_date)",
+				Text:  "?(name) ?(sername) ?(birthday) ?(quest_date)",
 				Fields: []s.OutField{
 					s.OutField{
 						Name: "name",
 						Type: "text",
 						Attributes: s.FieldAttribute{
-							Label:    "",
+							Label:    "Имя",
 							Required: true,
 						},
 					},
@@ -71,7 +71,7 @@ func getCommands(qs *QuestStorage, user_id string) *[]s.OutCommand {
 						Name: "sername",
 						Type: "text",
 						Attributes: s.FieldAttribute{
-							Label:    "",
+							Label:    "Фамилия",
 							Required: true,
 						},
 					},
@@ -79,7 +79,7 @@ func getCommands(qs *QuestStorage, user_id string) *[]s.OutCommand {
 						Name: "birthday",
 						Type: "text",
 						Attributes: s.FieldAttribute{
-							Label:    "",
+							Label:    "Дата рождения",
 							Required: true,
 						},
 					},
@@ -87,7 +87,7 @@ func getCommands(qs *QuestStorage, user_id string) *[]s.OutCommand {
 						Name: "quest_date",
 						Type: "text",
 						Attributes: s.FieldAttribute{
-							Label:    "",
+							Label:    "Дата квеста",
 							Required: true,
 						},
 					},
