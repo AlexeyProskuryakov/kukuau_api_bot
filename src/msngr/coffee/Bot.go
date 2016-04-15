@@ -21,7 +21,7 @@ func getCommands(coffeeHouseConfig *CoffeeHouseConfiguration, isFirst bool, isAc
 				Title: "Заказ напитка",
 				Type:  "form",
 				Name:  "order_drink_form",
-				Text:  "?(drink) ?(volume) ?(additive), ?(count) ?(time)",
+				Text:  "Ваш заказ: ?(drink) ?(volume) ?(additive), ?(count) ?(time)",
 				Fields: []s.OutField{
 					s.OutField{
 						Name: "drink",
@@ -54,7 +54,7 @@ func getCommands(coffeeHouseConfig *CoffeeHouseConfiguration, isFirst bool, isAc
 						Name:"count",
 						Type:"text",
 						Attributes:s.FieldAttribute{
-							Label:"скольку штук",
+							Label:"сколько штук",
 							Required:false,
 						},
 					},
@@ -77,7 +77,7 @@ func getCommands(coffeeHouseConfig *CoffeeHouseConfiguration, isFirst bool, isAc
 				Title: "Заказ выпечки",
 				Type:  "form",
 				Name:  "order_bake_form",
-				Text:  "Какая ?(bake) ?",
+				Text:  "Ваш заказ: ?(bake)",
 				Fields: []s.OutField{
 					s.OutField{
 						Name: "bake",
