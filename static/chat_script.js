@@ -66,9 +66,9 @@ function paste_message(message){
 }
 
 function update_messages(){
-    data = {m_for: message_for, after:messages_updated}
+    data = {m_for: message_for}
     $.ajax({type:"POST",
-        url:            url_prefix+"/messages",
+        url:            url_prefix+"/unread_messages",
         contentType:    'application/json',
         data:           JSON.stringify(data),
         dataType:       'json',
@@ -76,8 +76,6 @@ function update_messages(){
             x.messages.forEach(function(message){
                 paste_message(message);
             });
-            messages_updated = x.next_;
-
         }
     });
     return true;

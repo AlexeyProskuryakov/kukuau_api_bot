@@ -225,7 +225,7 @@ func StartBot(db *d.MainDb, result chan string) c.Configuration {
 				return fmt.Sprintf("%v%v", webRoute, s)
 			}
 			http.Handle(sr("/send"), chat.GetChatSendHandler(sr("/send"), notifier, db, c_conf.Chat, chat.NewChatStorage(db)))
-			http.Handle(sr("/messages"), chat.GetChatMessagesHandler(sr("/messages"), notifier, db, c_conf.Chat))
+			http.Handle(sr("/unread_messages"), chat.GetChatUnreadMessagesHandler(sr("/unread_messages"), notifier, db, c_conf.Chat))
 			http.Handle(sr("/messages_read"), chat.GetChatMessageReadHandler(sr("/messages_read"), notifier, db, c_conf.Chat))
 			http.Handle(sr("/contacts"), chat.GetChatContactsHandler(sr("/contacts"), notifier, db, c_conf.Chat))
 			http.Handle(sr("/contacts_change"), chat.GetChatContactsChangeHandler(sr("/contacts_change"), notifier, db, c_conf.Chat))
@@ -271,7 +271,7 @@ func StartBot(db *d.MainDb, result chan string) c.Configuration {
 				return fmt.Sprintf("%v%v", webRoute, s)
 			}
 			http.Handle(sr("/send"), chat.GetChatSendHandler(sr("/send"), notifier, db, chat_conf, chat.NewChatStorage(db)))
-			http.Handle(sr("/messages"), chat.GetChatMessagesHandler(sr("/messages"), notifier, db, chat_conf))
+			http.Handle(sr("/unread_messages"), chat.GetChatUnreadMessagesHandler(sr("/unread_messages"), notifier, db, chat_conf))
 			http.Handle(sr("/messages_read"), chat.GetChatMessageReadHandler(sr("/messages_read"), notifier, db, chat_conf))
 			http.Handle(sr("/contacts"), chat.GetChatContactsHandler(sr("/contacts"), notifier, db, chat_conf))
 			http.Handle(sr("/contacts_change"), chat.GetChatContactsChangeHandler(sr("/contacts_change"), notifier, db, chat_conf))
