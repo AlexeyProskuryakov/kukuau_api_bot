@@ -17,7 +17,12 @@ const (
 	BAKES = "bakes"
 )
 
-func FormItems(strings []string) {
+var (
+	NOW = string("сейчас")
+	ONE = string("1")
+)
+
+func FormItems(strings []string) []s.FieldItem {
 	result := []s.FieldItem{}
 	for _, el := range strings {
 		result = append(result, s.FieldItem{
@@ -27,6 +32,7 @@ func FormItems(strings []string) {
 			},
 		})
 	}
+	return result
 }
 
 func getCommands(coffeeHouseConfig *CoffeeHouseConfiguration, isFirst bool, isActive bool) *[]s.OutCommand {
@@ -75,7 +81,7 @@ func getCommands(coffeeHouseConfig *CoffeeHouseConfiguration, isFirst bool, isAc
 						Attributes:s.FieldAttribute{
 							Label:"количество",
 							Required:false,
-							EmptyText:"1",
+							EmptyText:&ONE,
 						},
 					},
 					s.OutField{
@@ -84,9 +90,9 @@ func getCommands(coffeeHouseConfig *CoffeeHouseConfiguration, isFirst bool, isAc
 						Attributes:s.FieldAttribute{
 							Label:"когда",
 							Required:false,
-							EmptyText:"сейчас",
+							EmptyText:&NOW,
 						},
-						Items:FormItems([]string{"сейчас", "через 10 минут", "через 20 минут", "через 20 минут",, "через час"}),
+						Items:FormItems([]string{"сейчас", "через 10 минут", "через 20 минут", "через 20 минут", "через час"}),
 					},
 				},
 			},
@@ -116,7 +122,7 @@ func getCommands(coffeeHouseConfig *CoffeeHouseConfiguration, isFirst bool, isAc
 						Attributes:s.FieldAttribute{
 							Label:"количество",
 							Required:false,
-							EmptyText:"1",
+							EmptyText:&ONE,
 						},
 					},
 					s.OutField{
@@ -125,9 +131,9 @@ func getCommands(coffeeHouseConfig *CoffeeHouseConfiguration, isFirst bool, isAc
 						Attributes:s.FieldAttribute{
 							Label:"когда",
 							Required:false,
-							EmptyText:"сейчас",
+							EmptyText:&NOW,
 						},
-						Items:FormItems([]string{"сейчас", "через 10 минут", "через 20 минут", "через 20 минут",, "через час"}),
+						Items:FormItems([]string{"сейчас", "через 10 минут", "через 20 минут", "через 20 минут", "через час"}),
 					},
 				},
 			},
