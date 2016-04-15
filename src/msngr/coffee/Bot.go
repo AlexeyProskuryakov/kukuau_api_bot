@@ -28,7 +28,7 @@ func getCommands(coffeeHouseConfig *CoffeeHouseConfiguration, isFirst bool, isAc
 				Title: "Заказ напитка",
 				Type:  "form",
 				Name:  "order_drink_form",
-				Text:  "Ваш заказ: ?(drink) ?(volume) ?(additive), ?(count) ?(time)",
+				Text:  "Ваш заказ: ?(drink) ?(volume) ?(additive), ?(count) ?(to_time)",
 				Fields: []s.OutField{
 					s.OutField{
 						Name: "drink",
@@ -59,14 +59,14 @@ func getCommands(coffeeHouseConfig *CoffeeHouseConfiguration, isFirst bool, isAc
 					},
 					s.OutField{
 						Name:"count",
-						Type:"text",
+						Type:"number",
 						Attributes:s.FieldAttribute{
 							Label:"сколько штук",
 							Required:false,
 						},
 					},
 					s.OutField{
-						Name:"time",
+						Name:"to_time",
 						Type:"text",
 						Attributes:s.FieldAttribute{
 							Label:"когда",
@@ -84,7 +84,7 @@ func getCommands(coffeeHouseConfig *CoffeeHouseConfiguration, isFirst bool, isAc
 				Title: "Заказ выпечки",
 				Type:  "form",
 				Name:  "order_bake_form",
-				Text:  "Ваш заказ: ?(bake)",
+				Text:  "Ваш заказ: ?(bake), ?(count) ?(to_time)",
 				Fields: []s.OutField{
 					s.OutField{
 						Name: "bake",
@@ -94,6 +94,22 @@ func getCommands(coffeeHouseConfig *CoffeeHouseConfiguration, isFirst bool, isAc
 							Required: true,
 						},
 						Items:coffeeHouseConfig.ToFieldItems(BAKES),
+					},
+					s.OutField{
+						Name:"count",
+						Type:"text",
+						Attributes:s.FieldAttribute{
+							Label:"сколько штук",
+							Required:false,
+						},
+					},
+					s.OutField{
+						Name:"to_time",
+						Type:"text",
+						Attributes:s.FieldAttribute{
+							Label:"когда",
+							Required:false,
+						},
 					},
 				},
 			},

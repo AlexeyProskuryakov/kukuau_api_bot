@@ -215,7 +215,7 @@ func StartBot(db *d.MainDb, result chan string) c.Configuration {
 				salt = c_conf.Name
 			}
 
-			notifier := n.NewNotifier(conf.Main.CallbackAddr, c_conf.Key, db)
+			notifier := n.NewNotifier(conf.Main.CallbackAddr, c_conf.Chat.Key, db)
 			notifier.SetFrom(c_conf.Name)
 
 			webRoute := fmt.Sprintf("/web/coffee/%v", salt)

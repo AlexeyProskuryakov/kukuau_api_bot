@@ -17,14 +17,14 @@ type Notifier struct {
 	address string
 	key     string
 	_db     *db.MainDb
-	from	string
+	from    string
 }
 
 func NewNotifier(addr, key string, dbh *db.MainDb) *Notifier {
 	return &Notifier{address: addr, key: key, _db:dbh}
 }
 
-func (n *Notifier) SetFrom(from string){
+func (n *Notifier) SetFrom(from string) {
 	n.from = from
 }
 
@@ -45,11 +45,11 @@ func (n *Notifier) Notify(outPkg s.OutPkg) error {
 	req.Header.Add("Accept", "application/json")
 	req.Header.Add("Authorization", n.key)
 
-	log.Printf("N >> %+v \n>>%+v \n>>%s", n.address, req.Header, jsoned_out)
+	log.Printf("N >> %+v \n>>%+v \n>>KEY:[%v]\n>>%s", n.address, req.Header, n.key, jsoned_out)
 
-	if n.from == ""{
+	if n.from == "" {
 		n._db.Messages.StoreMessage("me", outPkg.To, outPkg.Message.Body, outPkg.Message.ID)
-	} else{
+	} else {
 		n._db.Messages.StoreMessage(n.from, outPkg.To, outPkg.Message.Body, outPkg.Message.ID)
 	}
 
