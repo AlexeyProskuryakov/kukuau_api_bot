@@ -380,6 +380,11 @@ func (cop *CancelOrderProcessor) ProcessMessage(in *s.InPkg) *s.MessageResult {
 			log.Printf("CB Error at storing message for cancel %v", err)
 			return m.DB_ERROR_RESULT
 		}
+		err := cop.Storage.Orders.SetActive(lastOrder.OrderId, lastOrder.Source, false)
+		if err != nil{
+			log.Printf("CB Error at setting active is false for order %v", err)
+			return m.DB_ERROR_RESULT
+		}
 		return &s.MessageResult{Body:"Ваш заказ отменен!", Commands:cmds}
 	}
 	return &s.MessageResult{Body:"У вас нечего отменять.", Commands:cmds}
