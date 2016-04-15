@@ -147,7 +147,7 @@ func FormBotCoffeeContext(config c.CoffeeConfig, store *db.MainDb, coffeeHouseCo
 	commandsGenerator := func(in *s.InPkg) (*[]s.OutCommand, error) {
 		lastOrder, err := store.Orders.GetByOwnerLast(in.From, config.Name)
 		if err != nil {
-			log.Printf("COFFEE BOT error getting lat order for %v is: %v", in.From, err)
+			log.Printf("COFFEE BOT error getting last order for %v is: %v", in.From, err)
 			return nil, err
 		}
 		var isFirst, isActive bool
