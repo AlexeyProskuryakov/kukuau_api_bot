@@ -13,6 +13,13 @@ var contacts_updated = Math.round( Date.now() / 1000 );
 
 var message_for = $("#with").prop("value");
 
+function is_message_with_data(message){
+    if ((message.Attributes != null && message.AdditionalData != null) && (message.Attributes.length > 0 && message.AdditionalData.length > 0)) {
+        return true;
+    }
+    return false;
+}
+
 function paste_message(message){
     console.log("p m");
     if ($("#"+message.SID).length != 0){
@@ -27,12 +34,13 @@ function paste_message(message){
                         "</div>"+
                         "<hr>";
 
-    if ((message.Attributes != null && message.AdditionalData != null) && (message.Attributes.length > 0 && message.AdditionalData.length > 0)) {
+    if (is_message_with_data(message)) {
         text_message =  "<div class='msg' id={{SID}}>"+
                             "<h4 class='media-heading'>{{From}}"+
                                 "<small class='time'>{{stamp_date $message.Time}}</small>"+
                         "</h4>"+
-                            "<div class='msg-with-data'>{{Body}}"+
+                            "<div class='msg-with-data'>"+
+                            "<h4>{{Body}}</h4>"+
                                 "<table class='table table-condensed table-bordered table-hover table-little-text'>"+
                                 "{{#AdditionalData}}"+
                                 "{{#Value}}"+
@@ -40,9 +48,16 @@ function paste_message(message){
                                    "{{/Value}}"+
                                 "{{/AdditionalData}}"+
                                  "</table>"+
+                                 "{{#AdditionalFuncs}}"+
+                                 "<button class='btn btn-default btn-sm' onclick='call_message_func(\"{{Action}}\", \"{{&Context}}\", \"{{MessageID}}\")'>{{Name}}</button>"+
+                                 "{{/AdditionalFuncs}}"+
+                            "<div class='status'><h5> Статус: <big id='state-{{MessageID}}'>{{RelatedOrderState}}</big></h5></div>"+
                             "</div>"+
-                        "</div>";
 
+                        "</div>";
+        for (var i=0; i < message.AdditionalFuncs.length; i++){
+            message.AdditionalFuncs[i].Context = JSON.stringify(message.AdditionalFuncs[i].Context).replace(/\"/gi,"\\x22");
+        }
     }
 
     var result = Mustache.render(text_message, message);
@@ -374,5 +389,21 @@ function set_messages_read(from){
 var chat_end = document.getElementById( 'chat-end' );
 if (chat_end != null){
     chat_end.scrollIntoView(false);
+}
+
+function call_message_func(action, context_str, message_id){
+    var context = JSON.parse(context_str);
+    data = {action:action, context:context, message_id:message_id};
+    $.ajax({type:"POST",
+        url:            url_prefix+"/message_function",
+        contentType:    'application/json',
+        data:           JSON.stringify(data),
+        dataType:       'json',
+        success:        function(x){
+            if (x.ok==true){
+                $("#state-"+message_id).text(x.result);
+            }
+        }
+    });
 }
 

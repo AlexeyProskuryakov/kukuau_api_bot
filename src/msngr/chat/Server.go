@@ -87,6 +87,10 @@ func getRenderer(cName, cId, start_addr string) martini.Handler {
 				"is_additional_data_valid":func(ad d.AdditionalDataElement) bool {
 					return ad.Value != ""
 				},
+				"get_context":func(adF d.AdditionalFuncElement) string {
+					data, _ := json.Marshal(adF.Context)
+					return string(data)
+				},
 			},
 		},
 	})
@@ -103,7 +107,7 @@ func getBasicAuth(db *d.MainDb) martini.Handler {
 	})
 }
 
-func getMartini(cName, cId, start_addr string, db *d.MainDb) *martini.ClassicMartini {
+func GetMartini(cName, cId, start_addr string, db *d.MainDb) *martini.ClassicMartini {
 	m := martini.Classic()
 	m.Use(getRenderer(cName, cId, start_addr))
 	m.Use(getBasicAuth(db))
@@ -111,7 +115,7 @@ func getMartini(cName, cId, start_addr string, db *d.MainDb) *martini.ClassicMar
 }
 
 func GetChatMainHandler(start_addr string, notifier *ntf.Notifier, db *d.MainDb, config c.ChatConfig) http.Handler {
-	m := getMartini(config.Name, config.CompanyId, start_addr, db)
+	m := GetMartini(config.Name, config.CompanyId, start_addr, db)
 	m.Get(start_addr, func(r render.Render, params martini.Params, req *http.Request) {
 		var with string
 		result_data := map[string]interface{}{}
@@ -167,7 +171,7 @@ func GetChatMainHandler(start_addr string, notifier *ntf.Notifier, db *d.MainDb,
 }
 
 func GetChatDeleteMessagesHandler(start_addr string, db *d.MainDb, config c.ChatConfig) http.Handler {
-	m := getMartini(config.Name, config.CompanyId, start_addr, db)
+	m := GetMartini(config.Name, config.CompanyId, start_addr, db)
 	m.Delete(start_addr, func(ren render.Render, req *http.Request) {
 		type DeleteInfo struct {
 			From string `json:"from"`
@@ -196,7 +200,7 @@ func GetChatDeleteMessagesHandler(start_addr string, db *d.MainDb, config c.Chat
 	return m
 }
 func GetChatSendHandler(start_addr string, notifier *ntf.Notifier, db *d.MainDb, config c.ChatConfig, cs *ChatStorage) http.Handler {
-	m := getMartini(config.Name, config.CompanyId, start_addr, db)
+	m := GetMartini(config.Name, config.CompanyId, start_addr, db)
 	m.Post(start_addr, func(render render.Render, req *http.Request) {
 		type MessageFromF struct {
 			From string `json:"from"`
@@ -240,7 +244,7 @@ func GetChatSendHandler(start_addr string, notifier *ntf.Notifier, db *d.MainDb,
 	return m
 }
 func GetChatMessageReadHandler(start_addr string, notifier *ntf.Notifier, db *d.MainDb, config c.ChatConfig) http.Handler {
-	m := getMartini(config.Name, config.CompanyId, start_addr, db)
+	m := GetMartini(config.Name, config.CompanyId, start_addr, db)
 	m.Post(start_addr, func(render render.Render, req *http.Request) {
 		type Readed struct {
 			From string `json:"from"`
@@ -269,7 +273,7 @@ func GetChatMessageReadHandler(start_addr string, notifier *ntf.Notifier, db *d.
 	return m
 }
 func GetChatMessagesHandler(start_addr string, notifier *ntf.Notifier, db *d.MainDb, config c.ChatConfig) http.Handler {
-	m := getMartini(config.Name, config.CompanyId, start_addr, db)
+	m := GetMartini(config.Name, config.CompanyId, start_addr, db)
 	m.Post(start_addr, func(render render.Render, req *http.Request) {
 		type NewMessagesReq struct {
 			For   string `json:"m_for"`
@@ -313,7 +317,7 @@ func GetChatMessagesHandler(start_addr string, notifier *ntf.Notifier, db *d.Mai
 	return m
 }
 func GetChatContactsHandler(start_addr string, notifier *ntf.Notifier, db *d.MainDb, config c.ChatConfig) http.Handler {
-	m := getMartini(config.Name, config.CompanyId, start_addr, db)
+	m := GetMartini(config.Name, config.CompanyId, start_addr, db)
 	m.Post(start_addr, func(render render.Render, req *http.Request) {
 		type NewContactsReq struct {
 			After int64 `json:"after"`
@@ -359,7 +363,7 @@ func GetChatContactsHandler(start_addr string, notifier *ntf.Notifier, db *d.Mai
 }
 
 func GetChatContactsChangeHandler(start_addr string, notifier *ntf.Notifier, db *d.MainDb, config c.ChatConfig) http.Handler {
-	m := getMartini(config.Name, config.CompanyId, start_addr, db)
+	m := GetMartini(config.Name, config.CompanyId, start_addr, db)
 	m.Post(start_addr, func(render render.Render, req *http.Request) {
 		type NewContactName struct {
 			Id      string `json:"id"`
@@ -388,7 +392,7 @@ func GetChatContactsChangeHandler(start_addr string, notifier *ntf.Notifier, db 
 }
 
 func GetChatConfigHandler(start_addr, prefix string, db *d.MainDb, config c.ChatConfig) http.Handler {
-	m := getMartini(config.Name, config.CompanyId, prefix, db)
+	m := GetMartini(config.Name, config.CompanyId, prefix, db)
 	m.Get(start_addr, func(ren render.Render, req *http.Request) {
 		ren.HTML(200, "config", map[string]interface{}{}, render.HTMLOptions{Layout:"base"})
 	})

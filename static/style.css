@@ -43,7 +43,10 @@
     margin:0;
     background-color: #5DFF5D;
 }
-
+.msg-with-data .status{
+    margin:3px;
+    background-color: #A8BBFF;
+}
 .table-little-text{
     font-size: 13px;
 }
@@ -135,7 +138,10 @@
     box-shadow: none;
     border-bottom: 1px solid #ddd;
 }
-
+.glyphicon{
+    margin-left: -5px;
+    margin-bottom: 3px;
+}
 
 body::-webkit-scrollbar {
     width: 12px;
