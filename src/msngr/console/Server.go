@@ -657,6 +657,7 @@ func Run(addr string, db *d.MainDb, qs *quests.QuestStorage, vdh *voting.VotingD
 	r = EnsureWorkWithUsers(r, db)
 
 	r.Get("/statistic/taxi", func(render render.Render) {
+		EnsureStatistic()
 		render.HTML(200, "console/statistic", map[string]interface{}{"providers":[]string{"academ"}})
 	})
 

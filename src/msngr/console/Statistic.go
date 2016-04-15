@@ -1,4 +1,4 @@
-package main
+package console
 
 import (
 	"log"
@@ -119,7 +119,7 @@ func EnsureStatistic() {
 			}
 		}
 	}
-	file.Save("taxi_statistic.xlsx")
+	file.Save("statistic.xlsx")
 }
 func main() {
 	EnsureStatistic()
