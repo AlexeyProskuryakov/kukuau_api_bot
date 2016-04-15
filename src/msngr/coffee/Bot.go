@@ -28,7 +28,7 @@ func getCommands(coffeeHouseConfig *CoffeeHouseConfiguration, isFirst bool, isAc
 				Title: "Заказ напитка",
 				Type:  "form",
 				Name:  "order_drink_form",
-				Text:  "Ваш заказ: ?(drink) ?(volume) ?(additive), ?(count) ?(to_time)",
+				Text:  "?(drink) ?(volume) ?(additive), ?(count) ?(to_time)",
 				Fields: []s.OutField{
 					s.OutField{
 						Name: "drink",
