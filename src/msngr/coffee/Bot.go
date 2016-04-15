@@ -147,6 +147,7 @@ func FormBotCoffeeContext(config c.CoffeeConfig, store *db.MainDb, coffeeHouseCo
 	commandsGenerator := func(in *s.InPkg) (*[]s.OutCommand, error) {
 		lastOrder, err := store.Orders.GetByOwnerLast(in.From, config.Name)
 		if err != nil {
+			log.Printf("COFFEE BOT error getting lat order for %v is: %v", in.From, err)
 			return nil, err
 		}
 		var isFirst, isActive bool
@@ -192,7 +193,6 @@ type OrderDrinkProcessor struct {
 }
 
 func (odp *OrderDrinkProcessor) ProcessMessage(in *s.InPkg) *s.MessageResult {
-	log.Printf("CB : in: %+v, %+v, %+v", in.UserData, in.Message, in.Message.Commands)
 	if in.UserData != nil && in.Message != nil && in.Message.Commands != nil {
 		err := odp.Storage.Users.StoreUserData(in.From, in.UserData)
 		if err != nil {
@@ -207,6 +207,7 @@ func (odp *OrderDrinkProcessor) ProcessMessage(in *s.InPkg) *s.MessageResult {
 				}
 				order, err := NewCoffeeOrderFromForm(command.Form)
 				if err != nil {
+					log.Printf("COFFEE BOT error at forming order from form: %v", err)
 					return s.ErrorMessageResult(err, cmds)
 				}
 				id := u.GenIntId()
@@ -218,7 +219,10 @@ func (odp *OrderDrinkProcessor) ProcessMessage(in *s.InPkg) *s.MessageResult {
 					Active:true,
 					OrderData:order.ToOrderData(),
 				})
-
+				if err != nil {
+					log.Printf("CB Error at storing drink order %v", err)
+					return m.DB_ERROR_RESULT
+				}
 				err = odp.Storage.Messages.StoreMessageObject(db.MessageWrapper{
 					MessageID:in.Message.ID,
 					From:in.From,
@@ -234,8 +238,8 @@ func (odp *OrderDrinkProcessor) ProcessMessage(in *s.InPkg) *s.MessageResult {
 					AdditionalFuncs:getAdditionalFuncs(id, odp.CompanyName, in.From),
 					RelatedOrderState:"Отправленно в кофейню",
 				})
-
 				if err != nil {
+					log.Printf("CB Error at storing drink message %v", err)
 					return m.DB_ERROR_RESULT
 				}
 
@@ -273,6 +277,7 @@ func (odp *OrderBakeProcessor) ProcessMessage(in *s.InPkg) *s.MessageResult {
 				}
 				order, err := NewCoffeeOrderFromForm(command.Form)
 				if err != nil {
+					log.Printf("COFFEE BOT error at forming order from form: %v", err)
 					return s.ErrorMessageResult(err, cmds)
 				}
 				id := u.GenIntId()
@@ -285,6 +290,7 @@ func (odp *OrderBakeProcessor) ProcessMessage(in *s.InPkg) *s.MessageResult {
 					OrderData:order.ToOrderData(),
 				})
 				if err != nil {
+					log.Printf("CB Error at storing bake order %v", err)
 					return m.DB_ERROR_RESULT
 				}
 				err = odp.Storage.Messages.StoreMessageObject(db.MessageWrapper{
@@ -303,6 +309,7 @@ func (odp *OrderBakeProcessor) ProcessMessage(in *s.InPkg) *s.MessageResult {
 					RelatedOrderState:"Отправленно в кофейню",
 				})
 				if err != nil {
+					log.Printf("CB Error at storing bake message %v", err)
 					return m.DB_ERROR_RESULT
 				}
 
@@ -393,7 +400,7 @@ func (rop *RepeatOrderProcessor) ProcessMessage(in *s.InPkg) *s.MessageResult {
 			MessageID:in.Message.ID,
 			From:in.From,
 			To:rop.CompanyName,
-			Body:"Повторяю заказ",
+			Body:"Мне бы повторить...",
 			Unread:1,
 			NotAnswered:1,
 			Time:time.Now(),
