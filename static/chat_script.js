@@ -21,14 +21,10 @@ function is_message_with_data(message){
 }
 
 function paste_message(message){
-    console.log("p m");
     if ($("#"+message.SID).length != 0){
         return
     }
-    var text_message = "";
-
-
-    text_message =      "<div class='msg' id={{SID}}>"+
+    var text_message =      "<div class='msg' id={{SID}}>"+
                                 "<h4 class='media-heading'>{{From}} <small class='time'>{{time}}</small></h4>"+
                                 "<div class='col-lg-11'>{{Body}}</div>"+
                         "</div>"+

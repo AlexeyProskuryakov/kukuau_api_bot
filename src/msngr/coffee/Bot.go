@@ -224,14 +224,10 @@ func (odp *OrderDrinkProcessor) ProcessMessage(in *s.InPkg) *s.MessageResult {
 		commands := *(in.Message.Commands)
 		for _, command := range commands {
 			if command.Action == "order_drink" && command.Form.Name == "order_drink_form" {
-				cmds, err := odp.CommandsFunc(in)
-				if err != nil {
-					return s.ErrorMessageResult(err, cmds)
-				}
 				order, err := NewCoffeeOrderFromForm(command.Form)
 				if err != nil {
 					log.Printf("COFFEE BOT error at forming order from form: %v", err)
-					return s.ErrorMessageResult(err, cmds)
+					return m.MESSAGE_DATA_ERROR_RESULT
 				}
 				id := u.GenIntId()
 				err = odp.Storage.Orders.AddOrderObject(db.OrderWrapper{
@@ -265,7 +261,10 @@ func (odp *OrderDrinkProcessor) ProcessMessage(in *s.InPkg) *s.MessageResult {
 					log.Printf("CB Error at storing drink message %v", err)
 					return m.DB_ERROR_RESULT
 				}
-
+				cmds, err := odp.CommandsFunc(in)
+				if err != nil {
+					return s.ErrorMessageResult(err, cmds)
+				}
 				return &s.MessageResult{
 					Commands:cmds,
 					Type:"chat",
@@ -294,14 +293,10 @@ func (odp *OrderBakeProcessor) ProcessMessage(in *s.InPkg) *s.MessageResult {
 		commands := *(in.Message.Commands)
 		for _, command := range commands {
 			if command.Action == "order_bake" && command.Form.Name == "order_bake_form" {
-				cmds, err := odp.CommandsFunc(in)
-				if err != nil {
-					return s.ErrorMessageResult(err, cmds)
-				}
 				order, err := NewCoffeeOrderFromForm(command.Form)
 				if err != nil {
 					log.Printf("COFFEE BOT error at forming order from form: %v", err)
-					return s.ErrorMessageResult(err, cmds)
+					return m.MESSAGE_DATA_ERROR_RESULT
 				}
 				id := u.GenIntId()
 				err = odp.Storage.Orders.AddOrderObject(db.OrderWrapper{
@@ -335,7 +330,10 @@ func (odp *OrderBakeProcessor) ProcessMessage(in *s.InPkg) *s.MessageResult {
 					log.Printf("CB Error at storing bake message %v", err)
 					return m.DB_ERROR_RESULT
 				}
-
+				cmds, err := odp.CommandsFunc(in)
+				if err != nil {
+					return s.ErrorMessageResult(err, cmds)
+				}
 				return &s.MessageResult{
 					Commands:cmds,
 					Type:"chat",
@@ -355,10 +353,6 @@ type CancelOrderProcessor struct {
 }
 
 func (cop *CancelOrderProcessor) ProcessMessage(in *s.InPkg) *s.MessageResult {
-	cmds, err := cop.CommandsFunc(in)
-	if err != nil {
-		log.Printf("CB Error at forming commands %v", err)
-	}
 	lastOrder, err := cop.Storage.Orders.GetByOwnerLast(in.From, cop.CompanyName)
 	if err != nil {
 		return m.DB_ERROR_RESULT
@@ -381,13 +375,17 @@ func (cop *CancelOrderProcessor) ProcessMessage(in *s.InPkg) *s.MessageResult {
 			return m.DB_ERROR_RESULT
 		}
 		err := cop.Storage.Orders.SetActive(lastOrder.OrderId, lastOrder.Source, false)
-		if err != nil{
+		if err != nil {
 			log.Printf("CB Error at setting active is false for order %v", err)
 			return m.DB_ERROR_RESULT
 		}
+		cmds, err := cop.CommandsFunc(in)
+		if err != nil {
+			log.Printf("CB Error at forming commands %v", err)
+		}
 		return &s.MessageResult{Body:"Ваш заказ отменен!", Commands:cmds}
 	}
-	return &s.MessageResult{Body:"У вас нечего отменять.", Commands:cmds}
+	return &s.MessageResult{Body:"У вас нечего отменять."}
 }
 
 type RepeatOrderProcessor struct {
@@ -397,10 +395,6 @@ type RepeatOrderProcessor struct {
 }
 
 func (rop *RepeatOrderProcessor) ProcessMessage(in *s.InPkg) *s.MessageResult {
-	cmds, err := rop.CommandsFunc(in)
-	if err != nil {
-		log.Printf("CB Error at forming commands %v", err)
-	}
 	lastOrder, err := rop.Storage.Orders.GetByOwnerLast(in.From, rop.CompanyName)
 	if err != nil {
 		return m.DB_ERROR_RESULT
@@ -409,7 +403,7 @@ func (rop *RepeatOrderProcessor) ProcessMessage(in *s.InPkg) *s.MessageResult {
 		order, err := NewCoffeeOrderFromMap(lastOrder.OrderData.Content)
 		if err != nil {
 			log.Printf("CB Error at forming new coffee order %v", err)
-			return s.ErrorMessageResult(err, cmds)
+			return m.MESSAGE_DATA_ERROR_RESULT
 		}
 		id := u.GenIntId()
 		err = rop.Storage.Orders.AddOrderObject(db.OrderWrapper{
@@ -443,7 +437,11 @@ func (rop *RepeatOrderProcessor) ProcessMessage(in *s.InPkg) *s.MessageResult {
 			log.Printf("CB Error at storing message for order %v", err)
 			return m.DB_ERROR_RESULT
 		}
+		cmds, err := rop.CommandsFunc(in)
+		if err != nil {
+			log.Printf("CB Error at forming commands %v", err)
+		}
 		return &s.MessageResult{Body:"Ваш заказ повторен!", Commands:cmds}
 	}
-	return &s.MessageResult{Body:"Нечего повторять.", Commands:cmds}
+	return &s.MessageResult{Body:"Нечего повторять."}
 }

@@ -745,10 +745,23 @@ func (mh *MessageHandler) SetMessagesRead(from string) error {
 	if !mh.parent.Check() {
 		return errors.New("БД не доступна")
 	}
-	_, err := mh.Collection.UpdateAll(
+	info, err := mh.Collection.UpdateAll(
 		bson.M{"from":from, "unread":1},
 		bson.M{"$set":bson.M{"unread":0}},
 	)
+	log.Printf("Result of messages read for messages from %v is: %+v", from, info)
+	return err
+}
+
+func (mh *MessageHandler) SetAllMessagesRead(from, to string) error {
+	if !mh.parent.Check() {
+		return errors.New("БД не доступна")
+	}
+	info, err := mh.Collection.UpdateAll(
+		bson.M{"$or":[]bson.M{bson.M{"from":from, "to":to}, bson.M{"to":to, "from":from}}, "unread":1},
+		bson.M{"$set":bson.M{"unread":0}},
+	)
+	log.Printf("Result of messages read for messages from %v is: %+v", from, info)
 	return err
 }
 

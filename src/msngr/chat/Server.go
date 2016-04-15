@@ -163,7 +163,6 @@ func GetChatMainHandler(start_addr string, notifier *ntf.Notifier, db *d.MainDb,
 		if contacts, err := GetContacts(db, config.CompanyId); err == nil {
 			result_data["contacts"] = contacts
 		}
-		log.Printf("CS result data :%+v", result_data)
 		r.HTML(200, "chat", result_data, render.HTMLOptions{Layout:"base"})
 
 	})
@@ -262,7 +261,7 @@ func GetChatMessageReadHandler(start_addr string, notifier *ntf.Notifier, db *d.
 			render.JSON(500, map[string]interface{}{"error":err})
 			return
 		}
-		err = db.Messages.SetMessagesRead(readed.From)
+		err = db.Messages.SetAllMessagesRead(readed.From, config.CompanyId)
 		if err != nil {
 			log.Printf("CS QE E: at unmarshal json messages %v\ndata:%s", err, data)
 			render.JSON(500, map[string]interface{}{"error":err})
@@ -316,11 +315,11 @@ func GetChatUnreadMessagesHandler(start_addr string, notifier *ntf.Notifier, db 
 			render.JSON(500, map[string]interface{}{"ok":false, "detail":fmt.Sprintf("can not unmarshal request body %v \n %s", err, request_body)})
 			return
 		}
-		log.Printf("New messages request : %v", nmReq)
 		result, err := get_messages(nmReq.For, config.CompanyId, db)
 		if err != nil {
 			render.JSON(500, map[string]interface{}{"ok":false, "detail":fmt.Sprintf("error in db: %v", err)})
 		}
+		log.Printf("New messages for:%v\n%+v", nmReq, result)
 		render.JSON(200, map[string]interface{}{"messages":result})
 	})
 	return m
