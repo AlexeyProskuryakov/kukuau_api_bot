@@ -10,6 +10,13 @@ import (
 	"log"
 )
 
+const (
+	DRINKS = "drinks"
+	VOLUMES = "volumes"
+	ADDITIVES = "additives"
+	BAKES = "bakes"
+)
+
 func getCommands(coffeeHouseConfig *CoffeeHouseConfiguration, isFirst bool, isActive bool) *[]s.OutCommand {
 	commands := []s.OutCommand{
 		s.OutCommand{
@@ -30,7 +37,7 @@ func getCommands(coffeeHouseConfig *CoffeeHouseConfiguration, isFirst bool, isAc
 							Label:    "напиток",
 							Required: true,
 						},
-						Items:coffeeHouseConfig.ToFieldItems("drinks"),
+						Items:coffeeHouseConfig.ToFieldItems(DRINKS),
 					},
 					s.OutField{
 						Name: "volume",
@@ -39,7 +46,7 @@ func getCommands(coffeeHouseConfig *CoffeeHouseConfiguration, isFirst bool, isAc
 							Label:"объем",
 							Required: false,
 						},
-						Items:coffeeHouseConfig.ToFieldItems("volume"),
+						Items:coffeeHouseConfig.ToFieldItems(VOLUMES),
 					},
 					s.OutField{
 						Name: "additive",
@@ -48,7 +55,7 @@ func getCommands(coffeeHouseConfig *CoffeeHouseConfiguration, isFirst bool, isAc
 							Label:    "добавка",
 							Required: false,
 						},
-						Items:coffeeHouseConfig.ToFieldItems("addititves"),
+						Items:coffeeHouseConfig.ToFieldItems(ADDITIVES),
 					},
 					s.OutField{
 						Name:"count",
@@ -86,7 +93,7 @@ func getCommands(coffeeHouseConfig *CoffeeHouseConfiguration, isFirst bool, isAc
 							Label:    "выпечка",
 							Required: true,
 						},
-						Items:coffeeHouseConfig.ToFieldItems("bakes"),
+						Items:coffeeHouseConfig.ToFieldItems(BAKES),
 					},
 				},
 			},
@@ -165,7 +172,7 @@ func FormBotCoffeeContext(config c.CoffeeConfig, store *db.MainDb, coffeeHouseCo
 	}
 	result.MessageProcessors = map[string]s.MessageCommandProcessor{
 		"":m.NewFuncTextBodyProcessor(store, commandsGenerator, config.Name, nil),
-		"information":m.NewInformationProcessor(config.Information),
+		"information":m.NewInformationProcessor(config.Information, commandsGenerator),
 		"order_bake":&OrderBakeProcessor{Storage:store, CompanyName:config.Name, CommandsFunc:commandsGenerator},
 		"order_drink":&OrderDrinkProcessor{Storage:store, CompanyName:config.Name, CommandsFunc:commandsGenerator},
 		"cancel":&CancelOrderProcessor{Storage:store, CompanyName:config.Name, CommandsFunc:commandsGenerator},
