@@ -86,13 +86,13 @@ func getCommands(coffeeHouseConfig *CoffeeHouseConfiguration, isFirst bool, isAc
 					},
 					s.OutField{
 						Name:"to_time",
-						Type:"text",
+						Type:"list-single",
 						Attributes:s.FieldAttribute{
 							Label:"когда",
 							Required:false,
 							EmptyText:&NOW,
 						},
-						Items:FormItems([]string{"сейчас", "через 10 минут", "через 20 минут", "через 20 минут", "через час"}),
+						Items:FormItems([]string{"сейчас", "через 10 минут", "через 20 минут", "через 30 минут", "через час"}),
 					},
 				},
 			},
@@ -127,13 +127,13 @@ func getCommands(coffeeHouseConfig *CoffeeHouseConfiguration, isFirst bool, isAc
 					},
 					s.OutField{
 						Name:"to_time",
-						Type:"text",
+						Type:"list-single",
 						Attributes:s.FieldAttribute{
 							Label:"когда",
 							Required:false,
 							EmptyText:&NOW,
 						},
-						Items:FormItems([]string{"сейчас", "через 10 минут", "через 20 минут", "через 20 минут", "через час"}),
+						Items:FormItems([]string{"сейчас", "через 10 минут", "через 20 минут", "через 30 минут", "через час"}),
 					},
 				},
 			},
