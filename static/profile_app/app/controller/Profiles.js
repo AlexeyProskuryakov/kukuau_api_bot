@@ -472,8 +472,6 @@ Ext.define('Console.controller.Profiles', {
     },
 
     addGroupStart:function(button){
-        this.group_global_storage = Ext.create("Console.store.GroupsGlobalStore").load();
-
         var win    = button.up('window'),
         c_view = Ext.widget("groupWindow", {"parent":win}),
         profile_model = win.down("form").getRecord(),
@@ -542,8 +540,6 @@ Ext.define('Console.controller.Profiles', {
     }, 
 
     addFeatureStart: function(button){
-        this.feature_global_storage = Ext.create("Console.store.FeaturesGlobalStore").load();
-        
         console.log("adding new feature...");
         var win = button.up("window"),
         c_view = Ext.widget("featureWindow", {"parent":win}),
