@@ -9,6 +9,7 @@ import (
 	"github.com/tealeg/xlsx"
 	"gopkg.in/mgo.v2/bson"
 	"msngr/utils"
+	"fmt"
 )
 
 var config = cfg.ReadConfig()
@@ -30,7 +31,7 @@ func getDbsWithOrders() []string {
 	return result
 }
 
-func EnsureStatistic() {
+func EnsureStatistic(toPath string) error{
 	var file *xlsx.File
 	var sheet *xlsx.Sheet
 	var row *xlsx.Row
@@ -70,7 +71,7 @@ func EnsureStatistic() {
 			orders, err := db.Orders.GetBy(bson.M{"source":source.Name})
 			if err != nil {
 				log.Printf("Error at getting orders from %+v is: %v", config.Main.Database, err)
-				return
+				return err
 			}
 
 			for _, order := range orders {
@@ -119,8 +120,7 @@ func EnsureStatistic() {
 			}
 		}
 	}
-	file.Save("statistic.xlsx")
-}
-func main() {
-	EnsureStatistic()
+	fName := fmt.Sprintf("%v/statistic.xlsx", toPath)
+	file.Save(fName)
+	return nil
 }

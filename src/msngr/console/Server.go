@@ -27,6 +27,7 @@ import (
 	"io"
 	"regexp"
 	"msngr/voting"
+	"path/filepath"
 )
 
 const (
@@ -340,6 +341,7 @@ func Run(addr string, db *d.MainDb, qs *quests.QuestStorage, vdh *voting.VotingD
 			if err != nil {
 				log.Printf("CS warn at mkdir %v", err)
 			}
+
 			file_path := fmt.Sprintf("%v/%v", path, handler.Filename)
 			f, err := os.OpenFile(file_path, os.O_WRONLY | os.O_CREATE, 0664)
 			defer f.Close()
@@ -667,9 +669,14 @@ func Run(addr string, db *d.MainDb, qs *quests.QuestStorage, vdh *voting.VotingD
 	r = EnsureWorkWithKeys(r, qs)
 	r = EnsureWorkWithUsers(r, db)
 
-	r.Get("/statistic/taxi", func(render render.Render) {
-		EnsureStatistic()
-		render.HTML(200, "console/statistic", map[string]interface{}{"providers":[]string{"academ"}})
+	r.Get("/statistic", func(render render.Render) {
+		err := EnsureStatistic(filepath.Join(martini.Root, "static", "tmp"))
+		if err != nil {
+			log.Printf("CS ERROR at formin statistics :( ")
+			render.JSON(500, map[string]interface{}{"error":err})
+		}
+		log.Printf("saved: %v", martini.Root)
+		render.Redirect("/tmp/statistic.xlsx")
 	})
 
 	m.Action(r.Handle)
