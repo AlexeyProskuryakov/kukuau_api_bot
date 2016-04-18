@@ -342,6 +342,23 @@ func Run(addr string, db *d.MainDb, qs *quests.QuestStorage, vdh *voting.VotingD
 				log.Printf("CS warn at mkdir %v", err)
 			}
 
+			profile, err := ph.GetProfile(profile_id)
+			if err != nil {
+				log.Printf("CS error at getting profile")
+				render.JSON(500, map[string]interface{}{"error":err, "success":false})
+				return
+			}
+			if profile == nil {
+				profile = &Profile{UserName:profile_id}
+			} else {
+				splitted := strings.Split(profile.ImageURL, "/")
+				savedFname := splitted[len(splitted) - 1]
+				err = os.Remove(filepath.Join(path, savedFname))
+				if err != nil {
+					log.Printf("CS Error at remove old icon ha ha ha")
+				}
+			}
+
 			file_path := fmt.Sprintf("%v/%v", path, handler.Filename)
 			f, err := os.OpenFile(file_path, os.O_WRONLY | os.O_CREATE, 0664)
 			defer f.Close()
@@ -355,10 +372,6 @@ func Run(addr string, db *d.MainDb, qs *quests.QuestStorage, vdh *voting.VotingD
 			file_url := fmt.Sprintf("%v/%v/%v", cfg.Console.ProfileImgServer, profile_id, handler.Filename)
 			log.Printf("CS will form image at: [%v]", file_url)
 
-			profile, _ := ph.GetProfile(profile_id)
-			if profile == nil {
-				profile = &Profile{UserName:profile_id}
-			}
 			profile.ImageURL = file_url
 			ph.UpdateProfile(profile)
 
