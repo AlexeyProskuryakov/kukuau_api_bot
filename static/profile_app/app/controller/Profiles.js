@@ -236,9 +236,9 @@ Ext.define('Console.controller.Profiles', {
     // создание
     createProfileEnd: function(button) {
         var win = button.up("window"),
-        cmp = win.getComponent("user_name")
+        cmp = win.getComponent("user_name"),
         id = cmp.getValue();
-        if (id != ""){
+        if (id != "" && cmp.valudate()){
             var view = Ext.widget('profilewindow'),
             store = Ext.widget('profilelist').getStore(),
             profile_model = Ext.create("Console.model.Profile", {id:id});
@@ -249,7 +249,7 @@ Ext.define('Console.controller.Profiles', {
             view.setTitle(view.title+" ("+id+")");
             view.show();
         } else {
-            cmp.markInvalid("Введите имя, оно необходимо.");
+            cmp.markInvalid("Введите имя правильно, оно необходимо.");
         }
 
     },
