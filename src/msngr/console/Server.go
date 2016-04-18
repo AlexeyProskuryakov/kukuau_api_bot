@@ -372,6 +372,17 @@ func Run(addr string, db *d.MainDb, qs *quests.QuestStorage, vdh *voting.VotingD
 			log.Printf("CS forming next groups: %+v", groups)
 			ren.JSON(200, map[string]interface{}{"success":true, "groups":groups})
 		})
+
+		r.Get("/all_features", func(ren render.Render) {
+			features, err := ph.GetAllFeatures()
+			if err != nil {
+				log.Printf("CS error at features retrieve: %v", err)
+				ren.JSON(500, map[string]interface{}{"error":err, "success":false})
+				return
+			}
+			log.Printf("CS forming next features: %+v", features)
+			ren.JSON(200, map[string]interface{}{"success":true, "features":features})
+		})
 	})
 
 	r.Group("/chat", func(r martini.Router) {

@@ -21,6 +21,11 @@ Ext.define('Console.model.Profile', {
 		type:'hasMany', 
 		model:'Console.model.ProfileAllowPhone',
 		name:'phones'
+	},
+	{
+		type:'hasMany',
+		model:'Console.model.Feature',
+		name:'features'
 	}
 	],
 	proxy: {

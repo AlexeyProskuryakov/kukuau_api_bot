@@ -152,6 +152,7 @@ Ext.define('Console.view.Profile', {
                     scope: this,
                 }]
             },
+
             {
                 xtype: "grid",
                 title: "Контакты",
@@ -205,6 +206,40 @@ Ext.define('Console.view.Profile', {
                 buttons: [{
                     text: "Добавить контакт",
                     action: "add_contact_start",
+                    scope: this,
+                }]
+            },
+            {
+                xtype: "grid",
+                title: "Фичи",
+                itemId: "profile_features",
+                store: 'FeaturesStore',
+                collapsible: true,
+                collapsed: true,
+                columns: [{
+                    header: "Название фичи",
+                    dataIndex: 'name',
+                    flex: 1
+
+                }, {
+                    header: "Var",
+                    dataIndex: 'var',
+                    flex: 1
+                }, {
+                    xtype: 'actioncolumn',
+                    header: 'Delete',
+                    width: 100,
+                    align: 'center',
+                    action: "delete_feature",
+                    items: [{
+                        icon: 'img/delete-icon.png',
+                        tooltip: 'Delete',
+                        scope: me
+                    }]
+                }],
+                buttons: [{
+                    text: "Добавить фичу",
+                    action: "add_feature_start",
                     scope: this,
                 }]
             },

@@ -26,12 +26,14 @@ function createProfileForm(profileModel){
     form = profile_window.down('form'),
     contacts_grid = form.getComponent('profile_contacts'), 
     groups_grid = form.getComponent("profile_groups"),
-    phones_grid = form.getComponent("profile_phones");
+    phones_grid = form.getComponent("profile_phones"),
+    features_grid = form.getComponent("profile_features");
 
     form.loadRecord(profileModel);
     contacts_grid.reconfigure(profileModel.contacts());
     phones_grid.reconfigure(profileModel.phones());
     groups_grid.reconfigure(profileModel.groups());
+    features_grid.reconfigure(profileModel.features());
 
     var image_src = profileModel.get("image_url");
 
@@ -46,11 +48,12 @@ var geocoder = new google.maps.Geocoder();
 
 Ext.define('Console.controller.Profiles', {
     extend: 'Ext.app.Controller',
-    views: ['ProfileList', 'UserNameCheck', 'Profile', 'Contact', 'ContactLink', 'Phone', 'GroupChoose', 'NewGroupAdd'],
-    stores: ['ProfileStore', 'ContactsStore', 'ContactLinksStore', 'GroupsStore', 'GroupsGlobalStore', 'ProfileAllowPhoneStore'],
+    views: ['ProfileList', 'UserNameCheck', 'Profile', 'Contact', 'ContactLink', 'Phone', 'GroupChoose', 'NewGroupAdd', 'FeatureChoose'],
+    stores: ['ProfileStore', 'ContactsStore', 'ContactLinksStore', 'GroupsStore', 'GroupsGlobalStore', 'ProfileAllowPhoneStore', 'FeaturesStore', 'FeaturesGlobalStore'],
     models: ['Profile'],
     config:{
-        group_global_storage: undefined
+        group_global_storage: undefined,
+        feature_global_storage: undefined
     },
     init: function() {
         this.control({
@@ -133,16 +136,32 @@ Ext.define('Console.controller.Profiles', {
             'groupWindow button[action=add_global_group_start]':{
                 click: this.addGlobalGroupStart
             },
+
             'groupWindow grid[itemId=choose_group_grid]':{
                 itemdblclick: this.changeGlobalGroup
             },
 
             'newGroupWindow button[action=add_global_group_end]':{
                 click: this.addGlobalGroupEnd
+            },
+
+            //features
+            'profilewindow button[action=add_feature_start]':{
+                click: this.addFeatureStart
+            },
+
+            'featureWindow button[action=add_feature_end]':{
+                click: this.addFeatureEnd
+            }, 
+            'profilewindow actioncolumn[action=delete_feature]':{
+                click: this.deleteFeature
             }
+
+
         });
         Ext.widget('profilelist').getStore().load();
         this.group_global_storage = Ext.create("Console.store.GroupsGlobalStore").load();
+        this.feature_global_storage = Ext.create("Console.store.FeaturesGlobalStore").load();
     },
     // обновление
     updateProfile: function(button) {
@@ -159,7 +178,9 @@ Ext.define('Console.controller.Profiles', {
             var id = record.get('id'),
             cntcts = [],
             phones = [],
-            groups = [];
+            groups = [],
+            features = [];
+
             
             profile_main_values.id=id,
             Ext.each(record.contacts().data.items, function(item){
@@ -182,6 +203,12 @@ Ext.define('Console.controller.Profiles', {
                 groups.push(g_item.getData());
             });
             profile_main_values.groups = groups;
+
+            Ext.each(record.features().data.items, function(f_item){
+                features.push(f_item.getData());
+            });
+            profile_main_values.features = features;
+
             profile_main_values.image_url = form.getComponent("profile_image_wrapper").getComponent("profile_image").src;
         } 
 
@@ -445,6 +472,8 @@ Ext.define('Console.controller.Profiles', {
     },
 
     addGroupStart:function(button){
+        this.group_global_storage = Ext.create("Console.store.GroupsGlobalStore").load();
+
         var win    = button.up('window'),
         c_view = Ext.widget("groupWindow", {"parent":win}),
         profile_model = win.down("form").getRecord(),
@@ -455,6 +484,7 @@ Ext.define('Console.controller.Profiles', {
         Ext.each(profile_model.groups().data.items, function(item){
             profile_groups.push(item.getData()['name']);
         });
+
         console.log("profile groups is: ", profile_groups);
         this.group_global_storage.each(function(record, item){
             if (profile_groups.indexOf(record.get('name')) < 0){
@@ -470,7 +500,8 @@ Ext.define('Console.controller.Profiles', {
 
     addGroupEnd:function(button){
         var win = button.up('window'),
-        profile_model = win.getParent().down("form").getRecord(),
+        profile_form = win.getParent().down("form"),
+        profile_model = profile_form.getRecord(),
         ggs = win.down('form').getComponent("choose_group_grid").getStore(),
         gps = profile_model.groups();
 
@@ -482,6 +513,7 @@ Ext.define('Console.controller.Profiles', {
                 console.log("add group at profile", data);
             }
         })
+        profile_form.getComponent("profile_groups").reconfigure(gps);
         win.destroy();
     },
 
@@ -509,4 +541,56 @@ Ext.define('Console.controller.Profiles', {
         grid.getStore().removeAt(index);
     }, 
 
+    addFeatureStart: function(button){
+        this.feature_global_storage = Ext.create("Console.store.FeaturesGlobalStore").load();
+        
+        console.log("adding new feature...");
+        var win = button.up("window"),
+        c_view = Ext.widget("featureWindow", {"parent":win}),
+        profile_model = win.down("form").getRecord(),
+        new_cfg_store = Ext.create("Console.store.FeaturesGlobalStore"),
+        cfgCmp = c_view.down("form").getComponent("choose_feature_grid");
+
+        var profile_features = [];
+        Ext.each(profile_model.features().data.items, function(item){
+            profile_features.push(item.getData()['name']);
+        });
+
+        console.log("profile features is: ", profile_features);
+        this.feature_global_storage.each(function(record, item){
+            if (profile_features.indexOf(record.get('name')) < 0){
+                record.set("_active", false);
+                record.dirty = false;
+                new_cfg_store.add(record);
+            }
+        });
+        cfgCmp.reconfigure(new_cfg_store);
+
+        c_view.show();
+    },
+
+    addFeatureEnd:function(button){
+        console.log("ending add feature");
+        var win = button.up('window'),
+        profile_form = win.getParent().down("form"),
+        profile_model = profile_form.getRecord(),
+        fgs = win.down('form').getComponent("choose_feature_grid").getStore(),
+        fps = profile_model.features();
+
+        Ext.each(fgs.data.items, function(item){
+            var data = item.getData();
+            if (data['_active'] == true){
+                data['_active'] = false;
+                fps.add(Ext.create('Console.model.Feature', data));
+                console.log("add feature at profile", data);
+            }
+        })
+        profile_form.getComponent("profile_features").reconfigure(fps);
+        win.destroy();
+    },
+
+    deleteFeature:function(grid, row, index){
+        console.log("delete feature", row, index, grid);
+        grid.getStore().removeAt(index);
+    }, 
 });
