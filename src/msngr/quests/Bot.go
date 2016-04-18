@@ -37,22 +37,17 @@ func WRONG_TEAM_MEMBER(bad, good string) string {
 }
 
 func getCommands(qs *QuestStorage, user_id string) *[]s.OutCommand {
-	result := []s.OutCommand{
-		s.OutCommand{
-			Title:    "Информация",
-			Action:   "information",
-			Position: 0,
-		},
-	}
-	teamMember, err := qs.GetTeamMemberByUserId(user_id)
+	result := []s.OutCommand{}
+	man, err := qs.GetManByUserId(user_id)
 	if err != nil {
 		log.Printf("QB Error at getting team member at process request")
 	}
-	if teamMember != nil && teamMember.Passersby == false &&teamMember.TeamName != "" {
+	log.Printf("QB forming commands for %+v", man)
+	if man != nil && man.Passersby == true {
 		result = append(result, s.OutCommand{
-			Title:"Записаться на квест",
+			Title:"Записаться на квест в НОВАТе",
 			Action:"enroll",
-			Position:1,
+			Position:0,
 			Form: &s.OutForm{
 				Title: "Форма записи на квест",
 				Type:  "form",
@@ -173,7 +168,6 @@ func GetTeamNameFromKey(key string) (string, error) {
 }
 
 func (qmpp QuestMessageProcessor) ProcessMessage(in *s.InPkg) *s.MessageResult {
-	commands := getCommands(qmpp.Storage, in.From)
 
 	if in.Message.Body != nil {
 		pkey := in.Message.Body
@@ -230,6 +224,7 @@ func (qmpp QuestMessageProcessor) ProcessMessage(in *s.InPkg) *s.MessageResult {
 				}
 			} else {
 				log.Printf("Q:Member is: %+v", member)
+				commands := getCommands(qmpp.Storage, in.From)
 				if prev_key == nil {
 					log.Printf("Q:will change team at member [%v]  %v -> %v", member.Name, member.TeamName, team_name)
 					qmpp.Storage.AddTeamMember(in.From, in.UserData.Name, in.UserData.Phone, team)
@@ -260,6 +255,7 @@ func (qmpp QuestMessageProcessor) ProcessMessage(in *s.InPkg) *s.MessageResult {
 					log.Printf("Q E : can not store that team %v is winner, because %v", team_name, err)
 				}
 			}
+			commands := getCommands(qmpp.Storage, in.From)
 			return &s.MessageResult{Type:"chat", Body:descr, Commands:commands}
 		} else {
 			var from string
@@ -281,8 +277,10 @@ func (qmpp QuestMessageProcessor) ProcessMessage(in *s.InPkg) *s.MessageResult {
 			qmpp.Storage.StoreMessage(from, ME, key, false)
 		}
 	} else {
+		commands := getCommands(qmpp.Storage, in.From)
 		return &s.MessageResult{Type:"chat", Body:"Сообщения нет :( ", Commands:commands}
 	}
+	commands := getCommands(qmpp.Storage, in.From)
 	return &s.MessageResult{Type:"chat", Body:"Ваше сообщение доставлено. Скоро вам ответят.", Commands:commands}
 }
 
