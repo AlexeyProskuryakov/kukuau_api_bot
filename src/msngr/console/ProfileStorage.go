@@ -242,8 +242,8 @@ func (ph *ProfileDbHandler) InsertNewProfile(p *Profile) (*Profile, error) {
 	ph.db.QueryRow(fmt.Sprintf("INSERT INTO vcard_search(username, lusername, fn, lfn, family, lfamily, given, lgiven, middle, lmiddle, nickname, lnickname, bday, lbday, ctry, lctry, locality, llocality, email, lemail, orgname, lorgname, orgunit, lorgunit)  values ('%v', '%v', '%v', '%v', '', '', '', '', '%v', '%v', '', '', '', '', '', '', '', '', '', '', '', '', '', '');",
 		p.UserName,
 		strings.ToLower(p.UserName),
-		strings.ToLower(p.UserName),
-		strings.ToLower(p.UserName),
+		p.Name,
+		strings.ToLower(p.Name),
 		p.Name,
 		strings.ToLower(p.Name)))
 
