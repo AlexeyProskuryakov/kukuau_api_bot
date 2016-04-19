@@ -243,6 +243,47 @@ Ext.define('Console.view.Profile', {
                     scope: this,
                 }]
             },
+            {
+                xtype: "grid",
+                title: "Сотрудники",
+                itemId: "profile_employees",
+                store: 'EmployeesStore',
+                collapsible: true,
+                collapsed: true,
+                columns: [{
+                    header: "Роль",
+                    dataIndex: 'role_name',
+                    flex: 1
+
+                }, {
+                    header: "Имя",
+                    dataIndex: 'name',
+                    flex: 1
+
+                }, {
+                    header: "Телефон",
+                    dataIndex: 'phone',
+                    flex: 1
+                },
+                {
+                    xtype: 'actioncolumn',
+                    header: 'Delete',
+                    width: 100,
+                    align: 'center',
+                    action: "delete_employee",
+                    items: [{
+                        icon: 'img/delete-icon.png',
+                        tooltip: 'Delete',
+                        scope: me
+                    }]
+                }],
+                buttons: [{
+                    text: "Добавить сотрудника",
+                    action: "add_employee_start",
+                    scope: this,
+                }]
+            },
+
             new Ext.form.FormPanel({
                 frame: true,
                 autoDestroy: true,

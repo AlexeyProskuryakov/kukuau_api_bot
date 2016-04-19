@@ -27,13 +27,16 @@ function createProfileForm(profileModel){
     contacts_grid = form.getComponent('profile_contacts'), 
     groups_grid = form.getComponent("profile_groups"),
     phones_grid = form.getComponent("profile_phones"),
-    features_grid = form.getComponent("profile_features");
+    features_grid = form.getComponent("profile_features"),
+    employees_grid = form.getComponent("profile_employees");
+
 
     form.loadRecord(profileModel);
     contacts_grid.reconfigure(profileModel.contacts());
     phones_grid.reconfigure(profileModel.phones());
     groups_grid.reconfigure(profileModel.groups());
     features_grid.reconfigure(profileModel.features());
+    employees_grid.reconfigure(profileModel.employees());
 
     var image_src = profileModel.get("image_url");
 
@@ -48,8 +51,8 @@ var geocoder = new google.maps.Geocoder();
 
 Ext.define('Console.controller.Profiles', {
     extend: 'Ext.app.Controller',
-    views: ['ProfileList', 'UserNameCheck', 'Profile', 'Contact', 'ContactLink', 'Phone', 'GroupChoose', 'NewGroupAdd', 'FeatureChoose'],
-    stores: ['ProfileStore', 'ContactsStore', 'ContactLinksStore', 'GroupsStore', 'GroupsGlobalStore', 'ProfileAllowPhoneStore', 'FeaturesStore', 'FeaturesGlobalStore'],
+    views: ['ProfileList', 'UserNameCheck', 'Profile', 'Contact', 'ContactLink', 'Phone', 'GroupChoose', 'NewGroupAdd', 'FeatureChoose', 'EmployeeInfo'],
+    stores: ['ProfileStore', 'ContactsStore', 'ContactLinksStore', 'GroupsStore', 'GroupsGlobalStore', 'ProfileAllowPhoneStore', 'FeaturesStore', 'FeaturesGlobalStore', 'EmployeesStore'],
     models: ['Profile'],
     config:{
         group_global_storage: undefined,
@@ -155,7 +158,24 @@ Ext.define('Console.controller.Profiles', {
             }, 
             'profilewindow actioncolumn[action=delete_feature]':{
                 click: this.deleteFeature
-            }
+            },
+
+            //employees
+            'profilewindow button[action=add_employee_start]':{
+                click: this.addEmployeeStart
+            },
+            
+            'employeeWindow button[action=add_employee_end]':{
+                click: this.addEmployeeEnd
+            },
+            
+            'profilewindow actioncolumn[action=delete_employee]':{
+                click: this.deleteEmployee
+            },
+
+            'profilewindow grid[itemId=profile_employees]':{
+                 itemdblclick: this.changeEmployee
+            },            
 
 
         });
@@ -179,7 +199,8 @@ Ext.define('Console.controller.Profiles', {
             cntcts = [],
             phones = [],
             groups = [],
-            features = [];
+            features = [],
+            employees = [];
 
             
             profile_main_values.id=id,
@@ -208,6 +229,11 @@ Ext.define('Console.controller.Profiles', {
                 features.push(f_item.getData());
             });
             profile_main_values.features = features;
+
+            Ext.each(record.employees().data.items, function(e_item){
+                employees.push(e_item.getData());
+            });
+            profile_main_values.employees = employees;
 
             profile_main_values.image_url = form.getComponent("profile_image_wrapper").getComponent("profile_image").src;
         } 
@@ -589,4 +615,69 @@ Ext.define('Console.controller.Profiles', {
         console.log("delete feature", row, index, grid);
         grid.getStore().removeAt(index);
     }, 
+
+    addEmployeeStart:function(button){
+        console.log("adding new employee...");
+        var win = button.up("window"),
+        pModel = win.down("form").getRecord();
+        var e_view = Ext.widget("employeeWindow", {"parent":win, profileId:pModel.get("id")});
+        e_view.show();
+    },
+
+    changeEmployee: function(grid, row, index){
+        console.log('change employee');
+        var win = grid.up("window"),
+        pModel = win.down("form").getRecord();
+
+        var e_view = Ext.widget("employeeWindow", {"parent":win, profileId:pModel.get("id")}),
+        e_form = e_view.down('form'),
+        roleCmp = e_form.getComponent('role'),
+        phoneCmp = e_form.getComponent('phone');
+
+        roleCmp.setValue(row.data.role_id);
+        phoneCmp.setValue(row.data.phone);
+        e_view.show();  
+    },
+
+    addEmployeeEnd:function(button){
+        console.log("adding new employee...");
+        var e_win = button.up("window"),
+        pForm = e_win.getParent().down("form"),
+        pModel = pForm.getRecord(),
+        e_form = e_win.down('form'),
+        roleCmp = e_form.getComponent('role'),
+        phoneComp = e_form.getComponent('phone');
+        if (phoneComp.validate() && roleCmp.validate()){
+            var phone = phoneComp.getValue(),
+            roleObj = roleCmp.findRecordByValue(roleCmp.getValue()).getData();
+            console.log('phone: ',phone, 'role: ', roleObj);
+
+            Ext.Ajax.request({
+                url:"profile/employee/"+phone,
+                success:function(x){
+                    var data=Ext.decode(x.responseText);
+                    if (data.success==true && data.employee != null ){
+                        var employeeData = data.employee;
+                        employeeData['role_id'] = roleObj.role_id;
+                        employeeData['role_name'] = roleObj.role_name;
+                        employeeData['phone'] = phone;
+                        eModel = Ext.create("Console.model.Employee", employeeData);
+
+                        pModel.employees().add(eModel);
+                        var eGrid = pForm.getComponent("profile_employees");
+                        eGrid.reconfigure(pModel.employees());
+                        e_win.destroy();
+                    } else {
+                        Ext.Msg.alert('Ошибка!', 'Нет такого телефона :( ');         
+                    }
+                }
+            });
+        }
+
+    },
+     deleteEmployee:function(grid, row, index){
+        console.log("delete feature", row, index, grid);
+        grid.getStore().removeAt(index);
+    }, 
+
 });
