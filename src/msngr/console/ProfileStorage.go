@@ -843,11 +843,11 @@ func (ph *ProfileDbHandler) GetProfileFeatures(userName string) ([]ProfileFeatur
 func (ph *ProfileDbHandler) GetProfileRoles(userName string) ([]ProfileRole, error) {
 	result := []ProfileRole{}
 	row, err := ph.db.Query("SELECT DISTINCT r.id, r.name FROM users_roles r WHERE username = $1 ", userName)
-	defer row.Close()
 	if err != nil {
 		log.Printf("P ERROR when querying for roles %v", err)
 		return result, err
 	}
+	defer row.Close()
 	for row.Next() {
 		var id int64
 		var name sql.NullString
@@ -862,11 +862,11 @@ func (ph *ProfileDbHandler) GetProfileRoles(userName string) ([]ProfileRole, err
 
 func (ph *ProfileDbHandler) GetEmployeeByPhone(phone string) (*ProfileEmployee, error) {
 	row, err := ph.db.Query("SELECT p.phonenumber, v.fn, p.username FROM profile p JOIN vcard_search v ON v.username = p.username WHERE p.phonenumber = $1", phone)
-	defer row.Close()
 	if err != nil {
 		log.Printf("P ERROR at get employee by phone %v", err)
 		return nil, err
 	}
+	defer row.Close()
 	if row.Next() {
 		var phone, name, userName sql.NullString
 		err := row.Scan(&phone, &name, &userName)
@@ -886,11 +886,11 @@ func (ph *ProfileDbHandler) GetEmployeeByPhone(phone string) (*ProfileEmployee, 
 
 func (ph *ProfileDbHandler) AddEmployee(pUserName string, employee *ProfileEmployee) (int64, error) {
 	row, err := ph.db.Query("SELECT r.id FROM users_roles r WHERE username = $1 AND name = $2", pUserName, employee.RoleName)
-	defer row.Close()
 	if err != nil {
 		log.Printf("P ERROR when querying check for role %v", err)
 		return -1, err
 	}
+	defer row.Close()
 	isRoleExists := false
 	var roleId int64
 	for row.Next() {
@@ -920,11 +920,11 @@ func (ph *ProfileDbHandler) AddEmployee(pUserName string, employee *ProfileEmplo
 
 func (ph *ProfileDbHandler) RemoveAllEmployees(pUserName string) error {
 	stmt, err := ph.db.Prepare("DELETE FROM users_links WHERE fromusr = $1")
-	defer stmt.Close()
 	if err != nil {
 		log.Printf("P ERROR at preparing deleting from user_links %v", err)
 		return err
 	}
+	defer stmt.Close()
 	r, err := stmt.Exec(pUserName)
 	if err != nil {
 		log.Printf("P ERROR at execute deleting from user_links %v", err)
@@ -937,11 +937,11 @@ func (ph *ProfileDbHandler) RemoveAllEmployees(pUserName string) error {
 func (ph *ProfileDbHandler) GetProfileEmployees(pUserName string) ([]ProfileEmployee, error) {
 	result := []ProfileEmployee{}
 	row, err := ph.db.Query("SELECT l.id, l.tousr, l.role_id, r.name, p.phonenumber, v.fn FROM users_links l JOIN users_roles r ON r.id=l.role_id JOIN profile p ON l.tousr = p.username JOIN vcard_search v ON v.username = l.tousr WHERE l.fromusr = $1", pUserName)
-	defer row.Close()
 	if err != nil {
 		log.Printf("P EEROR when querying profile emplyees %v", err)
 		return result, err
 	}
+	defer row.Close()
 	for row.Next() {
 		var linkId, roleId int64
 		var eUserName, roleName, phone, eName sql.NullString
