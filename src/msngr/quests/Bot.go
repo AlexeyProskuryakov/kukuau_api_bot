@@ -80,11 +80,12 @@ func getCommands(qs *QuestStorage, user_id string) *[]s.OutCommand {
 					},
 					s.OutField{
 						Name: "quest_date",
-						Type: "text",
+						Type: "single_list",
 						Attributes: s.FieldAttribute{
 							Label:    "Дата квеста",
 							Required: true,
 						},
+						Items
 					},
 				},
 			},

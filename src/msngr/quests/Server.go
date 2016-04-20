@@ -348,6 +348,9 @@ func Run(config c.QuestConfig, qs *QuestStorage, ntf *ntf.Notifier, additionalNo
 		//log.Printf("QS i return this messages: %+v", messages)
 		result_data["with"] = with
 		result_data["collocutor"] = collocutor
+		if len(messages) > 100{
+			messages = messages[0:100]
+		}
 		result_data["messages"] = messages
 
 		qs.SetMessagesRead(with)

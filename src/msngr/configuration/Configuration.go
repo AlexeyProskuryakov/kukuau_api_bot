@@ -104,6 +104,7 @@ type QuestConfig struct {
 	WebPort       string `json:"web_port"`
 	Key           string `json:"key"`
 	AdditionalKey string `json:"additional_key"`
+	QuestTimes    []string `json:"quest_times"`
 }
 
 type ConsoleConfig struct {
@@ -131,15 +132,15 @@ type ChatConfig struct {
 }
 
 type CoffeeConfig struct {
-	Name    string `json:"name"`
-	Key	string `json:"key"`
-	DictUrl string `json:"dict_url"`
+	Name        string `json:"name"`
+	Key         string `json:"key"`
+	DictUrl     string `json:"dict_url"`
 	Information string `json:"information"`
-	Bakes []string `json:"bakes"`
-	Drinks []string `json:"drinks"`
-	Volumes []string `json:"volumes"`
-	Additives []string `json:"additives"`
-	Chat ChatConfig `json:"chat"`
+	Bakes       []string `json:"bakes"`
+	Drinks      []string `json:"drinks"`
+	Volumes     []string `json:"volumes"`
+	Additives   []string `json:"additives"`
+	Chat        ChatConfig `json:"chat"`
 }
 
 type Configuration struct {
