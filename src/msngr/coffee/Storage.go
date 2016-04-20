@@ -15,9 +15,9 @@ import (
 
 type CoffeeHouseConfiguration struct {
 	Name      string `bson:"name"`
-	Bakes     []string `bson:"bakes"`
-	Drinks    []string `bson:"drinks"`
-	Additives []string `bson:"additives"`
+	Bakes     map[string]string `bson:"bakes"`
+	Drinks    map[string]string`bson:"drinks"`
+	Additives map[string]string `bson:"additives"`
 	Volumes   []string `bson:"volumes"`
 }
 
@@ -75,7 +75,7 @@ func NewCoffeeOrderFromForm(form s.InForm) (*CoffeeOrder, error) {
 		result.Additive = additive
 		volume, _ := form.GetAny("volume")
 		result.Volume = volume
-	}else if form.Name == "order_bake_form" {
+	} else if form.Name == "order_bake_form" {
 		result.Type = "bake"
 		bake, _ := form.GetAny("bake")
 		result.Bake = bake
@@ -216,7 +216,7 @@ func (cch *CoffeeConfigHandler) GetConfig(name string) (*CoffeeHouseConfiguratio
 	err := cch.Configuration.Find(bson.M{"name":name}).One(&result)
 	if err == mgo.ErrNotFound {
 		return nil, nil
-	}else if err != nil {
+	} else if err != nil {
 		return nil, err
 	} else {
 		return &result, nil

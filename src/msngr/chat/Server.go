@@ -220,7 +220,7 @@ func GetChatSendHandler(start_addr string, notifier *ntf.Notifier, db *d.MainDb,
 			render.JSON(500, map[string]interface{}{"error":err})
 			return
 		}
-		log.Printf("message to send: %v", message)
+		log.Printf("CS message to send: %v", message)
 		if message.From != "" && message.To != "" && message.Body != "" {
 			if message.To == ALL {
 				peoples, _ := cs.GetUsersOfCompany(config.CompanyId)
@@ -231,9 +231,6 @@ func GetChatSendHandler(start_addr string, notifier *ntf.Notifier, db *d.MainDb,
 					go notifier.NotifyText(message.To, message.Body)
 				}
 				db.Messages.SetMessagesAnswered(message.To, config.CompanyId, config.CompanyId)
-			}
-			if err != nil {
-				render.JSON(500, map[string]interface{}{"error":err})
 			}
 		} else {
 			render.Redirect("/chat")
@@ -319,7 +316,6 @@ func GetChatUnreadMessagesHandler(start_addr string, notifier *ntf.Notifier, db 
 		if err != nil {
 			render.JSON(500, map[string]interface{}{"ok":false, "detail":fmt.Sprintf("error in db: %v", err)})
 		}
-		log.Printf("New messages for:%v\n%+v", nmReq, result)
 		render.JSON(200, map[string]interface{}{"messages":result})
 	})
 	return m

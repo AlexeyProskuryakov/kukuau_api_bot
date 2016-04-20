@@ -153,6 +153,8 @@ $("#chat-form").on("submit", function(e){
         from = $("#from").attr("value");
         to = $("#with").attr("value");
 
+    body = body.replace(/\?{2,}/g, "?");
+
     console.log("body: ", body, "from: ", from, "to: ", to)
     $.ajax({
         type:           "POST",

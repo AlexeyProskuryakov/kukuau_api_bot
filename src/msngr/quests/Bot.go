@@ -44,15 +44,6 @@ func getCommands(qs *QuestStorage, user_id string, times []string) *[]s.OutComma
 	}
 	log.Printf("QB forming commands for %+v", man)
 	if man != nil && man.Passersby == true {
-		timeItems := []s.FieldItem{}
-		for _, time := range times {
-			timeItems = append(timeItems, s.FieldItem{
-				Value:time,
-				Content:s.FieldItemContent{
-					Title:time,
-				},
-			})
-		}
 		result = append(result, s.OutCommand{
 			Title:"Записаться на квест в НОВАТе",
 			Action:"enroll",
@@ -94,7 +85,7 @@ func getCommands(qs *QuestStorage, user_id string, times []string) *[]s.OutComma
 							Label:    "Дата квеста",
 							Required: true,
 						},
-						Items:timeItems,
+						Items:s.FormItems(times),
 					},
 				},
 			},

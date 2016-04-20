@@ -135,10 +135,10 @@ type CoffeeConfig struct {
 	Name    string `json:"name"`
 	DictUrl string `json:"dict_url"`
 	Information string `json:"information"`
-	Bakes       []string `json:"bakes"`
-	Drinks      []string `json:"drinks"`
+	Bakes       map[string]string `json:"bakes"`
+	Drinks      map[string]string `json:"drinks"`
 	Volumes     []string `json:"volumes"`
-	Additives   []string `json:"additives"`
+	Additives   map[string]string `json:"additives"`
 	Chat        ChatConfig `json:"chat"`
 }
 
