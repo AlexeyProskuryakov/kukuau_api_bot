@@ -116,46 +116,53 @@ type ConsoleConfig struct {
 }
 
 type ChatConfig struct {
-	Name        string `json:"name"`
-	CompanyId   string `json:"id"`
-	UrlSalt     string `json:"url_salt"`
-	Information string `json:"information"`
-	AutoAnswer  struct {
-			    Enable bool `json:"enable"`
-			    After  int `json:"after_min"`
-			    Text   string `json:"text"`
-		    } `json:"auto_answer"`
-	BotAnswer   string `json:"bot_answer"`
-	Key         string `json:"key"`
-	User        string `json:"user"`
-	Password    string `json:"password"`
+	Name         string `json:"name"`
+	CompanyId    string `json:"id"`
+	UrlSalt      string `json:"url_salt"`
+	Information  string `json:"information"`
+	AutoAnswer   struct {
+			     Enable bool `json:"enable"`
+			     After  int `json:"after_min"`
+			     Text   string `json:"text"`
+		     } `json:"auto_answer"`
+
+	Notification struct {
+			     Enable bool `json:"enable"`
+			     After  int `json:"after_min"`
+			     Text   string `json:"text"`
+		     } `json:"notification"`
+	BotAnswer    string `json:"bot_answer"`
+	Key          string `json:"key"`
+	User         string `json:"user"`
+	Password     string `json:"password"`
 }
 
 type CoffeeConfig struct {
-	Name    string `json:"name"`
-	DictUrl string `json:"dict_url"`
+	Name        string `json:"name"`
+	DictUrl     string `json:"dict_url"`
 	Information string `json:"information"`
 	Bakes       map[string]string `json:"bakes"`
 	Drinks      map[string]string `json:"drinks"`
-	Volumes     []string `json:"volumes"`
 	Additives   map[string]string `json:"additives"`
+	Volumes     []string `json:"volumes"`
 	Chat        ChatConfig `json:"chat"`
 }
 
 type Configuration struct {
 	Main    struct {
-			Port         int    `json:"port"`
-			CallbackAddr string `json:"callback_addr"`
-			LoggingFile  string `json:"log_file"`
-			GoogleKey    string `json:"google_key"`
-			ElasticConn  string `json:"elastic_conn"`
-			Database     struct {
-					     ConnString string `json:"connection_string"`
-					     Name       string `json:"name"`
-				     } `json:"database"`
-			PGDatabase   struct {
-					     ConnString string `json:"connection_string"`
-				     } `json:"pg_database"`
+			Port                int    `json:"port"`
+			CallbackAddr        string `json:"callback_addr"`
+			CallbackAddrMembers string `json:"callback_addr_members"`
+			LoggingFile         string `json:"log_file"`
+			GoogleKey           string `json:"google_key"`
+			ElasticConn         string `json:"elastic_conn"`
+			Database            struct {
+						    ConnString string `json:"connection_string"`
+						    Name       string `json:"name"`
+					    } `json:"database"`
+			PGDatabase          struct {
+						    ConnString string `json:"connection_string"`
+					    } `json:"pg_database"`
 		} `json:"main"`
 	Console ConsoleConfig  `json:"console"`
 	Taxis   map[string]TaxiConfig `json:"taxis"`

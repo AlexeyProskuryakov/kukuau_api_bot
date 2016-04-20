@@ -16,7 +16,7 @@ var (
 	NO_ADD = string("без добавки")
 )
 
-func getCommands(coffeeHouseConfig *CoffeeHouseConfiguration, isFirst bool, isActive bool) *[]s.OutCommand {
+func getCommands(coffeeHouseConfig *CoffeeHouseConfiguration, isFirst, isActive bool) *[]s.OutCommand {
 	commands := []s.OutCommand{
 		s.OutCommand{
 			Title: "Напитки",

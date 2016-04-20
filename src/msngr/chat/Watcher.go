@@ -5,11 +5,11 @@ import (
 	"time"
 	"gopkg.in/mgo.v2/bson"
 	"log"
-	"msngr/notify"
+	n "msngr/notify"
 	"msngr/configuration"
 )
 
-func Watch(messageStore *db.MessageHandler, ntf *msngr.Notifier, config configuration.ChatConfig) {
+func Watch(messageStore *db.MessageHandler, ntf *n.Notifier, config configuration.ChatConfig) {
 	for {
 		froms := map[string]bool{}
 		timeStampLess := time.Now().Add(-(time.Duration(config.AutoAnswer.After) * time.Minute)).Unix()

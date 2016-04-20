@@ -23,7 +23,7 @@ type CoffeeFunctionData struct {
 	MessageId string `json:"message_id"`
 }
 
-func GetMessageAdditionalFunctionsHandler(start_addr string, notifier *ntf.Notifier, db *d.MainDb, config c.ChatConfig) http.Handler {
+func GetMessageAdditionalFunctionsHandler(start_addr string, notifier *ntf.Notifier, db *d.MainDb, config c.ChatConfig, chc *CoffeeHouseConfiguration) http.Handler {
 	m := chat.GetMartini(config.Name, config.CompanyId, start_addr, db)
 	m.Post(start_addr, func(render render.Render, req *http.Request) {
 		cfd := CoffeeFunctionData{}
@@ -45,7 +45,8 @@ func GetMessageAdditionalFunctionsHandler(start_addr string, notifier *ntf.Notif
 
 		switch cfd.Action {
 		case "cancel":
-			notifier.NotifyText(cfd.Context.UserName, "Ваш заказ отменили!")
+			commands := getCommands(chc, false, false)
+			notifier.NotifyTextWithCommands(cfd.Context.UserName, "Ваш заказ отменили!", commands)
 			db.Orders.SetActive(cfd.Context.OrderId, cfd.Context.CompanyName, false)
 			result = "Отменено"
 
