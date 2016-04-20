@@ -26,7 +26,7 @@ const (
 )
 
 var (
-	DB_ERROR = errors.New("Ошибка на стороне базы данных")
+	DB_ERROR = errors.New("Ошибка на стороне базы данных, попробуйте позже...")
 	DB_ERROR_RESULT = &s.MessageResult{Type:"chat", Body:DB_ERROR.Error()}
 	BAD_KEY_RESULT = &s.MessageResult{Type:"chat", Body:BAD_KEY}
 	USER_DATA_ERROR_RESULT = &s.MessageResult{Type:"chat", Body:"Не хватает данных для сохранения сообщения :("}
@@ -168,7 +168,6 @@ func GetTeamNameFromKey(key string) (string, error) {
 }
 
 func (qmpp QuestMessageProcessor) ProcessMessage(in *s.InPkg) *s.MessageResult {
-
 	if in.Message.Body != nil {
 		pkey := in.Message.Body
 		key := *pkey
@@ -217,7 +216,7 @@ func (qmpp QuestMessageProcessor) ProcessMessage(in *s.InPkg) *s.MessageResult {
 						log.Printf("Q E : at adding team member%v", err)
 						return DB_ERROR_RESULT
 					}
-				}else {
+				} else {
 					log.Printf("Q:Register key [%v] not recognised because we have previous key: %v, " +
 					"\nQ:but member for[%v] is nil:( all in:\n%+v", key, prev_key, in.UserData, in)
 					return BAD_KEY_RESULT
@@ -281,7 +280,40 @@ func (qmpp QuestMessageProcessor) ProcessMessage(in *s.InPkg) *s.MessageResult {
 		return &s.MessageResult{Type:"chat", Body:"Сообщения нет :( ", Commands:commands}
 	}
 	commands := getCommands(qmpp.Storage, in.From)
-	return &s.MessageResult{Type:"chat", Body:"Ваше сообщение доставлено. Скоро вам ответят.", Commands:commands}
+	return &s.MessageResult{Type:"chat", Body:"Ваше сообщение доставлено. ", Commands:commands}
+}
+
+type QuestEnrollProcessor struct {
+	Store *QuestStorage
+}
+
+func (qep *QuestEnrollProcessor) ProcessMessage(in *s.InPkg) *s.MessageResult {
+	commands := getCommands(qep.Store, in.From)
+	if in.Message.Commands != nil {
+		message_commands := in.Message.Commands
+		for _, command := range *message_commands {
+			if command.Action == "enroll" {
+				name, _ := command.Form.GetAny("name")
+				sername, _ := command.Form.GetAny("sername")
+				birthday, _ := command.Form.GetAny("birthday")
+				quest_date, _ := command.Form.GetAny("quest_date")
+				_, err := qep.Store.StoreMessage(
+					in.From,
+					ME,
+					fmt.Sprintf("Хочу записаться на квест %s! Меня зовут: %s %s, дата рождения: %s", quest_date, name, sername, birthday),
+					false,
+				)
+				if err != nil {
+					log.Printf("Q: ERROR at storing message for enroll")
+					return DB_ERROR_RESULT
+				}
+
+				return &s.MessageResult{Type:"chat", Body:"Ваша заявка принята.", Commands:commands}
+
+			}
+		}
+	}
+	return &s.MessageResult{Type:"chat", Body:"Чего-то не хватает...", Commands:commands}
 }
 
 func FormQuestBotContext(conf c.Configuration, qname string, cs c.ConfigStorage, qs *QuestStorage, db *db.MainDb) *m.BotContext {
@@ -297,6 +329,7 @@ func FormQuestBotContext(conf c.Configuration, qname string, cs c.ConfigStorage,
 
 	result.MessageProcessors = map[string]s.MessageCommandProcessor{
 		"information":&QuestInfoMessageProcessor{Information:qconf.Info},
+		"enroll": &QuestEnrollProcessor{Store:qs},
 		"":QuestMessageProcessor{Storage:qs, ConfigStorage:cs},
 	}
 

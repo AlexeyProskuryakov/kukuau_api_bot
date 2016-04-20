@@ -1,0 +1,54 @@
+{
+  "message": {
+    "commands": [
+      {
+        "action": "enroll",
+        "form": {
+          "fields": [
+            {
+              "data": {
+                "value": "",
+                "text": "test name"
+              },
+              "type": "text",
+              "name": "name"
+            },
+             {
+              "data": {
+                "value": "",
+                "text": "test name"
+              },
+              "type": "text",
+              "name": "sername"
+            },
+             {
+              "data": {
+                "value": "",
+                "text": "test birthday"
+              },
+              "type": "text",
+              "name": "birthday"
+            },
+             {
+              "data": {
+                "value": "",
+                "text": "test name"
+              },
+              "type": "text",
+              "name": "quest_date"
+            }
+          ]
+        }
+      }
+    ],
+    "thread": "2c474723-ff4d-4fad-a31f-18e8063bdff2",
+    "body": "",
+    "type": "chat",
+    "id": "quest0000000001"
+  },
+  "from": "TEST",
+  "userdata": {
+    "phone": "TESTPHONE",
+    "name": "TESTNAME"
+  }
+}
