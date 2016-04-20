@@ -4,6 +4,7 @@ import (
 	"msngr/db"
 	s "msngr/structs"
 	"errors"
+	"log"
 )
 
 var (
@@ -17,28 +18,27 @@ var (
 	GLOBAL_ERROR_RESULT = &s.MessageResult{Type:"chat", Body:GLOBAL_ERROR.Error()}
 )
 
-type Func func(in *s.InPkg) (*[]s.OutCommand, error)
+type CommandsGenerator func(in *s.InPkg) (*[]s.OutCommand, error)
 
 type FuncTextBodyProcessor struct {
-	Storage *db.MainDb
-	F Func
+	Storage                  *db.MainDb
+	F                        CommandsGenerator
 	MessageRecipientIdentity string
-	AnswerText *string
+	AnswerText               *string
 }
-
 
 func (ftbp *FuncTextBodyProcessor) ProcessMessage(in *s.InPkg) *s.MessageResult {
 	commands, err := ftbp.F(in)
-	if err != nil{
+	if err != nil {
 		return s.ErrorMessageResult(err, commands)
 	} else {
-		if in.UserData != nil{
+		if in.UserData != nil {
 			err := ftbp.Storage.Users.StoreUserData(in.From, in.UserData)
-			if err != nil{
+			if err != nil {
 				return DB_ERROR_RESULT
 			}
 		}
-		if in.Message != nil && in.Message.Body != nil{
+		if in.Message != nil && in.Message.Body != nil {
 			mesageBody := in.Message.Body
 			ftbp.Storage.Messages.StoreMessage(in.From, ftbp.MessageRecipientIdentity, *mesageBody, in.Message.ID)
 			if ftbp.AnswerText != nil {
@@ -54,25 +54,43 @@ func (ftbp *FuncTextBodyProcessor) ProcessMessage(in *s.InPkg) *s.MessageResult 
 	return GLOBAL_ERROR_RESULT
 }
 
-
-func NewSimpleTextBodyProcessor(storage *db.MainDb, commands *[]s.OutCommand, recipientId string, answerText *string) *FuncTextBodyProcessor{
-	f := func (in *s.InPkg) (*[]s.OutCommand, error){
+func NewSimpleTextBodyProcessor(storage *db.MainDb, commands *[]s.OutCommand, recipientId string, answerText *string) *FuncTextBodyProcessor {
+	f := func(in *s.InPkg) (*[]s.OutCommand, error) {
 		return commands, nil
 	}
 	result := &FuncTextBodyProcessor{Storage:storage, F:f, MessageRecipientIdentity:recipientId, AnswerText:answerText}
 	return result
 }
 
+func NewFuncTextBodyProcessor(storage *db.MainDb, function CommandsGenerator, recipientId string, answerText *string) *FuncTextBodyProcessor {
+	result := &FuncTextBodyProcessor{Storage:storage, F:function, MessageRecipientIdentity:recipientId, AnswerText:answerText}
+	return result
+}
 
 type InformationProcessor struct {
 	Information string
+	F           CommandsGenerator
 }
 
 func (ip *InformationProcessor) ProcessMessage(in *s.InPkg) *s.MessageResult {
-	result := s.MessageResult{Type:"chat", Body:ip.Information}
+	cmds, err := ip.F(in)
+	if err != nil {
+		log.Printf("Inforamtion processor: ERROR %v", err)
+		return &s.MessageResult{Type:"chat", Body:ip.Information}
+	}
+	result := s.MessageResult{Type:"chat", Body:ip.Information, Commands:cmds}
 	return &result
 }
 
-func NewInformationProcessor(information string) *InformationProcessor{
-	return &InformationProcessor{Information:information}
+func NewSimpleInformationProcessor(information string) *InformationProcessor {
+	return &InformationProcessor{
+		Information:information,
+		F:func(in *s.InPkg) (*[]s.OutCommand, error) {
+			return &[]s.OutCommand{}, nil
+		},
+	}
+}
+
+func NewInformationProcessor(information string, cg CommandsGenerator) *InformationProcessor {
+	return &InformationProcessor{Information:information, F:cg}
 }

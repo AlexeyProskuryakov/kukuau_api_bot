@@ -182,13 +182,16 @@ func StartBot(db *d.MainDb, result chan string) c.Configuration {
 		http.Handle("/static/", http.StripPrefix("/static/", fs))
 
 		for _, c_conf := range conf.Coffee {
-			cbc := coffee.FormBotCoffeeContext(c_conf, db)
+			c_store := coffee.NewCoffeeConfigHandler(db)
+			coffeeHouseConfiguration, err := c_store.LoadFromConfig(c_conf)
+			if err != nil {
+				log.Printf("INIT ERROR at init coffee %v is %v", c_conf.Name, err)
+			}
+			cbc := coffee.FormBotCoffeeContext(c_conf, db, coffeeHouseConfiguration)
 			cntrl := m.FormBotController(cbc, db)
 			route := fmt.Sprintf("/bot/coffee/%v", c_conf.Name)
 			http.HandleFunc(route, cntrl)
 			log.Printf("will handling bot messages for coffee %v at %v", c_conf.Name, route)
-			c_store := coffee.NewCoffeeConfigHandler(db)
-			c_store.LoadFromConfig(c_conf)
 
 			http.HandleFunc(fmt.Sprintf("/autocomplete/coffee/%v/drink", c_conf.Name), func(w http.ResponseWriter, r *http.Request) {
 				coffee.AutocompleteController(w, r, c_store, "drinks", c_conf.Name)
@@ -203,7 +206,7 @@ func StartBot(db *d.MainDb, result chan string) c.Configuration {
 			})
 
 			http.HandleFunc(fmt.Sprintf("/autocomplete/coffee/%v/additive", c_conf.Name), func(w http.ResponseWriter, r *http.Request) {
-				coffee.AutocompleteController(w, r, c_store, "addititves", c_conf.Name)
+				coffee.AutocompleteController(w, r, c_store, "additives", c_conf.Name)
 			})
 			var salt string
 			if c_conf.Chat.UrlSalt != "" {
@@ -212,7 +215,7 @@ func StartBot(db *d.MainDb, result chan string) c.Configuration {
 				salt = c_conf.Name
 			}
 
-			notifier := n.NewNotifier(conf.Main.CallbackAddr, c_conf.Key, db)
+			notifier := n.NewNotifier(conf.Main.CallbackAddr, c_conf.Chat.Key, db)
 			notifier.SetFrom(c_conf.Name)
 
 			webRoute := fmt.Sprintf("/web/coffee/%v", salt)
@@ -222,12 +225,14 @@ func StartBot(db *d.MainDb, result chan string) c.Configuration {
 				return fmt.Sprintf("%v%v", webRoute, s)
 			}
 			http.Handle(sr("/send"), chat.GetChatSendHandler(sr("/send"), notifier, db, c_conf.Chat, chat.NewChatStorage(db)))
-			http.Handle(sr("/messages"), chat.GetChatMessagesHandler(sr("/messages"), notifier, db, c_conf.Chat))
+			http.Handle(sr("/unread_messages"), chat.GetChatUnreadMessagesHandler(sr("/unread_messages"), notifier, db, c_conf.Chat))
 			http.Handle(sr("/messages_read"), chat.GetChatMessageReadHandler(sr("/messages_read"), notifier, db, c_conf.Chat))
 			http.Handle(sr("/contacts"), chat.GetChatContactsHandler(sr("/contacts"), notifier, db, c_conf.Chat))
 			http.Handle(sr("/contacts_change"), chat.GetChatContactsChangeHandler(sr("/contacts_change"), notifier, db, c_conf.Chat))
 			http.Handle(sr("/config"), chat.GetChatConfigHandler(sr("/config"), webRoute, db, c_conf.Chat))
 			http.Handle(sr("/delete_messages"), chat.GetChatDeleteMessagesHandler(sr("/delete_messages"), db, c_conf.Chat))
+
+			http.Handle(sr("/message_function"), coffee.GetMessageAdditionalFunctionsHandler(sr("/message_function"), notifier, db, c_conf.Chat))
 
 			log.Printf("I will handling web requests for coffee %v at : [%v]", c_conf.Name, webRoute)
 			db.Users.AddOrUpdateUserObject(d.UserWrapper{UserId:c_conf.Chat.User, UserName:c_conf.Chat.User, Password:utils.PHash(c_conf.Chat.Password), Role:users.MANAGER})
@@ -266,7 +271,7 @@ func StartBot(db *d.MainDb, result chan string) c.Configuration {
 				return fmt.Sprintf("%v%v", webRoute, s)
 			}
 			http.Handle(sr("/send"), chat.GetChatSendHandler(sr("/send"), notifier, db, chat_conf, chat.NewChatStorage(db)))
-			http.Handle(sr("/messages"), chat.GetChatMessagesHandler(sr("/messages"), notifier, db, chat_conf))
+			http.Handle(sr("/unread_messages"), chat.GetChatUnreadMessagesHandler(sr("/unread_messages"), notifier, db, chat_conf))
 			http.Handle(sr("/messages_read"), chat.GetChatMessageReadHandler(sr("/messages_read"), notifier, db, chat_conf))
 			http.Handle(sr("/contacts"), chat.GetChatContactsHandler(sr("/contacts"), notifier, db, chat_conf))
 			http.Handle(sr("/contacts_change"), chat.GetChatContactsChangeHandler(sr("/contacts_change"), notifier, db, chat_conf))

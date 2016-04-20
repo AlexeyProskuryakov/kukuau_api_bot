@@ -12,7 +12,7 @@
       <h1>Выберите комманду которой требуется написать сообщение</h1>
       {{range $team := .teams}}
       <div class="row">
-        <a href="/messages/{{$team.SID}}">Комманда {{$team.Name}}</a>
+        <a href="/messages/{{$team.SID}}">Команда {{$team.Name}}</a>
       </div>
       {{end}}
     </div>

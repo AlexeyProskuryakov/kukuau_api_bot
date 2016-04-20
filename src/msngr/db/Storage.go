@@ -79,29 +79,37 @@ type ErrorWrapper struct {
 }
 
 type AdditionalDataElement struct {
-	Key string
+	Key   string
 	Value string
-	Name string
+	Name  string
+}
+
+type AdditionalFuncElement struct {
+	Name    string
+	Action  string
+	Context map[string]interface{}
 }
 
 type MessageWrapper struct {
-	ID               bson.ObjectId `bson:"_id,omitempty"`
-	SID              string
-	From             string `bson:"from"`
-	Body             string `bson:"body"`
-	To               string `bson:"to"`
-	Time             time.Time `bson:"time"`
-	TimeStamp        int64 `bson:"time_stamp"`
-	TimeFormatted    string `bson:",omitempty" json:"time"`
-	NotAnswered      int `bson:"not_answered"`
-	AnsweredBy       string `bson:"answered_by"`
-	Unread           int `bson:"unread"`
-	MessageID        string `bson:"message_id"`
-	MessageStatus    string `bson:"message_status"`
-	MessageCondition string `bson:"message_condition"`
-	IsDeleted        bool `bson:"is_deleted"`
-	Attributes       []string `bson:"attributes"`
-	AdditionalData   []AdditionalDataElement `bson:"additional_data"`
+	ID                bson.ObjectId `bson:"_id,omitempty"`
+	SID               string
+	From              string `bson:"from"`
+	Body              string `bson:"body"`
+	To                string `bson:"to"`
+	Time              time.Time `bson:"time"`
+	TimeStamp         int64 `bson:"time_stamp"`
+	TimeFormatted     string `bson:",omitempty" json:"time"`
+	NotAnswered       int `bson:"not_answered"`
+	AnsweredBy        string `bson:"answered_by"`
+	Unread            int `bson:"unread"`
+	MessageID         string `bson:"message_id"`
+	MessageStatus     string `bson:"message_status"`
+	MessageCondition  string `bson:"message_condition"`
+	IsDeleted         bool `bson:"is_deleted"`
+	Attributes        []string `bson:"attributes"`
+	AdditionalData    []AdditionalDataElement `bson:"additional_data"`
+	AdditionalFuncs   []AdditionalFuncElement  `bson:"additional_funcs"`
+	RelatedOrderState string `bson:"related_order_state"`
 }
 
 func (mw MessageWrapper) IsAttrPresent(attrName string) bool {
@@ -522,7 +530,6 @@ func (uh *UserHandler) StoreUserData(user_id string, user_data *s.InUserData) er
 	}
 }
 
-
 func (uh UserHandler) AddOrUpdateUserObject(uw UserWrapper) error {
 	if !uh.parent.Check() {
 		return errors.New("БД не доступна")
@@ -738,10 +745,23 @@ func (mh *MessageHandler) SetMessagesRead(from string) error {
 	if !mh.parent.Check() {
 		return errors.New("БД не доступна")
 	}
-	_, err := mh.Collection.UpdateAll(
+	info, err := mh.Collection.UpdateAll(
 		bson.M{"from":from, "unread":1},
 		bson.M{"$set":bson.M{"unread":0}},
 	)
+	log.Printf("Result of messages read for messages from %v is: %+v", from, info)
+	return err
+}
+
+func (mh *MessageHandler) SetAllMessagesRead(from, to string) error {
+	if !mh.parent.Check() {
+		return errors.New("БД не доступна")
+	}
+	info, err := mh.Collection.UpdateAll(
+		bson.M{"$or":[]bson.M{bson.M{"from":from, "to":to}, bson.M{"to":to, "from":from}}, "unread":1},
+		bson.M{"$set":bson.M{"unread":0}},
+	)
+	log.Printf("Result of messages read for messages from %v is: %+v", from, info)
 	return err
 }
 
@@ -782,4 +802,8 @@ func (mh *MessageHandler) DeleteMessages(from, to string) (int, error) {
 }
 func (mh *MessageHandler) UpdateMessageStatus(message_id, status, condition string) error {
 	return mh.Collection.Update(bson.M{"message_id":message_id}, bson.M{"$set":bson.M{"message_status":status, "message_condition":condition}})
+}
+
+func (mh *MessageHandler) UpdateMessageRelatedOrderState(messageId, newState string) error {
+	return mh.Collection.Update(bson.M{"message_id":messageId}, bson.M{"$set":bson.M{"related_order_state":newState}})
 }

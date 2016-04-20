@@ -36,7 +36,7 @@ func WRONG_TEAM_MEMBER(bad, good string) string {
 	return fmt.Sprintf("Вы не являетесь участником группы %s. Вы учасник группы %s.", bad, good)
 }
 
-func getCommands(qs *QuestStorage, user_id string) *[]s.OutCommand {
+func getCommands(qs *QuestStorage, user_id string, times []string) *[]s.OutCommand {
 	result := []s.OutCommand{}
 	man, err := qs.GetManByUserId(user_id)
 	if err != nil {
@@ -44,6 +44,15 @@ func getCommands(qs *QuestStorage, user_id string) *[]s.OutCommand {
 	}
 	log.Printf("QB forming commands for %+v", man)
 	if man != nil && man.Passersby == true {
+		timeItems := []s.FieldItem{}
+		for _, time := range times {
+			timeItems = append(timeItems, s.FieldItem{
+				Value:time,
+				Content:s.FieldItemContent{
+					Title:time,
+				},
+			})
+		}
 		result = append(result, s.OutCommand{
 			Title:"Записаться на квест в НОВАТе",
 			Action:"enroll",
@@ -85,7 +94,7 @@ func getCommands(qs *QuestStorage, user_id string) *[]s.OutCommand {
 							Label:    "Дата квеста",
 							Required: true,
 						},
-						Items
+						Items:timeItems,
 					},
 				},
 			},
@@ -96,12 +105,12 @@ func getCommands(qs *QuestStorage, user_id string) *[]s.OutCommand {
 }
 
 type QuestCommandRequestProcessor struct {
-	c.ConfigStorage
 	Storage *QuestStorage
+	Config  c.QuestConfig
 }
 
 func (qcp *QuestCommandRequestProcessor) ProcessRequest(in *s.InPkg) *s.RequestResult {
-	commands := getCommands(qcp.Storage, in.From)
+	commands := getCommands(qcp.Storage, in.From, qcp.Config.QuestTimes)
 	result := s.RequestResult{Commands: commands}
 	return &result
 }
@@ -115,7 +124,7 @@ func (qimp QuestInfoMessageProcessor) ProcessMessage(in *s.InPkg) *s.MessageResu
 }
 
 type QuestMessageProcessor struct {
-	c.ConfigStorage
+	Config  c.QuestConfig
 	Storage *QuestStorage
 }
 
@@ -224,7 +233,7 @@ func (qmpp QuestMessageProcessor) ProcessMessage(in *s.InPkg) *s.MessageResult {
 				}
 			} else {
 				log.Printf("Q:Member is: %+v", member)
-				commands := getCommands(qmpp.Storage, in.From)
+				commands := getCommands(qmpp.Storage, in.From, qmpp.Config.QuestTimes)
 				if prev_key == nil {
 					log.Printf("Q:will change team at member [%v]  %v -> %v", member.Name, member.TeamName, team_name)
 					qmpp.Storage.AddTeamMember(in.From, in.UserData.Name, in.UserData.Phone, team)
@@ -255,7 +264,7 @@ func (qmpp QuestMessageProcessor) ProcessMessage(in *s.InPkg) *s.MessageResult {
 					log.Printf("Q E : can not store that team %v is winner, because %v", team_name, err)
 				}
 			}
-			commands := getCommands(qmpp.Storage, in.From)
+			commands := getCommands(qmpp.Storage, in.From, qmpp.Config.QuestTimes)
 			return &s.MessageResult{Type:"chat", Body:descr, Commands:commands}
 		} else {
 			var from string
@@ -277,19 +286,20 @@ func (qmpp QuestMessageProcessor) ProcessMessage(in *s.InPkg) *s.MessageResult {
 			qmpp.Storage.StoreMessage(from, ME, key, false)
 		}
 	} else {
-		commands := getCommands(qmpp.Storage, in.From)
+		commands := getCommands(qmpp.Storage, in.From, qmpp.Config.QuestTimes)
 		return &s.MessageResult{Type:"chat", Body:"Сообщения нет :( ", Commands:commands}
 	}
-	commands := getCommands(qmpp.Storage, in.From)
+	commands := getCommands(qmpp.Storage, in.From, qmpp.Config.QuestTimes)
 	return &s.MessageResult{Type:"chat", Body:"Ваше сообщение доставлено. ", Commands:commands}
 }
 
 type QuestEnrollProcessor struct {
-	Store *QuestStorage
+	Store  *QuestStorage
+	Config c.QuestConfig
 }
 
 func (qep *QuestEnrollProcessor) ProcessMessage(in *s.InPkg) *s.MessageResult {
-	commands := getCommands(qep.Store, in.From)
+	commands := getCommands(qep.Store, in.From, qep.Config.QuestTimes)
 	if in.Message.Commands != nil {
 		message_commands := in.Message.Commands
 		for _, command := range *message_commands {
@@ -325,13 +335,13 @@ func FormQuestBotContext(conf c.Configuration, qname string, cs c.ConfigStorage,
 	}
 
 	result.RequestProcessors = map[string]s.RequestCommandProcessor{
-		"commands":&QuestCommandRequestProcessor{Storage:qs, ConfigStorage:cs},
+		"commands":&QuestCommandRequestProcessor{Storage:qs, Config:qconf},
 	}
 
 	result.MessageProcessors = map[string]s.MessageCommandProcessor{
 		"information":&QuestInfoMessageProcessor{Information:qconf.Info},
-		"enroll": &QuestEnrollProcessor{Store:qs},
-		"":QuestMessageProcessor{Storage:qs, ConfigStorage:cs},
+		"enroll": &QuestEnrollProcessor{Store:qs, Config:qconf},
+		"":QuestMessageProcessor{Storage:qs, Config:qconf},
 	}
 
 	result.CommandsStorage = cs

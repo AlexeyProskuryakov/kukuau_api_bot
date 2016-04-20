@@ -87,6 +87,10 @@ func getRenderer(cName, cId, start_addr string) martini.Handler {
 				"is_additional_data_valid":func(ad d.AdditionalDataElement) bool {
 					return ad.Value != ""
 				},
+				"get_context":func(adF d.AdditionalFuncElement) string {
+					data, _ := json.Marshal(adF.Context)
+					return string(data)
+				},
 			},
 		},
 	})
@@ -103,7 +107,7 @@ func getBasicAuth(db *d.MainDb) martini.Handler {
 	})
 }
 
-func getMartini(cName, cId, start_addr string, db *d.MainDb) *martini.ClassicMartini {
+func GetMartini(cName, cId, start_addr string, db *d.MainDb) *martini.ClassicMartini {
 	m := martini.Classic()
 	m.Use(getRenderer(cName, cId, start_addr))
 	m.Use(getBasicAuth(db))
@@ -111,7 +115,7 @@ func getMartini(cName, cId, start_addr string, db *d.MainDb) *martini.ClassicMar
 }
 
 func GetChatMainHandler(start_addr string, notifier *ntf.Notifier, db *d.MainDb, config c.ChatConfig) http.Handler {
-	m := getMartini(config.Name, config.CompanyId, start_addr, db)
+	m := GetMartini(config.Name, config.CompanyId, start_addr, db)
 	m.Get(start_addr, func(r render.Render, params martini.Params, req *http.Request) {
 		var with string
 		result_data := map[string]interface{}{}
@@ -159,7 +163,6 @@ func GetChatMainHandler(start_addr string, notifier *ntf.Notifier, db *d.MainDb,
 		if contacts, err := GetContacts(db, config.CompanyId); err == nil {
 			result_data["contacts"] = contacts
 		}
-		log.Printf("CS result data :%+v", result_data)
 		r.HTML(200, "chat", result_data, render.HTMLOptions{Layout:"base"})
 
 	})
@@ -167,7 +170,7 @@ func GetChatMainHandler(start_addr string, notifier *ntf.Notifier, db *d.MainDb,
 }
 
 func GetChatDeleteMessagesHandler(start_addr string, db *d.MainDb, config c.ChatConfig) http.Handler {
-	m := getMartini(config.Name, config.CompanyId, start_addr, db)
+	m := GetMartini(config.Name, config.CompanyId, start_addr, db)
 	m.Delete(start_addr, func(ren render.Render, req *http.Request) {
 		type DeleteInfo struct {
 			From string `json:"from"`
@@ -196,7 +199,7 @@ func GetChatDeleteMessagesHandler(start_addr string, db *d.MainDb, config c.Chat
 	return m
 }
 func GetChatSendHandler(start_addr string, notifier *ntf.Notifier, db *d.MainDb, config c.ChatConfig, cs *ChatStorage) http.Handler {
-	m := getMartini(config.Name, config.CompanyId, start_addr, db)
+	m := GetMartini(config.Name, config.CompanyId, start_addr, db)
 	m.Post(start_addr, func(render render.Render, req *http.Request) {
 		type MessageFromF struct {
 			From string `json:"from"`
@@ -240,7 +243,7 @@ func GetChatSendHandler(start_addr string, notifier *ntf.Notifier, db *d.MainDb,
 	return m
 }
 func GetChatMessageReadHandler(start_addr string, notifier *ntf.Notifier, db *d.MainDb, config c.ChatConfig) http.Handler {
-	m := getMartini(config.Name, config.CompanyId, start_addr, db)
+	m := GetMartini(config.Name, config.CompanyId, start_addr, db)
 	m.Post(start_addr, func(render render.Render, req *http.Request) {
 		type Readed struct {
 			From string `json:"from"`
@@ -258,7 +261,7 @@ func GetChatMessageReadHandler(start_addr string, notifier *ntf.Notifier, db *d.
 			render.JSON(500, map[string]interface{}{"error":err})
 			return
 		}
-		err = db.Messages.SetMessagesRead(readed.From)
+		err = db.Messages.SetAllMessagesRead(readed.From, config.CompanyId)
 		if err != nil {
 			log.Printf("CS QE E: at unmarshal json messages %v\ndata:%s", err, data)
 			render.JSON(500, map[string]interface{}{"error":err})
@@ -268,12 +271,38 @@ func GetChatMessageReadHandler(start_addr string, notifier *ntf.Notifier, db *d.
 	})
 	return m
 }
-func GetChatMessagesHandler(start_addr string, notifier *ntf.Notifier, db *d.MainDb, config c.ChatConfig) http.Handler {
-	m := getMartini(config.Name, config.CompanyId, start_addr, db)
+
+func get_messages(between1, between2 string, db *d.MainDb) ([]d.MessageWrapper, error) {
+	query := bson.M{"unread":1}
+	if between1 == "" {
+		query["$or"] = []bson.M{bson.M{"to":between2}, bson.M{"from":between2}}
+	} else {
+		query["$or"] = []bson.M{bson.M{"from":between1, "to":between2}, bson.M{"to":between1, "from":between2}}
+	}
+
+	messages, err := db.Messages.GetMessages(query)
+	result := []d.MessageWrapper{}
+	if err != nil {
+		log.Printf("CS unread messages: error at retrieve messages %v", err)
+		return result, err
+	}
+	for i, msg := range messages {
+		if msg.From == between2 {
+			u, _ := db.Users.GetUserById(msg.To)
+			messages[i].To = u.GetName()
+		}else {
+			u, _ := db.Users.GetUserById(msg.From)
+			messages[i].From = u.GetName()
+		}
+		result = append(result, messages[i])
+	}
+	return result, nil
+}
+func GetChatUnreadMessagesHandler(start_addr string, notifier *ntf.Notifier, db *d.MainDb, config c.ChatConfig) http.Handler {
+	m := GetMartini(config.Name, config.CompanyId, start_addr, db)
 	m.Post(start_addr, func(render render.Render, req *http.Request) {
 		type NewMessagesReq struct {
-			For   string `json:"m_for"`
-			After int64 `json:"after"`
+			For string `json:"m_for"`
 		}
 		nmReq := NewMessagesReq{}
 		request_body, err := ioutil.ReadAll(req.Body)
@@ -286,34 +315,17 @@ func GetChatMessagesHandler(start_addr string, notifier *ntf.Notifier, db *d.Mai
 			render.JSON(500, map[string]interface{}{"ok":false, "detail":fmt.Sprintf("can not unmarshal request body %v \n %s", err, request_body)})
 			return
 		}
-		//log.Printf("New messages request : %v", nmReq)
-		query := bson.M{"time_stamp":bson.M{"$gt":nmReq.After}}
-		if nmReq.For == "" {
-			query["to"] = config.CompanyId
-		} else {
-			query["from"] = nmReq.For
-			query["to"] = config.CompanyId
-		}
-
-		messages, err := db.Messages.GetMessages(query)
+		result, err := get_messages(nmReq.For, config.CompanyId, db)
 		if err != nil {
 			render.JSON(500, map[string]interface{}{"ok":false, "detail":fmt.Sprintf("error in db: %v", err)})
-			return
 		}
-		result := []d.MessageWrapper{}
-		for i, msg := range messages {
-			if msg.From != config.CompanyId {
-				u, _ := db.Users.GetUserById(msg.From)
-				messages[i].From = u.GetName()
-				result = append(result, messages[i])
-			}
-		}
-		render.JSON(200, map[string]interface{}{"messages":result, "next_":time.Now().Unix()})
+		log.Printf("New messages for:%v\n%+v", nmReq, result)
+		render.JSON(200, map[string]interface{}{"messages":result})
 	})
 	return m
 }
 func GetChatContactsHandler(start_addr string, notifier *ntf.Notifier, db *d.MainDb, config c.ChatConfig) http.Handler {
-	m := getMartini(config.Name, config.CompanyId, start_addr, db)
+	m := GetMartini(config.Name, config.CompanyId, start_addr, db)
 	m.Post(start_addr, func(render render.Render, req *http.Request) {
 		type NewContactsReq struct {
 			After int64 `json:"after"`
@@ -359,7 +371,7 @@ func GetChatContactsHandler(start_addr string, notifier *ntf.Notifier, db *d.Mai
 }
 
 func GetChatContactsChangeHandler(start_addr string, notifier *ntf.Notifier, db *d.MainDb, config c.ChatConfig) http.Handler {
-	m := getMartini(config.Name, config.CompanyId, start_addr, db)
+	m := GetMartini(config.Name, config.CompanyId, start_addr, db)
 	m.Post(start_addr, func(render render.Render, req *http.Request) {
 		type NewContactName struct {
 			Id      string `json:"id"`
@@ -388,7 +400,7 @@ func GetChatContactsChangeHandler(start_addr string, notifier *ntf.Notifier, db 
 }
 
 func GetChatConfigHandler(start_addr, prefix string, db *d.MainDb, config c.ChatConfig) http.Handler {
-	m := getMartini(config.Name, config.CompanyId, prefix, db)
+	m := GetMartini(config.Name, config.CompanyId, prefix, db)
 	m.Get(start_addr, func(ren render.Render, req *http.Request) {
 		ren.HTML(200, "config", map[string]interface{}{}, render.HTMLOptions{Layout:"base"})
 	})

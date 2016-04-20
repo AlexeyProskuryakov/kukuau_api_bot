@@ -8,8 +8,9 @@ import (
 	"reflect"
 	"sort"
 	"msngr/configuration"
-	"msngr/structs"
-	"errors"
+	s "msngr/structs"
+	"encoding/json"
+	"log"
 )
 
 type CoffeeHouseConfiguration struct {
@@ -20,54 +21,7 @@ type CoffeeHouseConfiguration struct {
 	Volumes   []string `bson:"volumes"`
 }
 
-type CoffeeOrder struct {
-	Type     string
-	Drink    string
-	Bake     string
-	Additive string
-	Volume   string
-}
-
-func NewCoffeeOrderFromForm(form structs.InForm) (*CoffeeOrder, error) {
-	result := CoffeeOrder{}
-	if form.Name == "order_drink_form" {
-		result.Type = "drink"
-		drink, _ := form.GetValue("drink")
-		result.Drink = drink
-		additive, _ := form.GetValue("additive")
-		result.Additive = additive
-		volume, _ := form.GetValue("volume")
-		result.Volume = volume
-		return &result, nil
-	}else if form.Name == "order_bake_form" {
-		result.Type = "bake"
-		bake, _ := form.GetValue("bake")
-		result.Bake = bake
-		return &result, nil
-	}
-	return nil, errors.New("Invalid form :( ")
-}
-
-func (co CoffeeOrder) ToOrderData() d.OrderData {
-	return d.NewOrderData(map[string]interface{}{
-		"type":co.Type,
-		"drink":co.Drink,
-		"additive":co.Additive,
-		"volume":co.Volume,
-		"bake":co.Bake,
-	})
-}
-
-func (co CoffeeOrder) ToAdditionalMessageData() []d.AdditionalDataElement {
-	return []d.AdditionalDataElement{
-		d.AdditionalDataElement{Key:"drink", Value:co.Drink, Name:"Напиток"},
-		d.AdditionalDataElement{Key:"additive", Value:co.Additive, Name:"Добавка"},
-		d.AdditionalDataElement{Key:"volume", Value:co.Volume, Name:"Объем"},
-		d.AdditionalDataElement{Key:"bake", Value:co.Bake, Name:"Выпечка"},
-	}
-}
-
-func (cc CoffeeHouseConfiguration) _getFieldContent(fieldBsonName string) []string {
+func (cc CoffeeHouseConfiguration) getFieldContent(fieldBsonName string) []string {
 	v := reflect.ValueOf(cc)
 	typ := v.Type()
 	for i := 0; i < v.NumField(); i++ {
@@ -80,11 +34,95 @@ func (cc CoffeeHouseConfiguration) _getFieldContent(fieldBsonName string) []stri
 	return []string{}
 }
 
+func (chc *CoffeeHouseConfiguration) ToFieldItems(fName string) []s.FieldItem {
+	content := chc.getFieldContent(fName)
+	result := []s.FieldItem{}
+	for _, el := range content {
+		result = append(result, s.FieldItem{
+			Value:el,
+			Content:s.FieldItemContent{
+				Title:el,
+			},
+		})
+	}
+	return result
+}
+
 func (cc CoffeeHouseConfiguration) Autocomplete(q, fieldBsonName string) []string {
-	content := cc._getFieldContent(fieldBsonName)
+	content := cc.getFieldContent(fieldBsonName)
 	by := m.ByFuzzyEquals{Data:content, Center:q}
 	sort.Sort(by)
 	return by.Data
+}
+
+type CoffeeOrder struct {
+	Type     string `json:"type"`
+	Drink    string `json:"drink"`
+	Bake     string `json:"bake"`
+	Additive string `json:"additive"`
+	Volume   string `json:"volume"`
+	Count    string `json:"count"`
+	ToTime   string `json:"to_time"`
+}
+
+func NewCoffeeOrderFromForm(form s.InForm) (*CoffeeOrder, error) {
+	result := CoffeeOrder{}
+	if form.Name == "order_drink_form" {
+		result.Type = "drink"
+		drink, _ := form.GetAny("drink")
+		result.Drink = drink
+		additive, _ := form.GetAny("additive")
+		result.Additive = additive
+		volume, _ := form.GetAny("volume")
+		result.Volume = volume
+	}else if form.Name == "order_bake_form" {
+		result.Type = "bake"
+		bake, _ := form.GetAny("bake")
+		result.Bake = bake
+	}
+	count, _ := form.GetAny("count")
+	result.Count = count
+	time, _ := form.GetAny("to_time")
+	result.ToTime = time
+	return &result, nil
+}
+
+func (co CoffeeOrder) ToOrderData() d.OrderData {
+	rawData, err := json.Marshal(co)
+	if err != nil {
+		log.Printf("CoffeeSt tod ERROR at marshall %v", err)
+	}
+	data := map[string]interface{}{}
+	if err = json.Unmarshal(rawData, &data); err != nil {
+		log.Printf("CoffeeSt tod ERROR at unmarshall %v", err)
+	}
+	return d.NewOrderData(data)
+}
+
+func NewCoffeeOrderFromMap(data map[string]interface{}) (*CoffeeOrder, error) {
+	rawData, err := json.Marshal(data)
+	if err != nil {
+		log.Printf("CoffeeSt ncofm ERROR at marshall %v", err)
+		return nil, err
+	}
+
+	result := CoffeeOrder{}
+	if err = json.Unmarshal(rawData, &result); err != nil {
+		log.Printf("CoffeeSt ncofm ERROR at unmarshall %v", err)
+		return nil, err
+	}
+	return &result, nil
+}
+
+func (co CoffeeOrder) ToAdditionalMessageData() []d.AdditionalDataElement {
+	return []d.AdditionalDataElement{
+		d.AdditionalDataElement{Key:"drink", Value:co.Drink, Name:"Напиток"},
+		d.AdditionalDataElement{Key:"additive", Value:co.Additive, Name:"Добавка"},
+		d.AdditionalDataElement{Key:"volume", Value:co.Volume, Name:"Объем"},
+		d.AdditionalDataElement{Key:"bake", Value:co.Bake, Name:"Выпечка"},
+		d.AdditionalDataElement{Key:"count", Value:co.Count, Name:"Количество"},
+		d.AdditionalDataElement{Key:"to_time", Value:co.ToTime, Name:"Ко времени"},
+	}
 }
 
 type CoffeeConfigHandler struct {
@@ -186,27 +224,19 @@ func (cch *CoffeeConfigHandler) GetConfig(name string) (*CoffeeHouseConfiguratio
 
 }
 
-func (cch *CoffeeConfigHandler) LoadFromConfig(conf configuration.CoffeeConfig) {
-	f := CoffeeHouseConfiguration{}
-	cch.Configuration.Find(bson.M{"name":conf.Name}).One(&f)
-	if f.Name != conf.Name{
-		cch.Configuration.Insert(bson.M{"name":conf.Name})
+func (cch *CoffeeConfigHandler) LoadFromConfig(conf configuration.CoffeeConfig) (*CoffeeHouseConfiguration, error) {
+	chc := CoffeeHouseConfiguration{}
+	err := cch.Configuration.Find(bson.M{"name":conf.Name}).One(&chc)
+	if err != nil && err != mgo.ErrNotFound {
+		return nil, err
+
+	} else {
+		newChc := CoffeeHouseConfiguration{Name: conf.Name, Additives:conf.Additives, Bakes:conf.Bakes, Drinks:conf.Drinks, Volumes:conf.Volumes}
+		if err != mgo.ErrNotFound {
+			cch.Configuration.Remove(bson.M{"name":conf.Name})
+		}
+		err := cch.Configuration.Insert(newChc)
+		return &newChc, err
 	}
 
-	for _, bake := range conf.Bakes {
-		cch.RemoveBake(conf.Name, bake)
-		cch.AddBake(conf.Name, bake)
-	}
-	for _, drink := range conf.Drinks {
-		cch.RemoveDrink(conf.Name, drink)
-		cch.AddDrink(conf.Name, drink)
-	}
-	for _, additive := range conf.Additives {
-		cch.RemoveAdditive(conf.Name, additive)
-		cch.AddAdditive(conf.Name, additive)
-	}
-	for _, volume := range conf.Volumes {
-		cch.RemoveVolume(conf.Name, volume)
-		cch.AddVolume(conf.Name, volume)
-	}
 }
