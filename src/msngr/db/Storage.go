@@ -31,7 +31,7 @@ func (odh *OrderData) Get(key string) interface{} {
 	val, ok := odh.Content[key]
 	if ok {
 		return val
-	}else {
+	} else {
 		return nil
 	}
 }
@@ -110,6 +110,8 @@ type MessageWrapper struct {
 	AdditionalData    []AdditionalDataElement `bson:"additional_data"`
 	AdditionalFuncs   []AdditionalFuncElement  `bson:"additional_funcs"`
 	RelatedOrderState string `bson:"related_order_state"`
+	NotificationSend  bool `bson:"notification_sent"`
+	IsNotification    bool `bson:"is_notification"`
 }
 
 func (mw MessageWrapper) IsAttrPresent(attrName string) bool {
@@ -449,7 +451,7 @@ func (oh *orderHandler) GetByOwnerLast(whom, source string) (*OrderWrapper, erro
 	err := oh.Collection.Find(bson.M{"whom": whom, "source":source}).Sort("-when").One(&result)
 	if err == mgo.ErrNotFound {
 		return nil, nil
-	}else if err != nil {
+	} else if err != nil {
 		return nil, err
 	}
 	return &result, nil
@@ -463,7 +465,7 @@ func (oh *orderHandler) GetByOwner(whom, source string, active bool) (*OrderWrap
 	err := oh.Collection.Find(bson.M{"whom": whom, "source":source, "is_active":true}).Sort("-when").One(&result)
 	if err == mgo.ErrNotFound {
 		return nil, nil
-	}else if err != nil {
+	} else if err != nil {
 		return nil, err
 	}
 	return &result, nil
@@ -539,7 +541,7 @@ func (uh UserHandler) AddOrUpdateUserObject(uw UserWrapper) error {
 	if err == mgo.ErrNotFound {
 		err = uh.Collection.Insert(uw)
 		return err
-	}else {
+	} else {
 		err = uh.Collection.UpdateId(obj.ID, uw)
 		return err
 	}
@@ -619,7 +621,7 @@ func (uh *UserHandler) GetUserById(user_id string) (*UserWrapper, error) {
 	if err != nil && err != mgo.ErrNotFound {
 		log.Printf("Ощибка определения пользователя %v", err)
 		return nil, err
-	}else if err == mgo.ErrNotFound {
+	} else if err == mgo.ErrNotFound {
 		return nil, nil
 	}
 	return &result, err
@@ -668,7 +670,7 @@ func (uh *UserHandler) GetBy(req bson.M) ([]UserWrapper, error) {
 	err := uh.Collection.Find(req).Sort("last_update").All(&result)
 	if err != nil && err != mgo.ErrNotFound {
 		return nil, err
-	}else if err == mgo.ErrNotFound {
+	} else if err == mgo.ErrNotFound {
 		return result, nil
 	}
 	return result, nil
@@ -695,6 +697,30 @@ func (eh *errorHandler) GetBy(req bson.M) (*[]ErrorWrapper, error) {
 }
 
 //MESSAGES
+func (mh *MessageHandler) StoreNotificationMessage(from, to, body, message_id string) (*MessageWrapper, error) {
+	if !mh.parent.Check() {
+		return nil, errors.New("БД не доступна")
+	}
+	found, err := mh.GetMessageByMessageId(message_id)
+	if found == nil && err == nil {
+		result := MessageWrapper{
+			From:from,
+			To:to,
+			Body:body,
+			TimeStamp:time.Now().Unix(),
+			Time:time.Now(),
+			NotAnswered:1,
+			Unread:1,
+			MessageID:message_id,
+			IsDeleted:false,
+			TimeFormatted: time.Now().Format(time.Stamp),
+			IsNotification:true,
+		}
+		err := mh.Collection.Insert(&result)
+		return &result, err
+	}
+	return nil, errors.New(fmt.Sprintf("I have duplicate!%+v", found))
+}
 func (mh *MessageHandler) StoreMessage(from, to, body, message_id string) (*MessageWrapper, error) {
 	if !mh.parent.Check() {
 		return nil, errors.New("БД не доступна")
@@ -718,6 +744,15 @@ func (mh *MessageHandler) StoreMessage(from, to, body, message_id string) (*Mess
 	}
 	return nil, errors.New(fmt.Sprintf("I have duplicate!%+v", found))
 }
+
+func (mh *MessageHandler) SetMessageNotificationSent(message_id string) error {
+	if !mh.parent.Check() {
+		return errors.New("БД не доступна")
+	}
+	err := mh.Collection.Update(bson.M{"message_id":message_id}, bson.M{"$set":bson.M{"notification_sent":true}})
+	return err
+}
+
 func (mh *MessageHandler) StoreMessageObject(message MessageWrapper) (error) {
 	if !mh.parent.Check() {
 		return errors.New("БД не доступна")
@@ -771,7 +806,7 @@ func (mh *MessageHandler) GetMessageByMessageId(message_id string) (*MessageWrap
 	err := mh.Collection.Find(bson.M{"message_id":message_id, "is_deleted":false}).One(&result)
 	if err == mgo.ErrNotFound {
 		return nil, nil
-	}else if err != nil {
+	} else if err != nil {
 		return nil, err
 	}
 	result.TimeFormatted = result.Time.Format(time.Stamp)

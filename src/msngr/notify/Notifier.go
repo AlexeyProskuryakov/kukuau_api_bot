@@ -1,4 +1,4 @@
-package msngr
+package notify
 
 import (
 	"bytes"
@@ -45,12 +45,12 @@ func (n *Notifier) Notify(outPkg s.OutPkg) error {
 	req.Header.Add("Accept", "application/json")
 	req.Header.Add("Authorization", n.key)
 
-	log.Printf("N >> %+v \n>>%+v \n>>%s", n.address, req.Header, jsoned_out)
+	log.Printf("N\n>> %+v \n>> %+v \n>> %v\n>>%s", n.address, n.key, req.Header, jsoned_out)
 
 	if n.from == ""{
-		n._db.Messages.StoreMessage("me", outPkg.To, outPkg.Message.Body, outPkg.Message.ID)
+		n._db.Messages.StoreNotificationMessage("me", outPkg.To, outPkg.Message.Body, outPkg.Message.ID)
 	} else{
-		n._db.Messages.StoreMessage(n.from, outPkg.To, outPkg.Message.Body, outPkg.Message.ID)
+		n._db.Messages.StoreNotificationMessage(n.from, outPkg.To, outPkg.Message.Body, outPkg.Message.ID)
 	}
 
 	client := &http.Client{}
@@ -84,7 +84,11 @@ func (n *Notifier) NotifyText(to, text string) (*s.OutPkg, error) {
 	err := n.Notify(result)
 	return &result, err
 }
-
+func (n *Notifier) NotifyTextToMembers(text, key string) (*s.OutPkg, error) {
+	result := s.OutPkg{Message:&s.OutMessage{ID:utils.GenId(), Type:"chat", Body:text}}
+	err := n.Notify(result)
+	return &result, err
+}
 func (n *Notifier)SendMessageToPeople(people []db.UserWrapper, text string) {
 	go func() {
 		for _, user := range people {
@@ -92,4 +96,3 @@ func (n *Notifier)SendMessageToPeople(people []db.UserWrapper, text string) {
 		}
 	}()
 }
-

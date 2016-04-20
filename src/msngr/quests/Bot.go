@@ -9,7 +9,7 @@ import (
 
 	"fmt"
 
-	"msngr/notify"
+	n "msngr/notify"
 	"regexp"
 	"strings"
 	"errors"
@@ -303,8 +303,8 @@ func FormQuestBotContext(conf c.Configuration, qname string, cs c.ConfigStorage,
 	}
 
 	result.CommandsStorage = cs
-	notifier := msngr.NewNotifier(conf.Main.CallbackAddr, qconf.Key, db)
-	additionalNotifier := msngr.NewNotifier(conf.Main.CallbackAddr, qconf.AdditionalKey, db)
+	notifier := n.NewNotifier(conf.Main.CallbackAddr, qconf.Key, db)
+	additionalNotifier := n.NewNotifier(conf.Main.CallbackAddr, qconf.AdditionalKey, db)
 	go Run(qconf, qs, notifier, additionalNotifier)
 
 	return &result

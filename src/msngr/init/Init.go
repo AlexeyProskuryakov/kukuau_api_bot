@@ -177,6 +177,9 @@ func StartBot(db *d.MainDb, result chan string) c.Configuration {
 		http.HandleFunc("/vote", voteBotController)
 		result <- "vote"
 	}
+
+	watchManager := n.NewWatchManager(db, conf.Main.CallbackAddrMembers)
+
 	if len(conf.Coffee) > 0 {
 		fs := http.FileServer(http.Dir("static"))
 		http.Handle("/static/", http.StripPrefix("/static/", fs))
@@ -215,7 +218,7 @@ func StartBot(db *d.MainDb, result chan string) c.Configuration {
 				salt = c_conf.Name
 			}
 
-			notifier := n.NewNotifier(conf.Main.CallbackAddr, c_conf.Key, db)
+			notifier := n.NewNotifier(conf.Main.CallbackAddr, c_conf.Chat.Key, db)
 			notifier.SetFrom(c_conf.Name)
 
 			webRoute := fmt.Sprintf("/web/coffee/%v", salt)
@@ -236,11 +239,14 @@ func StartBot(db *d.MainDb, result chan string) c.Configuration {
 
 			log.Printf("I will handling web requests for coffee %v at : [%v]", c_conf.Name, webRoute)
 			db.Users.AddOrUpdateUserObject(d.UserWrapper{UserId:c_conf.Chat.User, UserName:c_conf.Chat.User, Password:utils.PHash(c_conf.Chat.Password), Role:users.MANAGER})
+			if c_conf.Chat.Notification.Enable {
+				watchManager.AddConfiguration(c_conf.Name, c_conf.Chat.Notification.Text, c_conf.Chat.Key, int64(c_conf.Chat.Notification.After) * 60)
+			}
 		}
 		result <- "coffee"
 	}
 	if len(conf.Chats) > 0 {
-		if len(conf.Coffee) == 0{
+		if len(conf.Coffee) == 0 {
 			fs := http.FileServer(http.Dir("static"))
 			http.Handle("/static/", http.StripPrefix("/static/", fs))
 		}
@@ -281,8 +287,12 @@ func StartBot(db *d.MainDb, result chan string) c.Configuration {
 			log.Printf("I will handling web requests for chat at : [%v]", webRoute)
 
 			db.Users.AddOrUpdateUserObject(d.UserWrapper{UserName:chat_conf.User, Password:utils.PHash(chat_conf.Password), Role:users.MANAGER, UserId:chat_conf.User})
+			if chat_conf.Notification.Enable {
+				watchManager.AddConfiguration(chat_conf.CompanyId, chat_conf.Notification.Text, chat_conf.Key, int64(chat_conf.Notification.After) * 60)
+			}
 		}
 	}
+	go watchManager.WatchUnreadMessages()
 
 	server_address := fmt.Sprintf(":%v", conf.Main.Port)
 	log.Printf("\nStart listen and serving at: %v\n", server_address)
