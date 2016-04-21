@@ -1,6 +1,55 @@
 var storage = localStorage;
 
 var notificationPermission;
+var windowState;
+
+var notIE = (document.documentMode === undefined),
+    isChromium = window.chrome;
+
+if (notIE && !isChromium) {
+    // checks for Firefox and other  NON IE Chrome versions
+    $(window).on("focusin", function () {
+        // tween resume() code goes here
+        setTimeout(function(){
+            windowState = "focus";
+        },300);
+
+    }).on("focusout", function () {
+        // tween pause() code goes here
+        windowState = "blur";
+    });
+} else {
+    // checks for IE and Chromium versions
+    if (window.addEventListener) {
+        // bind focus event
+        window.addEventListener("focus", function (event) {
+            // tween resume() code goes here
+            setTimeout(function(){
+                 windowState = "focus";
+            },300);
+
+        }, false);
+        // bind blur event
+        window.addEventListener("blur", function (event) {
+            // tween pause() code goes here
+             windowState = "blur";
+        }, false);
+    } else {
+        // bind focus event
+        window.attachEvent("focus", function (event) {
+            // tween resume() code goes here
+            setTimeout(function(){
+                windowState = "focus";
+            },300);
+
+        });
+        // bind focus event
+        window.attachEvent("blur", function (event) {
+            // tween pause() code goes here
+            windowState = "blur";
+        });
+    }
+}
 
 switch ( Notification.permission.toLowerCase() ) {
     case "granted":
@@ -8,15 +57,20 @@ switch ( Notification.permission.toLowerCase() ) {
         break;
 
     case "denied":
-        console.log("show notification denied")
+        console.log("show notification denied");
+        Notification.requestPermission( function(result) { notificationPermission = result  } );
         break;
 
     case "default":
+        console.log("show notification default");
        Notification.requestPermission( function(result) { notificationPermission = result  } );
 }
 
 function showNotification(text, from){
-
+    var mailNotification = new Notification(from,{body : text, icon : "/static/logo.jpg"});
+    mailNotification.onerror = function(){
+                    Notification.requestPermission( function(result) { notificationPermission = result  } );
+                }
 }
 
 function playNotification(){
@@ -78,6 +132,9 @@ function paste_message(message){
     var result = Mustache.render(text_message, message);
     $(result).insertBefore("#chat-end");
     document.getElementById( 'chat-end' ).scrollIntoView(false);
+    if (windowState != undefined && windowState == "blur"){
+        showNotification(message.Body, message.From);
+    }
 }
 
 function update_messages(){
@@ -110,6 +167,7 @@ function set_contact_new_message(contact_id, count){
         } else {
             cntr_wrapper.text("("+count+")");
             playNotification();
+            showNotification("У вас есть "+count+" непрочитанныx сообщения", "Klichat");
             c_wrapper.remove();
             c_wrapper.insertAfter("#write-all")
         }
@@ -123,6 +181,7 @@ function paste_new_contact(contact){
         var result = Mustache.render(c_text, contact);
         $(result).insertAfter("#write-all")
         playNotification();
+        showNotification("У вас новое сообщение от "+contact.Name, "Klichat");
     }
 }
 
