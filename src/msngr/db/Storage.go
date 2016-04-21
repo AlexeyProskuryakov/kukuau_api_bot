@@ -118,8 +118,8 @@ func (mw MessageWrapper) IsAttrPresent(attrName string) bool {
 	return utils.InS(attrName, mw.Attributes)
 }
 
-func NewMessageForWeb(from, to, body string) *MessageWrapper {
-	result := MessageWrapper{From:from, To:to, Body:body, TimeFormatted:time.Now().Format(time.Stamp)}
+func NewMessageForWeb(sid, from, to, body string) *MessageWrapper {
+	result := MessageWrapper{From:from, To:to, Body:body, TimeFormatted:time.Now().Format(time.Stamp), SID:sid}
 	return &result
 }
 
@@ -745,11 +745,11 @@ func (mh *MessageHandler) StoreMessage(from, to, body, message_id string) (*Mess
 	return nil, errors.New(fmt.Sprintf("I have duplicate!%+v", found))
 }
 
-func (mh *MessageHandler) SetMessageNotificationSent(message_id string) error {
+func (mh *MessageHandler) SetMessageNotificationSent(from string) error {
 	if !mh.parent.Check() {
 		return errors.New("БД не доступна")
 	}
-	err := mh.Collection.Update(bson.M{"message_id":message_id}, bson.M{"$set":bson.M{"notification_sent":true}})
+	err := mh.Collection.Update(bson.M{"from":from}, bson.M{"$set":bson.M{"notification_sent":true}})
 	return err
 }
 
@@ -823,6 +823,7 @@ func (mh *MessageHandler) GetMessageByMessageId(message_id string) (*MessageWrap
 		return nil, err
 	}
 	result.TimeFormatted = result.Time.Format(time.Stamp)
+	result.SID = result.ID.Hex()
 	return &result, nil
 }
 
