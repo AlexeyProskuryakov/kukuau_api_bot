@@ -92,7 +92,7 @@ func (n *Notifier) NotifyTextWithCommands(to, text string, commands *[]s.OutComm
 	return &result, err
 }
 
-func (n *Notifier) NotifyTextToMembers(text, key string) (*s.OutPkg, error) {
+func (n *Notifier) NotifyTextToMembers(text string) (*s.OutPkg, error) {
 	result := s.OutPkg{Message:&s.OutMessage{ID:utils.GenId(), Type:"chat", Body:text}}
 	err := n.Notify(result)
 	return &result, err

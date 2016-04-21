@@ -48,7 +48,7 @@ func (wm *WatchManager)WatchUnreadMessages() {
 			if len(messages) > 0 {
 				log.Printf("WUM Will notify by %v messages for [%v]", len(messages), config.Name)
 				notifier := NewNotifier(wm.Address, config.Key, wm.Store)
-				_, err = notifier.NotifyTextToMembers(config.Name, config.Text)
+				_, err = notifier.NotifyTextToMembers(config.Text)
 				if err != nil {
 					log.Printf("WUM ERROR at send notification to %v: %v", config.Name, err)
 					continue
