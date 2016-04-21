@@ -377,16 +377,6 @@ func Run(addr string, db *d.MainDb, qs *quests.QuestStorage, vdh *voting.VotingD
 
 			render.JSON(200, map[string]interface{}{"success":true, "url":file_url})
 		})
-		r.Get("/roles/:profile_id", func(render render.Render, params martini.Params, req *http.Request) {
-			profile_id := params["profile_id"]
-			roles, err := ph.GetProfileRoles(profile_id)
-			if err != nil {
-				log.Printf("CS Error getting profile roles")
-				render.JSON(500, map[string]interface{}{"error":err, "success":false})
-				return
-			}
-			render.JSON(200, map[string]interface{}{"success":true, "roles":roles})
-		})
 		r.Get("/employee/:phone", func(render render.Render, params martini.Params, req *http.Request) {
 			phone := params["phone"]
 			employee, err := ph.GetEmployeeByPhone(phone)

@@ -631,10 +631,8 @@ Ext.define('Console.controller.Profiles', {
 
         var e_view = Ext.widget("employeeWindow", {"parent":win, profileId:pModel.get("id")}),
         e_form = e_view.down('form'),
-        roleCmp = e_form.getComponent('role'),
         phoneCmp = e_form.getComponent('phone');
 
-        roleCmp.setValue(row.data.role_id);
         phoneCmp.setValue(row.data.phone);
         e_view.show();  
     },
@@ -645,12 +643,10 @@ Ext.define('Console.controller.Profiles', {
         pForm = e_win.getParent().down("form"),
         pModel = pForm.getRecord(),
         e_form = e_win.down('form'),
-        roleCmp = e_form.getComponent('role'),
         phoneComp = e_form.getComponent('phone');
-        if (phoneComp.validate() && roleCmp.validate()){
-            var phone = phoneComp.getValue(),
-            roleObj = roleCmp.findRecordByValue(roleCmp.getValue()).getData();
-            console.log('phone: ',phone, 'role: ', roleObj);
+        if (phoneComp.validate()){
+            var phone = phoneComp.getValue();
+            console.log('phone: ',phone);
 
             Ext.Ajax.request({
                 url:"profile/employee/"+phone,
@@ -658,8 +654,6 @@ Ext.define('Console.controller.Profiles', {
                     var data=Ext.decode(x.responseText);
                     if (data.success==true && data.employee != null ){
                         var employeeData = data.employee;
-                        employeeData['role_id'] = roleObj.role_id;
-                        employeeData['role_name'] = roleObj.role_name;
                         employeeData['phone'] = phone;
                         eModel = Ext.create("Console.model.Employee", employeeData);
 
@@ -668,7 +662,7 @@ Ext.define('Console.controller.Profiles', {
                         eGrid.reconfigure(pModel.employees());
                         e_win.destroy();
                     } else {
-                        Ext.Msg.alert('Ошибка!', 'Нет такого телефона :( ');         
+                        Ext.Msg.alert('Ошибка!', 'Сотрудник с таким номером телефона не зарегистрирован в KliChat.');         
                     }
                 }
             });

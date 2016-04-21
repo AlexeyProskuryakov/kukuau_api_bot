@@ -250,12 +250,14 @@ Ext.define('Console.view.Profile', {
                 store: 'EmployeesStore',
                 collapsible: true,
                 collapsed: true,
-                columns: [{
-                    header: "Роль",
-                    dataIndex: 'role_name',
-                    flex: 1
+                columns: [
+                // {
+                //     header: "Роль",
+                //     dataIndex: 'role_name',
+                //     flex: 1
 
-                }, {
+                // },
+                {
                     header: "Имя",
                     dataIndex: 'name',
                     flex: 1

@@ -840,26 +840,6 @@ func (ph *ProfileDbHandler) GetProfileFeatures(userName string) ([]ProfileFeatur
 	return result, nil
 }
 
-func (ph *ProfileDbHandler) GetProfileRoles(userName string) ([]ProfileRole, error) {
-	result := []ProfileRole{}
-	row, err := ph.db.Query("SELECT DISTINCT r.id, r.name FROM users_roles r WHERE username = $1 ", userName)
-	if err != nil {
-		log.Printf("P ERROR when querying for roles %v", err)
-		return result, err
-	}
-	defer row.Close()
-	for row.Next() {
-		var id int64
-		var name sql.NullString
-		err = row.Scan(&id, &name)
-		if err != nil {
-			log.Printf("P ERROR at scan role")
-		}
-		result = append(result, ProfileRole{RoleId:id, RoleName:name.String})
-	}
-	return result, nil
-}
-
 func (ph *ProfileDbHandler) GetEmployeeByPhone(phone string) (*ProfileEmployee, error) {
 	row, err := ph.db.Query("SELECT p.phonenumber, v.fn, p.username FROM profile p JOIN vcard_search v ON v.username = p.username WHERE p.phonenumber = $1", phone)
 	if err != nil {
@@ -885,31 +865,8 @@ func (ph *ProfileDbHandler) GetEmployeeByPhone(phone string) (*ProfileEmployee, 
 }
 
 func (ph *ProfileDbHandler) AddEmployee(pUserName string, employee *ProfileEmployee) (int64, error) {
-	row, err := ph.db.Query("SELECT r.id FROM users_roles r WHERE username = $1 AND name = $2", pUserName, employee.RoleName)
-	if err != nil {
-		log.Printf("P ERROR when querying check for role %v", err)
-		return -1, err
-	}
-	defer row.Close()
-	isRoleExists := false
-	var roleId int64
-	for row.Next() {
-		err = row.Scan(&roleId)
-		if err != nil {
-			log.Printf("P ERROR at scan for check role exist %v", err)
-		}
-		employee.RoleId = roleId
-		isRoleExists = true
-	}
-	if !isRoleExists {
-		err = ph.db.QueryRow("INSERT INTO users_roles (username, name) values ($1, $2) RETURNING id;", pUserName, employee.RoleName).Scan(&roleId)
-		if err != nil {
-			log.Printf("P ERROR at querying to insert new role")
-		}
-		employee.RoleId = roleId
-	}
 	var linkId int64
-	err = ph.db.QueryRow("INSERT INTO users_links (fromusr, tousr, role_id) values ($1, $2, $3) RETURNING id;", pUserName, employee.UserName, roleId).Scan(&linkId)
+	err := ph.db.QueryRow("INSERT INTO users_links (fromusr, tousr) values ($1, $2, $3) RETURNING id;", pUserName, employee.UserName).Scan(&linkId)
 	if err != nil{
 		log.Printf("P ERROR at insert in user_links %v", err)
 		return -1, err
@@ -936,22 +893,21 @@ func (ph *ProfileDbHandler) RemoveAllEmployees(pUserName string) error {
 
 func (ph *ProfileDbHandler) GetProfileEmployees(pUserName string) ([]ProfileEmployee, error) {
 	result := []ProfileEmployee{}
-	row, err := ph.db.Query("SELECT l.id, l.tousr, l.role_id, r.name, p.phonenumber, v.fn FROM users_links l JOIN users_roles r ON r.id=l.role_id JOIN profile p ON l.tousr = p.username JOIN vcard_search v ON v.username = l.tousr WHERE l.fromusr = $1", pUserName)
+	row, err := ph.db.Query("SELECT l.id, l.tousr, p.phonenumber, v.fn FROM users_links l JOIN profile p ON l.tousr = p.username JOIN vcard_search v ON v.username = l.tousr WHERE l.fromusr = $1", pUserName)
 	if err != nil {
 		log.Printf("P EEROR when querying profile emplyees %v", err)
 		return result, err
 	}
 	defer row.Close()
 	for row.Next() {
-		var linkId, roleId int64
-		var eUserName, roleName, phone, eName sql.NullString
-		err := row.Scan(&linkId, &eUserName, &roleId, &roleName, &phone, &eName)
+		var linkId int64
+		var eUserName,  phone, eName sql.NullString
+		err := row.Scan(&linkId, &eUserName, &phone, &eName)
 		if err != nil {
 			log.Printf("P ERROR at scan profile emplyees %v", err)
 			continue
 		}
 		result = append(result, ProfileEmployee{
-			ProfileRole:ProfileRole{RoleId:roleId, RoleName:roleName.String},
 			UserName:eUserName.String,
 			LinkId:linkId,
 			Phone:phone.String,
