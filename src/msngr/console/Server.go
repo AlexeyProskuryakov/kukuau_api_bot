@@ -495,6 +495,7 @@ func Run(addr string, db *d.MainDb, qs *quests.QuestStorage, vdh *voting.VotingD
 				render.JSON(500, map[string]interface{}{"error":err})
 				return
 			}
+			var messageSID string
 			if message.From != "" && message.To != "" && message.Body != "" {
 				if message.To == ALL {
 					peoples, _ := db.Users.GetBy(bson.M{})
@@ -508,9 +509,10 @@ func Run(addr string, db *d.MainDb, qs *quests.QuestStorage, vdh *voting.VotingD
 					user, _ := db.Users.GetUserById(message.To)
 					if user != nil {
 						db.Messages.SetMessagesRead(user.UserId)
-						go ntf.NotifyText(message.To, message.Body)
+						_, resultMessage, _ := ntf.NotifyText(message.To, message.Body)
+						resultMessage, _ = db.Messages.GetMessageByMessageId(resultMessage.MessageID)
+						messageSID = resultMessage.SID
 					}
-
 				}
 				if err != nil {
 					render.JSON(500, map[string]interface{}{"error":err})
@@ -518,7 +520,7 @@ func Run(addr string, db *d.MainDb, qs *quests.QuestStorage, vdh *voting.VotingD
 			} else {
 				render.Redirect("/chat")
 			}
-			render.JSON(200, map[string]interface{}{"ok":true, "message":d.NewMessageForWeb(message.From, message.To, message.Body)})
+			render.JSON(200, map[string]interface{}{"ok":true, "message":d.NewMessageForWeb(messageSID, message.From, message.To, message.Body)})
 		})
 
 		r.Post("/messages_read", func(render render.Render, req *http.Request) {
@@ -618,7 +620,7 @@ func Run(addr string, db *d.MainDb, qs *quests.QuestStorage, vdh *voting.VotingD
 					if contact.NewMessagesCount > 0 {
 						old_contacts = append(old_contacts, contact)
 					}
-				}else {
+				} else {
 					new_contacts = append(new_contacts, contact)
 				}
 			}
