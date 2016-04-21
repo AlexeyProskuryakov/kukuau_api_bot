@@ -221,6 +221,7 @@ func GetChatSendHandler(start_addr string, notifier *ntf.Notifier, db *d.MainDb,
 			return
 		}
 		log.Printf("CS message to send: %v", message)
+		var messageSID string
 		if message.From != "" && message.To != "" && message.Body != "" {
 			if message.To == ALL {
 				peoples, _ := cs.GetUsersOfCompany(config.CompanyId)
@@ -228,14 +229,17 @@ func GetChatSendHandler(start_addr string, notifier *ntf.Notifier, db *d.MainDb,
 			} else {
 				user, _ := db.Users.GetUserById(message.To)
 				if user != nil {
-					go notifier.NotifyText(message.To, message.Body)
+					db.Messages.SetMessagesRead(user.UserId)
+					_, resultMessage, _ := notifier.NotifyText(message.To, message.Body)
+					resultMessage, _ = db.Messages.GetMessageByMessageId(resultMessage.MessageID)
+					messageSID = resultMessage.SID
 				}
 				db.Messages.SetMessagesAnswered(message.To, config.CompanyId, config.CompanyId)
 			}
 		} else {
 			render.Redirect("/chat")
 		}
-		render.JSON(200, map[string]interface{}{"ok":true, "message":d.NewMessageForWeb(message.From, message.To, message.Body)})
+		render.JSON(200, map[string]interface{}{"ok":true, "message":d.NewMessageForWeb(messageSID, message.From, message.To, message.Body, )})
 	})
 	return m
 }
@@ -287,7 +291,7 @@ func get_messages(between1, between2 string, db *d.MainDb) ([]d.MessageWrapper, 
 		if msg.From == between2 {
 			u, _ := db.Users.GetUserById(msg.To)
 			messages[i].To = u.GetName()
-		}else {
+		} else {
 			u, _ := db.Users.GetUserById(msg.From)
 			messages[i].From = u.GetName()
 		}
@@ -351,7 +355,7 @@ func GetChatContactsHandler(start_addr string, notifier *ntf.Notifier, db *d.Mai
 				if contact.NewMessagesCount > 0 {
 					old_contacts = append(old_contacts, contact)
 				}
-			}else {
+			} else {
 				new_contacts = append(new_contacts, contact)
 			}
 		}

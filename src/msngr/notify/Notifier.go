@@ -28,17 +28,17 @@ func (n *Notifier) SetFrom(from string) {
 	n.from = from
 }
 
-func (n *Notifier) Notify(outPkg s.OutPkg) error {
+func (n *Notifier) Notify(outPkg s.OutPkg) (*db.MessageWrapper, error) {
 	jsoned_out, err := json.Marshal(&outPkg)
 	if err != nil {
 		log.Printf("NTF error at unmarshal %v", err)
-		return err
+		return nil, err
 	}
 	body := bytes.NewBuffer(jsoned_out)
 	req, err := http.NewRequest("POST", n.address, body)
 	if err != nil {
 		log.Printf("NTF error at for request %v", err)
-		return err
+		return nil, err
 	}
 
 	req.Header.Add("Content-Type", "application/json")
@@ -46,12 +46,11 @@ func (n *Notifier) Notify(outPkg s.OutPkg) error {
 	req.Header.Add("Authorization", n.key)
 
 	log.Printf("N\n>> %+v \n>> %+v \n>> %v\n>>%s", n.address, n.key, req.Header, jsoned_out)
-
+	var resultMessage *db.MessageWrapper
 	if n.from == "" {
-		n._db.Messages.StoreNotificationMessage("me", outPkg.To, outPkg.Message.Body, outPkg.Message.ID)
+		resultMessage, _ = n._db.Messages.StoreNotificationMessage("me", outPkg.To, outPkg.Message.Body, outPkg.Message.ID)
 	} else {
-		n._db.Messages.StoreNotificationMessage(n.from, outPkg.To, outPkg.Message.Body, outPkg.Message.ID)
-
+		resultMessage, _ = n._db.Messages.StoreNotificationMessage(n.from, outPkg.To, outPkg.Message.Body, outPkg.Message.ID)
 	}
 
 	client := &http.Client{}
@@ -59,7 +58,7 @@ func (n *Notifier) Notify(outPkg s.OutPkg) error {
 	if err != nil {
 		log.Printf("NTF error at do request %v", err)
 		n._db.Messages.UpdateMessageStatus(outPkg.Message.ID, "error", err.Error())
-		return err
+		return resultMessage, err
 	}
 
 	if resp != nil {
@@ -67,7 +66,7 @@ func (n *Notifier) Notify(outPkg s.OutPkg) error {
 		if err != nil {
 			log.Printf("N << ERROR:%+v", err)
 			n._db.Messages.UpdateMessageStatus(outPkg.Message.ID, "error", fmt.Sprintf("%v", resp.StatusCode))
-			return err
+			return resultMessage, err
 		} else {
 			log.Printf("N << %v", string(body))
 			n._db.Messages.UpdateMessageStatus(outPkg.Message.ID, "sended", "ok")
@@ -75,27 +74,27 @@ func (n *Notifier) Notify(outPkg s.OutPkg) error {
 		defer resp.Body.Close()
 	} else {
 		n._db.Messages.UpdateMessageStatus(outPkg.Message.ID, "error", "404")
-		return errors.New("404")
+		return resultMessage, errors.New("404")
 	}
-	return nil
+	return resultMessage, nil
 }
 
-func (n *Notifier) NotifyText(to, text string) (*s.OutPkg, error) {
+func (n *Notifier) NotifyText(to, text string) (*s.OutPkg, *db.MessageWrapper, error) {
 	result := s.OutPkg{To:to, Message:&s.OutMessage{ID:utils.GenId(), Type:"chat", Body:text}}
-	err := n.Notify(result)
-	return &result, err
+	message, err := n.Notify(result)
+	return &result, message, err
 }
 
-func (n *Notifier) NotifyTextWithCommands(to, text string, commands *[]s.OutCommand) (*s.OutPkg, error) {
+func (n *Notifier) NotifyTextWithCommands(to, text string, commands *[]s.OutCommand) (*s.OutPkg, *db.MessageWrapper, error) {
 	result := s.OutPkg{To:to, Message:&s.OutMessage{ID:utils.GenId(), Type:"chat", Body:text, Commands:commands}}
-	err := n.Notify(result)
-	return &result, err
+	message, err := n.Notify(result)
+	return &result, message, err
 }
 
-func (n *Notifier) NotifyTextToMembers(text string) (*s.OutPkg, error) {
+func (n *Notifier) NotifyTextToMembers(text string) (*s.OutPkg, *db.MessageWrapper, error) {
 	result := s.OutPkg{Message:&s.OutMessage{ID:utils.GenId(), Type:"chat", Body:text}}
-	err := n.Notify(result)
-	return &result, err
+	message, err := n.Notify(result)
+	return &result, message, err
 }
 
 func (n *Notifier)SendMessageToPeople(people []db.UserWrapper, text string) {
