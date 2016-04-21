@@ -43,7 +43,7 @@ func getCommands(coffeeHouseConfig *CoffeeHouseConfiguration, isFirst, isActive 
 						Type: "list-single",
 						Attributes: s.FieldAttribute{
 							Label:"объем",
-							Required: true,
+							Required: false,
 						},
 						Items:s.FormItems(coffeeHouseConfig.Volumes),
 					},
