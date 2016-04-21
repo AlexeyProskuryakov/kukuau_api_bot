@@ -36,62 +36,55 @@ func WRONG_TEAM_MEMBER(bad, good string) string {
 	return fmt.Sprintf("Вы не являетесь участником группы %s. Вы учасник группы %s.", bad, good)
 }
 
-func getCommands(qs *QuestStorage, user_id string, times []string) *[]s.OutCommand {
+func getCommands( times []string) *[]s.OutCommand {
 	result := []s.OutCommand{}
-	man, err := qs.GetManByUserId(user_id)
-	if err != nil {
-		log.Printf("QB Error at getting team member at process request")
-	}
-	log.Printf("QB forming commands for %+v", man)
-	if man != nil && man.Passersby == true {
-		result = append(result, s.OutCommand{
-			Title:"Записаться на квест в НОВАТе",
-			Action:"enroll",
-			Position:0,
-			Form: &s.OutForm{
-				Title: "Форма записи на квест",
-				Type:  "form",
-				Name:  "enroll_form",
-				Text:  "?(name) ?(sername) ?(birthday) ?(quest_date)",
-				Fields: []s.OutField{
-					s.OutField{
-						Name: "name",
-						Type: "text",
-						Attributes: s.FieldAttribute{
-							Label:    "Имя",
-							Required: true,
-						},
-					},
-					s.OutField{
-						Name: "sername",
-						Type: "text",
-						Attributes: s.FieldAttribute{
-							Label:    "Фамилия",
-							Required: true,
-						},
-					},
-					s.OutField{
-						Name: "birthday",
-						Type: "text",
-						Attributes: s.FieldAttribute{
-							Label:    "Дата рождения",
-							Required: true,
-						},
-					},
-					s.OutField{
-						Name: "quest_date",
-						Type: "single_list",
-						Attributes: s.FieldAttribute{
-							Label:    "Дата квеста",
-							Required: true,
-						},
-						Items:s.FormItems(times),
+	result = append(result, s.OutCommand{
+		Title:"Записаться на квест в НОВАТе",
+		Action:"enroll",
+		Position:0,
+		Form: &s.OutForm{
+			Title: "Форма записи на квест",
+			Type:  "form",
+			Name:  "enroll_form",
+			Text:  "?(name) ?(sername) ?(birthday) ?(quest_date)",
+			Fields: []s.OutField{
+				s.OutField{
+					Name: "name",
+					Type: "text",
+					Attributes: s.FieldAttribute{
+						Label:    "Имя",
+						Required: true,
 					},
 				},
+				s.OutField{
+					Name: "sername",
+					Type: "text",
+					Attributes: s.FieldAttribute{
+						Label:    "Фамилия",
+						Required: true,
+					},
+				},
+				s.OutField{
+					Name: "birthday",
+					Type: "text",
+					Attributes: s.FieldAttribute{
+						Label:    "Дата рождения",
+						Required: true,
+					},
+				},
+				s.OutField{
+					Name: "quest_date",
+					Type: "single_list",
+					Attributes: s.FieldAttribute{
+						Label:    "Дата квеста",
+						Required: true,
+					},
+					Items:s.FormItems(times),
+				},
 			},
-		})
-	}
-
+		},
+	})
+	
 	return &result
 }
 
@@ -101,7 +94,7 @@ type QuestCommandRequestProcessor struct {
 }
 
 func (qcp *QuestCommandRequestProcessor) ProcessRequest(in *s.InPkg) *s.RequestResult {
-	commands := getCommands(qcp.Storage, in.From, qcp.Config.QuestTimes)
+	commands := getCommands(qcp.Config.QuestTimes)
 	result := s.RequestResult{Commands: commands}
 	return &result
 }
@@ -224,7 +217,7 @@ func (qmpp QuestMessageProcessor) ProcessMessage(in *s.InPkg) *s.MessageResult {
 				}
 			} else {
 				log.Printf("Q:Member is: %+v", member)
-				commands := getCommands(qmpp.Storage, in.From, qmpp.Config.QuestTimes)
+				commands := getCommands(qmpp.Config.QuestTimes)
 				if prev_key == nil {
 					log.Printf("Q:will change team at member [%v]  %v -> %v", member.Name, member.TeamName, team_name)
 					qmpp.Storage.AddTeamMember(in.From, in.UserData.Name, in.UserData.Phone, team)
@@ -255,7 +248,7 @@ func (qmpp QuestMessageProcessor) ProcessMessage(in *s.InPkg) *s.MessageResult {
 					log.Printf("Q E : can not store that team %v is winner, because %v", team_name, err)
 				}
 			}
-			commands := getCommands(qmpp.Storage, in.From, qmpp.Config.QuestTimes)
+			commands := getCommands(qmpp.Config.QuestTimes)
 			return &s.MessageResult{Type:"chat", Body:descr, Commands:commands}
 		} else {
 			var from string
@@ -277,10 +270,10 @@ func (qmpp QuestMessageProcessor) ProcessMessage(in *s.InPkg) *s.MessageResult {
 			qmpp.Storage.StoreMessage(from, ME, key, false)
 		}
 	} else {
-		commands := getCommands(qmpp.Storage, in.From, qmpp.Config.QuestTimes)
+		commands := getCommands(qmpp.Config.QuestTimes)
 		return &s.MessageResult{Type:"chat", Body:"Сообщения нет :( ", Commands:commands}
 	}
-	commands := getCommands(qmpp.Storage, in.From, qmpp.Config.QuestTimes)
+	commands := getCommands( qmpp.Config.QuestTimes)
 	return &s.MessageResult{Type:"chat", Body:"Ваше сообщение доставлено. ", Commands:commands}
 }
 
@@ -290,7 +283,7 @@ type QuestEnrollProcessor struct {
 }
 
 func (qep *QuestEnrollProcessor) ProcessMessage(in *s.InPkg) *s.MessageResult {
-	commands := getCommands(qep.Store, in.From, qep.Config.QuestTimes)
+	commands := getCommands(qep.Config.QuestTimes)
 	if in.Message.Commands != nil {
 		message_commands := in.Message.Commands
 		for _, command := range *message_commands {
