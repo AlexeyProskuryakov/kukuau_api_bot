@@ -40,14 +40,10 @@ function is_message_with_data(message){
 }
 
 function paste_message(message){
-    console.log("p m");
     if ($("#"+message.SID).length != 0){
         return
     }
-    var text_message = "";
-
-
-    text_message =      "<div class='msg' id={{SID}}>"+
+    var text_message =      "<div class='msg' id={{SID}}>"+
                                 "<h4 class='media-heading'>{{From}} <small class='time'>{{time}}</small></h4>"+
                                 "<div class='col-lg-11'>{{Body}}</div>"+
                         "</div>"+
@@ -175,6 +171,8 @@ $("#chat-form").on("submit", function(e){
     var body = $("#chat-form-message").val(),
         from = $("#from").attr("value");
         to = $("#with").attr("value");
+
+    body = body.replace(/\?{2,}/g, "?");
 
     console.log("body: ", body, "from: ", from, "to: ", to)
     $.ajax({

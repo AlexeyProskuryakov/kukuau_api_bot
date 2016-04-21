@@ -11,6 +11,25 @@ import (
 
 const MAX_OPEN_CONNECTIONS = 10
 
+type ProfileRole struct {
+	RoleName string `json:"role_name"`
+	RoleId   int64 `json:"role_id"`
+}
+
+type ProfileEmployee struct {
+	ProfileRole
+	UserName string `json:"user_name"`
+	Name     string `json:"name"`
+	Phone    string `json:"phone"`
+	LinkId   int64 `json:"link_id"`
+}
+
+type ProfileFeature struct {
+	Id   int64 `json:"id"`
+	Name string `json:"name"`
+	Var  string `json:"var"`
+}
+
 type ProfileGroup struct {
 	Name        string `json:"name"`
 	Id          int64 `json:"id"`
@@ -65,6 +84,8 @@ type Profile struct {
 	Contacts         []ProfileContact `json:"contacts"`
 	Groups           []ProfileGroup `json:"groups"`
 	AllowedPhones    []ProfileAllowedPhone `json:"phones"`
+	Features         []ProfileFeature `json:"features"`
+	Employees        []ProfileEmployee `json:"employees"`
 	Enable           bool `json:"enable"`
 	Public           bool `json:"public"`
 }
@@ -73,10 +94,11 @@ func (p *Profile) Equal(p1 *Profile) bool {
 	return reflect.DeepEqual(p, p1)
 }
 func (p Profile) String() string {
-	return fmt.Sprintf("\nPROFILE------------------\n: %v [%v] enable: %v, public: %v \nimg: %v\ndescriptions: %v %v \ncontacts: %+v \ngroups: %+v \nallowed phones: %+v \n----------------------\n",
-		p.Name, p.UserName, p.Enable, p.Public, p.ImageURL, p.ShortDescription, p.TextDescription, p.Contacts, p.Groups, p.AllowedPhones,
+	return fmt.Sprintf("\nPROFILE------------------\n: %v [%v] enable: %v, public: %v \nimg: %v\ndescriptions: %v %v \ncontacts: %+v \ngroups: %+v \nallowed phones: %+v \nfeatures: %+v\nemployees: %+v\n----------------------\n",
+		p.Name, p.UserName, p.Enable, p.Public, p.ImageURL, p.ShortDescription, p.TextDescription, p.Contacts, p.Groups, p.AllowedPhones, p.Features, p.Employees,
 	)
 }
+
 func NewProfileFromRow(row *sql.Rows) Profile {
 	var id, short_text, long_text, name string
 	var image sql.NullString
@@ -139,21 +161,35 @@ func (ph *ProfileDbHandler) InsertProfileAllowedPhone(userName, phone string) (*
 func (ph *ProfileDbHandler)FillProfile(profile *Profile) error {
 	contacts, err := ph.GetProfileContacts(profile.UserName)
 	if err != nil {
-		log.Printf("P ERROR profile %v error load contacts", profile.UserName)
+		log.Printf("P ERROR profile %v error fill contacts", profile.UserName)
 	}
 	profile.Contacts = contacts
 
 	groups, err := ph.GetProfileGroups(profile.UserName)
 	if err != nil {
-		log.Printf("P ERROR profile %v error load groups", profile.UserName)
+		log.Printf("P ERROR profile %v error fill groups", profile.UserName)
 	}
 	profile.Groups = groups
 
 	phones, err := ph.GetProfileAllowedPhones(profile.UserName)
 	if err != nil {
-		log.Printf("P ERROR profile %v error load allowed phones", profile.UserName)
+		log.Printf("P ERROR profile %v error fill allowed phones", profile.UserName)
 	}
 	profile.AllowedPhones = phones
+
+	//features
+	features, err := ph.GetProfileFeatures(profile.UserName)
+	if err != nil {
+		log.Printf("P ERROR profile %v error fill features", profile.UserName)
+	}
+	profile.Features = features
+
+	//employees
+	employees, err := ph.GetProfileEmployees(profile.UserName)
+	if err != nil {
+		log.Printf("P ERROR profile %v error fill employees", profile.UserName)
+	}
+	profile.Employees = employees
 	return nil
 }
 
@@ -173,6 +209,7 @@ func (ph *ProfileDbHandler) GetContactLinkTypes() []string {
 		"phone", "www", "site",
 	}
 }
+
 func (ph *ProfileDbHandler) GetProfileContacts(userName string) ([]ProfileContact, error) {
 	contacts := []ProfileContact{}
 	contactRows, err := ph.db.Query("SELECT pc.id, pc.address, pc.lat, pc.lon, pc.descr, pc.ord FROM profile_contacts pc WHERE pc.username = $1 ORDER BY pc.ord ASC", userName)
@@ -242,8 +279,8 @@ func (ph *ProfileDbHandler) InsertNewProfile(p *Profile) (*Profile, error) {
 	ph.db.QueryRow(fmt.Sprintf("INSERT INTO vcard_search(username, lusername, fn, lfn, family, lfamily, given, lgiven, middle, lmiddle, nickname, lnickname, bday, lbday, ctry, lctry, locality, llocality, email, lemail, orgname, lorgname, orgunit, lorgunit)  values ('%v', '%v', '%v', '%v', '', '', '', '', '%v', '%v', '', '', '', '', '', '', '', '', '', '', '', '', '', '');",
 		p.UserName,
 		strings.ToLower(p.UserName),
-		strings.ToLower(p.UserName),
-		strings.ToLower(p.UserName),
+		p.Name,
+		strings.ToLower(p.Name),
 		p.Name,
 		strings.ToLower(p.Name)))
 
@@ -276,8 +313,17 @@ func (ph *ProfileDbHandler) InsertNewProfile(p *Profile) (*Profile, error) {
 			p.AllowedPhones[pInd] = *updPhone
 		}
 	}
+	//features
+	for _, feature := range p.Features {
+		ph.AddFeatureToProfile(p.UserName, &feature)
+	}
+	//employees
+	for _, employee := range p.Employees {
+		ph.AddEmployee(p.UserName, &employee)
+	}
 	return p, err
 }
+
 func (ph *ProfileDbHandler) BindGroupToProfile(userName string, group *ProfileGroup) error {
 	r, err := ph.db.Exec("INSERT INTO profile_groups (username, group_id) VALUES ($1, $2)", userName, group.Id)
 	if err != nil {
@@ -287,13 +333,12 @@ func (ph *ProfileDbHandler) BindGroupToProfile(userName string, group *ProfileGr
 	log.Printf("P result of bind group %v to %v is: %+v", group, userName, r)
 	return nil
 }
-
 func (ph *ProfileDbHandler) UnbindGroupsFromProfile(userName string) error {
 	stmt, err := ph.db.Prepare("DELETE FROM profile_groups WHERE username=$1")
+	defer stmt.Close()
 	if err != nil {
 		return err
 	}
-	defer stmt.Close()
 	r, err := stmt.Exec(userName)
 	if err != nil {
 		return err
@@ -301,7 +346,6 @@ func (ph *ProfileDbHandler) UnbindGroupsFromProfile(userName string) error {
 	log.Printf("P unbind group for %v result is: %+v", userName, r)
 	return nil
 }
-
 func (ph *ProfileDbHandler) InsertGroup(group *ProfileGroup) (*ProfileGroup, error) {
 	var groupId int64
 	err := ph.db.QueryRow("INSERT INTO groups (name, descr) VALUES ($1, $2) RETURNING id;", group.Name, group.Description).Scan(&groupId)
@@ -337,7 +381,6 @@ func (ph *ProfileDbHandler) AddGroupToProfile(userName string, group *ProfileGro
 	log.Printf("")
 	return group, nil
 }
-
 func (ph *ProfileDbHandler) GetProfileGroups(userName string) ([]ProfileGroup, error) {
 	result := []ProfileGroup{}
 	row, err := ph.db.Query("select g.id, g.name, g.descr from groups g inner join profile_groups pg on pg.group_id = g.id where pg.username=$1", userName)
@@ -358,7 +401,6 @@ func (ph *ProfileDbHandler) GetProfileGroups(userName string) ([]ProfileGroup, e
 	}
 	return result, nil
 }
-
 func (ph *ProfileDbHandler) GetAllGroups() ([]ProfileGroup, error) {
 	result := []ProfileGroup{}
 	row, err := ph.db.Query("select g.id, g.name, g.descr from groups g ")
@@ -379,7 +421,6 @@ func (ph *ProfileDbHandler) GetAllGroups() ([]ProfileGroup, error) {
 	}
 	return result, nil
 }
-
 func (ph *ProfileDbHandler) InsertContact(userName string, contact *ProfileContact) (*ProfileContact, error) {
 	var contactId int64
 	err := ph.db.QueryRow("INSERT INTO profile_contacts (username, address, lat, lon, descr, ord) VALUES ($1, $2, $3, $4, $5, $6) RETURNING id",
@@ -391,7 +432,6 @@ func (ph *ProfileDbHandler) InsertContact(userName string, contact *ProfileConta
 	contact.ContactId = contactId
 	return contact, nil
 }
-
 func (ph *ProfileDbHandler) AddContactToProfile(userName string, contact *ProfileContact) (*ProfileContact, error) {
 	result, err := ph.InsertContact(userName, contact)
 	if err != nil {
@@ -406,7 +446,6 @@ func (ph *ProfileDbHandler) AddContactToProfile(userName string, contact *Profil
 	}
 	return result, nil
 }
-
 func (ph *ProfileDbHandler) UpsertContact(userName string, newContact *ProfileContact) error {
 	stmt, err := ph.db.Prepare("UPDATE profile_contacts SET address=$1, lat=$2, lon=$3, descr=$4, ord=$5 WHERE id=$6")
 	defer stmt.Close()
@@ -455,8 +494,7 @@ func (ph *ProfileDbHandler) UpsertContact(userName string, newContact *ProfileCo
 	}
 	return nil
 }
-
-func (ph *ProfileDbHandler)DeleteContact(contactId int64) error {
+func (ph *ProfileDbHandler) DeleteContact(contactId int64) error {
 	err := ph.DeleteContactLinks(contactId)
 	if err != nil {
 		log.Printf("ph error delete contact when delete contact link %v", err)
@@ -464,8 +502,7 @@ func (ph *ProfileDbHandler)DeleteContact(contactId int64) error {
 	err = ph.deleteFromTable("profile_contacts", "id", contactId)
 	return err
 }
-
-func (ph *ProfileDbHandler)InsertContactLink(link *ProfileContactLink, contactId int64) (*ProfileContactLink, error) {
+func (ph *ProfileDbHandler) InsertContactLink(link *ProfileContactLink, contactId int64) (*ProfileContactLink, error) {
 	var lId int64
 	err := ph.db.QueryRow("INSERT INTO contact_links (contact_id, ctype, cvalue, descr, ord) VALUES ($1, $2, $3, $4, $5) RETURNING id",
 		contactId, link.Type, link.Value, link.Description, link.OrderNumber).Scan(&lId)
@@ -477,8 +514,7 @@ func (ph *ProfileDbHandler)InsertContactLink(link *ProfileContactLink, contactId
 	link.LinkId = lId
 	return link, nil
 }
-
-func (ph *ProfileDbHandler)UpdateContactLink(newLink ProfileContactLink) (int64, error) {
+func (ph *ProfileDbHandler) UpdateContactLink(newLink ProfileContactLink) (int64, error) {
 	stmt, err := ph.db.Prepare("UPDATE contact_links SET ctype=$1, cvalue=$2, descr=$3, ord=$4 WHERE id=$5")
 	defer stmt.Close()
 	if err != nil {
@@ -496,17 +532,14 @@ func (ph *ProfileDbHandler)UpdateContactLink(newLink ProfileContactLink) (int64,
 	}
 	return countRows, nil
 }
-
-func (ph *ProfileDbHandler)DeleteContactLinks(contactId int64) error {
+func (ph *ProfileDbHandler) DeleteContactLinks(contactId int64) error {
 	err := ph.deleteFromTable("contact_links", "contact_id", contactId)
 	return err
 }
-
-func (ph *ProfileDbHandler)DeleteOneContactLink(linkId int64) error {
+func (ph *ProfileDbHandler) DeleteOneContactLink(linkId int64) error {
 	err := ph.deleteFromTable("contact_links", "id", linkId)
 	return err
 }
-
 func (ph *ProfileDbHandler) GetContactLinks(contactId int64) ([]ProfileContactLink, error) {
 	links := []ProfileContactLink{}
 	linkRows, err := ph.db.Query("SELECT l.id, l.ctype, l.cvalue, l.descr, l.ord FROM contact_links l WHERE l.contact_id = $1 ORDER BY l.ord ASC", contactId)
@@ -534,7 +567,6 @@ func (ph *ProfileDbHandler) GetContactLinks(contactId int64) ([]ProfileContactLi
 	}
 	return links, nil
 }
-
 func (ph *ProfileDbHandler)updateProfileField(tableName, fieldName, userName string, newValue interface{}) {
 	stmt, err := ph.db.Prepare(fmt.Sprintf("UPDATE %v SET %v=$1 WHERE username=$2", tableName, fieldName))
 	defer stmt.Close()
@@ -546,7 +578,6 @@ func (ph *ProfileDbHandler)updateProfileField(tableName, fieldName, userName str
 		log.Printf("Error at execute update for change profile [%v] %v %v", userName, fieldName, err)
 	}
 }
-
 func (ph *ProfileDbHandler)deleteFromTable(tableName, nameId string, deleteId interface{}) error {
 	stmt, err := ph.db.Prepare(fmt.Sprintf("DELETE FROM %v WHERE %v=$1", tableName, nameId))
 	defer stmt.Close()
@@ -559,8 +590,7 @@ func (ph *ProfileDbHandler)deleteFromTable(tableName, nameId string, deleteId in
 	}
 	return nil
 }
-
-func (ph *ProfileDbHandler)DeleteProfile(userName string) error {
+func (ph *ProfileDbHandler) DeleteProfile(userName string) error {
 	//name
 	err := ph.deleteFromTable("vcard", "username", userName)
 	if err != nil {
@@ -587,6 +617,16 @@ func (ph *ProfileDbHandler)DeleteProfile(userName string) error {
 	err = ph.UnbindGroupsFromProfile(userName)
 	if err != nil {
 		log.Printf("ph del at unbind group %v", err)
+	}
+	//features
+	err = ph.RemoveAllFeaturesFromProfile(userName)
+	if err != nil {
+		log.Printf("ph del error at remove binded features from %v is: %v", userName, err)
+	}
+	//employeess
+	err = ph.RemoveAllEmployees(userName)
+	if err != nil {
+		log.Printf("ph del error at remove binded employees %v is: %v", userName, err)
 	}
 	//data
 	err = ph.deleteFromTable("profile", "username", userName)
@@ -701,17 +741,223 @@ func (ph *ProfileDbHandler)UpdateProfile(newProfile *Profile) error {
 		}
 
 	}
+	//features
+	if !reflect.DeepEqual(savedProfile.Features, newProfile.Features) {
+		log.Printf("Difference in features")
+		ph.RemoveAllFeaturesFromProfile(newProfile.UserName)
+		for _, feature := range newProfile.Features {
+			ph.AddFeatureToProfile(newProfile.UserName, &feature)
+		}
+	}
+	//employees
+	if !reflect.DeepEqual(savedProfile.Employees, newProfile.Employees) {
+		log.Printf("Difference in empoloyees")
+		ph.RemoveAllEmployees(newProfile.UserName)
+		for _, employee := range newProfile.Employees {
+			ph.AddEmployee(newProfile.UserName, &employee)
+		}
+	}
+
 	return nil
 }
 
-type ProfileFeature struct {
-	Id int64
-	Name string
-	Description string
-
+func (ph *ProfileDbHandler) GetAllFeatures() ([]ProfileFeature, error) {
+	result := []ProfileFeature{}
+	row, err := ph.db.Query("SELECT f.id, f.name, f.var FROM features f")
+	defer row.Close()
+	if err != nil {
+		log.Printf("P ERROR at getting all features")
+		return result, err
+	}
+	for row.Next() {
+		var fId int64
+		var name, f_var sql.NullString
+		err = row.Scan(&fId, &name, &f_var)
+		if err != nil {
+			log.Printf("P ERROR at get profiles features in scan: %v", err)
+			continue
+		}
+		result = append(result, ProfileFeature{Id:fId, Name:name.String, Var:f_var.String})
+	}
+	return result, nil
+}
+func (ph *ProfileDbHandler) AddFeatureToProfile(userName string, feature *ProfileFeature) error {
+	r, err := ph.db.Exec("INSERT INTO profile_features (username, feature_id) VALUES ($1, $2)", userName, feature.Id)
+	if err != nil {
+		log.Printf("P ERROR at binding profile %v and feature %+v: %v", userName, feature, err)
+		return err
+	}
+	log.Printf("P result of bind feature %v to %v is: %+v", feature, userName, r)
+	return nil
+}
+func (ph *ProfileDbHandler) RemoveFeatureFromProfile(userName string, feature *ProfileFeature) error {
+	stmt, err := ph.db.Prepare("DELETE FROM profile_features WHERE username=$1 AND feature_id=$2")
+	defer stmt.Close()
+	if err != nil {
+		log.Printf("P ERROR when prepate remove %v feature from profile %v is: %v", feature, userName, err)
+		return err
+	}
+	r, err := stmt.Exec(userName, feature.Id)
+	if err != nil {
+		log.Printf("P ERROR when execute remove %v features from profile %v is: %v", feature, userName, err)
+		return err
+	}
+	log.Printf("P remove feature for %v result is: %+v", userName, r)
+	return nil
+}
+func (ph *ProfileDbHandler) RemoveAllFeaturesFromProfile(userName string) error {
+	stmt, err := ph.db.Prepare("DELETE FROM profile_features WHERE username=$1")
+	defer stmt.Close()
+	if err != nil {
+		log.Printf("P ERROR when remove all features from profile %v is: %v", userName, err)
+		return err
+	}
+	r, err := stmt.Exec(userName, )
+	if err != nil {
+		return err
+	}
+	log.Printf("P remove all features for %v result is: %+v", userName, r)
+	return nil
+}
+func (ph *ProfileDbHandler) GetProfileFeatures(userName string) ([]ProfileFeature, error) {
+	result := []ProfileFeature{}
+	row, err := ph.db.Query("select f.id, f.name, f.var from features f inner join profile_features pf on pf.feature_id = f.id where pf.username=$1", userName)
+	defer row.Close()
+	if err != nil {
+		log.Printf("P ERROR at getting [%v] features, %v", userName, err)
+		return result, err
+	}
+	for row.Next() {
+		var fId int64
+		var name, f_var sql.NullString
+		err = row.Scan(&fId, &name, &f_var)
+		if err != nil {
+			log.Printf("P ERROR at get profiles feature in scan: %v", err)
+			continue
+		}
+		result = append(result, ProfileFeature{Id:fId, Name:name.String, Var:f_var.String})
+	}
+	return result, nil
 }
 
-func (ph *ProfileDbHandler) GetAllFeatures() ([]ProfileFeature, error){
-	ph.db.Query("SELECT f.id, f.ctype, l.cvalue, l.descr, l.ord FROM features f")
-	return []ProfileFeature{}, nil
+func (ph *ProfileDbHandler) GetProfileRoles(userName string) ([]ProfileRole, error) {
+	result := []ProfileRole{}
+	row, err := ph.db.Query("SELECT DISTINCT r.id, r.name FROM users_roles r WHERE username = $1 ", userName)
+	if err != nil {
+		log.Printf("P ERROR when querying for roles %v", err)
+		return result, err
+	}
+	defer row.Close()
+	for row.Next() {
+		var id int64
+		var name sql.NullString
+		err = row.Scan(&id, &name)
+		if err != nil {
+			log.Printf("P ERROR at scan role")
+		}
+		result = append(result, ProfileRole{RoleId:id, RoleName:name.String})
+	}
+	return result, nil
+}
+
+func (ph *ProfileDbHandler) GetEmployeeByPhone(phone string) (*ProfileEmployee, error) {
+	row, err := ph.db.Query("SELECT p.phonenumber, v.fn, p.username FROM profile p JOIN vcard_search v ON v.username = p.username WHERE p.phonenumber = $1", phone)
+	if err != nil {
+		log.Printf("P ERROR at get employee by phone %v", err)
+		return nil, err
+	}
+	defer row.Close()
+	if row.Next() {
+		var phone, name, userName sql.NullString
+		err := row.Scan(&phone, &name, &userName)
+		if err != nil {
+			log.Printf("P ERROR at scan profile emplyees %v", err)
+			return nil, err
+		}
+		result := ProfileEmployee{
+			UserName:userName.String,
+			Phone:phone.String,
+			Name:name.String,
+		}
+		return &result, nil
+	}
+	return nil, nil
+}
+
+func (ph *ProfileDbHandler) AddEmployee(pUserName string, employee *ProfileEmployee) (int64, error) {
+	row, err := ph.db.Query("SELECT r.id FROM users_roles r WHERE username = $1 AND name = $2", pUserName, employee.RoleName)
+	if err != nil {
+		log.Printf("P ERROR when querying check for role %v", err)
+		return -1, err
+	}
+	defer row.Close()
+	isRoleExists := false
+	var roleId int64
+	for row.Next() {
+		err = row.Scan(&roleId)
+		if err != nil {
+			log.Printf("P ERROR at scan for check role exist %v", err)
+		}
+		employee.RoleId = roleId
+		isRoleExists = true
+	}
+	if !isRoleExists {
+		err = ph.db.QueryRow("INSERT INTO users_roles (username, name) values ($1, $2) RETURNING id;", pUserName, employee.RoleName).Scan(&roleId)
+		if err != nil {
+			log.Printf("P ERROR at querying to insert new role")
+		}
+		employee.RoleId = roleId
+	}
+	var linkId int64
+	err = ph.db.QueryRow("INSERT INTO users_links (fromusr, tousr, role_id) values ($1, $2, $3) RETURNING id;", pUserName, employee.UserName, roleId).Scan(&linkId)
+	if err != nil{
+		log.Printf("P ERROR at insert in user_links %v", err)
+		return -1, err
+	}
+	employee.LinkId = linkId
+	return linkId, nil
+}
+
+func (ph *ProfileDbHandler) RemoveAllEmployees(pUserName string) error {
+	stmt, err := ph.db.Prepare("DELETE FROM users_links WHERE fromusr = $1")
+	if err != nil {
+		log.Printf("P ERROR at preparing deleting from user_links %v", err)
+		return err
+	}
+	defer stmt.Close()
+	r, err := stmt.Exec(pUserName)
+	if err != nil {
+		log.Printf("P ERROR at execute deleting from user_links %v", err)
+		return err
+	}
+	log.Printf("P unbind employee for %v result is: %+v", pUserName, r)
+	return nil
+}
+
+func (ph *ProfileDbHandler) GetProfileEmployees(pUserName string) ([]ProfileEmployee, error) {
+	result := []ProfileEmployee{}
+	row, err := ph.db.Query("SELECT l.id, l.tousr, l.role_id, r.name, p.phonenumber, v.fn FROM users_links l JOIN users_roles r ON r.id=l.role_id JOIN profile p ON l.tousr = p.username JOIN vcard_search v ON v.username = l.tousr WHERE l.fromusr = $1", pUserName)
+	if err != nil {
+		log.Printf("P EEROR when querying profile emplyees %v", err)
+		return result, err
+	}
+	defer row.Close()
+	for row.Next() {
+		var linkId, roleId int64
+		var eUserName, roleName, phone, eName sql.NullString
+		err := row.Scan(&linkId, &eUserName, &roleId, &roleName, &phone, &eName)
+		if err != nil {
+			log.Printf("P ERROR at scan profile emplyees %v", err)
+			continue
+		}
+		result = append(result, ProfileEmployee{
+			ProfileRole:ProfileRole{RoleId:roleId, RoleName:roleName.String},
+			UserName:eUserName.String,
+			LinkId:linkId,
+			Phone:phone.String,
+			Name:eName.String,
+		})
+	}
+	log.Printf("P Emloyees of %v is:\n%+v", pUserName, result)
+	return result, nil
 }

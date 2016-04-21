@@ -17,14 +17,14 @@ type Notifier struct {
 	address string
 	key     string
 	_db     *db.MainDb
-	from	string
+	from    string
 }
 
 func NewNotifier(addr, key string, dbh *db.MainDb) *Notifier {
 	return &Notifier{address: addr, key: key, _db:dbh}
 }
 
-func (n *Notifier) SetFrom(from string){
+func (n *Notifier) SetFrom(from string) {
 	n.from = from
 }
 
@@ -47,10 +47,11 @@ func (n *Notifier) Notify(outPkg s.OutPkg) error {
 
 	log.Printf("N\n>> %+v \n>> %+v \n>> %v\n>>%s", n.address, n.key, req.Header, jsoned_out)
 
-	if n.from == ""{
+	if n.from == "" {
 		n._db.Messages.StoreNotificationMessage("me", outPkg.To, outPkg.Message.Body, outPkg.Message.ID)
-	} else{
+	} else {
 		n._db.Messages.StoreNotificationMessage(n.from, outPkg.To, outPkg.Message.Body, outPkg.Message.ID)
+
 	}
 
 	client := &http.Client{}
@@ -72,7 +73,7 @@ func (n *Notifier) Notify(outPkg s.OutPkg) error {
 			n._db.Messages.UpdateMessageStatus(outPkg.Message.ID, "sended", "ok")
 		}
 		defer resp.Body.Close()
-	}else {
+	} else {
 		n._db.Messages.UpdateMessageStatus(outPkg.Message.ID, "error", "404")
 		return errors.New("404")
 	}
@@ -84,11 +85,19 @@ func (n *Notifier) NotifyText(to, text string) (*s.OutPkg, error) {
 	err := n.Notify(result)
 	return &result, err
 }
+
+func (n *Notifier) NotifyTextWithCommands(to, text string, commands *[]s.OutCommand) (*s.OutPkg, error) {
+	result := s.OutPkg{To:to, Message:&s.OutMessage{ID:utils.GenId(), Type:"chat", Body:text, Commands:commands}}
+	err := n.Notify(result)
+	return &result, err
+}
+
 func (n *Notifier) NotifyTextToMembers(text, key string) (*s.OutPkg, error) {
 	result := s.OutPkg{Message:&s.OutMessage{ID:utils.GenId(), Type:"chat", Body:text}}
 	err := n.Notify(result)
 	return &result, err
 }
+
 func (n *Notifier)SendMessageToPeople(people []db.UserWrapper, text string) {
 	go func() {
 		for _, user := range people {

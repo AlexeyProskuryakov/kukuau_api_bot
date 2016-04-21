@@ -9,16 +9,15 @@ import (
 	"sort"
 	"msngr/configuration"
 	s "msngr/structs"
-	"errors"
 	"encoding/json"
 	"log"
 )
 
 type CoffeeHouseConfiguration struct {
 	Name      string `bson:"name"`
-	Bakes     []string `bson:"bakes"`
-	Drinks    []string `bson:"drinks"`
-	Additives []string `bson:"additives"`
+	Bakes     map[string]string `bson:"bakes"`
+	Drinks    map[string]string`bson:"drinks"`
+	Additives map[string]string `bson:"additives"`
 	Volumes   []string `bson:"volumes"`
 }
 
@@ -70,20 +69,22 @@ func NewCoffeeOrderFromForm(form s.InForm) (*CoffeeOrder, error) {
 	result := CoffeeOrder{}
 	if form.Name == "order_drink_form" {
 		result.Type = "drink"
-		drink, _ := form.GetValue("drink")
+		drink, _ := form.GetAny("drink")
 		result.Drink = drink
-		additive, _ := form.GetValue("additive")
+		additive, _ := form.GetAny("additive")
 		result.Additive = additive
-		volume, _ := form.GetValue("volume")
+		volume, _ := form.GetAny("volume")
 		result.Volume = volume
-		return &result, nil
-	}else if form.Name == "order_bake_form" {
+	} else if form.Name == "order_bake_form" {
 		result.Type = "bake"
-		bake, _ := form.GetValue("bake")
+		bake, _ := form.GetAny("bake")
 		result.Bake = bake
-		return &result, nil
 	}
-	return nil, errors.New("Invalid form :( ")
+	count, _ := form.GetAny("count")
+	result.Count = count
+	time, _ := form.GetAny("to_time")
+	result.ToTime = time
+	return &result, nil
 }
 
 func (co CoffeeOrder) ToOrderData() d.OrderData {
@@ -215,7 +216,7 @@ func (cch *CoffeeConfigHandler) GetConfig(name string) (*CoffeeHouseConfiguratio
 	err := cch.Configuration.Find(bson.M{"name":name}).One(&result)
 	if err == mgo.ErrNotFound {
 		return nil, nil
-	}else if err != nil {
+	} else if err != nil {
 		return nil, err
 	} else {
 		return &result, nil

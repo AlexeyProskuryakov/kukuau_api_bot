@@ -163,7 +163,6 @@ func GetChatMainHandler(start_addr string, notifier *ntf.Notifier, db *d.MainDb,
 		if contacts, err := GetContacts(db, config.CompanyId); err == nil {
 			result_data["contacts"] = contacts
 		}
-		log.Printf("CS result data :%+v", result_data)
 		r.HTML(200, "chat", result_data, render.HTMLOptions{Layout:"base"})
 
 	})
@@ -221,7 +220,7 @@ func GetChatSendHandler(start_addr string, notifier *ntf.Notifier, db *d.MainDb,
 			render.JSON(500, map[string]interface{}{"error":err})
 			return
 		}
-		log.Printf("message to send: %v", message)
+		log.Printf("CS message to send: %v", message)
 		if message.From != "" && message.To != "" && message.Body != "" {
 			if message.To == ALL {
 				peoples, _ := cs.GetUsersOfCompany(config.CompanyId)
@@ -232,9 +231,6 @@ func GetChatSendHandler(start_addr string, notifier *ntf.Notifier, db *d.MainDb,
 					go notifier.NotifyText(message.To, message.Body)
 				}
 				db.Messages.SetMessagesAnswered(message.To, config.CompanyId, config.CompanyId)
-			}
-			if err != nil {
-				render.JSON(500, map[string]interface{}{"error":err})
 			}
 		} else {
 			render.Redirect("/chat")
@@ -262,7 +258,7 @@ func GetChatMessageReadHandler(start_addr string, notifier *ntf.Notifier, db *d.
 			render.JSON(500, map[string]interface{}{"error":err})
 			return
 		}
-		err = db.Messages.SetMessagesRead(readed.From)
+		err = db.Messages.SetAllMessagesRead(readed.From, config.CompanyId)
 		if err != nil {
 			log.Printf("CS QE E: at unmarshal json messages %v\ndata:%s", err, data)
 			render.JSON(500, map[string]interface{}{"error":err})
@@ -316,7 +312,6 @@ func GetChatUnreadMessagesHandler(start_addr string, notifier *ntf.Notifier, db 
 			render.JSON(500, map[string]interface{}{"ok":false, "detail":fmt.Sprintf("can not unmarshal request body %v \n %s", err, request_body)})
 			return
 		}
-		log.Printf("New messages request : %v", nmReq)
 		result, err := get_messages(nmReq.For, config.CompanyId, db)
 		if err != nil {
 			render.JSON(500, map[string]interface{}{"ok":false, "detail":fmt.Sprintf("error in db: %v", err)})

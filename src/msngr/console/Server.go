@@ -27,6 +27,7 @@ import (
 	"io"
 	"regexp"
 	"msngr/voting"
+	"path/filepath"
 )
 
 const (
@@ -340,6 +341,24 @@ func Run(addr string, db *d.MainDb, qs *quests.QuestStorage, vdh *voting.VotingD
 			if err != nil {
 				log.Printf("CS warn at mkdir %v", err)
 			}
+
+			profile, err := ph.GetProfile(profile_id)
+			if err != nil {
+				log.Printf("CS error at getting profile")
+				render.JSON(500, map[string]interface{}{"error":err, "success":false})
+				return
+			}
+			if profile == nil {
+				profile = &Profile{UserName:profile_id}
+			} else {
+				splitted := strings.Split(profile.ImageURL, "/")
+				savedFname := splitted[len(splitted) - 1]
+				err = os.Remove(filepath.Join(path, savedFname))
+				if err != nil {
+					log.Printf("CS Error at remove old icon ha ha ha")
+				}
+			}
+
 			file_path := fmt.Sprintf("%v/%v", path, handler.Filename)
 			f, err := os.OpenFile(file_path, os.O_WRONLY | os.O_CREATE, 0664)
 			defer f.Close()
@@ -353,14 +372,30 @@ func Run(addr string, db *d.MainDb, qs *quests.QuestStorage, vdh *voting.VotingD
 			file_url := fmt.Sprintf("%v/%v/%v", cfg.Console.ProfileImgServer, profile_id, handler.Filename)
 			log.Printf("CS will form image at: [%v]", file_url)
 
-			profile, _ := ph.GetProfile(profile_id)
-			if profile == nil {
-				profile = &Profile{UserName:profile_id}
-			}
 			profile.ImageURL = file_url
 			ph.UpdateProfile(profile)
 
 			render.JSON(200, map[string]interface{}{"success":true, "url":file_url})
+		})
+		r.Get("/roles/:profile_id", func(render render.Render, params martini.Params, req *http.Request) {
+			profile_id := params["profile_id"]
+			roles, err := ph.GetProfileRoles(profile_id)
+			if err != nil {
+				log.Printf("CS Error getting profile roles")
+				render.JSON(500, map[string]interface{}{"error":err, "success":false})
+				return
+			}
+			render.JSON(200, map[string]interface{}{"success":true, "roles":roles})
+		})
+		r.Get("/employee/:phone", func(render render.Render, params martini.Params, req *http.Request) {
+			phone := params["phone"]
+			employee, err := ph.GetEmployeeByPhone(phone)
+			if err != nil {
+				log.Printf("CS Error getting employee by phone")
+				render.JSON(500, map[string]interface{}{"error":err, "success":false})
+				return
+			}
+			render.JSON(200, map[string]interface{}{"success":true, "employee":employee})
 		})
 		r.Get("/all_groups", func(ren render.Render) {
 			groups, err := ph.GetAllGroups()
@@ -371,6 +406,17 @@ func Run(addr string, db *d.MainDb, qs *quests.QuestStorage, vdh *voting.VotingD
 			}
 			log.Printf("CS forming next groups: %+v", groups)
 			ren.JSON(200, map[string]interface{}{"success":true, "groups":groups})
+		})
+
+		r.Get("/all_features", func(ren render.Render) {
+			features, err := ph.GetAllFeatures()
+			if err != nil {
+				log.Printf("CS error at features retrieve: %v", err)
+				ren.JSON(500, map[string]interface{}{"error":err, "success":false})
+				return
+			}
+			log.Printf("CS forming next features: %+v", features)
+			ren.JSON(200, map[string]interface{}{"success":true, "features":features})
 		})
 	})
 
@@ -656,8 +702,14 @@ func Run(addr string, db *d.MainDb, qs *quests.QuestStorage, vdh *voting.VotingD
 	r = EnsureWorkWithKeys(r, qs)
 	r = EnsureWorkWithUsers(r, db)
 
-	r.Get("/statistic/taxi", func(render render.Render) {
-		render.HTML(200, "console/statistic", map[string]interface{}{"providers":[]string{"academ"}})
+	r.Get("/statistic", func(render render.Render) {
+		err := EnsureStatistic(filepath.Join(martini.Root, "static", "tmp"))
+		if err != nil {
+			log.Printf("CS ERROR at formin statistics :( ")
+			render.JSON(500, map[string]interface{}{"error":err})
+		}
+		log.Printf("saved: %v", martini.Root)
+		render.Redirect("/tmp/statistic.xlsx")
 	})
 
 	m.Action(r.Handle)

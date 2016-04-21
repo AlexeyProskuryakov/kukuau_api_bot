@@ -348,6 +348,9 @@ func Run(config c.QuestConfig, qs *QuestStorage, ntf *ntf.Notifier, additionalNo
 		//log.Printf("QS i return this messages: %+v", messages)
 		result_data["with"] = with
 		result_data["collocutor"] = collocutor
+		if len(messages) > 100{
+			messages = messages[0:100]
+		}
 		result_data["messages"] = messages
 
 		qs.SetMessagesRead(with)
@@ -360,7 +363,7 @@ func Run(config c.QuestConfig, qs *QuestStorage, ntf *ntf.Notifier, additionalNo
 		render.HTML(200, "chat", result_data)
 	})
 
-	r.Post("/send_message", func(render render.Render, req *http.Request) {
+	r.Post("/send", func(render render.Render, req *http.Request) {
 		type MessageFromF struct {
 			From string `json:"from"`
 			To   string `json:"to"`
@@ -397,7 +400,7 @@ func Run(config c.QuestConfig, qs *QuestStorage, ntf *ntf.Notifier, additionalNo
 					man, _ := qs.GetManByUserId(message.To)
 					if man != nil {
 						log.Printf("QSERV: will send [%v] to %v", message.Body, man.UserId)
-						ntf.NotifyText(man.UserId, message.Body)
+						go ntf.NotifyText(man.UserId, message.Body)
 					}
 				}else {
 					peoples, _ := qs.GetMembersOfTeam(team.Name)
@@ -420,7 +423,7 @@ func Run(config c.QuestConfig, qs *QuestStorage, ntf *ntf.Notifier, additionalNo
 
 	})
 
-	r.Post("/new_messages", func(render render.Render, req *http.Request) {
+	r.Post("/messages", func(render render.Render, req *http.Request) {
 		type NewMessagesReq struct {
 			For   string `json:"m_for"`
 			After int64 `json:"after"`
@@ -460,7 +463,7 @@ func Run(config c.QuestConfig, qs *QuestStorage, ntf *ntf.Notifier, additionalNo
 		render.JSON(200, map[string]interface{}{"messages":messages, "next_":time.Now().Unix()})
 	})
 
-	r.Post("/new_contacts", func(render render.Render, req *http.Request) {
+	r.Post("/contacts", func(render render.Render, req *http.Request) {
 		type NewContactsReq struct {
 			After int64 `json:"after"`
 			Exist []string `json:"exist"`

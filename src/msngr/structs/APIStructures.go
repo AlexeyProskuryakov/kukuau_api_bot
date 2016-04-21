@@ -128,6 +128,33 @@ type FieldItem struct {
 	Content FieldItemContent `json:"content"`
 }
 
+func FormItems(strings []string) []FieldItem {
+	result := []FieldItem{}
+	for _, el := range strings {
+		result = append(result, FieldItem{
+			Value:el,
+			Content:FieldItemContent{
+				Title:el,
+			},
+		})
+	}
+	return result
+}
+
+func FormItemsFromMap(items map[string]string) []FieldItem {
+	result := []FieldItem{}
+	for name, etc := range items {
+		result = append(result, FieldItem{
+			Value:name,
+			Content:FieldItemContent{
+				Title:name,
+				Subtitle:etc,
+			},
+		})
+	}
+	return result
+}
+
 type OutField struct {
 	Name       string `json:"name",bson:"name"`
 	Type       string `json:"type,omitempty",bson:"type,omitempty"`
@@ -235,7 +262,7 @@ func StartAfter(check CheckFunc, what func()) {
 	for {
 		if message, ok := check(); ok {
 			break
-		}else {
+		} else {
 			log.Printf("wait %v", message)
 			time.Sleep(5 * time.Second)
 		}

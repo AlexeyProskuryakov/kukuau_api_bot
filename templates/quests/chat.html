@@ -22,7 +22,7 @@
             " href="/chat?with={{$contact.ID}}">
                         {{if $contact.IsTeam}}
 
-                        Комманда {{$contact.Name}}
+                        Команда {{$contact.Name}}
             <span class="small" id="s-{{$contact.ID}}">
                 {{if $contact.NewMessagesCount}}
                     ( {{$contact.NewMessagesCount}} )
@@ -179,7 +179,9 @@
 
     </div>
 </div>
-
+<script>
+    var url_prefix = "";
+</script>
 <script src="chat_script.js"></script>
 <script src="quests_script.js"></script>
 
