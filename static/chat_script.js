@@ -1,5 +1,24 @@
 var storage = localStorage;
 
+var notificationPermission;
+
+switch ( Notification.permission.toLowerCase() ) {
+    case "granted":
+        console.log("show notification granted");
+        break;
+
+    case "denied":
+        console.log("show notification denied")
+        break;
+
+    case "default":
+       Notification.requestPermission( function(result) { notificationPermission = result  } );
+}
+
+function showNotification(text, from){
+
+}
+
 function playNotification(){
     if ($("#mute:checked").length == 0){
         var au = document.getElementById("audio-notification");
