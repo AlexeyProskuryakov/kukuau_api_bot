@@ -866,7 +866,7 @@ func (ph *ProfileDbHandler) GetEmployeeByPhone(phone string) (*ProfileEmployee, 
 
 func (ph *ProfileDbHandler) AddEmployee(pUserName string, employee *ProfileEmployee) (int64, error) {
 	var linkId int64
-	err := ph.db.QueryRow("INSERT INTO users_links (fromusr, tousr) values ($1, $2, $3) RETURNING id;", pUserName, employee.UserName).Scan(&linkId)
+	err := ph.db.QueryRow("INSERT INTO users_links (fromusr, tousr) values ($1, $2) RETURNING id;", pUserName, employee.UserName).Scan(&linkId)
 	if err != nil{
 		log.Printf("P ERROR at insert in user_links %v", err)
 		return -1, err
