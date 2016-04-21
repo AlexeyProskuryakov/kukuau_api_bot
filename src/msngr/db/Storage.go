@@ -749,7 +749,7 @@ func (mh *MessageHandler) SetMessageNotificationSent(from string) error {
 	if !mh.parent.Check() {
 		return errors.New("БД не доступна")
 	}
-	err := mh.Collection.Update(bson.M{"from":from}, bson.M{"$set":bson.M{"notification_sent":true}})
+	err := mh.Collection.Update(bson.M{"from":from, "unread":1}, bson.M{"$set":bson.M{"notification_sent":true}})
 	return err
 }
 
