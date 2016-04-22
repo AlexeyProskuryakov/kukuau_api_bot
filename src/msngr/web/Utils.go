@@ -6,7 +6,7 @@ import (
 	"log"
 	"time"
 	"github.com/tealeg/xlsx"
-"strings"
+	"strings"
 	"regexp"
 )
 
@@ -32,16 +32,17 @@ func NonJsonLogger() martini.Handler {
 	}
 }
 
-
 func ParseExportXlsx(xlf *xlsx.File, skip_row, skip_cell int) ([][]string, error) {
 	result := [][]string{}
 	sheet_reg := regexp.MustCompile("([кК]омм?анда\\s*\\d+)|(.*ключ.*)|(^\\d+$)")
 	for _, sheet := range xlf.Sheets {
 		if sheet != nil {
 			sh_name := strings.TrimSpace(strings.ToLower(sheet.Name))
-			if sheet_reg.MatchString(sh_name){
+			if sheet_reg.MatchString(sh_name) {
+				log.Printf("Processing sheet: %v", sh_name)
 				for ir, row := range sheet.Rows {
-					if row != nil && ir >= skip_row {
+					if row != nil && ir >= skip_row && len(row.Cells) > skip_cell + 2 {
+						log.Printf("Processing row: %+v, row cells: %+v len: %v", row, row.Cells, len(row.Cells))
 						key := strings.ToLower(strings.TrimSpace(row.Cells[skip_cell].Value))
 						description := strings.TrimSpace(row.Cells[skip_cell + 1].Value)
 						next_key_raw := strings.ToLower(strings.TrimSpace(row.Cells[skip_cell + 2].Value))
