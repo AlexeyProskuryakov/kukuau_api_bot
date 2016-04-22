@@ -359,6 +359,12 @@ type CancelOrderProcessor struct {
 }
 
 func (cop *CancelOrderProcessor) ProcessMessage(in *s.InPkg) *s.MessageResult {
+	start := time.Now()
+	defer func() {
+		end := time.Now()
+		log.Printf("Processing cancel order time is %v", end.Unix() - start.Unix())
+	}()
+
 	lastOrder, err := cop.Storage.Orders.GetByOwnerLast(in.From, cop.CompanyName)
 	if err != nil {
 		return m.DB_ERROR_RESULT
