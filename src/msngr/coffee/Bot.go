@@ -360,10 +360,6 @@ type CancelOrderProcessor struct {
 
 func (cop *CancelOrderProcessor) ProcessMessage(in *s.InPkg) *s.MessageResult {
 	start := time.Now()
-	defer func() {
-		end := time.Now()
-		log.Printf("Processing cancel order time is %v", end.Unix() - start.Unix())
-	}()
 
 	lastOrder, err := cop.Storage.Orders.GetByOwnerLast(in.From, cop.CompanyName)
 	if err != nil {
@@ -395,6 +391,10 @@ func (cop *CancelOrderProcessor) ProcessMessage(in *s.InPkg) *s.MessageResult {
 		if err != nil {
 			log.Printf("CB Error at forming commands %v", err)
 		}
+
+		end := time.Now()
+		log.Printf("Processing cancel order time is %v", end.UnixNano() - start.UnixNano())
+
 		return &s.MessageResult{Body:"Ваш заказ отменен!", Commands:cmds}
 	}
 	return &s.MessageResult{Body:"У вас нечего отменять."}
