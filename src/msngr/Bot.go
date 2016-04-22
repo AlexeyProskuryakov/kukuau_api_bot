@@ -17,7 +17,6 @@ import (
 
 var DEBUG bool
 var TEST bool
-//var textProvider = tm.NewTextMessageSupplier()
 
 
 type BotContext struct {
@@ -26,7 +25,7 @@ type BotContext struct {
 	RequestProcessors map[string]s.RequestCommandProcessor
 	MessageProcessors map[string]s.MessageCommandProcessor
 	Commands          map[string]*[]s.OutCommand
-	CommandsStorage   configuration.ConfigStorage
+	CommandsStorage   configuration.CommandsStorage
 	Settings          map[string]interface{}
 }
 
@@ -119,7 +118,6 @@ func process_message(commandProcessor s.MessageCommandProcessor, buff *s.OutPkg,
 		ID: u.GenId(),
 		Type:"chat",
 	}
-	//normal buff message forming
 	if messageResult.Type != "" {
 		buff.Message.Type = messageResult.Type
 	}

@@ -49,7 +49,7 @@ func TestMessageProcessor(t *testing.T) {
 	conf := configuration.ReadConfigInRecursive()
 	conf.Main.Database.Name = conf.Main.Database.Name + "_autotest"
 	qs := NewQuestStorage(conf.Main.Database.ConnString, conf.Main.Database.Name)
-	cs := configuration.NewConfigurationStorage(conf.Main.Database.ConnString, conf.Main.Database.Name)
+	cs := configuration.NewCommandsStorage(conf.Main.Database.ConnString, conf.Main.Database.Name)
 	qp := QuestMessageProcessor{Storage:qs, ConfigStorage:cs}
 	prep_keys(qs)
 	k, d := kd(0, 0)

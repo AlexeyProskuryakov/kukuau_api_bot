@@ -90,6 +90,10 @@ type AdditionalFuncElement struct {
 	Context map[string]interface{}
 }
 
+type NotificationElement struct {
+	After int `bson:"after"`
+}
+
 type MessageWrapper struct {
 	ID                bson.ObjectId `bson:"_id,omitempty"`
 	SID               string
@@ -107,11 +111,12 @@ type MessageWrapper struct {
 	MessageCondition  string `bson:"message_condition"`
 	IsDeleted         bool `bson:"is_deleted"`
 	Attributes        []string `bson:"attributes"`
-	AdditionalData    []AdditionalDataElement `bson:"additional_data"`
-	AdditionalFuncs   []AdditionalFuncElement  `bson:"additional_funcs"`
-	RelatedOrderState string `bson:"related_order_state"`
+	AdditionalData    []AdditionalDataElement `bson:"additional_data,omitempty"`
+	AdditionalFuncs   []AdditionalFuncElement  `bson:"additional_funcs,omitempty"`
+	RelatedOrderState string `bson:"related_order_state,omitempty"`
 	NotificationSend  bool `bson:"notification_sent"`
 	IsNotification    bool `bson:"is_notification"`
+	AutoAnswers       []NotificationElement `bson:"auto_answers"`
 }
 
 func (mw MessageWrapper) IsAttrPresent(attrName string) bool {
@@ -772,6 +777,28 @@ func (mh *MessageHandler) SetMessagesAnswered(from, to, by string) error {
 	_, err := mh.Collection.UpdateAll(
 		bson.M{"from":from, "to":to, "not_answered":1},
 		bson.M{"$set":bson.M{"not_answered":0, "answered_by":by}},
+	)
+	return err
+}
+func (mh *MessageHandler) GetMessagesForAutoAnswer(to string, after int) ([]MessageWrapper, error) {
+	result := []MessageWrapper{}
+	timeStampLess := time.Now().Add(-(time.Duration(after) * time.Minute)).Unix()
+	err := mh.Collection.Find(bson.M{
+		"to":to,
+		"not_answered":1,
+		"time_stamp":bson.M{"$lte": timeStampLess},
+		"$not":bson.M{"$elemMatch":bson.M{"after":after}},
+	}).All(&result)
+	return result, err
+}
+
+func (mh *MessageHandler) SetMessagesAutoAnswer(from, to string, after int) error {
+	if !mh.parent.Check() {
+		return errors.New("БД не доступна")
+	}
+	_, err := mh.Collection.UpdateAll(
+		bson.M{"from":from, "to":to, "not_answered":1},
+		bson.M{"$push":bson.M{"auto_answers":NotificationElement{After:after}}},
 	)
 	return err
 }

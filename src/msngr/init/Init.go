@@ -137,12 +137,12 @@ func StartBot(db *d.MainDb, result chan string) c.Configuration {
 		result <- "rupost"
 	}
 
-	cs := c.NewConfigurationStorage(conf.Main.Database.ConnString, conf.Main.Database.Name)
+	cs := c.NewCommandsStorage(conf.Main.Database.ConnString, conf.Main.Database.Name)
 	qs := q.NewQuestStorage(conf.Main.Database.ConnString, conf.Main.Database.Name)
 
 	for q_name, _ := range conf.Quests {
 		log.Printf("Will handling quests controller for quest: %v", q_name)
-		qb_controller := q.FormQuestBotContext(conf, q_name, cs, qs, db)
+		qb_controller := q.FormQuestBotContext(conf, q_name, qs, db)
 		q_controller := m.FormBotController(qb_controller, db)
 		http.HandleFunc(fmt.Sprintf("/quest/%v", q_name), q_controller)
 		result <- fmt.Sprintf("quest_%v", q_name)
@@ -150,7 +150,7 @@ func StartBot(db *d.MainDb, result chan string) c.Configuration {
 
 	if conf.Console.WebPort != "" && conf.Console.Key != "" {
 		log.Printf("Will handling requests from /console")
-		bc := cnsl.FormConsoleBotContext(conf, db, cs)
+		bc := cnsl.FormConsoleBotContext(conf, db)
 		cc := m.FormBotController(bc, db)
 		http.HandleFunc("/console", cc)
 		result <- "console"
@@ -239,8 +239,8 @@ func StartBot(db *d.MainDb, result chan string) c.Configuration {
 
 			log.Printf("I will handling web requests for coffee %v at : [%v]", c_conf.Name, webRoute)
 			db.Users.AddOrUpdateUserObject(d.UserWrapper{UserId:c_conf.Chat.User, UserName:c_conf.Chat.User, Password:utils.PHash(c_conf.Chat.Password), Role:users.MANAGER})
-			if c_conf.Chat.Notification.Enable {
-				watchManager.AddConfiguration(c_conf.Name, c_conf.Chat.Notification.Text, c_conf.Chat.Key, int64(c_conf.Chat.Notification.After) * 60)
+			if c_conf.Chat.Notifications.Enable {
+				watchManager.AddConfiguration(c_conf.Name, c_conf.Chat.Notifications.Text, c_conf.Chat.Key, int64(c_conf.Chat.Notifications.After) * 60)
 			}
 		}
 		result <- "coffee"
@@ -261,7 +261,7 @@ func StartBot(db *d.MainDb, result chan string) c.Configuration {
 			notifier := n.NewNotifier(conf.Main.CallbackAddr, chat_conf.Key, db)
 			notifier.SetFrom(chat_conf.CompanyId)
 
-			if chat_conf.AutoAnswer.Enable {
+			if chat_conf.AutoAnswers.Enable {
 				go chat.Watch(db.Messages, notifier, chat_conf)
 			}
 			var salt string
@@ -287,8 +287,8 @@ func StartBot(db *d.MainDb, result chan string) c.Configuration {
 			log.Printf("I will handling web requests for chat at : [%v]", webRoute)
 
 			db.Users.AddOrUpdateUserObject(d.UserWrapper{UserName:chat_conf.User, Password:utils.PHash(chat_conf.Password), Role:users.MANAGER, UserId:chat_conf.User})
-			if chat_conf.Notification.Enable {
-				watchManager.AddConfiguration(chat_conf.CompanyId, chat_conf.Notification.Text, chat_conf.Key, int64(chat_conf.Notification.After) * 60)
+			if chat_conf.Notifications.Enable {
+				watchManager.AddConfiguration(chat_conf.CompanyId, chat_conf.Notifications.Text, chat_conf.Key, int64(chat_conf.Notifications.After) * 60)
 			}
 		}
 	}

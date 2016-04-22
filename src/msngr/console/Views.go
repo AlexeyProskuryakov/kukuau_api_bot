@@ -23,7 +23,7 @@ import (
 	u "msngr/utils"
 )
 
-func ConfigurationView(request *http.Request, render render.Render, cs cfg.ConfigurationStorage) {
+func ConfigurationView(request *http.Request, render render.Render, cs cfg.CommandsStorage) {
 	input, err := ioutil.ReadAll(request.Body)
 	defer request.Body.Close()
 	if err != nil {

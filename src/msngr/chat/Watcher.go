@@ -3,36 +3,33 @@ package chat
 import (
 	"msngr/db"
 	"time"
-	"gopkg.in/mgo.v2/bson"
 	"log"
 	n "msngr/notify"
-	"msngr/configuration"
+	cfg "msngr/configuration"
 )
 
-func Watch(messageStore *db.MessageHandler, ntf *n.Notifier, config configuration.ChatConfig) {
+func Watch(messageStore *db.MessageHandler, configStorage *cfg.ConfigurationStorage, notifier *n.Notifier, company_id string) {
 	for {
-		froms := map[string]bool{}
-		timeStampLess := time.Now().Add(-(time.Duration(config.AutoAnswer.After) * time.Minute)).Unix()
-		//log.Printf("CW will get not answered messages to %v, and with time stamp less than: %v", config.CompanyId, timeStampLess)
-		messages, err := messageStore.GetMessages(bson.M{
-			"to":config.CompanyId,
-			"not_answered":1,
-			"unread":1,
-			"time_stamp":bson.M{
-				"$lte": timeStampLess,
-			}})
-
+		config, err := configStorage.GetChatConfig(company_id)
 		if err != nil {
-			log.Printf("CW ERROR %v", err)
+			log.Printf("AW ERROR when get chat config for %v", company_id)
+			time.Sleep(10 * time.Second)
+			continue
 		}
-		for _, message := range messages {
-			if _, ok := froms[message.From]; !ok {
-				ntf.NotifyText(message.From, config.AutoAnswer.Text)
-				messageStore.SetMessagesAnswered(message.From, config.CompanyId, "bot")
-				froms[message.From] = true
+		for _, autoAnswerCfg := range config.AutoAnswers {
+			messages, err := messageStore.GetMessagesForAutoAnswer(company_id, autoAnswerCfg.After)
+			if err != nil {
+				log.Printf("CW ERROR AT REtrieving messages %v", err)
+			}
+			froms := map[string]bool{}
+			for _, message := range messages {
+				if _, ok := froms[message.From]; !ok {
+					notifier.NotifyText(message.From, autoAnswerCfg.Text)
+					messageStore.SetMessagesAutoAnswer(message.From, config.CompanyId, autoAnswerCfg.After)
+					froms[message.From] = true
+				}
 			}
 		}
-		//log.Printf("CW was process %v messages", len(messages))
 		time.Sleep(10 * time.Second)
 	}
 }

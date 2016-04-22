@@ -5,56 +5,58 @@ import (
 	"gopkg.in/mgo.v2/bson"
 	"time"
 	"log"
+	cfg "msngr/configuration"
 )
 
-type NotifyConfiguration struct {
-	Name         string
-	SecondsAfter int64
-	Text         string
-	Key          string
-}
-
 type WatchManager struct {
-	Store   *db.MainDb
-	Configs []NotifyConfiguration
-	Address string
+	store       *db.MainDb
+	address     string
+	configStore *cfg.ConfigurationStorage
+	companies   []string
 }
 
 func NewWatchManager(store *db.MainDb, address string) *WatchManager {
 	log.Printf("WUM initializing Watch Unread Manager")
-	result := WatchManager{Store:store, Configs:[]NotifyConfiguration{}, Address:address}
+	result := WatchManager{store:store, address:address}
 	return &result
 }
 
-func (wm *WatchManager)AddConfiguration(profileName, text, key string, secondsAfter int64) {
-	log.Printf("WUM Add configuration for %v with text [%v] and seconds after %v", profileName, text, secondsAfter)
-	wm.Configs = append(wm.Configs, NotifyConfiguration{Name:profileName, SecondsAfter:secondsAfter, Text:text, Key:key})
+func (wm *WatchManager)AddConfiguration(companyId string) {
+	log.Printf("WUM Will watch for %v", companyId)
+	wm.companies = append(wm.companies, companyId)
 }
 
 func (wm *WatchManager)WatchUnreadMessages() {
 	log.Printf("WUM start...")
 	for {
-		for _, config := range wm.Configs {
-			messages, err := wm.Store.Messages.GetMessages(bson.M{
-				"unread":1,
-				"to":config.Name,
-				"time_stamp":bson.M{"$lte":time.Now().Unix() - config.SecondsAfter},
-				"notification_sent":false,
-			})
+		for _, company := range wm.companies {
+			config, err := wm.configStore.GetChatConfig(company)
 			if err != nil {
-				log.Printf("WUM ERROR at retrieve messages for notify [%v]: %v", config.Name, err)
+				log.Printf("WUM ERROR at retrieve chat config for %v", company)
 				continue
 			}
-			if len(messages) > 0 {
-				log.Printf("WUM Will notify by %v messages for [%v]", len(messages), config.Name)
-				notifier := NewNotifier(wm.Address, config.Key, wm.Store)
-				_, _, err = notifier.NotifyTextToMembers(config.Text)
+			for _, cfg_notification := range config.Notifications {
+				messages, err := wm.store.Messages.GetMessages(bson.M{
+					"unread":1,
+					"to":config.CompanyId,
+					"time_stamp":bson.M{"$lte":time.Now().Unix() - int64(cfg_notification.After) * 60},
+					"notification_sent":false,
+				})
 				if err != nil {
-					log.Printf("WUM ERROR at send notification to %v: %v", config.Name, err)
+					log.Printf("WUM ERROR at retrieve messages for notify [%v]: %v", config.CompanyId, err)
 					continue
 				}
-				for _, message := range messages {
-					wm.Store.Messages.SetMessageNotificationSent(message.From)
+				if len(messages) > 0 {
+					log.Printf("WUM Will notify by %v messages for [%v]", len(messages), config.CompanyId)
+					notifier := NewNotifier(wm.address, config.Key, wm.store)
+					_, _, err = notifier.NotifyTextToMembers(cfg_notification.Text)
+					if err != nil {
+						log.Printf("WUM ERROR at send notification to %v: %v", config.CompanyId, err)
+						continue
+					}
+					for _, message := range messages {
+						wm.store.Messages.SetMessageNotificationSent(message.From)
+					}
 				}
 			}
 		}

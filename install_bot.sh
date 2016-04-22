@@ -19,7 +19,6 @@ build(){
     ${EXEC} get github.com/lib/pq
     ${EXEC} get github.com/renstrom/fuzzysearch/fuzzy
 
-
     #building
     rm -rf ${HOME}/build
     mkdir ${HOME}/build

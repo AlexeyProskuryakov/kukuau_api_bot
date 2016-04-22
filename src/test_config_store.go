@@ -50,7 +50,7 @@ var QUEST_SUBSCRIBED_COMMANDS = []s.OutCommand{
 
 
 func main() {
-	cs := configuration.NewConfigurationStorage("localhost:27017", "bot")
+	cs := configuration.NewCommandsStorage("localhost:27017", "bot")
 	SUBSCRIBED, _ := cs.LoadCommands(quests.PROVIDER, quests.SUBSCRIBED)
 	log.Printf("SUBSCRIBED COMMANDS: %+v", SUBSCRIBED)
 	UNSUBSCRIBED, _ := cs.LoadCommands(quests.PROVIDER, quests.UNSUBSCRIBED)
