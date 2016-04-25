@@ -285,6 +285,7 @@ func StartBot(db *d.MainDb, result chan string) c.Configuration {
 
 			configStorage.SetChatConfig(chat_conf, false)
 		}
+		result <- "chat"
 	}
 
 	go n.WatchUnreadMessages(db, configStorage, conf.Main.CallbackAddrMembers)

@@ -995,6 +995,7 @@ func (cs *ConfigurationStorage) SetChatConfig(config c.ChatConfig, update bool) 
 		return err
 	}
 	if err == mgo.ErrNotFound {
+		log.Printf("SETTING CHAT CONFIG %+v", config)
 		cs.Collection.Insert(config)
 		return nil
 	}
