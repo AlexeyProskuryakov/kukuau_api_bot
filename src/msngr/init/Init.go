@@ -137,7 +137,6 @@ func StartBot(db *d.MainDb, result chan string) c.Configuration {
 		result <- "rupost"
 	}
 
-	cs := c.NewCommandsStorage(conf.Main.Database.ConnString, conf.Main.Database.Name)
 	qs := q.NewQuestStorage(conf.Main.Database.ConnString, conf.Main.Database.Name)
 
 	for q_name, _ := range conf.Quests {
@@ -178,70 +177,69 @@ func StartBot(db *d.MainDb, result chan string) c.Configuration {
 		result <- "vote"
 	}
 
-	watchManager := n.NewWatchManager(db, conf.Main.CallbackAddrMembers)
+	configStorage := d.NewConfigurationStorage(conf.Main.ConfigDatabase)
 
 	if len(conf.Coffee) > 0 {
 		fs := http.FileServer(http.Dir("static"))
 		http.Handle("/static/", http.StripPrefix("/static/", fs))
 
-		for _, c_conf := range conf.Coffee {
+		for _, coffee_conf := range conf.Coffee {
 			c_store := coffee.NewCoffeeConfigHandler(db)
-			coffeeHouseConfiguration, err := c_store.LoadFromConfig(c_conf)
+			coffeeHouseConfiguration, err := c_store.LoadFromConfig(coffee_conf)
 			if err != nil {
-				log.Printf("INIT ERROR at init coffee %v is %v", c_conf.Name, err)
+				log.Printf("INIT ERROR at init coffee %v is %v", coffee_conf.Name, err)
 			}
-			cbc := coffee.FormBotCoffeeContext(c_conf, db, coffeeHouseConfiguration)
+			cbc := coffee.FormBotCoffeeContext(coffee_conf, db, coffeeHouseConfiguration, configStorage)
 			cntrl := m.FormBotController(cbc, db)
-			route := fmt.Sprintf("/bot/coffee/%v", c_conf.Name)
+			route := fmt.Sprintf("/bot/coffee/%v", coffee_conf.Name)
 			http.HandleFunc(route, cntrl)
-			log.Printf("will handling bot messages for coffee %v at %v", c_conf.Name, route)
+			log.Printf("will handling bot messages for coffee %v at %v", coffee_conf.Name, route)
 
-			http.HandleFunc(fmt.Sprintf("/autocomplete/coffee/%v/drink", c_conf.Name), func(w http.ResponseWriter, r *http.Request) {
-				coffee.AutocompleteController(w, r, c_store, "drinks", c_conf.Name)
+			http.HandleFunc(fmt.Sprintf("/autocomplete/coffee/%v/drink", coffee_conf.Name), func(w http.ResponseWriter, r *http.Request) {
+				coffee.AutocompleteController(w, r, c_store, "drinks", coffee_conf.Name)
 			})
 
-			http.HandleFunc(fmt.Sprintf("/autocomplete/coffee/%v/volume", c_conf.Name), func(w http.ResponseWriter, r *http.Request) {
-				coffee.AutocompleteController(w, r, c_store, "volumes", c_conf.Name)
+			http.HandleFunc(fmt.Sprintf("/autocomplete/coffee/%v/volume", coffee_conf.Name), func(w http.ResponseWriter, r *http.Request) {
+				coffee.AutocompleteController(w, r, c_store, "volumes", coffee_conf.Name)
 			})
 
-			http.HandleFunc(fmt.Sprintf("/autocomplete/coffee/%v/bake", c_conf.Name), func(w http.ResponseWriter, r *http.Request) {
-				coffee.AutocompleteController(w, r, c_store, "bakes", c_conf.Name)
+			http.HandleFunc(fmt.Sprintf("/autocomplete/coffee/%v/bake", coffee_conf.Name), func(w http.ResponseWriter, r *http.Request) {
+				coffee.AutocompleteController(w, r, c_store, "bakes", coffee_conf.Name)
 			})
 
-			http.HandleFunc(fmt.Sprintf("/autocomplete/coffee/%v/additive", c_conf.Name), func(w http.ResponseWriter, r *http.Request) {
-				coffee.AutocompleteController(w, r, c_store, "additives", c_conf.Name)
+			http.HandleFunc(fmt.Sprintf("/autocomplete/coffee/%v/additive", coffee_conf.Name), func(w http.ResponseWriter, r *http.Request) {
+				coffee.AutocompleteController(w, r, c_store, "additives", coffee_conf.Name)
 			})
 			var salt string
-			if c_conf.Chat.UrlSalt != "" {
-				salt = fmt.Sprintf("%v-%v", c_conf.Name, c_conf.Chat.UrlSalt)
+			if coffee_conf.Chat.UrlSalt != "" {
+				salt = fmt.Sprintf("%v-%v", coffee_conf.Name, coffee_conf.Chat.UrlSalt)
 			} else {
-				salt = c_conf.Name
+				salt = coffee_conf.Name
 			}
 
-			notifier := n.NewNotifier(conf.Main.CallbackAddr, c_conf.Chat.Key, db)
-			notifier.SetFrom(c_conf.Name)
+			notifier := n.NewNotifier(conf.Main.CallbackAddr, coffee_conf.Chat.Key, db)
+			notifier.SetFrom(coffee_conf.Name)
 
 			webRoute := fmt.Sprintf("/web/coffee/%v", salt)
-			http.Handle(webRoute, chat.GetChatMainHandler(webRoute, notifier, db, c_conf.Chat))
+			http.Handle(webRoute, chat.GetChatMainHandler(webRoute, notifier, db, coffee_conf.Chat))
 
 			sr := func(s string) string {
 				return fmt.Sprintf("%v%v", webRoute, s)
 			}
-			http.Handle(sr("/send"), chat.GetChatSendHandler(sr("/send"), notifier, db, c_conf.Chat, chat.NewChatStorage(db)))
-			http.Handle(sr("/unread_messages"), chat.GetChatUnreadMessagesHandler(sr("/unread_messages"), notifier, db, c_conf.Chat))
-			http.Handle(sr("/messages_read"), chat.GetChatMessageReadHandler(sr("/messages_read"), notifier, db, c_conf.Chat))
-			http.Handle(sr("/contacts"), chat.GetChatContactsHandler(sr("/contacts"), notifier, db, c_conf.Chat))
-			http.Handle(sr("/contacts_change"), chat.GetChatContactsChangeHandler(sr("/contacts_change"), notifier, db, c_conf.Chat))
-			http.Handle(sr("/config"), chat.GetChatConfigHandler(sr("/config"), webRoute, db, c_conf.Chat))
-			http.Handle(sr("/delete_messages"), chat.GetChatDeleteMessagesHandler(sr("/delete_messages"), db, c_conf.Chat))
+			http.Handle(sr("/send"), chat.GetChatSendHandler(sr("/send"), notifier, db, coffee_conf.Chat, chat.NewChatStorage(db)))
+			http.Handle(sr("/unread_messages"), chat.GetChatUnreadMessagesHandler(sr("/unread_messages"), notifier, db, coffee_conf.Chat))
+			http.Handle(sr("/messages_read"), chat.GetChatMessageReadHandler(sr("/messages_read"), notifier, db, coffee_conf.Chat))
+			http.Handle(sr("/contacts"), chat.GetChatContactsHandler(sr("/contacts"), notifier, db, coffee_conf.Chat))
+			http.Handle(sr("/contacts_change"), chat.GetChatContactsChangeHandler(sr("/contacts_change"), notifier, db, coffee_conf.Chat))
+			http.Handle(sr("/config"), chat.GetChatConfigHandler(sr("/config"), webRoute, db, coffee_conf.Chat))
+			http.Handle(sr("/delete_messages"), chat.GetChatDeleteMessagesHandler(sr("/delete_messages"), db, coffee_conf.Chat))
 
-			http.Handle(sr("/message_function"), coffee.GetMessageAdditionalFunctionsHandler(sr("/message_function"), notifier, db, c_conf.Chat, coffeeHouseConfiguration))
+			http.Handle(sr("/message_function"), coffee.GetMessageAdditionalFunctionsHandler(sr("/message_function"), notifier, db, coffee_conf.Chat, coffeeHouseConfiguration))
 
-			log.Printf("I will handling web requests for coffee %v at : [%v]", c_conf.Name, webRoute)
-			db.Users.AddOrUpdateUserObject(d.UserWrapper{UserId:c_conf.Chat.User, UserName:c_conf.Chat.User, Password:utils.PHash(c_conf.Chat.Password), Role:users.MANAGER})
-			if c_conf.Chat.Notifications.Enable {
-				watchManager.AddConfiguration(c_conf.Name, c_conf.Chat.Notifications.Text, c_conf.Chat.Key, int64(c_conf.Chat.Notifications.After) * 60)
-			}
+			log.Printf("I will handling web requests for coffee %v at : [%v]", coffee_conf.Name, webRoute)
+			db.Users.AddOrUpdateUserObject(d.UserWrapper{UserId:coffee_conf.Chat.User, UserName:coffee_conf.Chat.User, Password:utils.PHash(coffee_conf.Chat.Password), Role:users.MANAGER})
+
+			configStorage.SetChatConfig(coffee_conf.Chat, false)
 		}
 		result <- "coffee"
 	}
@@ -252,7 +250,7 @@ func StartBot(db *d.MainDb, result chan string) c.Configuration {
 		}
 
 		for _, chat_conf := range conf.Chats {
-			chatBotContext := chat.FormChatBotContext(chat_conf, db)
+			chatBotContext := chat.FormChatBotContext(db, configStorage, chat_conf.CompanyId)
 			chatBotController := m.FormBotController(chatBotContext, db)
 			route := fmt.Sprintf("/bot/chat/%v", chat_conf.CompanyId)
 			http.HandleFunc(route, chatBotController)
@@ -261,9 +259,6 @@ func StartBot(db *d.MainDb, result chan string) c.Configuration {
 			notifier := n.NewNotifier(conf.Main.CallbackAddr, chat_conf.Key, db)
 			notifier.SetFrom(chat_conf.CompanyId)
 
-			if chat_conf.AutoAnswers.Enable {
-				go chat.Watch(db.Messages, notifier, chat_conf)
-			}
 			var salt string
 			if chat_conf.UrlSalt != "" {
 				salt = fmt.Sprintf("%v-%v", chat_conf.CompanyId, chat_conf.UrlSalt)
@@ -287,12 +282,13 @@ func StartBot(db *d.MainDb, result chan string) c.Configuration {
 			log.Printf("I will handling web requests for chat at : [%v]", webRoute)
 
 			db.Users.AddOrUpdateUserObject(d.UserWrapper{UserName:chat_conf.User, Password:utils.PHash(chat_conf.Password), Role:users.MANAGER, UserId:chat_conf.User})
-			if chat_conf.Notifications.Enable {
-				watchManager.AddConfiguration(chat_conf.CompanyId, chat_conf.Notifications.Text, chat_conf.Key, int64(chat_conf.Notifications.After) * 60)
-			}
+
+			configStorage.SetChatConfig(chat_conf, false)
 		}
 	}
-	go watchManager.WatchUnreadMessages()
+
+	go n.WatchUnreadMessages(db, configStorage, conf.Main.CallbackAddrMembers)
+	go chat.WatchNotAnsweredMessages(db, configStorage, conf.Main.CallbackAddr)
 
 	server_address := fmt.Sprintf(":%v", conf.Main.Port)
 	log.Printf("\nStart listen and serving at: %v\n", server_address)
