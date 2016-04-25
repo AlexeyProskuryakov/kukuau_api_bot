@@ -2,9 +2,17 @@
   "main": {
     "port": 9191,
     "callback_addr": "http://localhost:9876/notify",
+    "callback_addr_members": "http://localhost:9876/notify",
+    //адре сдля нотификации мемберов
     "log_file": "",
     "database": {
+      //для всего остального
       "name": "bot",
+      "connection_string": "localhost:27017"
+    },
+    "config_database": {
+      //для конфигов
+      "name": "bot_config",
       "connection_string": "localhost:27017"
     },
     "pg_database": {
@@ -312,13 +320,13 @@
       "id": "test_company",
       //идентификатор компании (будет виден в сообщениях)
       "information": "<some information>",
-      "auto_answer": {
-        //автоматический ответ
-        "enable": true,
-        "after_min": 2,
-        "text": "<Will answer you later. Wait please>"
-      },
-      "bot_answer": "<I receive your message>",
+      "auto_answers": [ //список автоматических ответов
+        {
+          //автоматический ответ
+          "after_min": 2,
+          "text": "<Will answer you later. Wait please>"
+        }
+      ],
       //ответ бота на каждое сообщение сразуже
       "key": "Kuku test_company_key",
       "user": "user",

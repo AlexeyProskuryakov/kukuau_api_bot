@@ -10,7 +10,8 @@
     },
     "pg_database": {
       "connection_string": "postgres://postgres:123@localhost:5432/kuku_test?sslmode=disable"
-    }
+    },
+    "log_file":"result.log"
   },
   "taxis": {
     "fake": {

@@ -5,11 +5,9 @@ import (
 	"msngr/db"
 	s "msngr/structs"
 
-	"msngr/configuration"
 	m "msngr"
 	"log"
 )
-
 
 type ChatRequestProcessor struct {
 	Commands *[]s.OutCommand
@@ -21,19 +19,24 @@ func (crp *ChatRequestProcessor)ProcessRequest(in *s.InPkg) *s.RequestResult {
 }
 
 type ChatInformationProcessor struct {
-	Information string
+	CompanyId     string
+	ConfigStorage *db.ConfigurationStorage
 }
 
 func (cip ChatInformationProcessor) ProcessMessage(in *s.InPkg) *s.MessageResult {
-	result := s.MessageResult{Type:"chat", Body:cip.Information}
-	return &result
+	chatConfig, err := cip.ConfigStorage.GetChatConfig(cip.CompanyId)
+	if err != nil {
+		log.Printf("CB ERROR at getting configuration %v", err)
+		return &s.MessageResult{Type:"chat", Body:err.Error()}
+	}
+	return &s.MessageResult{Type:"chat", Body:chatConfig.Information}
 }
 
 type ChatMessageProcessor struct {
 	Storage        *ChatStorage
 	MessageStorage *db.MessageHandler
 	CompanyId      string
-	Answer         string
+	ConfigStorage  *db.ConfigurationStorage
 }
 
 func (cmp ChatMessageProcessor) ProcessMessage(in *s.InPkg) *s.MessageResult {
@@ -56,16 +59,23 @@ func (cmp ChatMessageProcessor) ProcessMessage(in *s.InPkg) *s.MessageResult {
 		res, _ := cmp.MessageStorage.StoreMessage(in.From, cmp.CompanyId, r_body, in.Message.ID)
 		log.Printf("CB persist message:\n %+v", res)
 
-		if cmp.Answer != "" {
-			return &s.MessageResult{Type:"chat", Body:cmp.Answer, IsDeferred:false}
+		conf, err := cmp.ConfigStorage.GetChatConfig(cmp.CompanyId)
+		if err != nil {
+			log.Printf("CB ERROR retrieve configuration %v", err)
+			return &s.MessageResult{Type:"chat", Body:"", IsDeferred:true}
+		}
+		for _, aa := range conf.AutoAnswers {
+			if aa.After == 0 {
+				return &s.MessageResult{Type:"chat", Body:aa.Text, IsDeferred:false}
+			}
 		}
 		return &s.MessageResult{Type:"chat", Body:"", IsDeferred:true}
-	}else {
+	} else {
 		return &s.MessageResult{Type:"chat", Body:"Нет данных для сообщения или данных пользователя"}
 	}
 }
 
-func FormChatBotContext(config configuration.ChatConfig, store *db.MainDb) *msngr.BotContext {
+func FormChatBotContext(store *db.MainDb, confStore *db.ConfigurationStorage, companyId string) *msngr.BotContext {
 	result := msngr.BotContext{}
 	result.RequestProcessors = map[string]s.RequestCommandProcessor{
 		"commands":&ChatRequestProcessor{
@@ -81,8 +91,8 @@ func FormChatBotContext(config configuration.ChatConfig, store *db.MainDb) *msng
 	chatStorage := NewChatStorage(store)
 
 	result.MessageProcessors = map[string]s.MessageCommandProcessor{
-		"information":&ChatInformationProcessor{Information:config.Information},
-		"":&ChatMessageProcessor{Storage:chatStorage, CompanyId:config.CompanyId, MessageStorage:store.Messages, Answer:config.BotAnswer},
+		"information":&ChatInformationProcessor{CompanyId:companyId, ConfigStorage: confStore},
+		"":&ChatMessageProcessor{Storage:chatStorage, CompanyId:companyId, MessageStorage:store.Messages, ConfigStorage:confStore},
 	}
 
 	return &result

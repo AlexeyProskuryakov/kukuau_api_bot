@@ -2,7 +2,6 @@ package test
 
 import (
 	"path"
-	s "msngr/structs"
 	"io/ioutil"
 	"log"
 	"encoding/json"
@@ -10,10 +9,12 @@ import (
 	"bytes"
 	"errors"
 	"os"
-	"msngr"
-	"msngr/utils"
 	"testing"
 	"reflect"
+
+	"msngr"
+	"msngr/utils"
+	s "msngr/structs"
 )
 
 const (

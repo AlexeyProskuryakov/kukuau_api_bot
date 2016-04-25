@@ -11,14 +11,11 @@ import (
 
 	s "msngr/structs"
 	u "msngr/utils"
-	"msngr/configuration"
 	db "msngr/db"
 )
 
 var DEBUG bool
 var TEST bool
-//var textProvider = tm.NewTextMessageSupplier()
-
 
 type BotContext struct {
 	Name              string
@@ -26,7 +23,7 @@ type BotContext struct {
 	RequestProcessors map[string]s.RequestCommandProcessor
 	MessageProcessors map[string]s.MessageCommandProcessor
 	Commands          map[string]*[]s.OutCommand
-	CommandsStorage   configuration.ConfigStorage
+	CommandsStorage   *db.CommandsStorage
 	Settings          map[string]interface{}
 }
 
@@ -77,7 +74,7 @@ func PutOutPackage(w http.ResponseWriter, out *s.OutPkg, isError bool, isDeferre
 	} else if isDeferred {
 		w.WriteHeader(http.StatusNoContent)
 		return
-	}else {
+	} else {
 		w.WriteHeader(http.StatusOK)
 	}
 	fmt.Fprintf(w, "%s", string(jsoned_out))
@@ -98,7 +95,7 @@ func process_request_pkg(buff *s.OutPkg, in *s.InPkg, context *BotContext) (*s.O
 		if requestResult.Error != nil {
 			err := requestResult.Error
 			return buff, err
-		}else {
+		} else {
 			//normal our request forming
 			buff.Request.Query.Result = *requestResult.Commands
 			if requestResult.Type != "" {
@@ -119,7 +116,6 @@ func process_message(commandProcessor s.MessageCommandProcessor, buff *s.OutPkg,
 		ID: u.GenId(),
 		Type:"chat",
 	}
-	//normal buff message forming
 	if messageResult.Type != "" {
 		buff.Message.Type = messageResult.Type
 	}
