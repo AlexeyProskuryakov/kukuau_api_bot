@@ -329,7 +329,8 @@ this.feature_global_storage = Ext.create("Console.store.FeaturesGlobalStore").lo
             var view = Ext.widget('profilewindow'),
             store = Ext.widget('profilelist').getStore(),
             profile_model = Ext.create("Console.model.Profile", {id:id});
-            
+            profile_model.setBotConfig(Ext.create('Console.model.BotConfig'));
+
             store.add(profile_model);
             view.down("form").loadRecord(profile_model);
             win.destroy();
