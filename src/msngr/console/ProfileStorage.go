@@ -219,6 +219,10 @@ func (ph *ProfileDbHandler)FillProfile(profile *Profile) error {
 		profile.BotConfig = NewProfileBotConfig(config)
 	} else {
 		profile.BotConfig = ProfileBotConfig{Answers:[]configuration.TimedAnswer{}, Notifications:[]configuration.TimedAnswer{}}
+		err = ph.botConfigStore.SetChatConfig(configuration.ChatConfig{CompanyId:profile.UserName}, false)
+		if err != nil {
+			log.Printf("P ERROR at storing empty new chat config")
+		}
 	}
 
 	return nil
@@ -352,6 +356,8 @@ func (ph *ProfileDbHandler) InsertNewProfile(p *Profile) (*Profile, error) {
 	for _, employee := range p.Employees {
 		ph.AddEmployee(p.UserName, &employee)
 	}
+	//botconfig
+	ph.botConfigStore.SetChatConfig(configuration.ChatConfig{CompanyId:p.UserName, AutoAnswers:p.BotConfig.Answers, Notifications:p.BotConfig.Notifications, Information:p.BotConfig.Information}, true)
 	return p, err
 }
 
@@ -792,6 +798,7 @@ func (ph *ProfileDbHandler)UpdateProfile(newProfile *Profile) error {
 	}
 	//bot configs
 	if !reflect.DeepEqual(savedProfile.BotConfig, newProfile.BotConfig) {
+		log.Printf("Difference in bot config")
 		ph.botConfigStore.UpdateNotifications(newProfile.UserName, newProfile.BotConfig.Notifications)
 		ph.botConfigStore.UpdateAutoAnswers(newProfile.UserName, newProfile.BotConfig.Answers)
 		ph.botConfigStore.UpdateInformation(newProfile.UserName, newProfile.BotConfig.Information)
@@ -953,6 +960,5 @@ func (ph *ProfileDbHandler) GetProfileEmployees(pUserName string) ([]ProfileEmpl
 			Name:eName.String,
 		})
 	}
-	log.Printf("P Emloyees of %v is:\n%+v", pUserName, result)
 	return result, nil
 }

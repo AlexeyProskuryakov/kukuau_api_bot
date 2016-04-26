@@ -15,7 +15,6 @@ import (
 	u "msngr/utils"
 	s "msngr/structs"
 	c "msngr/configuration"
-
 )
 
 const (
@@ -1018,17 +1017,20 @@ func (cs *ConfigurationStorage) SetChatConfig(config c.ChatConfig, update bool) 
 }
 
 func (cs *ConfigurationStorage) UpdateNotifications(companyId string, notifications []c.TimedAnswer) error {
-	err := cs.Collection.Update(bson.M{"company_id":companyId}, bson.M{"$set":bson.M{"notifications":notifications}})
+	ci, err := cs.Collection.Upsert(bson.M{"company_id":companyId}, bson.M{"$set":bson.M{"notifications":notifications}})
+	log.Printf("Update notifications %+v", ci)
 	return err
 }
 
 func (cs *ConfigurationStorage) UpdateAutoAnswers(companyId string, autoAnswers []c.TimedAnswer) error {
-	err := cs.Collection.Update(bson.M{"company_id":companyId}, bson.M{"$set":bson.M{"auto_answers":autoAnswers}})
+	ci, err := cs.Collection.Upsert(bson.M{"company_id":companyId}, bson.M{"$set":bson.M{"auto_answers":autoAnswers}})
+	log.Printf("Update auto answers %+v", ci)
 	return err
 }
 
 func (cs *ConfigurationStorage) UpdateInformation(companyId, information string) error {
-	err := cs.Collection.Update(bson.M{"company_id":companyId}, bson.M{"$set":bson.M{"information":information}})
+	ci, err := cs.Collection.Upsert(bson.M{"company_id":companyId}, bson.M{"$set":bson.M{"information":information}})
+	log.Printf("Update information %+v", ci)
 	return err
 }
 
