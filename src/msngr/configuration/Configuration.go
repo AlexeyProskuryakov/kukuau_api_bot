@@ -135,7 +135,6 @@ type ChatConfig struct {
 type CoffeeConfig struct {
 	Name        string `json:"name"`
 	DictUrl     string `json:"dict_url"`
-	Information string `json:"information"`
 	Bakes       map[string]string `json:"bakes"`
 	Drinks      map[string]string `json:"drinks"`
 	Additives   map[string]string `json:"additives"`

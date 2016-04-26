@@ -15,6 +15,7 @@ import (
 	u "msngr/utils"
 	s "msngr/structs"
 	c "msngr/configuration"
+
 )
 
 const (
@@ -1014,6 +1015,21 @@ func (cs *ConfigurationStorage) SetChatConfig(config c.ChatConfig, update bool) 
 		cs.Collection.Update(bson.M{"company_id":config.CompanyId}, bson.M{"$set":modify})
 	}
 	return nil
+}
+
+func (cs *ConfigurationStorage) UpdateNotifications(companyId string, notifications []c.TimedAnswer) error {
+	err := cs.Collection.Update(bson.M{"company_id":companyId}, bson.M{"$set":bson.M{"notifications":notifications}})
+	return err
+}
+
+func (cs *ConfigurationStorage) UpdateAutoAnswers(companyId string, autoAnswers []c.TimedAnswer) error {
+	err := cs.Collection.Update(bson.M{"company_id":companyId}, bson.M{"$set":bson.M{"auto_answers":autoAnswers}})
+	return err
+}
+
+func (cs *ConfigurationStorage) UpdateInformation(companyId, information string) error {
+	err := cs.Collection.Update(bson.M{"company_id":companyId}, bson.M{"$set":bson.M{"information":information}})
+	return err
 }
 
 func (cs *ConfigurationStorage) GetChatConfig(companyId string) (*c.ChatConfig, error) {

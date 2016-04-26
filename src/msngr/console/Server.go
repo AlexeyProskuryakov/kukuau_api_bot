@@ -195,7 +195,7 @@ func Run(addr string, db *d.MainDb, qs *quests.QuestStorage, vdh *voting.VotingD
 			Id string `json:"id"`
 		}
 		pg_conf := cfg.Main.PGDatabase
-		ph, err := NewProfileDbHandler(pg_conf.ConnString)
+		ph, err := NewProfileDbHandler(pg_conf.ConnString, cfg.Main.ConfigDatabase)
 		if err != nil {
 			panic(err)
 		}
@@ -209,6 +209,8 @@ func Run(addr string, db *d.MainDb, qs *quests.QuestStorage, vdh *voting.VotingD
 				log.Printf("CS Error at getting all profiles: %v", err)
 				render.JSON(500, map[string]interface{}{"success":false, "error":err})
 			}
+			str , _  := json.Marshal(profiles)
+			log.Printf("profiles raw data: %s", str)
 			render.JSON(200, map[string]interface{}{
 				"success":true,
 				"profiles":profiles,

@@ -7,6 +7,8 @@ import (
 	"strings"
 	"log"
 	"reflect"
+	"msngr/configuration"
+	"msngr/db"
 )
 
 const MAX_OPEN_CONNECTIONS = 10
@@ -75,6 +77,22 @@ func (pcl ProfileContactLink) String() string {
 	)
 }
 
+type ProfileBotConfig struct {
+	Id            string `json:"id"`
+	Answers       []configuration.TimedAnswer `json:"answers"`
+	Notifications []configuration.TimedAnswer `json:"notifications"`
+	Information   string `json:"information"`
+}
+
+func (pbc ProfileBotConfig) String() string {
+	return fmt.Sprintf("\n\t\tAnswers: %+v\n\t\tNotifications: %+v\n\t\tInformation: %+v", pbc.Answers, pbc.Notifications, pbc.Information)
+}
+
+func NewProfileBotConfig(cfg *configuration.ChatConfig) ProfileBotConfig {
+	result := ProfileBotConfig{Answers:cfg.AutoAnswers, Notifications:cfg.Notifications, Information:cfg.Information, Id:cfg.CompanyId}
+	return result
+}
+
 type Profile struct {
 	UserName         string `json:"id"`
 	ImageURL         string `json:"image_url"`
@@ -88,14 +106,15 @@ type Profile struct {
 	Employees        []ProfileEmployee `json:"employees"`
 	Enable           bool `json:"enable"`
 	Public           bool `json:"public"`
+	BotConfig        ProfileBotConfig `json:"botconfig"`
 }
 
 func (p *Profile) Equal(p1 *Profile) bool {
 	return reflect.DeepEqual(p, p1)
 }
 func (p Profile) String() string {
-	return fmt.Sprintf("\nPROFILE------------------\n: %v [%v] enable: %v, public: %v \nimg: %v\ndescriptions: %v %v \ncontacts: %+v \ngroups: %+v \nallowed phones: %+v \nfeatures: %+v\nemployees: %+v\n----------------------\n",
-		p.Name, p.UserName, p.Enable, p.Public, p.ImageURL, p.ShortDescription, p.TextDescription, p.Contacts, p.Groups, p.AllowedPhones, p.Features, p.Employees,
+	return fmt.Sprintf("\nPROFILE------------------\n: %v [%v] enable: %v, public: %v \nimg: %v\ndescriptions: %v %v \ncontacts: %+v \ngroups: %+v \nallowed phones: %+v \nfeatures: %+v\nemployees: %+v\nbot config:%+v\n----------------------\n",
+		p.Name, p.UserName, p.Enable, p.Public, p.ImageURL, p.ShortDescription, p.TextDescription, p.Contacts, p.Groups, p.AllowedPhones, p.Features, p.Employees, p.BotConfig,
 	)
 }
 
@@ -118,7 +137,8 @@ func NewProfileFromRow(row *sql.Rows) Profile {
 }
 
 type ProfileDbHandler struct {
-	db *sql.DB
+	db             *sql.DB
+	botConfigStore *db.ConfigurationStorage
 }
 
 func (ph *ProfileDbHandler) GetProfileAllowedPhones(userName string) ([]ProfileAllowedPhone, error) {
@@ -190,17 +210,28 @@ func (ph *ProfileDbHandler)FillProfile(profile *Profile) error {
 		log.Printf("P ERROR profile %v error fill employees", profile.UserName)
 	}
 	profile.Employees = employees
+
+	config, err := ph.botConfigStore.GetChatConfig(profile.UserName)
+	if err != nil {
+		log.Printf("P ERROR at getting chat config %v for profile %v", err, profile.UserName)
+	}
+	if config != nil {
+		profile.BotConfig = NewProfileBotConfig(config)
+	} else {
+		profile.BotConfig = ProfileBotConfig{Answers:[]configuration.TimedAnswer{}, Notifications:[]configuration.TimedAnswer{}}
+	}
+
 	return nil
 }
 
-func NewProfileDbHandler(connectionString string) (*ProfileDbHandler, error) {
+func NewProfileDbHandler(connectionString string, configDbCredentials configuration.MongoDbConfig) (*ProfileDbHandler, error) {
 	pg, err := sql.Open("postgres", connectionString)
 	if err != nil {
 		log.Printf("CS Error at connect to db [%v]: %v", connectionString, err)
 		return nil, err
 	}
 	pg.SetMaxOpenConns(MAX_OPEN_CONNECTIONS)
-	ph := &ProfileDbHandler{db:pg}
+	ph := &ProfileDbHandler{db:pg, botConfigStore:db.NewConfigurationStorage(configDbCredentials)}
 	return ph, nil
 }
 
@@ -633,6 +664,8 @@ func (ph *ProfileDbHandler) DeleteProfile(userName string) error {
 	if err != nil {
 		log.Printf("ph del at profile %v", err)
 	}
+
+	//bot config ??
 	return err
 }
 
@@ -757,6 +790,12 @@ func (ph *ProfileDbHandler)UpdateProfile(newProfile *Profile) error {
 			ph.AddEmployee(newProfile.UserName, &employee)
 		}
 	}
+	//bot configs
+	if !reflect.DeepEqual(savedProfile.BotConfig, newProfile.BotConfig) {
+		ph.botConfigStore.UpdateNotifications(newProfile.UserName, newProfile.BotConfig.Notifications)
+		ph.botConfigStore.UpdateAutoAnswers(newProfile.UserName, newProfile.BotConfig.Answers)
+		ph.botConfigStore.UpdateInformation(newProfile.UserName, newProfile.BotConfig.Information)
+	}
 
 	return nil
 }
@@ -867,7 +906,7 @@ func (ph *ProfileDbHandler) GetEmployeeByPhone(phone string) (*ProfileEmployee, 
 func (ph *ProfileDbHandler) AddEmployee(pUserName string, employee *ProfileEmployee) (int64, error) {
 	var linkId int64
 	err := ph.db.QueryRow("INSERT INTO users_links (fromusr, tousr) values ($1, $2) RETURNING id;", pUserName, employee.UserName).Scan(&linkId)
-	if err != nil{
+	if err != nil {
 		log.Printf("P ERROR at insert in user_links %v", err)
 		return -1, err
 	}
@@ -901,7 +940,7 @@ func (ph *ProfileDbHandler) GetProfileEmployees(pUserName string) ([]ProfileEmpl
 	defer row.Close()
 	for row.Next() {
 		var linkId int64
-		var eUserName,  phone, eName sql.NullString
+		var eUserName, phone, eName sql.NullString
 		err := row.Scan(&linkId, &eUserName, &phone, &eName)
 		if err != nil {
 			log.Printf("P ERROR at scan profile emplyees %v", err)
