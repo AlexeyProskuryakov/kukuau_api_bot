@@ -8,6 +8,7 @@ import (
 	"msngr/db"
 	"time"
 	"log"
+	"fmt"
 )
 
 var (
@@ -149,9 +150,10 @@ func getCommands(coffeeHouseConfig *CoffeeHouseConfiguration, isFirst, isActive 
 
 func getAdditionalFuncs(orderId int64, companyName, userName string) []db.AdditionalFuncElement {
 	context := map[string]interface{}{
-		"order_id":orderId,
+		"order_id":fmt.Sprintf("%v", orderId), //fucking js
 		"company_name":companyName,
 		"user_name":userName,
+		"fucking_js":"123",
 	}
 	result := []db.AdditionalFuncElement{
 		db.AdditionalFuncElement{
@@ -237,9 +239,9 @@ func (odp *OrderDrinkProcessor) ProcessMessage(in *s.InPkg) *s.MessageResult {
 					log.Printf("COFFEE BOT error at forming order from form: %v", err)
 					return m.MESSAGE_DATA_ERROR_RESULT
 				}
-				id := u.GenIntId()
+				orderId := u.GenIntId()
 				err = odp.Storage.Orders.AddOrderObject(db.OrderWrapper{
-					OrderId:id,
+					OrderId:orderId,
 					When:time.Now(),
 					Whom:in.From,
 					Source:odp.CompanyName,
@@ -262,8 +264,9 @@ func (odp *OrderDrinkProcessor) ProcessMessage(in *s.InPkg) *s.MessageResult {
 					TimeFormatted: time.Now().Format(time.Stamp),
 					Attributes:[]string{"coffee"},
 					AdditionalData:order.ToAdditionalMessageData(),
-					AdditionalFuncs:getAdditionalFuncs(id, odp.CompanyName, in.From),
+					AdditionalFuncs:getAdditionalFuncs(orderId, odp.CompanyName, in.From),
 					RelatedOrderState:"Отправленно в кофейню",
+					RelatedOrder:orderId,
 				})
 				if err != nil {
 					log.Printf("CB Error at storing drink message %v", err)
@@ -306,9 +309,9 @@ func (odp *OrderBakeProcessor) ProcessMessage(in *s.InPkg) *s.MessageResult {
 					log.Printf("COFFEE BOT error at forming order from form: %v", err)
 					return m.MESSAGE_DATA_ERROR_RESULT
 				}
-				id := u.GenIntId()
+				orderId := u.GenIntId()
 				err = odp.Storage.Orders.AddOrderObject(db.OrderWrapper{
-					OrderId:id,
+					OrderId:orderId,
 					When:time.Now(),
 					Whom:in.From,
 					Source:odp.CompanyName,
@@ -331,8 +334,9 @@ func (odp *OrderBakeProcessor) ProcessMessage(in *s.InPkg) *s.MessageResult {
 					TimeFormatted: time.Now().Format(time.Stamp),
 					Attributes:[]string{"coffee"},
 					AdditionalData:order.ToAdditionalMessageData(),
-					AdditionalFuncs:getAdditionalFuncs(id, odp.CompanyName, in.From),
+					AdditionalFuncs:getAdditionalFuncs(orderId, odp.CompanyName, in.From),
 					RelatedOrderState:"Отправленно в кофейню",
+					RelatedOrder:orderId,
 				})
 				if err != nil {
 					log.Printf("CB Error at storing bake message %v", err)
@@ -419,9 +423,9 @@ func (rop *RepeatOrderProcessor) ProcessMessage(in *s.InPkg) *s.MessageResult {
 			log.Printf("CB Error at forming new coffee order %v", err)
 			return m.MESSAGE_DATA_ERROR_RESULT
 		}
-		id := u.GenIntId()
+		orderId := u.GenIntId()
 		err = rop.Storage.Orders.AddOrderObject(db.OrderWrapper{
-			OrderId: id,
+			OrderId: orderId,
 			When:time.Now(),
 			Whom:in.From,
 			Source:rop.CompanyName,
@@ -444,8 +448,9 @@ func (rop *RepeatOrderProcessor) ProcessMessage(in *s.InPkg) *s.MessageResult {
 			TimeFormatted: time.Now().Format(time.Stamp),
 			Attributes:[]string{"coffee"},
 			AdditionalData:order.ToAdditionalMessageData(),
-			AdditionalFuncs:getAdditionalFuncs(id, rop.CompanyName, in.From),
+			AdditionalFuncs:getAdditionalFuncs(orderId, rop.CompanyName, in.From),
 			RelatedOrderState:"Отправленно в кофейню",
+			RelatedOrder:orderId,
 		})
 		if err != nil {
 			log.Printf("CB Error at storing message for order %v", err)

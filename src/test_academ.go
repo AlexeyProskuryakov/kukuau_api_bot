@@ -47,7 +47,7 @@ func sendNewOrder(from, to string) {
 
 	out := s.InPkg{
 		UserData:&userData,
-		Message:&s.InMessage{Type:"chat", ID:utils.GenId(), Thread:utils.GenId(), Commands:&[]s.InCommand{command}},
+		Message:&s.InMessage{Type:"chat", ID:utils.GenStringId(), Thread:utils.GenStringId(), Commands:&[]s.InCommand{command}},
 		From:userData.Name,
 	}
 

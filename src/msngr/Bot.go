@@ -86,7 +86,7 @@ func process_request_pkg(buff *s.OutPkg, in *s.InPkg, context *BotContext) (*s.O
 		return buff, errors.New("error because request type is error")
 	}
 	action := in.Request.Query.Action
-	buff.Request = &s.OutRequest{ID: u.GenId(), Type: "result"}
+	buff.Request = &s.OutRequest{ID: u.GenStringId(), Type: "result"}
 	buff.Request.Query.Action = action
 	buff.Request.Type = "result"
 
@@ -113,7 +113,7 @@ func process_message(commandProcessor s.MessageCommandProcessor, buff *s.OutPkg,
 	messageResult := commandProcessor.ProcessMessage(in)
 	buff.Message = &s.OutMessage{
 		Thread: in.Message.Thread,
-		ID: u.GenId(),
+		ID: u.GenStringId(),
 		Type:"chat",
 	}
 	if messageResult.Type != "" {
@@ -265,7 +265,7 @@ func process_message_pkg(buff *s.OutPkg, in *s.InPkg, context *BotContext) (*s.O
 			err = errors.New("Команда не поддерживается.")
 			buff.Message = &s.OutMessage{
 				Thread:in.Message.Thread,
-				ID :u.GenId(),
+				ID :u.GenStringId(),
 				Type:"chat",
 				Body: err.Error(),
 			}
@@ -292,7 +292,7 @@ func FormBotController(context *BotContext, db *db.MainDb) controllerHandler {
 		check := context.Check
 		if check != nil {
 			if detail, ok := check(); !ok {
-				out.Message = &s.OutMessage{Type: "chat", Thread: "0", ID: u.GenId(), Body: fmt.Sprintln(detail)}
+				out.Message = &s.OutMessage{Type: "chat", Thread: "0", ID: u.GenStringId(), Body: fmt.Sprintln(detail)}
 				PutOutPackage(w, out, true, false)
 				return
 			}
@@ -343,15 +343,15 @@ func FormBotController(context *BotContext, db *db.MainDb) controllerHandler {
 
 		if message_error != nil {
 			out = &s.OutPkg{}
-			out.Message = &s.OutMessage{Type: "error", Thread: "0", ID: u.GenId(), Body: fmt.Sprintf("%+v", message_error)}
+			out.Message = &s.OutMessage{Type: "error", Thread: "0", ID: u.GenStringId(), Body: fmt.Sprintf("%+v", message_error)}
 			isError = true
 		} else if global_error != nil {
 			out = &s.OutPkg{}
-			out.Message = &s.OutMessage{Type: "error", Thread: "0", ID: u.GenId(), Body: fmt.Sprintf("%+v", global_error)}
+			out.Message = &s.OutMessage{Type: "error", Thread: "0", ID: u.GenStringId(), Body: fmt.Sprintf("%+v", global_error)}
 			isError = true
 		} else if request_error != nil {
 			out = &s.OutPkg{}
-			out.Request = &s.OutRequest{Type: "error", ID: u.GenId()}
+			out.Request = &s.OutRequest{Type: "error", ID: u.GenStringId()}
 			out.Request.Query.Text = fmt.Sprintf("%+v", request_error)
 			isError = true
 		}

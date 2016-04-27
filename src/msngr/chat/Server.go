@@ -28,6 +28,38 @@ const (
 	ALL = "all"
 )
 
+func getFuncMap(cName, cId, start_addr string) template.FuncMap{
+	return template.FuncMap{
+		"eq_s":func(a, b string) bool {
+			return a == b
+		},
+		"stamp_date":func(t time.Time) string {
+			return t.Format(time.Stamp)
+		},
+		"header_name":func() string {
+			return cName
+		},
+		"me":func() string {
+			return cId
+		},
+		"prefix":func() string {
+			return start_addr
+		},
+		"chat_with":func(with string) string {
+			return fmt.Sprintf("%v?with=%v", start_addr, with)
+		},
+		"has_additional_data":func(msg d.MessageWrapper) bool {
+			return len(msg.AdditionalData) > 0
+		},
+		"is_additional_data_valid":func(ad d.AdditionalDataElement) bool {
+			return ad.Value != ""
+		},
+		"get_context":func(adF d.AdditionalFuncElement) string {
+			data, _ := json.Marshal(adF.Context)
+			return string(data)
+		},
+	}
+}
 func GetContacts(db *d.MainDb, to_name string) ([]usrs.Contact, error) {
 	resp := []usrs.Contact{}
 	err := db.Messages.Collection.Pipe([]bson.M{
@@ -62,41 +94,26 @@ func getRenderer(cName, cId, start_addr string) martini.Handler {
 		IndentJSON: true,
 		IndentXML: true,
 		Funcs:[]template.FuncMap{
-			template.FuncMap{
-				"eq_s":func(a, b string) bool {
-					return a == b
-				},
-				"stamp_date":func(t time.Time) string {
-					return t.Format(time.Stamp)
-				},
-				"header_name":func() string {
-					return cName
-				},
-				"me":func() string {
-					return cId
-				},
-				"prefix":func() string {
-					return start_addr
-				},
-				"chat_with":func(with string) string {
-					return fmt.Sprintf("%v?with=%v", start_addr, with)
-				},
-				"has_additional_data":func(msg d.MessageWrapper) bool {
-					return len(msg.AdditionalData) > 0
-				},
-				"is_additional_data_valid":func(ad d.AdditionalDataElement) bool {
-					return ad.Value != ""
-				},
-				"get_context":func(adF d.AdditionalFuncElement) string {
-					data, _ := json.Marshal(adF.Context)
-					return string(data)
-				},
-			},
+			getFuncMap(cName, cId, start_addr),
 		},
 	})
 	return renderer
 }
 
+func getRendererTemplateDir(cName, cId, start_addr, template_dir string) martini.Handler {
+	renderer := render.Renderer(render.Options{
+		Directory:template_dir,
+		//Layout: "console/layout",
+		Extensions: []string{".tmpl", ".html"},
+		Charset: "UTF-8",
+		IndentJSON: true,
+		IndentXML: true,
+		Funcs:[]template.FuncMap{
+			getFuncMap(cName, cId, start_addr),
+		},
+	})
+	return renderer
+}
 func getBasicAuth(db *d.MainDb) martini.Handler {
 	return auth.BasicFunc(func(username, password string) bool {
 		usr, _ := db.Users.GetUser(bson.M{"user_name":username, "role":usrs.MANAGER})
@@ -110,6 +127,13 @@ func getBasicAuth(db *d.MainDb) martini.Handler {
 func GetMartini(cName, cId, start_addr string, db *d.MainDb) *martini.ClassicMartini {
 	m := martini.Classic()
 	m.Use(getRenderer(cName, cId, start_addr))
+	m.Use(getBasicAuth(db))
+	return m
+}
+
+func GetMartiniTemplatesDir(cName, cId, start_addr, template_dir string, db *d.MainDb) *martini.ClassicMartini{
+	m := martini.Classic()
+	m.Use(getRendererTemplateDir(cName, cId, start_addr, template_dir))
 	m.Use(getBasicAuth(db))
 	return m
 }

@@ -1,0 +1,51 @@
+<div class="container-fluid">
+    <div class="row">
+        <div class="col-md-5 col-md-offset-5">
+            <h2>Текущие заказы</h2>
+        </div>
+    </div>
+    <div class="row">
+        <div class="col-md-8 col-md-offset-2" id="orders-wrapper">
+            {{range $message := .order_messages}}
+                <div class="msg" id="{{$message.MessageID}}">
+                    <h4 class="media-heading"><a href="{{chat_with $message.From }}">{{$message.FromName}}</a>
+                        <small class="time">{{stamp_date $message.Time}}</small>
+                    </h4>
+                    <div class="msg-with-data">
+                        <h4>{{$message.Body}}</h4>
+                        <table class="table table-condensed table-bordered table-hover table-little-text">
+                            {{range $addDataEl := $message.AdditionalData}}
+                            {{if is_additional_data_valid $addDataEl }}
+                            <tr>
+                                <td>{{$addDataEl.Name}}</td>
+                                <td>{{$addDataEl.Value}}</td>
+                            </tr>
+                            {{end}}
+                            {{end}}
+                        </table>
+                        {{range $addFuncEl := $message.AdditionalFuncs}}
+                        <button class="btn btn-default btn-sm"
+                                onclick="call_message_func('{{$addFuncEl.Action}}', '{{get_context $addFuncEl}}', '{{$message.MessageID}}')">
+                            {{$addFuncEl.Name}}
+                        </button>
+                        {{end}}
+                        <div class="status">
+                            <h5>Статус:
+                                <big id="state-{{$message.MessageID}}">{{$message.RelatedOrderState}}</big>
+                            </h5>
+                        </div>
+                    </div>
+
+                </div>
+
+            {{end}}
+        </div>
+    </div>
+</div>
+<script>
+    var url_prefix = "{{ prefix }}";
+
+
+</script>
+<script src="/static/order_page_script.js"></script>
+

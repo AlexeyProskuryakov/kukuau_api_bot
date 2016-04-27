@@ -101,6 +101,7 @@ type MessageWrapper struct {
 	ID                bson.ObjectId `bson:"_id,omitempty"`
 	SID               string
 	From              string `bson:"from"`
+	FromName          string `bson:"from_name,omitempty"`
 	Body              string `bson:"body"`
 	To                string `bson:"to"`
 	Time              time.Time `bson:"time"`
@@ -116,6 +117,7 @@ type MessageWrapper struct {
 	Attributes        []string `bson:"attributes,omitempty"`
 	AdditionalData    []AdditionalDataElement `bson:"additional_data,omitempty"`
 	AdditionalFuncs   []AdditionalFuncElement  `bson:"additional_funcs,omitempty"`
+	RelatedOrder      int64 `bson:"related_order,omitempty"`
 	RelatedOrderState string `bson:"related_order_state,omitempty"`
 	IsNotification    bool `bson:"is_notification,omitempty"`
 	AutoAnswers       []NotificationElement `bson:"auto_answers,omitempty"`
@@ -311,6 +313,9 @@ func (odbh *MainDb) ensureIndexes() {
 		Key:[]string{"message_id"},
 		Unique:true,
 	})
+	message_collection.EnsureIndex(mgo.Index{
+		Key:[]string{"related_order"},
+	})
 
 	odbh.Users.Collection = users_collection
 	odbh.Orders.Collection = orders_collection
@@ -481,6 +486,18 @@ func (oh *orderHandler) GetOrders(q bson.M) ([]OrderWrapper, error) {
 	}
 	var result []OrderWrapper
 	err := oh.Collection.Find(q).Sort("-when").All(&result)
+	if err != nil && err != mgo.ErrNotFound {
+		return nil, err
+	}
+	return result, nil
+}
+
+func (oh *orderHandler) GetOrdersSort(q bson.M, sort string) ([]OrderWrapper, error) {
+	if !oh.parent.Check() {
+		return nil, errors.New("БД не доступна")
+	}
+	var result []OrderWrapper
+	err := oh.Collection.Find(q).Sort(sort).All(&result)
 	if err != nil && err != mgo.ErrNotFound {
 		return nil, err
 	}
@@ -862,6 +879,19 @@ func (mh *MessageHandler) GetMessages(query bson.M) ([]MessageWrapper, error) {
 func (mh *MessageHandler) GetMessageByMessageId(message_id string) (*MessageWrapper, error) {
 	result := MessageWrapper{}
 	err := mh.Collection.Find(bson.M{"message_id":message_id, "is_deleted":false}).One(&result)
+	if err == mgo.ErrNotFound {
+		return nil, nil
+	} else if err != nil {
+		return nil, err
+	}
+	result.TimeFormatted = result.Time.Format(time.Stamp)
+	result.SID = result.ID.Hex()
+	return &result, nil
+}
+
+func (mh *MessageHandler) GetMessageByRelatedOrder(relatedOrderId int64) (*MessageWrapper, error) {
+	result := MessageWrapper{}
+	err := mh.Collection.Find(bson.M{"related_order":relatedOrderId, "is_deleted":false}).One(&result)
 	if err == mgo.ErrNotFound {
 		return nil, nil
 	} else if err != nil {

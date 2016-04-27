@@ -235,9 +235,16 @@ func StartBot(db *d.MainDb, result chan string) c.Configuration {
 			http.Handle(sr("/delete_messages"), chat.GetChatDeleteMessagesHandler(sr("/delete_messages"), db, coffee_conf.Chat))
 
 			http.Handle(sr("/message_function"), coffee.GetMessageAdditionalFunctionsHandler(sr("/message_function"), notifier, db, coffee_conf.Chat, coffeeHouseConfiguration))
+			http.Handle(sr("/order_page"), coffee.GetOrdersPageFunctionHandler(sr("/order_page"), webRoute, db, coffee_conf.Chat, coffee_conf.Name))
+			http.Handle(sr("/order_page_supply"), coffee.GetOrdersPageSupplierFunctionHandler(sr("/order_page_supply"), webRoute, db, coffee_conf.Chat, coffee_conf.Name))
 
 			log.Printf("I will handling web requests for coffee %v at : [%v]", coffee_conf.Name, webRoute)
-			db.Users.AddOrUpdateUserObject(d.UserWrapper{UserId:coffee_conf.Chat.User, UserName:coffee_conf.Chat.User, Password:utils.PHash(coffee_conf.Chat.Password), Role:users.MANAGER})
+			db.Users.AddOrUpdateUserObject(d.UserWrapper{
+				UserId:coffee_conf.Chat.User,
+				UserName:coffee_conf.Chat.User,
+				Password:utils.PHash(coffee_conf.Chat.Password),
+				Role:users.MANAGER,
+			})
 
 			configStorage.SetChatConfig(coffee_conf.Chat, false)
 		}

@@ -80,19 +80,19 @@ func (n *Notifier) Notify(outPkg s.OutPkg) (*db.MessageWrapper, error) {
 }
 
 func (n *Notifier) NotifyText(to, text string) (*s.OutPkg, *db.MessageWrapper, error) {
-	result := s.OutPkg{To:to, Message:&s.OutMessage{ID:utils.GenId(), Type:"chat", Body:text}}
+	result := s.OutPkg{To:to, Message:&s.OutMessage{ID:utils.GenStringId(), Type:"chat", Body:text}}
 	message, err := n.Notify(result)
 	return &result, message, err
 }
 
 func (n *Notifier) NotifyTextWithCommands(to, text string, commands *[]s.OutCommand) (*s.OutPkg, *db.MessageWrapper, error) {
-	result := s.OutPkg{To:to, Message:&s.OutMessage{ID:utils.GenId(), Type:"chat", Body:text, Commands:commands}}
+	result := s.OutPkg{To:to, Message:&s.OutMessage{ID:utils.GenStringId(), Type:"chat", Body:text, Commands:commands}}
 	message, err := n.Notify(result)
 	return &result, message, err
 }
 
 func (n *Notifier) NotifyTextToMembers(text string) (*s.OutPkg, *db.MessageWrapper, error) {
-	result := s.OutPkg{Message:&s.OutMessage{ID:utils.GenId(), Type:"chat", Body:text}}
+	result := s.OutPkg{Message:&s.OutMessage{ID:utils.GenStringId(), Type:"chat", Body:text}}
 	message, err := n.Notify(result)
 	return &result, message, err
 }

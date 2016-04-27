@@ -75,7 +75,7 @@ func TestTaxiInfinityFail(t *testing.T) {
 
 	out_res, err := tu.POST(fmt.Sprintf("http://localhost:%v/taxi/%v", conf.Main.Port, taxi_conf.Name), &structs.InPkg{
 		Message:&structs.InMessage{
-			ID: u.GenId(),
+			ID: u.GenStringId(),
 			Commands:&[]structs.InCommand{
 				structs.InCommand{Action:"information", Title:"information"},
 			},

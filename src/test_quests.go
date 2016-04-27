@@ -20,7 +20,7 @@ var address = fmt.Sprintf("http://localhost:%v/quest/%v", config.Main.Port, QUES
 var salt = "УРА!FUCKING112-012$%^&*()-1"
 
 func send_key(key string, userData *s.InUserData) string {
-	out := s.InPkg{UserData:userData, Message:&s.InMessage{Type:"chat", ID:utils.GenId(), Thread:utils.GenId(), Body:&key}, From:userData.Name}
+	out := s.InPkg{UserData:userData, Message:&s.InMessage{Type:"chat", ID:utils.GenStringId(), Thread:utils.GenStringId(), Body:&key}, From:userData.Name}
 	in, err := test.POST(address, &out)
 	if err != nil {
 		log.Printf("Error: %v", err)

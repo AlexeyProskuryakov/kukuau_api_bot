@@ -17,7 +17,7 @@ import (
 	"strconv"
 )
 
-func GenId() string {
+func GenStringId() string {
 	t := time.Now().UnixNano()
 	s := rand.NewSource(t)
 	r := rand.New(s)

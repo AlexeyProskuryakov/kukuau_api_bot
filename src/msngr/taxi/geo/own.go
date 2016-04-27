@@ -376,6 +376,7 @@ func (oh *OwnAddressHandler) GetCoordinates(key string) *Coordinates {
 	s_result, err := oh.client.Search().Index("photon").Query(t_query).Do()
 	if err != nil {
 		log.Printf("error in own address handler search at search in elastic %v", err)
+		return nil
 	}
 	var ogcr OwnGeoCodeResult
 	for _, osm_hit := range s_result.Each(reflect.TypeOf(ogcr)) {

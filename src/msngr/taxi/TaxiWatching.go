@@ -71,7 +71,7 @@ func FormNotification(context *TaxiContext, ow *d.OrderWrapper, previous_state i
 	}
 
 	if text != "" {
-		out := s.OutPkg{To: ow.Whom, Message: &s.OutMessage{ID: u.GenId(), Type: "chat", Body: text}}
+		out := s.OutPkg{To: ow.Whom, Message: &s.OutMessage{ID: u.GenStringId(), Type: "chat", Body: text}}
 		return &out
 	}
 	return nil
@@ -138,7 +138,7 @@ func notify_cancel_order(taxiContext *TaxiContext, botContext *m.BotContext, db_
 	taxiContext.Notifier.Notify(s.OutPkg{
 		To:db_order.Whom,
 		Message: &s.OutMessage{
-			ID: u.GenId(),
+			ID: u.GenStringId(),
 			Type: "chat",
 			Body: "Ваш заказ отменен!",
 			Commands: botContext.Commands["commands_at_not_created_order"],
