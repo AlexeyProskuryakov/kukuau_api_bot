@@ -714,7 +714,7 @@ func (ph *ProfileDbHandler)UpdateProfile(newProfile *Profile) error {
 		} else {
 			defer stmt.Close()
 		}
-		_, err := stmt.Exec(newProfile.UserName)
+		_, err = stmt.Exec(newProfile.UserName)
 		if err != nil {
 			log.Printf("Error at execute update for change profile [%v] public %v", newProfile.UserName, err)
 		}
