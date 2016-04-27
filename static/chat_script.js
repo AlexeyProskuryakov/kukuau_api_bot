@@ -50,10 +50,11 @@ if (notIE && !isChromium) {
         });
     }
 }
-
-switch ( Notification.permission.toLowerCase() ) {
+if (window.Notification){
+    switch (Notification.permission.toLowerCase() ) {
     case "granted":
         console.log("show notification granted");
+        notificationPermission = 'granted';
         break;
 
     case "denied":
@@ -62,15 +63,22 @@ switch ( Notification.permission.toLowerCase() ) {
         break;
 
     case "default":
-        console.log("show notification default");
+       console.log("show notification default");
        Notification.requestPermission( function(result) { notificationPermission = result  } );
+    }
+} else {
+    notificationPermission = 'denied';
 }
 
+
 function showNotification(text, from){
+    if (notificationPermission != 'granted'){
+        return;
+    }
     var mailNotification = new Notification(from,{body : text, icon : "/static/logo.jpg"});
     mailNotification.onerror = function(){
                     Notification.requestPermission( function(result) { notificationPermission = result  } );
-                }
+    }
 }
 
 function playNotification(){
