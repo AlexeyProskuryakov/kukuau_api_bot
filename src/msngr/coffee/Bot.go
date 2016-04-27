@@ -12,10 +12,11 @@ import (
 )
 
 var (
-	//NOW = string("сейчас")
-	NOW = string("всенепременно")
+	NOW = string("сейчас")
 	ONE = string("1")
 	NO_ADD = string("без добавки")
+	NO_SUGAR = string("без сахара")
+	NO_SYRUP = string("без сиропа")
 )
 
 func getCommands(coffeeHouseConfig *CoffeeHouseConfiguration, isFirst, isActive bool) *[]s.OutCommand {
@@ -29,8 +30,7 @@ func getCommands(coffeeHouseConfig *CoffeeHouseConfiguration, isFirst, isActive 
 				Title: "Заказ напитка",
 				Type:  "form",
 				Name:  "order_drink_form",
-				//Text:  "?(drink) ?(volume), ?(additive), ?(count), ?(to_time)",
-				Text:  "А налей-ка ты мне ?(drink), да вот столько ?(volume), и положи-ка еще ?(additive), общим счетом ?(count), ожидать буду ?(to_time)",
+				Text:  "?(drink) ?(additive) ?(syrup), ?(sugar) ?(count), ?(to_time)",
 				Fields: []s.OutField{
 					s.OutField{
 						Name: "drink",
@@ -42,13 +42,14 @@ func getCommands(coffeeHouseConfig *CoffeeHouseConfiguration, isFirst, isActive 
 						Items:s.FormItemsFromMap(coffeeHouseConfig.Drinks),
 					},
 					s.OutField{
-						Name: "volume",
+						Name: "syrup",
 						Type: "list-single",
 						Attributes: s.FieldAttribute{
-							Label:"объем",
+							Label:"сироп",
 							Required: false,
+							EmptyText:&NO_SYRUP,
 						},
-						Items:s.FormItems(coffeeHouseConfig.Volumes),
+						Items:s.FormItemsFromMap(coffeeHouseConfig.Syrups),
 					},
 					s.OutField{
 						Name: "additive",
@@ -59,6 +60,16 @@ func getCommands(coffeeHouseConfig *CoffeeHouseConfiguration, isFirst, isActive 
 							EmptyText:&NO_ADD,
 						},
 						Items:s.FormItemsFromMap(coffeeHouseConfig.Additives),
+					},
+					s.OutField{
+						Name:"sugar",
+						Type:"list-single",
+						Attributes:s.FieldAttribute{
+							Label:"сахар",
+							Required:false,
+							EmptyText:&NO_SUGAR,
+						},
+						Items:s.FormItems([]string{"1 ложка", "2 ложки", "3 ложки", "4 ложки"}),
 					},
 					s.OutField{
 						Name:"count",
@@ -77,7 +88,7 @@ func getCommands(coffeeHouseConfig *CoffeeHouseConfiguration, isFirst, isActive 
 							Required:false,
 							EmptyText:&NOW,
 						},
-						Items:s.FormItems([]string{"сейчас", "через 10 минут", "через 20 минут", "через 30 минут", "через час"}),
+						Items:s.FormItems([]string{"через 10 минут", "через 20 минут", "через 30 минут"}),
 					},
 				},
 			},
@@ -153,7 +164,6 @@ func getAdditionalFuncs(orderId int64, companyName, userName string) []db.Additi
 		"order_id":fmt.Sprintf("%v", orderId), //fucking js
 		"company_name":companyName,
 		"user_name":userName,
-		"fucking_js":"123",
 	}
 	result := []db.AdditionalFuncElement{
 		db.AdditionalFuncElement{
@@ -169,6 +179,11 @@ func getAdditionalFuncs(orderId int64, companyName, userName string) []db.Additi
 		db.AdditionalFuncElement{
 			Name:"Закончить",
 			Action:"end",
+			Context:context,
+		},
+		db.AdditionalFuncElement{
+			Name:"Запрос подтверждения",
+			Action:"confirm",
 			Context:context,
 		},
 	}
@@ -265,7 +280,7 @@ func (odp *OrderDrinkProcessor) ProcessMessage(in *s.InPkg) *s.MessageResult {
 					Attributes:[]string{"coffee"},
 					AdditionalData:order.ToAdditionalMessageData(),
 					AdditionalFuncs:getAdditionalFuncs(orderId, odp.CompanyName, in.From),
-					RelatedOrderState:"Отправленно в кофейню",
+					RelatedOrderState:"Отправлено в кофейню",
 					RelatedOrder:orderId,
 				})
 				if err != nil {
@@ -335,7 +350,7 @@ func (odp *OrderBakeProcessor) ProcessMessage(in *s.InPkg) *s.MessageResult {
 					Attributes:[]string{"coffee"},
 					AdditionalData:order.ToAdditionalMessageData(),
 					AdditionalFuncs:getAdditionalFuncs(orderId, odp.CompanyName, in.From),
-					RelatedOrderState:"Отправленно в кофейню",
+					RelatedOrderState:"Отправлено в кофейню",
 					RelatedOrder:orderId,
 				})
 				if err != nil {
@@ -449,7 +464,7 @@ func (rop *RepeatOrderProcessor) ProcessMessage(in *s.InPkg) *s.MessageResult {
 			Attributes:[]string{"coffee"},
 			AdditionalData:order.ToAdditionalMessageData(),
 			AdditionalFuncs:getAdditionalFuncs(orderId, rop.CompanyName, in.From),
-			RelatedOrderState:"Отправленно в кофейню",
+			RelatedOrderState:"Отправлено в кофейню",
 			RelatedOrder:orderId,
 		})
 		if err != nil {

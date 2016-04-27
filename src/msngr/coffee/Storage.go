@@ -16,8 +16,9 @@ import (
 type CoffeeHouseConfiguration struct {
 	Name      string `bson:"name"`
 	Bakes     map[string]string `bson:"bakes"`
-	Drinks    map[string]string`bson:"drinks"`
+	Drinks    map[string]string `bson:"drinks"`
 	Additives map[string]string `bson:"additives"`
+	Syrups    map[string]string `bson:"syrups"`
 	Volumes   []string `bson:"volumes"`
 }
 
@@ -25,7 +26,6 @@ func (cc CoffeeHouseConfiguration) getFieldContent(fieldBsonName string) []strin
 	v := reflect.ValueOf(cc)
 	typ := v.Type()
 	for i := 0; i < v.NumField(); i++ {
-		// gets us a StructField
 		fi := typ.Field(i)
 		if tagv := fi.Tag.Get("bson"); tagv == fieldBsonName {
 			return v.Field(i).Interface().([]string)
@@ -60,7 +60,8 @@ type CoffeeOrder struct {
 	Drink    string `json:"drink"`
 	Bake     string `json:"bake"`
 	Additive string `json:"additive"`
-	Volume   string `json:"volume"`
+	Syrup    string `json:"syrup"`
+	Sugar    string `json:"sugar"`
 	Count    string `json:"count"`
 	ToTime   string `json:"to_time"`
 }
@@ -73,8 +74,11 @@ func NewCoffeeOrderFromForm(form s.InForm) (*CoffeeOrder, error) {
 		result.Drink = drink
 		additive, _ := form.GetAny("additive")
 		result.Additive = additive
-		volume, _ := form.GetAny("volume")
-		result.Volume = volume
+		syrup, _ := form.GetAny("syrup")
+		result.Syrup = syrup
+		sugar, _ := form.GetAny("sugar")
+		result.Sugar = sugar
+
 	} else if form.Name == "order_bake_form" {
 		result.Type = "bake"
 		bake, _ := form.GetAny("bake")
@@ -118,7 +122,8 @@ func (co CoffeeOrder) ToAdditionalMessageData() []d.AdditionalDataElement {
 	return []d.AdditionalDataElement{
 		d.AdditionalDataElement{Key:"drink", Value:co.Drink, Name:"Напиток"},
 		d.AdditionalDataElement{Key:"additive", Value:co.Additive, Name:"Добавка"},
-		d.AdditionalDataElement{Key:"volume", Value:co.Volume, Name:"Объем"},
+		d.AdditionalDataElement{Key:"syrup", Value:co.Syrup, Name:"Сироп"},
+		d.AdditionalDataElement{Key:"sugar", Value:co.Syrup, Name:"Сахар"},
 		d.AdditionalDataElement{Key:"bake", Value:co.Bake, Name:"Выпечка"},
 		d.AdditionalDataElement{Key:"count", Value:co.Count, Name:"Количество"},
 		d.AdditionalDataElement{Key:"to_time", Value:co.ToTime, Name:"Ко времени"},
@@ -227,7 +232,7 @@ func (cch *CoffeeConfigHandler) LoadFromConfig(conf configuration.CoffeeConfig) 
 		return nil, err
 
 	} else {
-		newChc := CoffeeHouseConfiguration{Name: conf.Name, Additives:conf.Additives, Bakes:conf.Bakes, Drinks:conf.Drinks, Volumes:conf.Volumes}
+		newChc := CoffeeHouseConfiguration{Name: conf.Name, Additives:conf.Additives, Bakes:conf.Bakes, Drinks:conf.Drinks, Syrups:conf.Syrups, Volumes:conf.Volumes}
 		if err != mgo.ErrNotFound {
 			cch.Configuration.Remove(bson.M{"name":conf.Name})
 		}

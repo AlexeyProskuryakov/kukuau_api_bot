@@ -138,6 +138,7 @@ type CoffeeConfig struct {
 	Bakes       map[string]string `json:"bakes"`
 	Drinks      map[string]string `json:"drinks"`
 	Additives   map[string]string `json:"additives"`
+	Syrups	    map[string]string `json:"syrups"`
 	Volumes     []string `json:"volumes"`
 	Chat        ChatConfig `json:"chat"`
 }

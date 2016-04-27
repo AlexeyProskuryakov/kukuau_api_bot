@@ -62,8 +62,11 @@ func GetMessageAdditionalFunctionsHandler(start_addr string, notifier *ntf.Notif
 		case "end":
 			notifier.NotifyText(cfd.Context.UserName, "Ваш заказ готов!")
 			db.Orders.SetActive(orderId, cfd.Context.CompanyName, false)
-			result = "Оконченно"
+			result = "Окончено"
 
+		case "confirm":
+			notifier.NotifyText(cfd.Context.UserName, "Вы уверены что хотите сделать заказ?")
+			result = "Подтверждение отправлено"
 		}
 		db.Messages.UpdateMessageRelatedOrderState(cfd.MessageId, result)
 
