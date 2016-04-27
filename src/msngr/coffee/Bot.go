@@ -11,7 +11,8 @@ import (
 )
 
 var (
-	NOW = string("сейчас")
+	//NOW = string("сейчас")
+	NOW = string("всенепременно")
 	ONE = string("1")
 	NO_ADD = string("без добавки")
 )
@@ -27,7 +28,8 @@ func getCommands(coffeeHouseConfig *CoffeeHouseConfiguration, isFirst, isActive 
 				Title: "Заказ напитка",
 				Type:  "form",
 				Name:  "order_drink_form",
-				Text:  "?(drink) ?(volume), ?(additive), ?(count), ?(to_time)",
+				//Text:  "?(drink) ?(volume), ?(additive), ?(count), ?(to_time)",
+				Text:  "А налей-ка ты мне ?(drink), да вот столько ?(volume), и положи-ка еще ?(additive), общим счетом ?(count), ожидать буду ?(to_time)",
 				Fields: []s.OutField{
 					s.OutField{
 						Name: "drink",
@@ -51,7 +53,7 @@ func getCommands(coffeeHouseConfig *CoffeeHouseConfiguration, isFirst, isActive 
 						Name: "additive",
 						Type: "list-single",
 						Attributes: s.FieldAttribute{
-							Label:    "добавка",
+							Label:    "добавки",
 							Required: false,
 							EmptyText:&NO_ADD,
 						},
