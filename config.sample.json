@@ -320,13 +320,24 @@
       "id": "test_company",
       //идентификатор компании (будет виден в сообщениях)
       "information": "<some information>",
-      "auto_answers": [ //список автоматических ответов
+      "auto_answers": [
         {
-          //автоматический ответ
-          "after_min": 2,
-          "text": "<Will answer you later. Wait please>"
+          "after_min": 40,
+          "text": "К сожалению, Профиль по какой-то причине пока не может ответить на Ваше сообщение"
+        },
+        {
+          "after_min": 0,
+          "text": "Ваше сообщение в работе, мастер свяжется с Вами в течение 40 минут"
         }
       ],
+      "notifications": [
+        {
+          "enable": true,
+          "after_min": 3,
+          "text": "У вас есть неотвеченные сообщения"
+        }
+      ]
+    ,
       //ответ бота на каждое сообщение сразуже
       "key": "Kuku test_company_key",
       "user": "user",
