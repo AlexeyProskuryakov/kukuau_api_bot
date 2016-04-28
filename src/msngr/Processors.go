@@ -108,6 +108,7 @@ func (ip *InformationProcessorUpdatable) ProcessMessage(in *s.InPkg) *s.MessageR
 		return &s.MessageResult{Type:"chat", Body:err.Error()}
 	}
 	information, err := ip.ConfigStore.GetInformation(ip.Key)
+	log.Printf("Information for %v is %s",ip.Key, *information)
 	if err != nil {
 		log.Printf("Inforamtion processor: ERROR at getting information %v", err)
 		return &s.MessageResult{Type:"chat", Body:err.Error()}
