@@ -6,17 +6,21 @@ Ext.define('Console.view.Profile', {
     layout: 'fit',
     autoDestroy: true,
     maximizable : true,
-    autoScroll: true,
-    overflowY:'scroll',
     autoShow: false,
-    width: 650,
-    height: 750,
+    width: 800,
+    height: 600,
+    
+    // overflowY:'scroll',
+    // autoScroll: true,
+    // layout: 'fit',
 
     initComponent: function() {
         console.log("init profile");
         var me = this
         this.items = [{
             xtype: 'form',
+            // layout: 'fit',
+            // autoScroll:true,
             items: [
             new Ext.form.FormPanel({
                 frame: true,
@@ -26,10 +30,6 @@ Ext.define('Console.view.Profile', {
                 collapsed: true,
                 itemId: "profile_image_wrapper",
                 layout: 'column',
-                defaults: {
-                    xtype: 'form',
-                    autoscroll  : true
-                },
                 fileUpload: true,
                 items: [{
                     xtype: 'image',
@@ -94,7 +94,6 @@ Ext.define('Console.view.Profile', {
                 collapsed: true,
                 defaults:{
                     xtype:"panel",
-                    autoscroll  : true
                 },
                 columns: [{
                     header: "Номер телефона",
@@ -408,7 +407,7 @@ Ext.define('Console.view.Profile', {
                     enableSourceEdit: false,
                     enableAlignments: false,
                     enableFont: false,
-                    height: 170,
+                    height: 100,
                     width:600,
                     grow: true,
                     fieldLabel: 'Слоган',
@@ -424,7 +423,7 @@ Ext.define('Console.view.Profile', {
                     enableLists: false,
                     enableSourceEdit: false,
                     enableAlignments: false,
-                    height: 170,
+                    height: 100,
                     width:600,
                     grow: true,
                     fieldLabel: 'Описание',
