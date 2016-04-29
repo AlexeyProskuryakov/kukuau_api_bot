@@ -143,28 +143,6 @@ func (cch *CoffeeConfigHandler) ensureIndexes() {
 		DropDups:   true,
 		Unique: true,
 	})
-	configCollection.EnsureIndex(mgo.Index{
-		Key:        []string{"drinks"},
-		Background: true,
-		DropDups:   true,
-	})
-
-	configCollection.EnsureIndex(mgo.Index{
-		Key:        []string{"bakes"},
-		Background: true,
-		DropDups:   true,
-	})
-
-	configCollection.EnsureIndex(mgo.Index{
-		Key:        []string{"additives"},
-		Background: true,
-		DropDups:   true,
-	})
-	configCollection.EnsureIndex(mgo.Index{
-		Key:        []string{"volumes"},
-		Background: true,
-		DropDups:   true,
-	})
 
 	cch.Configuration = configCollection
 }
