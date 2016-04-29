@@ -30,7 +30,7 @@ func getCommands(coffeeHouseConfig *CoffeeHouseConfiguration, isFirst, isActive 
 				Title: "Заказ напитка",
 				Type:  "form",
 				Name:  "order_drink_form",
-				Text:  "?(drink) ?(additive) ?(syrup), ?(sugar) ?(count), ?(to_time)",
+				Text:  "Ваш заказ: ?(drink), ?(additive) ?(syrup) ?(sugar), ?(count) ?(to_time)",
 				Fields: []s.OutField{
 					s.OutField{
 						Name: "drink",
@@ -73,12 +73,13 @@ func getCommands(coffeeHouseConfig *CoffeeHouseConfiguration, isFirst, isActive 
 					},
 					s.OutField{
 						Name:"count",
-						Type:"number",
+						Type:"list-single",
 						Attributes:s.FieldAttribute{
 							Label:"количество",
 							Required:false,
 							EmptyText:&ONE,
 						},
+						Items:s.FormItems([]string{"1", "2", "3", "4", "5", "6", "7", "8", "9", "10", "11", "12", "13", "14", "15", "16"}),
 					},
 					s.OutField{
 						Name:"to_time",
@@ -114,12 +115,13 @@ func getCommands(coffeeHouseConfig *CoffeeHouseConfiguration, isFirst, isActive 
 					},
 					s.OutField{
 						Name:"count",
-						Type:"number",
+						Type:"list-single",
 						Attributes:s.FieldAttribute{
 							Label:"количество",
 							Required:false,
 							EmptyText:&ONE,
 						},
+						Items:s.FormItems([]string{"1", "2", "3", "4", "5", "6", "7", "8", "9", "10", "11", "12", "13", "14", "15", "16"}),
 					},
 					s.OutField{
 						Name:"to_time",
@@ -129,7 +131,7 @@ func getCommands(coffeeHouseConfig *CoffeeHouseConfiguration, isFirst, isActive 
 							Required:false,
 							EmptyText:&NOW,
 						},
-						Items:s.FormItems([]string{"сейчас", "через 10 минут", "через 20 минут", "через 30 минут", "через час"}),
+						Items:s.FormItems([]string{"через 10 минут", "через 20 минут", "через 30 минут"}),
 					},
 				},
 			},

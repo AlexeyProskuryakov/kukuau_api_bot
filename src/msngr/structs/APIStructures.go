@@ -144,13 +144,24 @@ func FormItems(strings []string) []FieldItem {
 func FormItemsFromMap(items map[string]string) []FieldItem {
 	result := []FieldItem{}
 	for name, etc := range items {
-		result = append(result, FieldItem{
-			Value:name,
-			Content:FieldItemContent{
-				Title:name,
-				Subtitle:etc,
-			},
-		})
+		var fi FieldItem
+		if etc != "" {
+			fi = FieldItem{
+				Value:name,
+				Content:FieldItemContent{
+					Title:name,
+					Subtitle:etc,
+				},
+			}
+		} else {
+			fi = FieldItem{
+				Value:name,
+				Content:FieldItemContent{
+					Title:name,
+				},
+			}
+		}
+		result = append(result, fi)
 	}
 	return result
 }
