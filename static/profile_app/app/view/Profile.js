@@ -6,7 +6,6 @@ Ext.define('Console.view.Profile', {
     layout: 'fit',
     autoDestroy: true,
     maximizable : true,
-    maximized : true,
     autoShow: false,
     width: 800,
     height: 600,
@@ -20,7 +19,7 @@ Ext.define('Console.view.Profile', {
         var me = this
         this.items = [{
             xtype: 'form',
-            // layout: 'fit',
+           layout:'accordion',
             // autoScroll:true,
             items: [
             new Ext.form.FormPanel({
@@ -372,10 +371,11 @@ Ext.define('Console.view.Profile', {
                 collapsible: true,
                 collapsed: false,
                 itemId: "profile_main_information",
-                layout: 'column',
+                // layout: 'fit',
                 defaults: {
                     xtype: 'form',
                 },
+                // autoScroll:true,
                 items: [
                 {
                     xtype: 'checkbox',
