@@ -6,6 +6,7 @@ Ext.define('Console.view.Profile', {
     layout: 'fit',
     autoDestroy: true,
     maximizable : true,
+    maximized : true,
     autoShow: false,
     width: 800,
     height: 600,
