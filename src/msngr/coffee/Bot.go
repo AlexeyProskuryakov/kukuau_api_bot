@@ -161,7 +161,7 @@ func getCommands(coffeeHouseConfig *CoffeeHouseConfiguration, isFirst, isActive 
 	return &commands
 }
 
-func getAdditionalFuncs(orderId int64, companyName, userName string) []db.AdditionalFuncElement {
+func getAdditionalFuncs(orderId int64, companyName, userName, messageId string) []db.AdditionalFuncElement {
 	context := map[string]interface{}{
 		"order_id":fmt.Sprintf("%v", orderId), //fucking js
 		"company_name":companyName,
@@ -169,21 +169,25 @@ func getAdditionalFuncs(orderId int64, companyName, userName string) []db.Additi
 	}
 	result := []db.AdditionalFuncElement{
 		db.AdditionalFuncElement{
+			MessageId:messageId,
 			Name:"Отменить",
 			Action:"cancel",
 			Context:context,
 		},
 		db.AdditionalFuncElement{
+			MessageId:messageId,
 			Name:"Начать",
 			Action:"start",
 			Context:context,
 		},
 		db.AdditionalFuncElement{
+			MessageId:messageId,
 			Name:"Закончить",
 			Action:"end",
 			Context:context,
 		},
 		db.AdditionalFuncElement{
+			MessageId:messageId,
 			Name:"Запрос подтверждения",
 			Action:"confirm",
 			Context:context,
@@ -281,7 +285,7 @@ func (odp *OrderDrinkProcessor) ProcessMessage(in *s.InPkg) *s.MessageResult {
 					TimeFormatted: time.Now().Format(time.Stamp),
 					Attributes:[]string{"coffee"},
 					AdditionalData:order.ToAdditionalMessageData(),
-					AdditionalFuncs:getAdditionalFuncs(orderId, odp.CompanyName, in.From),
+					AdditionalFuncs:getAdditionalFuncs(orderId, odp.CompanyName, in.From, in.GetMessageId()),
 					RelatedOrderState:"Отправлено в кофейню",
 					RelatedOrder:orderId,
 				})
@@ -351,7 +355,7 @@ func (odp *OrderBakeProcessor) ProcessMessage(in *s.InPkg) *s.MessageResult {
 					TimeFormatted: time.Now().Format(time.Stamp),
 					Attributes:[]string{"coffee"},
 					AdditionalData:order.ToAdditionalMessageData(),
-					AdditionalFuncs:getAdditionalFuncs(orderId, odp.CompanyName, in.From),
+					AdditionalFuncs:getAdditionalFuncs(orderId, odp.CompanyName, in.From, in.GetMessageId()),
 					RelatedOrderState:"Отправлено в кофейню",
 					RelatedOrder:orderId,
 				})
@@ -465,7 +469,7 @@ func (rop *RepeatOrderProcessor) ProcessMessage(in *s.InPkg) *s.MessageResult {
 			TimeFormatted: time.Now().Format(time.Stamp),
 			Attributes:[]string{"coffee"},
 			AdditionalData:order.ToAdditionalMessageData(),
-			AdditionalFuncs:getAdditionalFuncs(orderId, rop.CompanyName, in.From),
+			AdditionalFuncs:getAdditionalFuncs(orderId, rop.CompanyName, in.From, in.GetMessageId()),
 			RelatedOrderState:"Отправлено в кофейню",
 			RelatedOrder:orderId,
 		})

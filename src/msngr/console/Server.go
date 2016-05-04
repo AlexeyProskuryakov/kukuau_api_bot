@@ -82,7 +82,7 @@ func (s ByContactsLastMessageTime) Less(i, j int) bool {
 
 func GetContacts(db *d.MainDb) ([]usrs.Contact, error) {
 	resp := []usrs.Contact{}
-	err := db.Messages.Collection.Pipe([]bson.M{
+	err := db.Messages.MessagesCollection.Pipe([]bson.M{
 		bson.M{"$group": bson.M{"_id":"$from", "unread_count":bson.M{"$sum":"$unread"}, "name":bson.M{"$first":"$from"}, "time":bson.M{"$max":"$time_stamp"}}}}).All(&resp)
 	if err != nil {
 		return resp, err

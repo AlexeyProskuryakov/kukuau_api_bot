@@ -12,7 +12,7 @@ const (
 	DEFAULT_PWD = "sederfes100500"
 )
 
-type ByContactsLastMessageTime []Contact
+type  ByContactsLastMessageTime []Contact
 
 func (s ByContactsLastMessageTime) Len() int {
 	return len(s)
@@ -30,8 +30,9 @@ type Contact struct {
 	NewMessagesCount int `bson:"unread_count"`
 	Phone            string
 	LastMessageTime  int64 `bson:"time"`
+	HaveActiveOrder  bool
 }
 
 func (c Contact) String() string {
-	return fmt.Sprintf("[%v] name: %v, new messages: %v, phone: %s, last message: %v", c.ID, c.Name, c.NewMessagesCount, c.Phone, time.Unix(c.LastMessageTime, 0).Format(time.Stamp))
+	return fmt.Sprintf("[%v] name: %v, new messages: %v, phone: %s, last message: %v, Have active order: %v", c.ID, c.Name, c.NewMessagesCount, c.Phone, time.Unix(c.LastMessageTime, 0).Format(time.Stamp), c.HaveActiveOrder)
 }

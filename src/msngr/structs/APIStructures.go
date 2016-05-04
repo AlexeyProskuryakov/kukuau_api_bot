@@ -117,6 +117,14 @@ type InPkg struct {
 	Request  *InRequest  `json:"request"`
 }
 
+func (i InPkg) GetMessageId() string {
+	if i.Message != nil {
+		return i.Message.ID
+	}
+	log.Printf("STRCTURE ERROR not have message id %v", i)
+	return ""
+}
+
 type FieldItemContent struct {
 	Title    string `json:"title"`
 	Subtitle string `json:"subtitle"`

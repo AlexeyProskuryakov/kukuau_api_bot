@@ -14,7 +14,7 @@ func TestAutoAnswersStoring(t *testing.T) {
 	log.Printf("start tes....")
 	config := configuration.ReadTestConfigInRecursive()
 	store := NewMainDb(config.Main.Database.ConnString, config.Main.Database.Name)
-	store.Messages.Collection.RemoveAll(bson.M{})
+	store.Messages.MessagesCollection.RemoveAll(bson.M{})
 
 	store.Messages.StoreMessage("from", "to", "test", "testMessageId")
 	store.Messages.StoreMessage("from", "to", "test1", "testMessageId1")

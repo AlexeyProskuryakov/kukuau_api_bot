@@ -219,3 +219,4 @@ func (cch *CoffeeConfigHandler) LoadFromConfig(conf configuration.CoffeeConfig) 
 	}
 
 }
+

@@ -180,6 +180,12 @@ body::-webkit-scrollbar {
     font-size:20px;
 }
 
+.a-contact-with-order{
+    font-weight:700;
+    font-size:20px;
+    color: #007700;
+}
+
 .a-contact:hover{
     color: #FFF;
     text-decoration:none;

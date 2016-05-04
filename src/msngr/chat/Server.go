@@ -28,7 +28,7 @@ const (
 	ALL = "all"
 )
 
-func getFuncMap(cName, cId, start_addr string) template.FuncMap{
+func getFuncMap(cName, cId, start_addr string) template.FuncMap {
 	return template.FuncMap{
 		"eq_s":func(a, b string) bool {
 			return a == b
@@ -62,7 +62,7 @@ func getFuncMap(cName, cId, start_addr string) template.FuncMap{
 }
 func GetContacts(db *d.MainDb, to_name string) ([]usrs.Contact, error) {
 	resp := []usrs.Contact{}
-	err := db.Messages.Collection.Pipe([]bson.M{
+	err := db.Messages.MessagesCollection.Pipe([]bson.M{
 		bson.M{"$match":bson.M{"to":to_name}},
 		bson.M{"$group": bson.M{"_id":"$from", "unread_count":bson.M{"$sum":"$unread"}, "name":bson.M{"$first":"$from"}, "time":bson.M{"$max":"$time_stamp"}}}}).All(&resp)
 	if err != nil {
@@ -131,7 +131,7 @@ func GetMartini(cName, cId, start_addr string, db *d.MainDb) *martini.ClassicMar
 	return m
 }
 
-func GetMartiniTemplatesDir(cName, cId, start_addr, template_dir string, db *d.MainDb) *martini.ClassicMartini{
+func GetMartiniTemplatesDir(cName, cId, start_addr, template_dir string, db *d.MainDb) *martini.ClassicMartini {
 	m := martini.Classic()
 	m.Use(getRendererTemplateDir(cName, cId, start_addr, template_dir))
 	m.Use(getBasicAuth(db))
@@ -222,6 +222,7 @@ func GetChatDeleteMessagesHandler(start_addr string, db *d.MainDb, config c.Chat
 	})
 	return m
 }
+
 func GetChatSendHandler(start_addr string, notifier *ntf.Notifier, db *d.MainDb, config c.ChatConfig, cs *ChatStorage) http.Handler {
 	m := GetMartini(config.Name, config.CompanyId, start_addr, db)
 	m.Post(start_addr, func(render render.Render, req *http.Request) {
@@ -314,10 +315,11 @@ func get_messages(between1, between2 string, db *d.MainDb) ([]d.MessageWrapper, 
 	for i, msg := range messages {
 		if msg.From == between2 {
 			u, _ := db.Users.GetUserById(msg.To)
-			messages[i].To = u.GetName()
+			messages[i].ToName = u.GetName()
+			messages[i].FromName = messages[i].From
 		} else {
 			u, _ := db.Users.GetUserById(msg.From)
-			messages[i].From = u.GetName()
+			messages[i].FromName = u.GetName()
 		}
 		result = append(result, messages[i])
 	}

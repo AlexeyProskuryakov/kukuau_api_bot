@@ -221,7 +221,7 @@ func StartBot(db *d.MainDb, result chan string) c.Configuration {
 			notifier.SetFrom(coffee_conf.Name)
 
 			webRoute := fmt.Sprintf("/web/coffee/%v", salt)
-			http.Handle(webRoute, chat.GetChatMainHandler(webRoute, notifier, db, coffee_conf.Chat))
+			http.Handle(webRoute, coffee.GetChatMainHandler(webRoute, notifier, db, coffee_conf.Chat))
 
 			sr := func(s string) string {
 				return fmt.Sprintf("%v%v", webRoute, s)
@@ -229,11 +229,11 @@ func StartBot(db *d.MainDb, result chan string) c.Configuration {
 			http.Handle(sr("/send"), chat.GetChatSendHandler(sr("/send"), notifier, db, coffee_conf.Chat, chat.NewChatStorage(db)))
 			http.Handle(sr("/unread_messages"), chat.GetChatUnreadMessagesHandler(sr("/unread_messages"), notifier, db, coffee_conf.Chat))
 			http.Handle(sr("/messages_read"), chat.GetChatMessageReadHandler(sr("/messages_read"), notifier, db, coffee_conf.Chat))
-			http.Handle(sr("/contacts"), chat.GetChatContactsHandler(sr("/contacts"), notifier, db, coffee_conf.Chat))
 			http.Handle(sr("/contacts_change"), chat.GetChatContactsChangeHandler(sr("/contacts_change"), notifier, db, coffee_conf.Chat))
 			http.Handle(sr("/config"), chat.GetChatConfigHandler(sr("/config"), webRoute, db, coffee_conf.Chat))
 			http.Handle(sr("/delete_messages"), chat.GetChatDeleteMessagesHandler(sr("/delete_messages"), db, coffee_conf.Chat))
 
+			http.Handle(sr("/contacts"), coffee.GetChatContactsHandler(sr("/contacts"), notifier, db, coffee_conf.Chat))
 			http.Handle(sr("/message_function"), coffee.GetMessageAdditionalFunctionsHandler(sr("/message_function"), notifier, db, coffee_conf.Chat, coffeeHouseConfiguration))
 			http.Handle(sr("/order_page"), coffee.GetOrdersPageFunctionHandler(sr("/order_page"), webRoute, db, coffee_conf.Chat, coffee_conf.Name))
 			http.Handle(sr("/order_page_supply"), coffee.GetOrdersPageSupplierFunctionHandler(sr("/order_page_supply"), webRoute, db, coffee_conf.Chat, coffee_conf.Name))
