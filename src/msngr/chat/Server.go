@@ -131,12 +131,12 @@ func GetMartini(cName, cId, start_addr string, db *d.MainDb) *martini.ClassicMar
 	return m
 }
 
-func GetMartiniTemplatesDir(cName, cId, start_addr, template_dir string, db *d.MainDb) *martini.ClassicMartini {
-	m := martini.Classic()
-	m.Use(getRendererTemplateDir(cName, cId, start_addr, template_dir))
-	m.Use(getBasicAuth(db))
-	return m
-}
+//func GetMartiniTemplatesDir(cName, cId, start_addr, template_dir string, db *d.MainDb) *martini.ClassicMartini {
+//	m := martini.Classic()
+//	m.Use(getRendererTemplateDir(cName, cId, start_addr, template_dir))
+//	m.Use(getBasicAuth(db))
+//	return m
+//}
 
 func GetChatMainHandler(start_addr string, notifier *ntf.Notifier, db *d.MainDb, config c.ChatConfig) http.Handler {
 	m := GetMartini(config.Name, config.CompanyId, start_addr, db)

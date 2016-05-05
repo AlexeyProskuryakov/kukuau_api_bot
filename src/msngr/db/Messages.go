@@ -71,8 +71,8 @@ type MessageHandler struct {
 	parent              *MainDb
 }
 
-func (mh *MessageHandler) ensureIndexes(odbh *MainDb) {
-	messageCollection := odbh.Session.DB(odbh.DbName).C("user_messages")
+func (mh *MessageHandler) ensureIndexes() {
+	messageCollection := mh.parent.Session.DB(mh.parent.DbName).C("user_messages")
 	messageCollection.EnsureIndex(mgo.Index{
 		Key:[]string{"from"},
 		Unique:false,
@@ -105,7 +105,7 @@ func (mh *MessageHandler) ensureIndexes(odbh *MainDb) {
 	})
 	mh.MessagesCollection = messageCollection
 
-	functions := odbh.Session.DB(odbh.DbName).C("user_messages_functions")
+	functions := mh.parent.Session.DB(mh.parent.DbName).C("user_messages_functions")
 	functions.EnsureIndex(mgo.Index{
 		Key:[]string{"message_id", "action"},
 		Unique:true,

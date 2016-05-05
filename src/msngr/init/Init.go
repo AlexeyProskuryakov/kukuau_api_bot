@@ -239,7 +239,7 @@ func StartBot(db *d.MainDb, result chan string) c.Configuration {
 			http.Handle(sr("/order_page_supply"), coffee.GetOrdersPageSupplierFunctionHandler(sr("/order_page_supply"), webRoute, db, coffee_conf.Chat, coffee_conf.Name))
 
 			log.Printf("I will handling web requests for coffee %v at : [%v]", coffee_conf.Name, webRoute)
-			db.Users.AddOrUpdateUserObject(d.UserWrapper{
+			db.Users.AddOrUpdateUserObject(d.UserData{
 				UserId:coffee_conf.Chat.User,
 				UserName:coffee_conf.Chat.User,
 				Password:utils.PHash(coffee_conf.Chat.Password),
@@ -288,7 +288,7 @@ func StartBot(db *d.MainDb, result chan string) c.Configuration {
 
 			log.Printf("I will handling web requests for chat at : [%v]", webRoute)
 
-			db.Users.AddOrUpdateUserObject(d.UserWrapper{UserName:chat_conf.User, Password:utils.PHash(chat_conf.Password), Role:users.MANAGER, UserId:chat_conf.User})
+			db.Users.AddOrUpdateUserObject(d.UserData{UserName:chat_conf.User, Password:utils.PHash(chat_conf.Password), Role:users.MANAGER, UserId:chat_conf.User})
 
 			configStorage.SetChatConfig(chat_conf, false)
 		}

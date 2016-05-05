@@ -97,7 +97,7 @@ func (n *Notifier) NotifyTextToMembers(text string) (*s.OutPkg, *db.MessageWrapp
 	return &result, message, err
 }
 
-func (n *Notifier)SendMessageToPeople(people []db.UserWrapper, text string) {
+func (n *Notifier)SendMessageToPeople(people []db.UserData, text string) {
 	go func() {
 		for _, user := range people {
 			n.NotifyText(user.UserId, text)

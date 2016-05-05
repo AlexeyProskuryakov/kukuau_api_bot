@@ -1,0 +1,72 @@
+{{ define "base" }}
+<html lang="ru">
+{{template "head" . }}
+<body>
+{{template "head_menu" . }}
+
+{{ yield }}
+
+{{template "flash" . }}
+</body>
+</html>
+{{end}}
+
+{{ define "head" }}
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TEST AUTH</title>
+    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.5/css/bootstrap.min.css">
+    <!--<link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.5/css/bootstrap-theme.min.css">-->
+
+    <link rel="stylesheet" href="style.css">
+    <link rel="shortcut icon" href="favicon.ico">
+
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/2.1.4/jquery.min.js"></script>
+    <script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.5/js/bootstrap.min.js"></script>
+
+    <script src="mustache.min.js"></script>
+</head>
+{{ end}}
+
+
+{{define "head_menu"}}
+<nav class="navbar navbar-default navbar-static-top">
+    <div class="container">
+        <div class="navbar-header">
+            <button type="button" class="navbar-toggle collapsed" data-toggle="collapse" data-target="#navbar"
+                    aria-expanded="false" aria-controls="navbar">
+                <span class="sr-only">Toggle navigation</span>
+                <span class="icon-bar"></span>
+                <span class="icon-bar"></span>
+                <span class="icon-bar"></span>
+            </button>
+            <a class="navbar-brand" href="#">TEST AUTH</a>
+        </div>
+        <div id="navbar" class="collapse navbar-collapse visible-xs-*">
+            <ul class="nav navbar-nav">
+                <li><a href="/">Войти</a></li>
+                <li><a href="/logout">Выйти</a></li>
+                <li><a href="/private">Конфиденс</a></li>
+                <li><a href="/private_some_read">Конфиденс чит</a></li>
+                <li><a href="/private_some_write">Конфиденс пис</a></li>
+                <li><a href="/private_some_role">Конфиденс роле</a></li>
+            </ul>
+        </div>
+    </div>
+</nav>
+{{end}}
+
+{{define "flash"}}
+<div class="container-fluid">
+    {{if .flash_error}}
+    <div class="row">
+        <div class="col-md-3 col-md-offset-4">
+            <div class="alert alert-warning">
+                {{.flash_error}}
+            </div>
+        </div>
+    </div>
+    {{end}}
+</div>
+{{end}}

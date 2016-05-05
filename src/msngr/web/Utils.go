@@ -6,7 +6,7 @@ import (
 	"log"
 	"time"
 	"github.com/tealeg/xlsx"
-"strings"
+	"strings"
 	"regexp"
 )
 
@@ -32,14 +32,13 @@ func NonJsonLogger() martini.Handler {
 	}
 }
 
-
 func ParseExportXlsx(xlf *xlsx.File, skip_row, skip_cell int) ([][]string, error) {
 	result := [][]string{}
 	sheet_reg := regexp.MustCompile("([кК]омм?анда\\s*\\d+)|(.*ключ.*)|(^\\d+$)")
 	for _, sheet := range xlf.Sheets {
 		if sheet != nil {
 			sh_name := strings.TrimSpace(strings.ToLower(sheet.Name))
-			if sheet_reg.MatchString(sh_name){
+			if sheet_reg.MatchString(sh_name) {
 				for ir, row := range sheet.Rows {
 					if row != nil && ir >= skip_row {
 						key := strings.ToLower(strings.TrimSpace(row.Cells[skip_cell].Value))
@@ -56,4 +55,22 @@ func ParseExportXlsx(xlf *xlsx.File, skip_row, skip_cell int) ([][]string, error
 		}
 	}
 	return result, nil
+}
+
+type Flash struct {
+	Message string
+	Type    string
+}
+
+func (f *Flash) GetMessage() (string, string) {
+	message := f.Message
+	fType := f.Type
+	f.Message = ""
+	f.Type = ""
+	return message, fType
+}
+
+func (f *Flash) SetMessage(s, t string) {
+	f.Message = s
+	f.Type = t
 }
