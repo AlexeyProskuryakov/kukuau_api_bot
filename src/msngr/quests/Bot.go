@@ -1,15 +1,14 @@
 package quests
 
 import (
-	"log"
-
 	s "msngr/structs"
 	c "msngr/configuration"
 	m "msngr"
+	n "msngr/notify"
 
 	"fmt"
+	"log"
 
-	n "msngr/notify"
 	"regexp"
 	"strings"
 	"errors"
@@ -36,7 +35,7 @@ func WRONG_TEAM_MEMBER(bad, good string) string {
 	return fmt.Sprintf("Вы не являетесь участником группы %s. Вы учасник группы %s.", bad, good)
 }
 
-func getCommands( times []string) *[]s.OutCommand {
+func getCommands(times []string) *[]s.OutCommand {
 	result := []s.OutCommand{}
 	result = append(result, s.OutCommand{
 		Title:"Записаться на квест в НОВАТе",
@@ -84,7 +83,7 @@ func getCommands( times []string) *[]s.OutCommand {
 			},
 		},
 	})
-	
+
 	return &result
 }
 
@@ -273,7 +272,7 @@ func (qmpp QuestMessageProcessor) ProcessMessage(in *s.InPkg) *s.MessageResult {
 		commands := getCommands(qmpp.Config.QuestTimes)
 		return &s.MessageResult{Type:"chat", Body:"Сообщения нет :( ", Commands:commands}
 	}
-	commands := getCommands( qmpp.Config.QuestTimes)
+	commands := getCommands(qmpp.Config.QuestTimes)
 	return &s.MessageResult{Type:"chat", Body:"Ваше сообщение доставлено. ", Commands:commands}
 }
 
@@ -311,11 +310,16 @@ func (qep *QuestEnrollProcessor) ProcessMessage(in *s.InPkg) *s.MessageResult {
 	return &s.MessageResult{Type:"chat", Body:"Чего-то не хватает...", Commands:commands}
 }
 
-func FormQuestBotContext(conf c.Configuration, qname string, qs *QuestStorage, db *db.MainDb) *m.BotContext {
+func FormQuestBotContext(conf c.Configuration, qname string, qs *QuestStorage, db *db.MainDb, cs *db.ConfigurationStorage) *m.BotContext {
 	result := m.BotContext{}
 	qconf, ok := conf.Quests[qname]
 	if !ok {
 		panic(fmt.Sprintf("Quest configuration with name %v is not exist :(", qname))
+	}
+
+	commandsGenerator := func(in *s.InPkg) (*[]s.OutCommand, error) {
+		commands := getCommands(qconf.QuestTimes)
+		return commands, nil
 	}
 
 	result.RequestProcessors = map[string]s.RequestCommandProcessor{
@@ -323,7 +327,7 @@ func FormQuestBotContext(conf c.Configuration, qname string, qs *QuestStorage, d
 	}
 
 	result.MessageProcessors = map[string]s.MessageCommandProcessor{
-		"information":&QuestInfoMessageProcessor{Information:qconf.Info},
+		"information":m.NewUpdatableInformationProcessor(cs, commandsGenerator, qconf.CompanyId),
 		"enroll": &QuestEnrollProcessor{Store:qs, Config:qconf},
 		"":QuestMessageProcessor{Storage:qs, Config:qconf},
 	}

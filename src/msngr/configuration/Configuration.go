@@ -105,6 +105,7 @@ type QuestConfig struct {
 	Key           string `json:"key"`
 	AdditionalKey string `json:"additional_key"`
 	QuestTimes    []string `json:"quest_times"`
+	CompanyId     string `json:"id"`
 }
 
 type ConsoleConfig struct {
@@ -133,13 +134,13 @@ type ChatConfig struct {
 }
 
 type CoffeeConfig struct {
-	Name        string `json:"name"`
-	DictUrl     string `json:"dict_url"`
-	Bakes       map[string]string `json:"bakes"`
-	Drinks      map[string]string `json:"drinks"`
-	Additives   map[string]string `json:"additives"`
-	Volumes     []string `json:"volumes"`
-	Chat        ChatConfig `json:"chat"`
+	Name      string `json:"name"`
+	DictUrl   string `json:"dict_url"`
+	Bakes     map[string]string `json:"bakes"`
+	Drinks    map[string]string `json:"drinks"`
+	Additives map[string]string `json:"additives"`
+	Volumes   []string `json:"volumes"`
+	Chat      ChatConfig `json:"chat"`
 }
 
 type MongoDbConfig  struct {

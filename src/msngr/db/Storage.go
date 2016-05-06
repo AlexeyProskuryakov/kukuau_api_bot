@@ -1030,7 +1030,7 @@ func (cs *ConfigurationStorage) UpdateAutoAnswers(companyId string, autoAnswers 
 
 func (cs *ConfigurationStorage) UpdateInformation(companyId, information string) error {
 	ci, err := cs.Collection.Upsert(bson.M{"company_id":companyId}, bson.M{"$set":bson.M{"information":information}})
-	log.Printf("Update information %+v", ci)
+	log.Printf("Update information for: %v, new: %v, result: %+v", companyId, information, ci)
 	return err
 }
 
