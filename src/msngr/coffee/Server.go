@@ -6,10 +6,6 @@ import (
 	"io/ioutil"
 	"encoding/json"
 	"fmt"
-	ntf "msngr/notify"
-	d "msngr/db"
-	c "msngr/configuration"
-	"msngr/chat"
 	"log"
 	"gopkg.in/mgo.v2/bson"
 	"strconv"
@@ -19,6 +15,11 @@ import (
 	"sort"
 	"msngr/users"
 	"time"
+
+	ntf "msngr/notify"
+	d "msngr/db"
+	c "msngr/configuration"
+	"msngr/chat"
 )
 
 type CoffeeFunctionData struct {

@@ -1,7 +1,6 @@
 package web
 
 import (
-	"msngr/db"
 	"log"
 	"github.com/martini-contrib/sessions"
 	"github.com/go-martini/martini"
@@ -10,6 +9,8 @@ import (
 	"github.com/martini-contrib/binding"
 	"net/http"
 	"fmt"
+
+	"msngr/db"
 	"msngr/utils"
 )
 
@@ -124,6 +125,31 @@ func (ah *AuthHandler) CheckWriteRights(rights ...string) func(r render.Render, 
 			}
 		}
 	}
+}
+
+func NewSessionAuthorisationMartini(mainDb *db.MainDb, ) *martini.Martini {
+	m := martini.New()
+	m.Use(NonJsonLogger())
+	m.Use(martini.Recovery())
+	m.Use(martini.Static("static"))
+	//m.Use(render.Renderer(render.Options{
+	//	Directory:"auth",
+	//	Extensions: []string{".tmpl", ".html"},
+	//	Charset: "UTF-8",
+	//}))
+	store := sessions.NewCookieStore([]byte("ALESHA_ХОРОШИЙ"))
+	store.Options(sessions.Options{
+		MaxAge: 0,
+		Secure:true,
+	})
+	m.Use(sessions.Sessions("klichat_session", store))
+	m.Use(sessionauth.SessionUser(anonymousUserInitializer(mainDb.Users)))
+
+	m.Map(mainDb)
+
+	sessionauth.RedirectUrl = "/"
+	sessionauth.RedirectParam = "from"
+	return m
 }
 
 func TestRun(mainDb *db.MainDb) {

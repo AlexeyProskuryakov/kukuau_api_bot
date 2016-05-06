@@ -6,6 +6,7 @@ import (
 	u "msngr/utils"
 	ntf "msngr/notify"
 	usrs "msngr/users"
+	"msngr/web"
 
 	"github.com/go-martini/martini"
 	"github.com/martini-contrib/auth"
@@ -28,39 +29,8 @@ const (
 	ALL = "all"
 )
 
-func getFuncMap(cName, cId, start_addr string) template.FuncMap {
-	return template.FuncMap{
-		"eq_s":func(a, b string) bool {
-			return a == b
-		},
-		"stamp_date":func(t time.Time) string {
-			return t.Format(time.Stamp)
-		},
-		"header_name":func() string {
-			return cName
-		},
-		"me":func() string {
-			return cId
-		},
-		"prefix":func() string {
-			return start_addr
-		},
-		"chat_with":func(with string) string {
-			return fmt.Sprintf("%v?with=%v", start_addr, with)
-		},
-		"has_additional_data":func(msg d.MessageWrapper) bool {
-			return len(msg.AdditionalData) > 0
-		},
-		"is_additional_data_valid":func(ad d.AdditionalDataElement) bool {
-			return ad.Value != ""
-		},
-		"get_context":func(adF d.AdditionalFuncElement) string {
-			data, _ := json.Marshal(adF.Context)
-			return string(data)
-		},
-	}
-}
-func GetContacts(db *d.MainDb, to_name string) ([]usrs.Contact, error) {
+
+func getContacts(db *d.MainDb, to_name string) ([]usrs.Contact, error) {
 	resp := []usrs.Contact{}
 	err := db.Messages.MessagesCollection.Pipe([]bson.M{
 		bson.M{"$match":bson.M{"to":to_name}},
@@ -94,26 +64,12 @@ func getRenderer(cName, cId, start_addr string) martini.Handler {
 		IndentJSON: true,
 		IndentXML: true,
 		Funcs:[]template.FuncMap{
-			getFuncMap(cName, cId, start_addr),
+			web.GetFuncMap(cName, cId, start_addr),
 		},
 	})
 	return renderer
 }
 
-func getRendererTemplateDir(cName, cId, start_addr, template_dir string) martini.Handler {
-	renderer := render.Renderer(render.Options{
-		Directory:template_dir,
-		//Layout: "console/layout",
-		Extensions: []string{".tmpl", ".html"},
-		Charset: "UTF-8",
-		IndentJSON: true,
-		IndentXML: true,
-		Funcs:[]template.FuncMap{
-			getFuncMap(cName, cId, start_addr),
-		},
-	})
-	return renderer
-}
 func getBasicAuth(db *d.MainDb) martini.Handler {
 	return auth.BasicFunc(func(username, password string) bool {
 		usr, _ := db.Users.GetUser(bson.M{"user_name":username, "role":usrs.MANAGER})
@@ -184,7 +140,7 @@ func GetChatMainHandler(start_addr string, notifier *ntf.Notifier, db *d.MainDb,
 		result_data["messages"] = messages
 		result_data["companyId"] = config.CompanyId
 
-		if contacts, err := GetContacts(db, config.CompanyId); err == nil {
+		if contacts, err := getContacts(db, config.CompanyId); err == nil {
 			result_data["contacts"] = contacts
 		}
 		r.HTML(200, "chat", result_data, render.HTMLOptions{Layout:"base"})
@@ -368,7 +324,7 @@ func GetChatContactsHandler(start_addr string, notifier *ntf.Notifier, db *d.Mai
 			render.JSON(500, map[string]interface{}{"ok":false, "detail":fmt.Sprintf("can not unmarshal request body %v \n %s", err, request_body)})
 			return
 		}
-		contacts, err := GetContacts(db, config.CompanyId)
+		contacts, err := getContacts(db, config.CompanyId)
 		if err != nil {
 			render.JSON(500, map[string]interface{}{"ok":false, "detail":fmt.Sprintf("db err body %v", err)})
 			return
@@ -433,3 +389,7 @@ func GetChatConfigHandler(start_addr, prefix string, db *d.MainDb, config c.Chat
 	return m
 }
 
+//func GetChatRoutesForCompany(companyId string, db *d.MainDb) martini.Router {
+//	router := martini.NewRouter()
+//	router.Group(fmt.Sprintf("web/chat/%s", companyId))
+//}

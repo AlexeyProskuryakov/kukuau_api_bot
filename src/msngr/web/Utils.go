@@ -8,6 +8,11 @@ import (
 	"github.com/tealeg/xlsx"
 	"strings"
 	"regexp"
+	"fmt"
+	"encoding/json"
+	"html/template"
+
+	d "msngr/db"
 )
 
 func NonJsonLogger() martini.Handler {
@@ -73,4 +78,37 @@ func (f *Flash) GetMessage() (string, string) {
 func (f *Flash) SetMessage(s, t string) {
 	f.Message = s
 	f.Type = t
+}
+
+func GetFuncMap(cName, cId, start_addr string) template.FuncMap {
+	return template.FuncMap{
+		"eq_s":func(a, b string) bool {
+			return a == b
+		},
+		"stamp_date":func(t time.Time) string {
+			return t.Format(time.Stamp)
+		},
+		"header_name":func() string {
+			return cName
+		},
+		"me":func() string {
+			return cId
+		},
+		"prefix":func() string {
+			return start_addr
+		},
+		"chat_with":func(with string) string {
+			return fmt.Sprintf("%v?with=%v", start_addr, with)
+		},
+		"has_additional_data":func(msg d.MessageWrapper) bool {
+			return len(msg.AdditionalData) > 0
+		},
+		"is_additional_data_valid":func(ad d.AdditionalDataElement) bool {
+			return ad.Value != ""
+		},
+		"get_context":func(adF d.AdditionalFuncElement) string {
+			data, _ := json.Marshal(adF.Context)
+			return string(data)
+		},
+	}
 }
