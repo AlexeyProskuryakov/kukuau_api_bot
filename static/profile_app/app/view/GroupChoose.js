@@ -13,6 +13,8 @@ Ext.define('Console.view.GroupChoose', {
 		console.log("init group window");
 		this.items= [{
 			xtype:"form",
+			layout: 'fit',
+			autoScroll:true,
 			items:[
 			{
 				xtype: "grid",

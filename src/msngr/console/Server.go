@@ -204,13 +204,13 @@ func Run(addr string, db *d.MainDb, qs *quests.QuestStorage, vdh *voting.VotingD
 			render.HTML(200, "profile", map[string]interface{}{})
 		})
 		r.Get("/all", func(render render.Render) {
+			log.Printf("CS start querying for all profiles...")
 			profiles, err := ph.GetAllProfiles()
 			if err != nil {
 				log.Printf("CS Error at getting all profiles: %v", err)
 				render.JSON(500, map[string]interface{}{"success":false, "error":err})
 			}
-			str , _  := json.Marshal(profiles)
-			log.Printf("profiles raw data: %s", str)
+			log.Printf("CS found %v profiles.", len(profiles))
 			render.JSON(200, map[string]interface{}{
 				"success":true,
 				"profiles":profiles,
@@ -390,6 +390,7 @@ func Run(addr string, db *d.MainDb, qs *quests.QuestStorage, vdh *voting.VotingD
 			render.JSON(200, map[string]interface{}{"success":true, "employee":employee})
 		})
 		r.Get("/all_groups", func(ren render.Render) {
+			log.Printf("CS start querying for all groups")
 			groups, err := ph.GetAllGroups()
 			if err != nil {
 				log.Printf("CS error at groups retrieve: %v", err)
@@ -401,6 +402,7 @@ func Run(addr string, db *d.MainDb, qs *quests.QuestStorage, vdh *voting.VotingD
 		})
 
 		r.Get("/all_features", func(ren render.Render) {
+			log.Printf("CS start querying for all features")
 			features, err := ph.GetAllFeatures()
 			if err != nil {
 				log.Printf("CS error at features retrieve: %v", err)

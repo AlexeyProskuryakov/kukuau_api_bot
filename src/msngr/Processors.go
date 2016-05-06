@@ -82,7 +82,7 @@ func (ip *InformationProcessor) ProcessMessage(in *s.InPkg) *s.MessageResult {
 	return &result
 }
 
-func NewSimpleInformationProcessor(information string) *InformationProcessor {
+func NewNonCommandsInformationProcessor(information string) *InformationProcessor {
 	return &InformationProcessor{
 		Information:information,
 		F:func(in *s.InPkg) (*[]s.OutCommand, error) {
@@ -95,20 +95,19 @@ func NewInformationProcessor(information string, cg CommandsGenerator) *Informat
 	return &InformationProcessor{Information:information, F:cg}
 }
 
-
 type InformationProcessorUpdatable struct {
 	ConfigStore *db.ConfigurationStorage
-	Key string
+	ConfigId    string
 	F           CommandsGenerator
 }
+
 func (ip *InformationProcessorUpdatable) ProcessMessage(in *s.InPkg) *s.MessageResult {
 	cmds, err := ip.F(in)
 	if err != nil {
 		log.Printf("Inforamtion processor: ERROR at forming commands %v", err)
 		return &s.MessageResult{Type:"chat", Body:err.Error()}
 	}
-	information, err := ip.ConfigStore.GetInformation(ip.Key)
-	log.Printf("Information for %v is %s",ip.Key, *information)
+	information, err := ip.ConfigStore.GetInformation(ip.ConfigId)
 	if err != nil {
 		log.Printf("Inforamtion processor: ERROR at getting information %v", err)
 		return &s.MessageResult{Type:"chat", Body:err.Error()}
@@ -117,7 +116,7 @@ func (ip *InformationProcessorUpdatable) ProcessMessage(in *s.InPkg) *s.MessageR
 	return &result
 }
 
-func NewUpdatableInformationProcessor(confStore *db.ConfigurationStorage, cg CommandsGenerator, key string) *InformationProcessorUpdatable{
-	return &InformationProcessorUpdatable{ConfigStore:confStore, Key:key, F:cg}
+func NewUpdatableInformationProcessor(confStore *db.ConfigurationStorage, cg CommandsGenerator, ConfigId string) *InformationProcessorUpdatable {
+	return &InformationProcessorUpdatable{ConfigStore:confStore, ConfigId:ConfigId, F:cg}
 
 }

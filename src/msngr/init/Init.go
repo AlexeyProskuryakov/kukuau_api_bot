@@ -136,12 +136,13 @@ func StartBot(db *d.MainDb, result chan string) c.Configuration {
 		http.HandleFunc(conf.RuPost.WorkUrl, rp_controller)
 		result <- "rupost"
 	}
-
+	configStorage := d.NewConfigurationStorage(conf.Main.ConfigDatabase)
 	qs := q.NewQuestStorage(conf.Main.Database.ConnString, conf.Main.Database.Name)
 
-	for q_name, _ := range conf.Quests {
+	for q_name, qConf := range conf.Quests {
 		log.Printf("Will handling quests controller for quest: %v", q_name)
-		qb_controller := q.FormQuestBotContext(conf, q_name, qs, db)
+		configStorage.UpdateInformation(qConf.CompanyId, qConf.Info)
+		qb_controller := q.FormQuestBotContext(conf, q_name, qs, db, configStorage)
 		q_controller := m.FormBotController(qb_controller, db)
 		http.HandleFunc(fmt.Sprintf("/quest/%v", q_name), q_controller)
 		result <- fmt.Sprintf("quest_%v", q_name)
@@ -177,7 +178,7 @@ func StartBot(db *d.MainDb, result chan string) c.Configuration {
 		result <- "vote"
 	}
 
-	configStorage := d.NewConfigurationStorage(conf.Main.ConfigDatabase)
+
 
 	if len(conf.Coffee) > 0 {
 		fs := http.FileServer(http.Dir("static"))
