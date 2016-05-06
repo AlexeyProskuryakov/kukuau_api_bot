@@ -30,7 +30,6 @@ function createProfileForm(profileModel){
     features_grid = form.getComponent("profile_features"),
     employees_grid = form.getComponent("profile_employees");
 
-
     form.loadRecord(profileModel);
     contacts_grid.reconfigure(profileModel.contacts());
     phones_grid.reconfigure(profileModel.phones());
@@ -39,21 +38,45 @@ function createProfileForm(profileModel){
     employees_grid.reconfigure(profileModel.employees());
 
     var image_src = profileModel.get("image_url");
-
+    
     if (image_src != ""){
         form.getComponent("profile_image_wrapper").getComponent("profile_image").setSrc(image_src);
     }
 
     profile_window.setTitle(profile_window.title+" ("+profileModel.get("id")+")");
+
+    var  answers_grid = form.getComponent("profile_bot_config_wrapper").getComponent("answers"),
+    notifications_grid = form.getComponent("profile_bot_config_wrapper").getComponent("notifications"),
+    information_field = form.getComponent("profile_bot_config_wrapper").getComponent("information"),
+    botConfigRaw = profileModel.get('botconfig'),
+    botConfig = Ext.create('Console.model.BotConfig', botConfigRaw);
+
+    console.log("f");
+    
+    botConfigRaw.answers.forEach(function(x){
+        x._id = guid();
+        botConfig.answers().add(Ext.create('Console.model.TimedAnswer', x))
+    })
+    answers_grid.reconfigure(botConfig.answers());
+
+    botConfigRaw.notifications.forEach(function(x){
+        x._id = guid();
+        botConfig.notifications().add(Ext.create('Console.model.TimedAnswer', x))
+    })
+    notifications_grid.reconfigure(botConfig.notifications());
+
+    information_field.setValue(botConfig.get("information"));
+
+    profileModel.setBotConfig(botConfig);
     return profile_window;
 }
 var geocoder = new google.maps.Geocoder();
 
 Ext.define('Console.controller.Profiles', {
     extend: 'Ext.app.Controller',
-    views: ['ProfileList', 'UserNameCheck', 'Profile', 'Contact', 'ContactLink', 'Phone', 'GroupChoose', 'NewGroupAdd', 'FeatureChoose', 'EmployeeInfo'],
-    stores: ['ProfileStore', 'ContactsStore', 'ContactLinksStore', 'GroupsStore', 'GroupsGlobalStore', 'ProfileAllowPhoneStore', 'FeaturesStore', 'FeaturesGlobalStore', 'EmployeesStore'],
-    models: ['Profile'],
+    views: ['ProfileList', 'UserNameCheck', 'Profile', 'Contact', 'ContactLink', 'Phone', 'GroupChoose', 'NewGroupAdd', 'FeatureChoose', 'EmployeeInfo', 'Notification', 'AutoAnswer'],
+    stores: ['ProfileStore', 'ContactsStore', 'ContactLinksStore', 'GroupsStore', 'GroupsGlobalStore', 'ProfileAllowPhoneStore', 'FeaturesStore', 'FeaturesGlobalStore', 'EmployeesStore','TimedAnswersStore'],
+    models: ['Profile','BotConfig'],
     config:{
         group_global_storage: undefined,
         feature_global_storage: undefined
@@ -174,15 +197,41 @@ Ext.define('Console.controller.Profiles', {
             },
 
             'profilewindow grid[itemId=profile_employees]':{
-                 itemdblclick: this.changeEmployee
-            },            
+             itemdblclick: this.changeEmployee
+         },       
+            //bot configuration
+            'profilewindow grid[itemId=answers]':{
+                itemdblclick: this.changeAnswer
+            },
+            
+            'profilewindow grid[itemId=notifications]':{
+                itemdblclick: this.changeNotification
+            },
+            'profilewindow button[action=add_answer_start]':{
+                click: this.createAnswer
+            },
+            'answerWindow button[action=add_answer_end]':{
+                click: this.createAnswerEnd
+            },
 
-
+            'profilewindow button[action=add_notification_start]':{
+                click: this.createNotification
+            },
+            'notificationWindow button[action=add_notification_end]':{
+                click: this.createNotificationEnd
+            },
+            'profilewindow actioncolumn[action=delete_answer]':{
+                click: this.deleteAnswer
+            },
+            'profilewindow actioncolumn[action=delete_notification]':{
+                click: this.deleteNotification
+            },
         });
-        Ext.widget('profilelist').getStore().load();
-        this.group_global_storage = Ext.create("Console.store.GroupsGlobalStore").load();
-        this.feature_global_storage = Ext.create("Console.store.FeaturesGlobalStore").load();
-    },
+
+Ext.widget('profilelist').getStore().load();
+this.group_global_storage = Ext.create("Console.store.GroupsGlobalStore").load();
+this.feature_global_storage = Ext.create("Console.store.FeaturesGlobalStore").load();
+},
     // обновление
     updateProfile: function(button) {
         var win    = button.up('window');
@@ -236,6 +285,18 @@ Ext.define('Console.controller.Profiles', {
             profile_main_values.employees = employees;
 
             profile_main_values.image_url = form.getComponent("profile_image_wrapper").getComponent("profile_image").src;
+
+            //bot configuration
+            var botConfig = record.getBotConfig();
+
+            profile_main_values.botconfig = {answers:[], notifications:[],information:form.getComponent("profile_bot_config_wrapper").getComponent("information").getValue()};
+            Ext.each(botConfig.answers().data.items, function(a_item){
+                profile_main_values.botconfig.answers.push(a_item.getData());
+            });
+            Ext.each(botConfig.notifications().data.items, function(n_item){
+                profile_main_values.botconfig.notifications.push(n_item.getData());
+            });
+            console.log("profile main values", profile_main_values);
         } 
 
         Ext.Ajax.request({
@@ -264,11 +325,12 @@ Ext.define('Console.controller.Profiles', {
         var win = button.up("window"),
         cmp = win.getComponent("user_name"),
         id = cmp.getValue();
-        if (id != "" && cmp.valudate()){
+        if (id != "" && cmp.validate()){
             var view = Ext.widget('profilewindow'),
             store = Ext.widget('profilelist').getStore(),
             profile_model = Ext.create("Console.model.Profile", {id:id});
-            
+            profile_model.setBotConfig(Ext.create('Console.model.BotConfig'));
+
             store.add(profile_model);
             view.down("form").loadRecord(profile_model);
             win.destroy();
@@ -631,10 +693,8 @@ Ext.define('Console.controller.Profiles', {
 
         var e_view = Ext.widget("employeeWindow", {"parent":win, profileId:pModel.get("id")}),
         e_form = e_view.down('form'),
-        roleCmp = e_form.getComponent('role'),
         phoneCmp = e_form.getComponent('phone');
 
-        roleCmp.setValue(row.data.role_id);
         phoneCmp.setValue(row.data.phone);
         e_view.show();  
     },
@@ -645,12 +705,10 @@ Ext.define('Console.controller.Profiles', {
         pForm = e_win.getParent().down("form"),
         pModel = pForm.getRecord(),
         e_form = e_win.down('form'),
-        roleCmp = e_form.getComponent('role'),
         phoneComp = e_form.getComponent('phone');
-        if (phoneComp.validate() && roleCmp.validate()){
-            var phone = phoneComp.getValue(),
-            roleObj = roleCmp.findRecordByValue(roleCmp.getValue()).getData();
-            console.log('phone: ',phone, 'role: ', roleObj);
+        if (phoneComp.validate()){
+            var phone = phoneComp.getValue();
+            console.log('phone: ',phone);
 
             Ext.Ajax.request({
                 url:"profile/employee/"+phone,
@@ -658,8 +716,6 @@ Ext.define('Console.controller.Profiles', {
                     var data=Ext.decode(x.responseText);
                     if (data.success==true && data.employee != null ){
                         var employeeData = data.employee;
-                        employeeData['role_id'] = roleObj.role_id;
-                        employeeData['role_name'] = roleObj.role_name;
                         employeeData['phone'] = phone;
                         eModel = Ext.create("Console.model.Employee", employeeData);
 
@@ -668,16 +724,97 @@ Ext.define('Console.controller.Profiles', {
                         eGrid.reconfigure(pModel.employees());
                         e_win.destroy();
                     } else {
-                        Ext.Msg.alert('Ошибка!', 'Нет такого телефона :( ');         
+                        Ext.Msg.alert('Ошибка!', 'Сотрудник с таким номером телефона не зарегистрирован в KliChat.');         
                     }
                 }
             });
         }
 
     },
-     deleteEmployee:function(grid, row, index){
+    deleteEmployee:function(grid, row, index){
         console.log("delete feature", row, index, grid);
         grid.getStore().removeAt(index);
     }, 
 
+    createAnswer:function(button){
+        console.log("start create answer");
+        var win = button.up("window"),
+        pModel = win.down("form").getRecord();
+        var e_view = Ext.widget("answerWindow", {"parent":win, profileId:pModel.get("id")});
+        e_view.show();
+    },
+
+    createAnswerEnd:function(button){
+        console.log("end create answer");
+        var win = button.up("window"),
+        form = win.down('form'),
+        pWin = win.getParent(),
+        pModel = pWin.down("form").getRecord(),
+        after_min = form.getComponent('after_min'),
+        text = form.getComponent('text'),
+        answers_grid = pWin.down('form').getComponent("profile_bot_config_wrapper").getComponent("answers"),
+        botConfig = pModel.getBotConfig();
+
+        if (text.validate() && after_min.validate()){
+
+            var record = form.getRecord();
+            if (record == undefined){
+                botConfig.answers().add(Ext.create('Console.model.TimedAnswer', {after_min:after_min.getValue(), text:text.getValue()}))
+                pModel.setBotConfig(botConfig);
+            } else {
+                var stored = botConfig.answers().getById(record.get("_id"));
+                stored.set(record.getData());
+            }
+            answers_grid.reconfigure(botConfig.answers());
+            win.destroy();
+        }
+
+    },
+    createNotification:function(button){
+        console.log("start create notification");
+        var win = button.up("window"),
+        pModel = win.down("form").getRecord();
+        var e_view = Ext.widget("notificationWindow", {"parent":win, profileId:pModel.get("id")});
+        e_view.show();
+    },
+
+    createNotificationEnd:function(button){
+        console.log("end create notification");
+        var win = button.up("window"),
+        pWin = win.getParent(),
+        pModel = pWin.down("form").getRecord(),
+        after_min = win.down('form').getComponent('after_min'),
+        text = win.down('form').getComponent('text'),
+        notifications_grid = pWin.down('form').getComponent("profile_bot_config_wrapper").getComponent("notifications"),
+        botConfig = pModel.getBotConfig();
+
+        if (text.validate() && after_min.validate()){
+            botConfig.notifications().add(Ext.create('Console.model.TimedAnswer', {after_min:after_min.getValue(), text:text.getValue()}))
+            notifications_grid.reconfigure(botConfig.notifications());
+            pModel.setBotConfig(botConfig);
+            win.destroy();
+        }
+
+    },
+
+    deleteAnswer:function(grid, row, index){
+        console.log("delete feature", row, index, grid);
+        grid.getStore().removeAt(index);
+    }, 
+
+    deleteNotification:function(grid, row, index){
+        console.log("delete feature", row, index, grid);
+        grid.getStore().removeAt(index);
+    }, 
+
+    changeAnswer:function(grid, row, index){
+        console.log("start change answer");
+        var win = grid.up("window"),
+        pModel = win.down("form").getRecord(),
+        e_view = Ext.widget("answerWindow", {"parent":win, profileId:pModel.get("id")}),
+        e_form = e_view.down('form');
+        
+        e_form.loadRecord(row);
+        e_view.show();
+    }
 });

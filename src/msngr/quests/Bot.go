@@ -311,7 +311,7 @@ func (qep *QuestEnrollProcessor) ProcessMessage(in *s.InPkg) *s.MessageResult {
 	return &s.MessageResult{Type:"chat", Body:"Чего-то не хватает...", Commands:commands}
 }
 
-func FormQuestBotContext(conf c.Configuration, qname string, cs c.ConfigStorage, qs *QuestStorage, db *db.MainDb) *m.BotContext {
+func FormQuestBotContext(conf c.Configuration, qname string, qs *QuestStorage, db *db.MainDb) *m.BotContext {
 	result := m.BotContext{}
 	qconf, ok := conf.Quests[qname]
 	if !ok {
@@ -328,7 +328,6 @@ func FormQuestBotContext(conf c.Configuration, qname string, cs c.ConfigStorage,
 		"":QuestMessageProcessor{Storage:qs, Config:qconf},
 	}
 
-	result.CommandsStorage = cs
 	notifier := n.NewNotifier(conf.Main.CallbackAddr, qconf.Key, db)
 	additionalNotifier := n.NewNotifier(conf.Main.CallbackAddr, qconf.AdditionalKey, db)
 	go Run(qconf, qs, notifier, additionalNotifier)

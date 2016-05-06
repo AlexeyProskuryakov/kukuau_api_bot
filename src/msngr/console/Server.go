@@ -195,7 +195,7 @@ func Run(addr string, db *d.MainDb, qs *quests.QuestStorage, vdh *voting.VotingD
 			Id string `json:"id"`
 		}
 		pg_conf := cfg.Main.PGDatabase
-		ph, err := NewProfileDbHandler(pg_conf.ConnString)
+		ph, err := NewProfileDbHandler(pg_conf.ConnString, cfg.Main.ConfigDatabase)
 		if err != nil {
 			panic(err)
 		}
@@ -204,11 +204,13 @@ func Run(addr string, db *d.MainDb, qs *quests.QuestStorage, vdh *voting.VotingD
 			render.HTML(200, "profile", map[string]interface{}{})
 		})
 		r.Get("/all", func(render render.Render) {
+			log.Printf("CS start querying for all profiles...")
 			profiles, err := ph.GetAllProfiles()
 			if err != nil {
 				log.Printf("CS Error at getting all profiles: %v", err)
 				render.JSON(500, map[string]interface{}{"success":false, "error":err})
 			}
+			log.Printf("CS found %v profiles.", len(profiles))
 			render.JSON(200, map[string]interface{}{
 				"success":true,
 				"profiles":profiles,
@@ -377,16 +379,6 @@ func Run(addr string, db *d.MainDb, qs *quests.QuestStorage, vdh *voting.VotingD
 
 			render.JSON(200, map[string]interface{}{"success":true, "url":file_url})
 		})
-		r.Get("/roles/:profile_id", func(render render.Render, params martini.Params, req *http.Request) {
-			profile_id := params["profile_id"]
-			roles, err := ph.GetProfileRoles(profile_id)
-			if err != nil {
-				log.Printf("CS Error getting profile roles")
-				render.JSON(500, map[string]interface{}{"error":err, "success":false})
-				return
-			}
-			render.JSON(200, map[string]interface{}{"success":true, "roles":roles})
-		})
 		r.Get("/employee/:phone", func(render render.Render, params martini.Params, req *http.Request) {
 			phone := params["phone"]
 			employee, err := ph.GetEmployeeByPhone(phone)
@@ -398,6 +390,7 @@ func Run(addr string, db *d.MainDb, qs *quests.QuestStorage, vdh *voting.VotingD
 			render.JSON(200, map[string]interface{}{"success":true, "employee":employee})
 		})
 		r.Get("/all_groups", func(ren render.Render) {
+			log.Printf("CS start querying for all groups")
 			groups, err := ph.GetAllGroups()
 			if err != nil {
 				log.Printf("CS error at groups retrieve: %v", err)
@@ -409,6 +402,7 @@ func Run(addr string, db *d.MainDb, qs *quests.QuestStorage, vdh *voting.VotingD
 		})
 
 		r.Get("/all_features", func(ren render.Render) {
+			log.Printf("CS start querying for all features")
 			features, err := ph.GetAllFeatures()
 			if err != nil {
 				log.Printf("CS error at features retrieve: %v", err)
@@ -505,6 +499,7 @@ func Run(addr string, db *d.MainDb, qs *quests.QuestStorage, vdh *voting.VotingD
 				render.JSON(500, map[string]interface{}{"error":err})
 				return
 			}
+			var messageSID string
 			if message.From != "" && message.To != "" && message.Body != "" {
 				if message.To == ALL {
 					peoples, _ := db.Users.GetBy(bson.M{})
@@ -518,9 +513,10 @@ func Run(addr string, db *d.MainDb, qs *quests.QuestStorage, vdh *voting.VotingD
 					user, _ := db.Users.GetUserById(message.To)
 					if user != nil {
 						db.Messages.SetMessagesRead(user.UserId)
-						go ntf.NotifyText(message.To, message.Body)
+						_, resultMessage, _ := ntf.NotifyText(message.To, message.Body)
+						resultMessage, _ = db.Messages.GetMessageByMessageId(resultMessage.MessageID)
+						messageSID = resultMessage.SID
 					}
-
 				}
 				if err != nil {
 					render.JSON(500, map[string]interface{}{"error":err})
@@ -528,7 +524,7 @@ func Run(addr string, db *d.MainDb, qs *quests.QuestStorage, vdh *voting.VotingD
 			} else {
 				render.Redirect("/chat")
 			}
-			render.JSON(200, map[string]interface{}{"ok":true, "message":d.NewMessageForWeb(message.From, message.To, message.Body)})
+			render.JSON(200, map[string]interface{}{"ok":true, "message":d.NewMessageForWeb(messageSID, message.From, message.To, message.Body)})
 		})
 
 		r.Post("/messages_read", func(render render.Render, req *http.Request) {
@@ -628,7 +624,7 @@ func Run(addr string, db *d.MainDb, qs *quests.QuestStorage, vdh *voting.VotingD
 					if contact.NewMessagesCount > 0 {
 						old_contacts = append(old_contacts, contact)
 					}
-				}else {
+				} else {
 					new_contacts = append(new_contacts, contact)
 				}
 			}

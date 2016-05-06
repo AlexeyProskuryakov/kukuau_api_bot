@@ -3,36 +3,40 @@ package chat
 import (
 	"msngr/db"
 	"time"
-	"gopkg.in/mgo.v2/bson"
 	"log"
 	n "msngr/notify"
-	"msngr/configuration"
 )
 
-func Watch(messageStore *db.MessageHandler, ntf *n.Notifier, config configuration.ChatConfig) {
+func WatchNotAnsweredMessages(mainStore *db.MainDb, configStorage *db.ConfigurationStorage, ntfAddress string) {
 	for {
-		froms := map[string]bool{}
-		timeStampLess := time.Now().Add(-(time.Duration(config.AutoAnswer.After) * time.Minute)).Unix()
-		//log.Printf("CW will get not answered messages to %v, and with time stamp less than: %v", config.CompanyId, timeStampLess)
-		messages, err := messageStore.GetMessages(bson.M{
-			"to":config.CompanyId,
-			"not_answered":1,
-			"unread":1,
-			"time_stamp":bson.M{
-				"$lte": timeStampLess,
-			}})
-
+		configs, err := configStorage.GetAllChatsConfig()
+		//log.Printf("WNAM found %v configs", len(configs))
 		if err != nil {
-			log.Printf("CW ERROR %v", err)
+			log.Printf("WNAM ERROR when get chat config %v", err)
+			time.Sleep(10 * time.Second)
+			continue
 		}
-		for _, message := range messages {
-			if _, ok := froms[message.From]; !ok {
-				ntf.NotifyText(message.From, config.AutoAnswer.Text)
-				messageStore.SetMessagesAnswered(message.From, config.CompanyId, "bot")
-				froms[message.From] = true
+		for _, config := range configs {
+			notifier := n.NewNotifier(ntfAddress, config.Key, mainStore)
+			for _, autoAnswerCfg := range config.AutoAnswers {
+				if autoAnswerCfg.After != 0 {
+					messages, err := mainStore.Messages.GetMessagesForAutoAnswer(config.CompanyId, autoAnswerCfg.After)
+					if err != nil {
+						log.Printf("CW ERROR AT REtrieving messages %v", err)
+						continue
+					}
+					froms := map[string]bool{}
+					for _, message := range messages {
+						if _, ok := froms[message.From]; !ok {
+							notifier.NotifyText(message.From, autoAnswerCfg.Text)
+							mainStore.Messages.SetMessagesAutoAnswered(message.From, config.CompanyId, autoAnswerCfg.After)
+							froms[message.From] = true
+						}
+					}
+				}
 			}
 		}
-		//log.Printf("CW was process %v messages", len(messages))
+
 		time.Sleep(10 * time.Second)
 	}
 }

@@ -7,6 +7,8 @@ import (
 	"strings"
 	"log"
 	"reflect"
+	"msngr/configuration"
+	"msngr/db"
 )
 
 const MAX_OPEN_CONNECTIONS = 10
@@ -75,6 +77,22 @@ func (pcl ProfileContactLink) String() string {
 	)
 }
 
+type ProfileBotConfig struct {
+	Id            string `json:"id"`
+	Answers       []configuration.TimedAnswer `json:"answers"`
+	Notifications []configuration.TimedAnswer `json:"notifications"`
+	Information   string `json:"information"`
+}
+
+func (pbc ProfileBotConfig) String() string {
+	return fmt.Sprintf("\n\t\tAnswers: %+v\n\t\tNotifications: %+v\n\t\tInformation: %+v", pbc.Answers, pbc.Notifications, pbc.Information)
+}
+
+func NewProfileBotConfig(cfg *configuration.ChatConfig) ProfileBotConfig {
+	result := ProfileBotConfig{Answers:cfg.AutoAnswers, Notifications:cfg.Notifications, Information:cfg.Information, Id:cfg.CompanyId}
+	return result
+}
+
 type Profile struct {
 	UserName         string `json:"id"`
 	ImageURL         string `json:"image_url"`
@@ -88,14 +106,15 @@ type Profile struct {
 	Employees        []ProfileEmployee `json:"employees"`
 	Enable           bool `json:"enable"`
 	Public           bool `json:"public"`
+	BotConfig        ProfileBotConfig `json:"botconfig"`
 }
 
 func (p *Profile) Equal(p1 *Profile) bool {
 	return reflect.DeepEqual(p, p1)
 }
 func (p Profile) String() string {
-	return fmt.Sprintf("\nPROFILE------------------\n: %v [%v] enable: %v, public: %v \nimg: %v\ndescriptions: %v %v \ncontacts: %+v \ngroups: %+v \nallowed phones: %+v \nfeatures: %+v\nemployees: %+v\n----------------------\n",
-		p.Name, p.UserName, p.Enable, p.Public, p.ImageURL, p.ShortDescription, p.TextDescription, p.Contacts, p.Groups, p.AllowedPhones, p.Features, p.Employees,
+	return fmt.Sprintf("\nPROFILE------------------\n: %v [%v] enable: %v, public: %v \nimg: %v\ndescriptions: %v %v \ncontacts: %+v \ngroups: %+v \nallowed phones: %+v \nfeatures: %+v\nemployees: %+v\nbot config:%+v\n----------------------\n",
+		p.Name, p.UserName, p.Enable, p.Public, p.ImageURL, p.ShortDescription, p.TextDescription, p.Contacts, p.Groups, p.AllowedPhones, p.Features, p.Employees, p.BotConfig,
 	)
 }
 
@@ -118,7 +137,8 @@ func NewProfileFromRow(row *sql.Rows) Profile {
 }
 
 type ProfileDbHandler struct {
-	db *sql.DB
+	db             *sql.DB
+	botConfigStore *db.ConfigurationStorage
 }
 
 func (ph *ProfileDbHandler) GetProfileAllowedPhones(userName string) ([]ProfileAllowedPhone, error) {
@@ -128,6 +148,7 @@ func (ph *ProfileDbHandler) GetProfileAllowedPhones(userName string) ([]ProfileA
 		log.Printf("P ERROR at query profile [%v] allowed phones %v", userName, err)
 		return result, err
 	}
+	defer phonesRows.Close()
 	for phonesRows.Next() {
 		var pId int64
 		var number string
@@ -190,17 +211,32 @@ func (ph *ProfileDbHandler)FillProfile(profile *Profile) error {
 		log.Printf("P ERROR profile %v error fill employees", profile.UserName)
 	}
 	profile.Employees = employees
+
+	config, err := ph.botConfigStore.GetChatConfig(profile.UserName)
+	if err != nil {
+		log.Printf("P ERROR at getting chat config %v for profile %v", err, profile.UserName)
+	}
+	if config != nil {
+		profile.BotConfig = NewProfileBotConfig(config)
+	} else {
+		profile.BotConfig = ProfileBotConfig{Answers:[]configuration.TimedAnswer{}, Notifications:[]configuration.TimedAnswer{}}
+		err = ph.botConfigStore.SetChatConfig(configuration.ChatConfig{CompanyId:profile.UserName}, false)
+		if err != nil {
+			log.Printf("P ERROR at storing empty new chat config")
+		}
+	}
+
 	return nil
 }
 
-func NewProfileDbHandler(connectionString string) (*ProfileDbHandler, error) {
+func NewProfileDbHandler(connectionString string, configDbCredentials configuration.MongoDbConfig) (*ProfileDbHandler, error) {
 	pg, err := sql.Open("postgres", connectionString)
 	if err != nil {
 		log.Printf("CS Error at connect to db [%v]: %v", connectionString, err)
 		return nil, err
 	}
 	pg.SetMaxOpenConns(MAX_OPEN_CONNECTIONS)
-	ph := &ProfileDbHandler{db:pg}
+	ph := &ProfileDbHandler{db:pg, botConfigStore:db.NewConfigurationStorage(configDbCredentials)}
 	return ph, nil
 }
 
@@ -217,6 +253,7 @@ func (ph *ProfileDbHandler) GetProfileContacts(userName string) ([]ProfileContac
 		log.Printf("P ERROR at query profile [%v] contacts %v", userName, err)
 		return contacts, err
 	}
+	defer contactRows.Close()
 	for contactRows.Next() {
 		var cId int64
 		var cOrd int
@@ -245,11 +282,11 @@ func (ph *ProfileDbHandler) GetProfileContacts(userName string) ([]ProfileContac
 func (ph *ProfileDbHandler) GetAllProfiles() ([]Profile, error) {
 	profiles := []Profile{}
 	profileRows, err := ph.db.Query("SELECT p.username, p.short_text, p.long_text, i.path, p.name, p.enable, p.public FROM profile p INNER JOIN profile_icons i ON p.username = i.username")
-	defer profileRows.Close()
 	if err != nil {
 		log.Printf("P ERROR at query profiles: %v", err)
 		return profiles, err
 	}
+	defer profileRows.Close()
 	for profileRows.Next() {
 		profile := NewProfileFromRow(profileRows)
 		ph.FillProfile(&profile)
@@ -260,11 +297,11 @@ func (ph *ProfileDbHandler) GetAllProfiles() ([]Profile, error) {
 
 func (ph *ProfileDbHandler) GetProfile(username string) (*Profile, error) {
 	profileRow, err := ph.db.Query("SELECT p.username, p.short_text, p.long_text, i.path, p.name, p.enable, p.public FROM profile p INNER JOIN profile_icons i ON p.username = i.username WHERE p.username = $1", username)
-	defer profileRow.Close()
 	if err != nil {
 		log.Printf("P ERROR at query profiles: %v", err)
 		return nil, err
 	}
+	defer profileRow.Close()
 	if profileRow.Next() {
 		profile := NewProfileFromRow(profileRow)
 		ph.FillProfile(&profile)
@@ -321,6 +358,8 @@ func (ph *ProfileDbHandler) InsertNewProfile(p *Profile) (*Profile, error) {
 	for _, employee := range p.Employees {
 		ph.AddEmployee(p.UserName, &employee)
 	}
+	//botconfig
+	ph.botConfigStore.SetChatConfig(configuration.ChatConfig{CompanyId:p.UserName, AutoAnswers:p.BotConfig.Answers, Notifications:p.BotConfig.Notifications, Information:p.BotConfig.Information}, true)
 	return p, err
 }
 
@@ -335,10 +374,11 @@ func (ph *ProfileDbHandler) BindGroupToProfile(userName string, group *ProfileGr
 }
 func (ph *ProfileDbHandler) UnbindGroupsFromProfile(userName string) error {
 	stmt, err := ph.db.Prepare("DELETE FROM profile_groups WHERE username=$1")
-	defer stmt.Close()
 	if err != nil {
+		log.Printf("P ERROR at oreoare unbind group %v", err)
 		return err
 	}
+	defer stmt.Close()
 	r, err := stmt.Exec(userName)
 	if err != nil {
 		return err
@@ -384,11 +424,11 @@ func (ph *ProfileDbHandler) AddGroupToProfile(userName string, group *ProfileGro
 func (ph *ProfileDbHandler) GetProfileGroups(userName string) ([]ProfileGroup, error) {
 	result := []ProfileGroup{}
 	row, err := ph.db.Query("select g.id, g.name, g.descr from groups g inner join profile_groups pg on pg.group_id = g.id where pg.username=$1", userName)
-	defer row.Close()
 	if err != nil {
 		log.Printf("P ERROR at get profiles group for %v: %v", userName, err)
 		return result, err
 	}
+	defer row.Close()
 	for row.Next() {
 		var gId int64
 		var name, descr sql.NullString
@@ -404,11 +444,11 @@ func (ph *ProfileDbHandler) GetProfileGroups(userName string) ([]ProfileGroup, e
 func (ph *ProfileDbHandler) GetAllGroups() ([]ProfileGroup, error) {
 	result := []ProfileGroup{}
 	row, err := ph.db.Query("select g.id, g.name, g.descr from groups g ")
-	defer row.Close()
 	if err != nil {
 		log.Printf("P ERROR at get all groups %v", err)
 		return result, err
 	}
+	defer row.Close()
 	for row.Next() {
 		var gId int64
 		var name, descr sql.NullString
@@ -448,11 +488,11 @@ func (ph *ProfileDbHandler) AddContactToProfile(userName string, contact *Profil
 }
 func (ph *ProfileDbHandler) UpsertContact(userName string, newContact *ProfileContact) error {
 	stmt, err := ph.db.Prepare("UPDATE profile_contacts SET address=$1, lat=$2, lon=$3, descr=$4, ord=$5 WHERE id=$6")
-	defer stmt.Close()
 	if err != nil {
 		log.Printf("P ERROR at prepare update for change profile contact %v", err)
 		return err
 	}
+	defer stmt.Close()
 	upd_res, err := stmt.Exec(newContact.Address, newContact.Lat, newContact.Lon, newContact.Description, newContact.OrderNumber, newContact.ContactId)
 	if err != nil {
 		log.Printf("P ERROR at execute update for change profile contact %v", err)
@@ -516,11 +556,11 @@ func (ph *ProfileDbHandler) InsertContactLink(link *ProfileContactLink, contactI
 }
 func (ph *ProfileDbHandler) UpdateContactLink(newLink ProfileContactLink) (int64, error) {
 	stmt, err := ph.db.Prepare("UPDATE contact_links SET ctype=$1, cvalue=$2, descr=$3, ord=$4 WHERE id=$5")
-	defer stmt.Close()
 	if err != nil {
 		log.Printf("P ERROR at prepare update for change profile contact link %v", err)
 		return -1, err
 	}
+	defer stmt.Close()
 	upd_res, err := stmt.Exec(newLink.Type, newLink.Value, newLink.Description, newLink.OrderNumber, newLink.LinkId)
 	if err != nil {
 		log.Printf("P ERROR at execute update for change profile contact %v", err)
@@ -543,11 +583,11 @@ func (ph *ProfileDbHandler) DeleteOneContactLink(linkId int64) error {
 func (ph *ProfileDbHandler) GetContactLinks(contactId int64) ([]ProfileContactLink, error) {
 	links := []ProfileContactLink{}
 	linkRows, err := ph.db.Query("SELECT l.id, l.ctype, l.cvalue, l.descr, l.ord FROM contact_links l WHERE l.contact_id = $1 ORDER BY l.ord ASC", contactId)
-	defer linkRows.Close()
 	if err != nil {
 		log.Printf("P ERROR at query to contact links [%+v] err: %v", contactId, err)
 		return links, err
 	}
+	defer linkRows.Close()
 	for linkRows.Next() {
 		var lType, lValue string
 		var lId int64
@@ -569,10 +609,11 @@ func (ph *ProfileDbHandler) GetContactLinks(contactId int64) ([]ProfileContactLi
 }
 func (ph *ProfileDbHandler)updateProfileField(tableName, fieldName, userName string, newValue interface{}) {
 	stmt, err := ph.db.Prepare(fmt.Sprintf("UPDATE %v SET %v=$1 WHERE username=$2", tableName, fieldName))
-	defer stmt.Close()
 	if err != nil {
 		log.Printf("Error at prepare update for change profile [%v] %v %v", userName, fieldName, err)
+		return
 	}
+	defer stmt.Close()
 	_, err = stmt.Exec(newValue, userName)
 	if err != nil {
 		log.Printf("Error at execute update for change profile [%v] %v %v", userName, fieldName, err)
@@ -580,10 +621,11 @@ func (ph *ProfileDbHandler)updateProfileField(tableName, fieldName, userName str
 }
 func (ph *ProfileDbHandler)deleteFromTable(tableName, nameId string, deleteId interface{}) error {
 	stmt, err := ph.db.Prepare(fmt.Sprintf("DELETE FROM %v WHERE %v=$1", tableName, nameId))
-	defer stmt.Close()
 	if err != nil {
+		log.Printf("P ERROR delete from %v WHERE %v=%v", tableName, nameId, deleteId)
 		return err
 	}
+	defer stmt.Close()
 	_, err = stmt.Exec(deleteId)
 	if err != nil {
 		return err
@@ -633,6 +675,8 @@ func (ph *ProfileDbHandler) DeleteProfile(userName string) error {
 	if err != nil {
 		log.Printf("ph del at profile %v", err)
 	}
+
+	//bot config ??
 	return err
 }
 
@@ -665,18 +709,20 @@ func (ph *ProfileDbHandler)UpdateProfile(newProfile *Profile) error {
 	if savedProfile.Name != newProfile.Name {
 		log.Printf("Difference in name")
 		stmt, err := ph.db.Prepare(fmt.Sprintf("UPDATE vcard SET vcard='<vCard xmlns=''vcard-temp''><FN>%v</FN></vCard>' WHERE username=$1", newProfile.Name))
-		defer stmt.Close()
 		if err != nil {
 			log.Printf("Error at prepare update for change profile [%v] public %v", newProfile.UserName, err)
+		} else {
+			defer stmt.Close()
 		}
 		_, err = stmt.Exec(newProfile.UserName)
 		if err != nil {
 			log.Printf("Error at execute update for change profile [%v] public %v", newProfile.UserName, err)
 		}
 		stmt_s, err := ph.db.Prepare("UPDATE vcard_search SET fn=$1, lfn=$2 WHERE username=$3")
-		defer stmt_s.Close()
 		if err != nil {
 			log.Printf("Error at prepare update for change profile [%v] public %v", newProfile.UserName, err)
+		} else {
+			defer stmt_s.Close()
 		}
 
 		_, err = stmt_s.Exec(newProfile.Name, strings.ToLower(newProfile.Name), newProfile.UserName)
@@ -757,6 +803,13 @@ func (ph *ProfileDbHandler)UpdateProfile(newProfile *Profile) error {
 			ph.AddEmployee(newProfile.UserName, &employee)
 		}
 	}
+	//bot configs
+	if !reflect.DeepEqual(savedProfile.BotConfig, newProfile.BotConfig) {
+		log.Printf("Difference in bot config")
+		ph.botConfigStore.UpdateNotifications(newProfile.UserName, newProfile.BotConfig.Notifications)
+		ph.botConfigStore.UpdateAutoAnswers(newProfile.UserName, newProfile.BotConfig.Answers)
+		ph.botConfigStore.UpdateInformation(newProfile.UserName, newProfile.BotConfig.Information)
+	}
 
 	return nil
 }
@@ -764,11 +817,11 @@ func (ph *ProfileDbHandler)UpdateProfile(newProfile *Profile) error {
 func (ph *ProfileDbHandler) GetAllFeatures() ([]ProfileFeature, error) {
 	result := []ProfileFeature{}
 	row, err := ph.db.Query("SELECT f.id, f.name, f.var FROM features f")
-	defer row.Close()
 	if err != nil {
 		log.Printf("P ERROR at getting all features")
 		return result, err
 	}
+	defer row.Close()
 	for row.Next() {
 		var fId int64
 		var name, f_var sql.NullString
@@ -792,11 +845,11 @@ func (ph *ProfileDbHandler) AddFeatureToProfile(userName string, feature *Profil
 }
 func (ph *ProfileDbHandler) RemoveFeatureFromProfile(userName string, feature *ProfileFeature) error {
 	stmt, err := ph.db.Prepare("DELETE FROM profile_features WHERE username=$1 AND feature_id=$2")
-	defer stmt.Close()
 	if err != nil {
 		log.Printf("P ERROR when prepate remove %v feature from profile %v is: %v", feature, userName, err)
 		return err
 	}
+	defer stmt.Close()
 	r, err := stmt.Exec(userName, feature.Id)
 	if err != nil {
 		log.Printf("P ERROR when execute remove %v features from profile %v is: %v", feature, userName, err)
@@ -807,11 +860,11 @@ func (ph *ProfileDbHandler) RemoveFeatureFromProfile(userName string, feature *P
 }
 func (ph *ProfileDbHandler) RemoveAllFeaturesFromProfile(userName string) error {
 	stmt, err := ph.db.Prepare("DELETE FROM profile_features WHERE username=$1")
-	defer stmt.Close()
 	if err != nil {
 		log.Printf("P ERROR when remove all features from profile %v is: %v", userName, err)
 		return err
 	}
+	defer stmt.Close()
 	r, err := stmt.Exec(userName, )
 	if err != nil {
 		return err
@@ -822,11 +875,11 @@ func (ph *ProfileDbHandler) RemoveAllFeaturesFromProfile(userName string) error 
 func (ph *ProfileDbHandler) GetProfileFeatures(userName string) ([]ProfileFeature, error) {
 	result := []ProfileFeature{}
 	row, err := ph.db.Query("select f.id, f.name, f.var from features f inner join profile_features pf on pf.feature_id = f.id where pf.username=$1", userName)
-	defer row.Close()
 	if err != nil {
 		log.Printf("P ERROR at getting [%v] features, %v", userName, err)
 		return result, err
 	}
+	defer row.Close()
 	for row.Next() {
 		var fId int64
 		var name, f_var sql.NullString
@@ -836,26 +889,6 @@ func (ph *ProfileDbHandler) GetProfileFeatures(userName string) ([]ProfileFeatur
 			continue
 		}
 		result = append(result, ProfileFeature{Id:fId, Name:name.String, Var:f_var.String})
-	}
-	return result, nil
-}
-
-func (ph *ProfileDbHandler) GetProfileRoles(userName string) ([]ProfileRole, error) {
-	result := []ProfileRole{}
-	row, err := ph.db.Query("SELECT DISTINCT r.id, r.name FROM users_roles r WHERE username = $1 ", userName)
-	if err != nil {
-		log.Printf("P ERROR when querying for roles %v", err)
-		return result, err
-	}
-	defer row.Close()
-	for row.Next() {
-		var id int64
-		var name sql.NullString
-		err = row.Scan(&id, &name)
-		if err != nil {
-			log.Printf("P ERROR at scan role")
-		}
-		result = append(result, ProfileRole{RoleId:id, RoleName:name.String})
 	}
 	return result, nil
 }
@@ -885,32 +918,9 @@ func (ph *ProfileDbHandler) GetEmployeeByPhone(phone string) (*ProfileEmployee, 
 }
 
 func (ph *ProfileDbHandler) AddEmployee(pUserName string, employee *ProfileEmployee) (int64, error) {
-	row, err := ph.db.Query("SELECT r.id FROM users_roles r WHERE username = $1 AND name = $2", pUserName, employee.RoleName)
-	if err != nil {
-		log.Printf("P ERROR when querying check for role %v", err)
-		return -1, err
-	}
-	defer row.Close()
-	isRoleExists := false
-	var roleId int64
-	for row.Next() {
-		err = row.Scan(&roleId)
-		if err != nil {
-			log.Printf("P ERROR at scan for check role exist %v", err)
-		}
-		employee.RoleId = roleId
-		isRoleExists = true
-	}
-	if !isRoleExists {
-		err = ph.db.QueryRow("INSERT INTO users_roles (username, name) values ($1, $2) RETURNING id;", pUserName, employee.RoleName).Scan(&roleId)
-		if err != nil {
-			log.Printf("P ERROR at querying to insert new role")
-		}
-		employee.RoleId = roleId
-	}
 	var linkId int64
-	err = ph.db.QueryRow("INSERT INTO users_links (fromusr, tousr, role_id) values ($1, $2, $3) RETURNING id;", pUserName, employee.UserName, roleId).Scan(&linkId)
-	if err != nil{
+	err := ph.db.QueryRow("INSERT INTO users_links (fromusr, tousr) values ($1, $2) RETURNING id;", pUserName, employee.UserName).Scan(&linkId)
+	if err != nil {
 		log.Printf("P ERROR at insert in user_links %v", err)
 		return -1, err
 	}
@@ -936,28 +946,26 @@ func (ph *ProfileDbHandler) RemoveAllEmployees(pUserName string) error {
 
 func (ph *ProfileDbHandler) GetProfileEmployees(pUserName string) ([]ProfileEmployee, error) {
 	result := []ProfileEmployee{}
-	row, err := ph.db.Query("SELECT l.id, l.tousr, l.role_id, r.name, p.phonenumber, v.fn FROM users_links l JOIN users_roles r ON r.id=l.role_id JOIN profile p ON l.tousr = p.username JOIN vcard_search v ON v.username = l.tousr WHERE l.fromusr = $1", pUserName)
+	row, err := ph.db.Query("SELECT l.id, l.tousr, p.phonenumber, v.fn FROM users_links l JOIN profile p ON l.tousr = p.username JOIN vcard_search v ON v.username = l.tousr WHERE l.fromusr = $1", pUserName)
 	if err != nil {
 		log.Printf("P EEROR when querying profile emplyees %v", err)
 		return result, err
 	}
 	defer row.Close()
 	for row.Next() {
-		var linkId, roleId int64
-		var eUserName, roleName, phone, eName sql.NullString
-		err := row.Scan(&linkId, &eUserName, &roleId, &roleName, &phone, &eName)
+		var linkId int64
+		var eUserName, phone, eName sql.NullString
+		err := row.Scan(&linkId, &eUserName, &phone, &eName)
 		if err != nil {
 			log.Printf("P ERROR at scan profile emplyees %v", err)
 			continue
 		}
 		result = append(result, ProfileEmployee{
-			ProfileRole:ProfileRole{RoleId:roleId, RoleName:roleName.String},
 			UserName:eUserName.String,
 			LinkId:linkId,
 			Phone:phone.String,
 			Name:eName.String,
 		})
 	}
-	log.Printf("P Emloyees of %v is:\n%+v", pUserName, result)
 	return result, nil
 }

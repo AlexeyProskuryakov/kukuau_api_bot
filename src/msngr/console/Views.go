@@ -8,7 +8,6 @@ import (
 	"msngr/structs"
 	"encoding/json"
 
-	cfg "msngr/configuration"
 	"github.com/go-martini/martini"
 	"github.com/martini-contrib/auth"
 	"regexp"
@@ -23,7 +22,7 @@ import (
 	u "msngr/utils"
 )
 
-func ConfigurationView(request *http.Request, render render.Render, cs cfg.ConfigurationStorage) {
+func ConfigurationView(request *http.Request, render render.Render, cs d.CommandsStorage) {
 	input, err := ioutil.ReadAll(request.Body)
 	defer request.Body.Close()
 	if err != nil {

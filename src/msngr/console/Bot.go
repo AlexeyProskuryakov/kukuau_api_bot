@@ -89,7 +89,7 @@ func (cmp ConsoleMessageProcessor) ProcessMessage(in *s.InPkg) *s.MessageResult 
 	}
 }
 
-func FormConsoleBotContext(conf c.Configuration, db_handler *d.MainDb, cs c.ConfigStorage) *m.BotContext {
+func FormConsoleBotContext(conf c.Configuration, db_handler *d.MainDb) *m.BotContext {
 	result := m.BotContext{}
 	result.RequestProcessors = map[string]s.RequestCommandProcessor{
 		"commands":&ConsoleRequestProcessor{},

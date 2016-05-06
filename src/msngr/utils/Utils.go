@@ -23,7 +23,7 @@ func GenId() string {
 	r := rand.New(s)
 	return fmt.Sprintf("%d", r.Int63())
 }
-func GenIntId() int64{
+func GenIntId() int64 {
 	t := time.Now().UnixNano()
 	s := rand.NewSource(t)
 	r := rand.New(s)
@@ -76,7 +76,7 @@ func FoundFile(fname string) *string {
 		if prev_dir == dir {
 			log.Printf("Can not found file: %v", fname)
 			return nil
-		}else {
+		} else {
 			prev_dir = dir
 		}
 		log.Printf("now dir is: %v", dir)
@@ -235,4 +235,42 @@ func InterfaceSlice(slice interface{}) []interface{} {
 	}
 
 	return ret
+}
+
+func GetStringUpdates(objOld, objNew interface{}, tag string, notConsiderNils bool) (map[string]string, error) {
+	result := map[string]string{}
+	vOld := reflect.ValueOf(objOld)
+	vNew := reflect.ValueOf(objNew)
+	if vOld.Kind() == reflect.Ptr {
+		vOld = vOld.Elem()
+	}
+	if vNew.Kind() == reflect.Ptr {
+		vNew = vNew.Elem()
+	}
+	// we only accept structs
+	if vNew.Kind() != reflect.Struct || vNew.Kind() != reflect.Struct {
+		return result, fmt.Errorf("ToMap only accepts structs; got %T %T", vNew, vOld)
+	}
+	typNew := vNew.Type()
+	typOld := vOld.Type()
+	if !reflect.DeepEqual(typNew, typOld) {
+		return result, fmt.Errorf("Can not getting updates of differen structs")
+	}
+	for i := 0; i < typOld.NumField(); i++ {
+		// gets us a StructField
+		fiOld := typOld.Field(i)
+		log.Printf("f tags: %+v", fiOld.Tag.Get("bson"))
+		if tagv := fiOld.Tag.Get(tag); tagv != "" {
+			if vNew.Field(i).Kind() == reflect.String {
+				newFieldValue := vNew.Field(i).String()
+				if vOld.Field(i).String() != newFieldValue {
+					if notConsiderNils && newFieldValue == "" {
+						continue
+					}
+					result[tagv] = newFieldValue
+				}
+			}
+		}
+	}
+	return result, nil
 }

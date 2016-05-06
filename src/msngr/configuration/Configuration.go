@@ -115,37 +115,36 @@ type ConsoleConfig struct {
 	ProfileImgServer string `json:"profile_img_server"`
 }
 
-type ChatConfig struct {
-	Name         string `json:"name"`
-	CompanyId    string `json:"id"`
-	UrlSalt      string `json:"url_salt"`
-	Information  string `json:"information"`
-	AutoAnswer   struct {
-			     Enable bool `json:"enable"`
-			     After  int `json:"after_min"`
-			     Text   string `json:"text"`
-		     } `json:"auto_answer"`
+type TimedAnswer struct {
+	After int `json:"after_min" bson:"after"`
+	Text  string `json:"text" bson:"text"`
+}
 
-	Notification struct {
-			     Enable bool `json:"enable"`
-			     After  int `json:"after_min"`
-			     Text   string `json:"text"`
-		     } `json:"notification"`
-	BotAnswer    string `json:"bot_answer"`
-	Key          string `json:"key"`
-	User         string `json:"user"`
-	Password     string `json:"password"`
+type ChatConfig struct {
+	Name          string `json:"name" bson:"name"`
+	CompanyId     string `json:"id" bson:"company_id"`
+	UrlSalt       string `json:"url_salt" bson:"url_salt"`
+	Information   string `json:"information" bson:"information"`
+	AutoAnswers   []TimedAnswer `json:"auto_answers" bson:"auto_answers"`
+	Notifications []TimedAnswer `json:"notifications" bson:"notifications"`
+	Key           string `json:"key" bson:"key"`
+	User          string `json:"user" bson:"user"`
+	Password      string `json:"password" bson:"password"`
 }
 
 type CoffeeConfig struct {
 	Name        string `json:"name"`
 	DictUrl     string `json:"dict_url"`
-	Information string `json:"information"`
 	Bakes       map[string]string `json:"bakes"`
 	Drinks      map[string]string `json:"drinks"`
 	Additives   map[string]string `json:"additives"`
 	Volumes     []string `json:"volumes"`
 	Chat        ChatConfig `json:"chat"`
+}
+
+type MongoDbConfig  struct {
+	ConnString string `json:"connection_string"`
+	Name       string `json:"name"`
 }
 
 type Configuration struct {
@@ -156,10 +155,8 @@ type Configuration struct {
 			LoggingFile         string `json:"log_file"`
 			GoogleKey           string `json:"google_key"`
 			ElasticConn         string `json:"elastic_conn"`
-			Database            struct {
-						    ConnString string `json:"connection_string"`
-						    Name       string `json:"name"`
-					    } `json:"database"`
+			Database            MongoDbConfig `json:"database"`
+			ConfigDatabase      MongoDbConfig `json:"config_database"`
 			PGDatabase          struct {
 						    ConnString string `json:"connection_string"`
 					    } `json:"pg_database"`

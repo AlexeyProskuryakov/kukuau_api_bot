@@ -7,7 +7,8 @@ Ext.define('Console.model.Profile', {
 	'short_description', 
 	'text_description', 
 	{ name: 'enable', type:"boolean"},
-	{ name: 'public', type:"boolean"}
+	{ name: 'public', type:"boolean"},
+	'botconfig'
 	],
 	associations: [{
 		type: 'hasMany',
@@ -31,6 +32,14 @@ Ext.define('Console.model.Profile', {
 		type:'hasMany',
 		model:'Console.model.Employee',
 		name:'employees'
+	},
+	{
+		type:'hasOne',
+		model:'Console.model.BotConfig',
+		//associatedModel:'Console.model.BotConfig',
+		name:'botconfig',
+		getterName:'getBotConfig',
+		setterName:'setBotConfig',
 	}
 	],
 	proxy: {

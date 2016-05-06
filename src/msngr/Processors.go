@@ -94,3 +94,29 @@ func NewSimpleInformationProcessor(information string) *InformationProcessor {
 func NewInformationProcessor(information string, cg CommandsGenerator) *InformationProcessor {
 	return &InformationProcessor{Information:information, F:cg}
 }
+
+
+type InformationProcessorUpdatable struct {
+	ConfigStore *db.ConfigurationStorage
+	Key string
+	F           CommandsGenerator
+}
+func (ip *InformationProcessorUpdatable) ProcessMessage(in *s.InPkg) *s.MessageResult {
+	cmds, err := ip.F(in)
+	if err != nil {
+		log.Printf("Inforamtion processor: ERROR at forming commands %v", err)
+		return &s.MessageResult{Type:"chat", Body:err.Error()}
+	}
+	information, err := ip.ConfigStore.GetInformation(ip.Key)
+	if err != nil {
+		log.Printf("Inforamtion processor: ERROR at getting information %v", err)
+		return &s.MessageResult{Type:"chat", Body:err.Error()}
+	}
+	result := s.MessageResult{Type:"chat", Body:*information, Commands:cmds}
+	return &result
+}
+
+func NewUpdatableInformationProcessor(confStore *db.ConfigurationStorage, cg CommandsGenerator, key string) *InformationProcessorUpdatable{
+	return &InformationProcessorUpdatable{ConfigStore:confStore, Key:key, F:cg}
+
+}

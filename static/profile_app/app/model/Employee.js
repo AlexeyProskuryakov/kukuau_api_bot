@@ -3,8 +3,8 @@ Ext.define("Console.model.Employee",{
 	idProperty:'user_name',
 	fields:[
 	'user_name',
-	'role_name',
-	'role_id',
+	// 'role_name',
+	// 'role_id',
 	'name',
 	'phone',
 	'link_id'

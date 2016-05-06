@@ -6,17 +6,21 @@ Ext.define('Console.view.Profile', {
     layout: 'fit',
     autoDestroy: true,
     maximizable : true,
-    autoScroll: true,
-    overflowY:'scroll',
     autoShow: false,
-    width: 650,
-    height: 750,
+    width: 800,
+    height: 600,
+    
+    // overflowY:'scroll',
+    // autoScroll: true,
+    // layout: 'fit',
 
     initComponent: function() {
         console.log("init profile");
         var me = this
         this.items = [{
             xtype: 'form',
+           layout:'accordion',
+            // autoScroll:true,
             items: [
             new Ext.form.FormPanel({
                 frame: true,
@@ -26,10 +30,6 @@ Ext.define('Console.view.Profile', {
                 collapsed: true,
                 itemId: "profile_image_wrapper",
                 layout: 'column',
-                defaults: {
-                    xtype: 'form',
-                    autoscroll  : true
-                },
                 fileUpload: true,
                 items: [{
                     xtype: 'image',
@@ -94,7 +94,6 @@ Ext.define('Console.view.Profile', {
                 collapsed: true,
                 defaults:{
                     xtype:"panel",
-                    autoscroll  : true
                 },
                 columns: [{
                     header: "Номер телефона",
@@ -152,7 +151,6 @@ Ext.define('Console.view.Profile', {
                     scope: this,
                 }]
             },
-
             {
                 xtype: "grid",
                 title: "Контакты",
@@ -172,7 +170,6 @@ Ext.define('Console.view.Profile', {
                     markDirty: false,
                     flex: 1, 
                     renderer:function(item, meta){
-                        console.log("render item",item, meta);
                         if (item == "") {
                             var result = "";
                             meta.record.links().each(function(r,i){
@@ -250,12 +247,8 @@ Ext.define('Console.view.Profile', {
                 store: 'EmployeesStore',
                 collapsible: true,
                 collapsed: true,
-                columns: [{
-                    header: "Роль",
-                    dataIndex: 'role_name',
-                    flex: 1
-
-                }, {
+                columns: [
+                {
                     header: "Имя",
                     dataIndex: 'name',
                     flex: 1
@@ -283,7 +276,94 @@ Ext.define('Console.view.Profile', {
                     scope: this,
                 }]
             },
-
+            {
+                xtype:'form',
+                title: "Настройка бота",
+                collapsible:true,
+                collapsed:true,
+                itemId:'profile_bot_config_wrapper',
+                items: [
+                {
+                    xtype: "grid",
+                    title: "Автоответы",
+                    collapsible: true,
+                    collapsed: true,
+                    itemId: "answers",
+                    store: 'TimedAnswersStore',
+                    columns: [{
+                        header: "Через (минуты)",
+                        dataIndex: 'after_min',
+                        width:200,
+                    }, {
+                        header: "Ответ",
+                        dataIndex: 'text',
+                        flex: 1
+                    }, {
+                        xtype: 'actioncolumn',
+                        header: 'Delete',
+                        width: 100,
+                        align: 'center',
+                        action: "delete_answer",
+                        items: [{
+                            icon: 'img/delete-icon.png',
+                            tooltip: 'Delete',
+                            scope: me
+                        }]
+                    }],
+                    buttons: [{
+                        text: "Добавить автоответ",
+                        action: "add_answer_start",
+                        scope: this,
+                    }]
+                }, {
+                    xtype: "grid",
+                    title: "Нотификации",
+                    itemId: "notifications",
+                    store: 'TimedAnswersStore',
+                    collapsible: true,
+                    collapsed: true,
+                    defaults:{
+                        xtype:"panel",
+                        autoscroll  : true
+                    },
+                    columns: [{
+                        header: "Через (минуты)",
+                        dataIndex: 'after_min',
+                        width:200,
+                    },
+                    {
+                        header: "Ответ",
+                        dataIndex: 'text',
+                        flex: 1
+                    },
+                    {
+                        xtype: 'actioncolumn',
+                        header: 'Delete',
+                        width: 100,
+                        align: 'center',
+                        action: "delete_notification",
+                        items: [{
+                            icon: 'img/delete-icon.png',
+                            tooltip: 'Delete',
+                            scope: me
+                        }]
+                    }],
+                    buttons: [{
+                        text: "Добавить нотификацию",
+                        action: "add_notification_start",
+                        scope: this,
+                    }]
+                },
+                {
+                    xtype: 'textareafield',
+                    fieldLabel: 'Информация',
+                    itemId:'information',
+                    dataIndex: 'information',
+                    width: 580,
+                    padding: 10,
+                } 
+                ]
+            }, 
             new Ext.form.FormPanel({
                 frame: true,
                 autoDestroy: true,
@@ -291,10 +371,11 @@ Ext.define('Console.view.Profile', {
                 collapsible: true,
                 collapsed: false,
                 itemId: "profile_main_information",
-                layout: 'column',
+                // layout: 'fit',
                 defaults: {
                     xtype: 'form',
                 },
+                // autoScroll:true,
                 items: [
                 {
                     xtype: 'checkbox',
@@ -327,7 +408,7 @@ Ext.define('Console.view.Profile', {
                     enableSourceEdit: false,
                     enableAlignments: false,
                     enableFont: false,
-                    height: 170,
+                    height: 100,
                     width:600,
                     grow: true,
                     fieldLabel: 'Слоган',
@@ -343,7 +424,7 @@ Ext.define('Console.view.Profile', {
                     enableLists: false,
                     enableSourceEdit: false,
                     enableAlignments: false,
-                    height: 170,
+                    height: 100,
                     width:600,
                     grow: true,
                     fieldLabel: 'Описание',

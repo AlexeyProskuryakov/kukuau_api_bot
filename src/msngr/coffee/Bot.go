@@ -43,7 +43,7 @@ func getCommands(coffeeHouseConfig *CoffeeHouseConfiguration, isFirst, isActive 
 						Type: "list-single",
 						Attributes: s.FieldAttribute{
 							Label:"объем",
-							Required: true,
+							Required: false,
 						},
 						Items:s.FormItems(coffeeHouseConfig.Volumes),
 					},
@@ -171,7 +171,7 @@ func getAdditionalFuncs(orderId int64, companyName, userName string) []db.Additi
 	return result
 }
 
-func FormBotCoffeeContext(config c.CoffeeConfig, store *db.MainDb, coffeeHouseConfiguration *CoffeeHouseConfiguration) *m.BotContext {
+func FormBotCoffeeContext(config c.CoffeeConfig, store *db.MainDb, coffeeHouseConfiguration *CoffeeHouseConfiguration, configStore *db.ConfigurationStorage) *m.BotContext {
 
 	commandsGenerator := func(in *s.InPkg) (*[]s.OutCommand, error) {
 		lastOrder, err := store.Orders.GetByOwnerLast(in.From, config.Name)
@@ -194,7 +194,7 @@ func FormBotCoffeeContext(config c.CoffeeConfig, store *db.MainDb, coffeeHouseCo
 	}
 	result.MessageProcessors = map[string]s.MessageCommandProcessor{
 		"":m.NewFuncTextBodyProcessor(store, commandsGenerator, config.Name, nil),
-		"information":m.NewInformationProcessor(config.Information, commandsGenerator),
+		"information":m.NewUpdatableInformationProcessor(configStore, commandsGenerator, config.Chat.CompanyId),
 		"order_bake":&OrderBakeProcessor{Storage:store, CompanyName:config.Name, CommandsFunc:commandsGenerator},
 		"order_drink":&OrderDrinkProcessor{Storage:store, CompanyName:config.Name, CommandsFunc:commandsGenerator},
 		"cancel":&CancelOrderProcessor{Storage:store, CompanyName:config.Name, CommandsFunc:commandsGenerator},
@@ -359,6 +359,8 @@ type CancelOrderProcessor struct {
 }
 
 func (cop *CancelOrderProcessor) ProcessMessage(in *s.InPkg) *s.MessageResult {
+	start := time.Now()
+
 	lastOrder, err := cop.Storage.Orders.GetByOwnerLast(in.From, cop.CompanyName)
 	if err != nil {
 		return m.DB_ERROR_RESULT
@@ -389,6 +391,10 @@ func (cop *CancelOrderProcessor) ProcessMessage(in *s.InPkg) *s.MessageResult {
 		if err != nil {
 			log.Printf("CB Error at forming commands %v", err)
 		}
+
+		end := time.Now()
+		log.Printf("Processing cancel order time is %v", end.UnixNano() - start.UnixNano())
+
 		return &s.MessageResult{Body:"Ваш заказ отменен!", Commands:cmds}
 	}
 	return &s.MessageResult{Body:"У вас нечего отменять."}

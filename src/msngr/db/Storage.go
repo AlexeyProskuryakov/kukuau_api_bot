@@ -10,8 +10,11 @@ import (
 	"gopkg.in/mgo.v2"
 	"gopkg.in/mgo.v2/bson"
 
-	"msngr/utils"
+	"reflect"
+
+	u "msngr/utils"
 	s "msngr/structs"
+	c "msngr/configuration"
 )
 
 const (
@@ -90,6 +93,10 @@ type AdditionalFuncElement struct {
 	Context map[string]interface{}
 }
 
+type NotificationElement struct {
+	After int `bson:"after"`
+}
+
 type MessageWrapper struct {
 	ID                bson.ObjectId `bson:"_id,omitempty"`
 	SID               string
@@ -106,20 +113,21 @@ type MessageWrapper struct {
 	MessageStatus     string `bson:"message_status"`
 	MessageCondition  string `bson:"message_condition"`
 	IsDeleted         bool `bson:"is_deleted"`
-	Attributes        []string `bson:"attributes"`
-	AdditionalData    []AdditionalDataElement `bson:"additional_data"`
-	AdditionalFuncs   []AdditionalFuncElement  `bson:"additional_funcs"`
-	RelatedOrderState string `bson:"related_order_state"`
-	NotificationSend  bool `bson:"notification_sent"`
-	IsNotification    bool `bson:"is_notification"`
+	Attributes        []string `bson:"attributes,omitempty"`
+	AdditionalData    []AdditionalDataElement `bson:"additional_data,omitempty"`
+	AdditionalFuncs   []AdditionalFuncElement  `bson:"additional_funcs,omitempty"`
+	RelatedOrderState string `bson:"related_order_state,omitempty"`
+	IsNotification    bool `bson:"is_notification,omitempty"`
+	AutoAnswers       []NotificationElement `bson:"auto_answers,omitempty"`
+	Notifications     []NotificationElement `bson:"notifications,omitempty"`
 }
 
 func (mw MessageWrapper) IsAttrPresent(attrName string) bool {
-	return utils.InS(attrName, mw.Attributes)
+	return u.InS(attrName, mw.Attributes)
 }
 
-func NewMessageForWeb(from, to, body string) *MessageWrapper {
-	result := MessageWrapper{From:from, To:to, Body:body, TimeFormatted:time.Now().Format(time.Stamp)}
+func NewMessageForWeb(sid, from, to, body string) *MessageWrapper {
+	result := MessageWrapper{From:from, To:to, Body:body, TimeFormatted:time.Now().Format(time.Stamp), SID:sid}
 	return &result
 }
 
@@ -291,7 +299,6 @@ func (odbh *MainDb) ensureIndexes() {
 		Key:[]string{"not_answered"},
 		Unique:false,
 	})
-
 	message_collection.EnsureIndex(mgo.Index{
 		Key:[]string{"unread"},
 		Unique:false,
@@ -303,9 +310,6 @@ func (odbh *MainDb) ensureIndexes() {
 	message_collection.EnsureIndex(mgo.Index{
 		Key:[]string{"message_id"},
 		Unique:true,
-	})
-	message_collection.EnsureIndex(mgo.Index{
-		Key:[]string{"message_condition"},
 	})
 
 	odbh.Users.Collection = users_collection
@@ -346,7 +350,7 @@ func (oh *orderHandler) GetById(order_id int64, source string) (*OrderWrapper, e
 
 func (oh *orderHandler) SetActive(order_id int64, source string, state bool) error {
 	if !oh.parent.Check() {
-		utils.After(oh.parent.Check, func() {
+		u.After(oh.parent.Check, func() {
 			oh.SetActive(order_id, source, state)
 		})
 		return nil
@@ -361,7 +365,7 @@ func (oh *orderHandler) SetActive(order_id int64, source string, state bool) err
 func (oh *orderHandler) SetState(order_id int64, source string, new_state int, order_data *OrderData) error {
 	if !oh.parent.Check() {
 		log.Printf("DB: can not set state for [%v] now... Will do it after.", order_id)
-		utils.After(oh.parent.Check, func() {
+		u.After(oh.parent.Check, func() {
 			oh.SetState(order_id, source, new_state, order_data)
 		})
 		return nil
@@ -386,7 +390,7 @@ func (oh *orderHandler) SetState(order_id int64, source string, new_state int, o
 
 func (oh *orderHandler) SetFeedback(for_whom string, for_state int, feedback string, source string) (*int64, error) {
 	if !oh.parent.Check() {
-		utils.After(oh.parent.Check, func() {
+		u.After(oh.parent.Check, func() {
 			oh.SetFeedback(for_whom, for_state, feedback, source)
 		})
 		return nil, nil
@@ -590,13 +594,13 @@ func (uh *UserHandler) SetUserPassword(username, password string) error {
 	}
 	tmp, _ := uh.GetUser(bson.M{"user_name": username})
 	if tmp == nil {
-		err := uh.Collection.Insert(&UserWrapper{UserId: username, UserName: username, Password: utils.PHash(password), LastUpdate: time.Now()})
+		err := uh.Collection.Insert(&UserWrapper{UserId: username, UserName: username, Password: u.PHash(password), LastUpdate: time.Now()})
 		return err
-	} else if utils.PHash(password) != tmp.Password {
+	} else if u.PHash(password) != tmp.Password {
 		log.Println("changing password! for user ", username)
 		err := uh.Collection.Update(
 			bson.M{"user_name": username},
-			bson.M{"$set": bson.M{"password": utils.PHash(password), "last_update": time.Now()}},
+			bson.M{"$set": bson.M{"password": u.PHash(password), "last_update": time.Now()}},
 		)
 		return err
 	}
@@ -608,7 +612,7 @@ func (uh *UserHandler) CheckUserPassword(username, password string) (bool, error
 		return false, errors.New("БД не доступна")
 	}
 	tmp := UserWrapper{}
-	err := uh.Collection.Find(bson.M{"user_name": username, "password": utils.PHash(password)}).One(&tmp)
+	err := uh.Collection.Find(bson.M{"user_name": username, "password": u.PHash(password)}).One(&tmp)
 	return err != nil, err
 }
 
@@ -744,15 +748,6 @@ func (mh *MessageHandler) StoreMessage(from, to, body, message_id string) (*Mess
 	}
 	return nil, errors.New(fmt.Sprintf("I have duplicate!%+v", found))
 }
-
-func (mh *MessageHandler) SetMessageNotificationSent(message_id string) error {
-	if !mh.parent.Check() {
-		return errors.New("БД не доступна")
-	}
-	err := mh.Collection.Update(bson.M{"message_id":message_id}, bson.M{"$set":bson.M{"notification_sent":true}})
-	return err
-}
-
 func (mh *MessageHandler) StoreMessageObject(message MessageWrapper) (error) {
 	if !mh.parent.Check() {
 		return errors.New("БД не доступна")
@@ -772,6 +767,56 @@ func (mh *MessageHandler) SetMessagesAnswered(from, to, by string) error {
 	_, err := mh.Collection.UpdateAll(
 		bson.M{"from":from, "to":to, "not_answered":1},
 		bson.M{"$set":bson.M{"not_answered":0, "answered_by":by}},
+	)
+	return err
+}
+
+func (mh *MessageHandler) GetMessagesForAutoAnswer(to string, after int) ([]MessageWrapper, error) {
+	result := []MessageWrapper{}
+	if !mh.parent.Check() {
+		return result, errors.New("БД не доступна")
+	}
+	timeStampLess := time.Now().Add(-(time.Duration(after) * time.Minute)).Unix()
+	err := mh.Collection.Find(bson.M{
+		"to":to,
+		"not_answered":1,
+		"time_stamp":bson.M{"$lte": timeStampLess},
+		"auto_answers":bson.M{"$not":bson.M{"$elemMatch":bson.M{"after":after}}},
+	}).All(&result)
+	return result, err
+}
+func (mh *MessageHandler) SetMessagesAutoAnswered(from, to string, after int) error {
+	if !mh.parent.Check() {
+		return errors.New("БД не доступна")
+	}
+	_, err := mh.Collection.UpdateAll(
+		bson.M{"from":from, "to":to, "not_answered":1},
+		bson.M{"$push":bson.M{"auto_answers":NotificationElement{After:after}}},
+	)
+	return err
+}
+
+func (mh *MessageHandler) GetMessagesForNotification(to string, after int) ([]MessageWrapper, error) {
+	result := []MessageWrapper{}
+	if !mh.parent.Check() {
+		return result, errors.New("БД не доступна")
+	}
+	timeStampLess := time.Now().Add(-(time.Duration(after) * time.Minute)).Unix()
+	err := mh.Collection.Find(bson.M{
+		"to":to,
+		"unread":1,
+		"time_stamp":bson.M{"$lte": timeStampLess},
+		"notifications":bson.M{"$not":bson.M{"$elemMatch":bson.M{"after":after}}},
+	}).All(&result)
+	return result, err
+}
+func (mh *MessageHandler) SetMessagesNotified(from, to string, after int) error {
+	if !mh.parent.Check() {
+		return errors.New("БД не доступна")
+	}
+	_, err := mh.Collection.UpdateAll(
+		bson.M{"from":from, "to":to, "unread":1},
+		bson.M{"$push":bson.M{"notifications":NotificationElement{After:after}}},
 	)
 	return err
 }
@@ -823,6 +868,7 @@ func (mh *MessageHandler) GetMessageByMessageId(message_id string) (*MessageWrap
 		return nil, err
 	}
 	result.TimeFormatted = result.Time.Format(time.Stamp)
+	result.SID = result.ID.Hex()
 	return &result, nil
 }
 
@@ -841,4 +887,184 @@ func (mh *MessageHandler) UpdateMessageStatus(message_id, status, condition stri
 
 func (mh *MessageHandler) UpdateMessageRelatedOrderState(messageId, newState string) error {
 	return mh.Collection.Update(bson.M{"message_id":messageId}, bson.M{"$set":bson.M{"related_order_state":newState}})
+}
+
+type CommandsStorage struct {
+	DbHelper
+	Commands *mgo.Collection
+}
+
+func (cs *CommandsStorage) ensureIndexes() {
+	commands_collection := cs.Session.DB(cs.DbName).C("commands")
+	commands_collection.EnsureIndex(mgo.Index{
+		Key:        []string{"name", "provider"},
+		Background: true,
+		DropDups:   true,
+		Unique:    true,
+	})
+
+	cs.Commands = commands_collection
+}
+
+func NewCommandsStorage(conn, dbname string) *CommandsStorage {
+	helper := NewDbHelper(conn, dbname)
+	res := &CommandsStorage{DbHelper:*helper}
+	res.ensureIndexes()
+	return res
+}
+
+type CommandsStore interface {
+	SaveCommand(provider, name string, command s.OutCommand) error
+	LoadCommands(provider, name string) ([]s.OutCommand, error)
+	GetCommand(req bson.M) (*s.OutCommand, error)
+}
+
+type CommandsWrapper struct {
+	Name     string `bson:"name"`
+	Provider string `bson:"provider"`
+	Commands []s.OutCommand `bson:"commands"`
+}
+
+func (cs *CommandsStorage) SaveCommand(provider, name string, command s.OutCommand) error {
+	res := &CommandsWrapper{}
+	err := cs.Commands.Find(bson.M{"name":name, "provider":provider}).One(res)
+	if res.Name != "" && res.Provider != "" && len(res.Commands) > 0 {
+		err = cs.Commands.Update(bson.M{"name":name, "provider":provider}, bson.M{"$addToSet":bson.M{"commands":command}})
+	} else {
+		err = cs.Commands.Insert(CommandsWrapper{Name:name, Provider:provider, Commands:[]s.OutCommand{command}})
+		if err != nil {
+			log.Printf("CS Error at saving command %v", err)
+		}
+	}
+	return err
+}
+
+func (cs *CommandsStorage) LoadCommands(provider, name string) ([]s.OutCommand, error) {
+	res := CommandsWrapper{}
+	err := cs.Commands.Find(bson.M{"name":name, "provider":provider}).Sort("commands.position").One(&res)
+	if err != nil {
+		log.Printf("CS Error at find commands by name: %v provider: %v %v", name, provider, err)
+	}
+	return res.Commands, err
+}
+
+func (cs *CommandsStorage) GetCommand(req bson.M) (*s.OutCommand, error) {
+	res := &s.OutCommand{}
+	err := cs.Commands.Find(req).One(res)
+	if err != nil && err != mgo.ErrNotFound {
+		return nil, err
+	} else if err == mgo.ErrNotFound {
+		return nil, nil
+	}
+	return res, nil
+}
+
+type ConfigurationStorage struct {
+	DbHelper
+	Collection *mgo.Collection
+}
+
+func NewConfigurationStorage(connection c.MongoDbConfig) *ConfigurationStorage {
+	helper := NewDbHelper(connection.ConnString, connection.Name)
+	result := &ConfigurationStorage{DbHelper:*helper}
+	result.ensureIndexes()
+	return result
+}
+
+func (cs *ConfigurationStorage) ensureIndexes() {
+	collection := cs.Session.DB(cs.DbName).C("bots_configs")
+	collection.EnsureIndex(mgo.Index{
+		Key:[]string{"company_id"},
+		Unique:true,
+	})
+	collection.EnsureIndex(mgo.Index{
+		Key:[]string{"notifications"},
+	})
+	collection.EnsureIndex(mgo.Index{
+		Key:[]string{"auto_answers"},
+	})
+
+	cs.Collection = collection
+}
+
+func (cs *ConfigurationStorage) SetChatConfig(config c.ChatConfig, update bool) error {
+	found := c.ChatConfig{}
+	err := cs.Collection.Find(bson.M{"company_id":config.CompanyId}).One(&found)
+	if err != nil && err != mgo.ErrNotFound {
+		log.Printf("CFGS ERROR set chat config at find %v", err)
+		return err
+	}
+	if err == mgo.ErrNotFound {
+		log.Printf("SETTING CHAT CONFIG %+v", config)
+		cs.Collection.Insert(config)
+		return nil
+	}
+	if update && err == nil {
+		modify := bson.M{}
+		if reflect.DeepEqual(found.Notifications, config.Notifications) {
+			modify["notifications"] = config.Notifications
+		}
+		if reflect.DeepEqual(found.AutoAnswers, config.AutoAnswers) {
+			modify["auto_answers"] = config.AutoAnswers
+		}
+		update, _ := u.GetStringUpdates(found, config, "bson", true)
+		for k, v := range update {
+			modify[k] = v
+		}
+		cs.Collection.Update(bson.M{"company_id":config.CompanyId}, bson.M{"$set":modify})
+	}
+	return nil
+}
+
+func (cs *ConfigurationStorage) UpdateNotifications(companyId string, notifications []c.TimedAnswer) error {
+	ci, err := cs.Collection.Upsert(bson.M{"company_id":companyId}, bson.M{"$set":bson.M{"notifications":notifications}})
+	log.Printf("Update notifications %+v", ci)
+	return err
+}
+
+func (cs *ConfigurationStorage) UpdateAutoAnswers(companyId string, autoAnswers []c.TimedAnswer) error {
+	ci, err := cs.Collection.Upsert(bson.M{"company_id":companyId}, bson.M{"$set":bson.M{"auto_answers":autoAnswers}})
+	log.Printf("Update auto answers %+v", ci)
+	return err
+}
+
+func (cs *ConfigurationStorage) UpdateInformation(companyId, information string) error {
+	ci, err := cs.Collection.Upsert(bson.M{"company_id":companyId}, bson.M{"$set":bson.M{"information":information}})
+	log.Printf("Update information %+v", ci)
+	return err
+}
+
+func (cs *ConfigurationStorage) GetChatConfig(companyId string) (*c.ChatConfig, error) {
+	found := c.ChatConfig{}
+	err := cs.Collection.Find(bson.M{"company_id":companyId}).One(&found)
+	if err != nil && err != mgo.ErrNotFound {
+		log.Printf("CFGS ERROR set chat config at find %v", err)
+		return nil, err
+	} else if err == mgo.ErrNotFound {
+		return nil, nil
+	}
+	return &found, nil
+}
+func (cs *ConfigurationStorage) GetAllChatsConfig() ([]c.ChatConfig, error) {
+	found := []c.ChatConfig{}
+	err := cs.Collection.Find(bson.M{}).All(&found)
+	if err != nil && err != mgo.ErrNotFound {
+		log.Printf("CFGS ERROR set chat config at find %v", err)
+		return nil, err
+	} else if err == mgo.ErrNotFound {
+		return nil, nil
+	}
+	return found, nil
+}
+func (cs *ConfigurationStorage) GetInformation(companyId string) (*string, error) {
+	found := c.ChatConfig{}
+	err := cs.Collection.Find(bson.M{"company_id":companyId}).One(&found)
+	if err != nil && err != mgo.ErrNotFound {
+		log.Printf("CFGS ERROR set chat config at find %v", err)
+		return nil, err
+	} else if err == mgo.ErrNotFound {
+		return nil, nil
+	}
+	information := found.Information
+	return &information, nil
 }
