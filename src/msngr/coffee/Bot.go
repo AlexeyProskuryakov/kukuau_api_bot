@@ -19,7 +19,81 @@ var (
 	NO_SYRUP = string("без сиропа")
 )
 
+func getCommandsTextAndFieldForDrink(chc *CoffeeHouseConfiguration) (string, []s.OutField) {
+	result := "Ваш заказ: ?(drink)"
+	resultFields := []s.OutField{
+		s.OutField{
+			Name: "drink",
+			Type: "list-single",
+			Attributes: s.FieldAttribute{
+				Label:    "напиток",
+				Required: true,
+			},
+			Items:s.FormItemsFromMap(chc.Drinks),
+		},
+		s.OutField{
+			Name:"sugar",
+			Type:"list-single",
+			Attributes:s.FieldAttribute{
+				Label:"сахар",
+				Required:false,
+				EmptyText:&NO_SUGAR,
+			},
+			Items:s.FormItems([]string{"1 ложка", "2 ложки", "3 ложки", "4 ложки"}),
+		},
+		s.OutField{
+			Name:"count",
+			Type:"list-single",
+			Attributes:s.FieldAttribute{
+				Label:"количество",
+				Required:false,
+				EmptyText:&ONE,
+			},
+			Items:s.FormItems([]string{"1", "2", "3", "4", "5", "6", "7", "8", "9", "10", "11", "12", "13", "14", "15", "16"}),
+		},
+		s.OutField{
+			Name:"to_time",
+			Type:"list-single",
+			Attributes:s.FieldAttribute{
+				Label:"когда",
+				Required:false,
+				EmptyText:&NOW,
+			},
+			Items:s.FormItems([]string{"через 10 минут", "через 20 минут", "через 30 минут"}),
+		},
+	}
+	if len(chc.Additives) > 0 {
+		result = fmt.Sprintf("%v, ?(additive)", result)
+		resultFields = append(resultFields, s.OutField{
+			Name: "additive",
+			Type: "list-single",
+			Attributes: s.FieldAttribute{
+				Label:    "добавки",
+				Required: false,
+				EmptyText:&NO_ADD,
+			},
+			Items:s.FormItemsFromMap(chc.Additives),
+		})
+	}
+	if len(chc.Syrups) > 0 {
+		result = fmt.Sprintf("%v ?(syrup)", result)
+		resultFields = append(resultFields, s.OutField{
+			Name: "syrup",
+			Type: "list-single",
+			Attributes: s.FieldAttribute{
+				Label:"сироп",
+				Required: false,
+				EmptyText:&NO_SYRUP,
+			},
+			Items:s.FormItemsFromMap(chc.Syrups),
+		})
+	}
+	result = fmt.Sprintf("%v ?(sugar), ?(count) ?(to_time)", result)
+	return result, resultFields
+}
+
 func getCommands(coffeeHouseConfig *CoffeeHouseConfiguration, isFirst, isActive bool) *[]s.OutCommand {
+	drinkString, drinkFields := getCommandsTextAndFieldForDrink(coffeeHouseConfig)
 	commands := []s.OutCommand{
 		s.OutCommand{
 			Title: "Напитки",
@@ -30,68 +104,8 @@ func getCommands(coffeeHouseConfig *CoffeeHouseConfiguration, isFirst, isActive 
 				Title: "Заказ напитка",
 				Type:  "form",
 				Name:  "order_drink_form",
-				Text:  "Ваш заказ: ?(drink), ?(additive) ?(syrup) ?(sugar), ?(count) ?(to_time)",
-				Fields: []s.OutField{
-					s.OutField{
-						Name: "drink",
-						Type: "list-single",
-						Attributes: s.FieldAttribute{
-							Label:    "напиток",
-							Required: true,
-						},
-						Items:s.FormItemsFromMap(coffeeHouseConfig.Drinks),
-					},
-					s.OutField{
-						Name: "syrup",
-						Type: "list-single",
-						Attributes: s.FieldAttribute{
-							Label:"сироп",
-							Required: false,
-							EmptyText:&NO_SYRUP,
-						},
-						Items:s.FormItemsFromMap(coffeeHouseConfig.Syrups),
-					},
-					s.OutField{
-						Name: "additive",
-						Type: "list-single",
-						Attributes: s.FieldAttribute{
-							Label:    "добавки",
-							Required: false,
-							EmptyText:&NO_ADD,
-						},
-						Items:s.FormItemsFromMap(coffeeHouseConfig.Additives),
-					},
-					s.OutField{
-						Name:"sugar",
-						Type:"list-single",
-						Attributes:s.FieldAttribute{
-							Label:"сахар",
-							Required:false,
-							EmptyText:&NO_SUGAR,
-						},
-						Items:s.FormItems([]string{"1 ложка", "2 ложки", "3 ложки", "4 ложки"}),
-					},
-					s.OutField{
-						Name:"count",
-						Type:"list-single",
-						Attributes:s.FieldAttribute{
-							Label:"количество",
-							Required:false,
-							EmptyText:&ONE,
-						},
-						Items:s.FormItems([]string{"1", "2", "3", "4", "5", "6", "7", "8", "9", "10", "11", "12", "13", "14", "15", "16"}),
-					},
-					s.OutField{
-						Name:"to_time",
-						Type:"list-single",
-						Attributes:s.FieldAttribute{
-							Label:"когда",
-							Required:false,
-							EmptyText:&NOW,
-						},
-						Items:s.FormItems([]string{"через 10 минут", "через 20 минут", "через 30 минут"}),
-					},
-				},
+				Text:  drinkString,
+				Fields: drinkFields,
 			},
 		},
 		s.OutCommand{
@@ -197,7 +211,6 @@ func getAdditionalFuncs(orderId int64, companyName, userName, messageId string) 
 }
 
 func FormBotCoffeeContext(config c.CoffeeConfig, store *db.MainDb, coffeeHouseConfiguration *CoffeeHouseConfiguration, configStore *db.ConfigurationStorage) *m.BotContext {
-
 	commandsGenerator := func(in *s.InPkg) (*[]s.OutCommand, error) {
 		lastOrder, err := store.Orders.GetByOwnerLast(in.From, config.Name)
 		if err != nil {

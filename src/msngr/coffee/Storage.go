@@ -220,3 +220,8 @@ func (cch *CoffeeConfigHandler) LoadFromConfig(conf configuration.CoffeeConfig) 
 
 }
 
+func NewCHCFromConfig(conf configuration.CoffeeConfig) (*CoffeeHouseConfiguration) {
+	newChc := CoffeeHouseConfiguration{Name: conf.Name, Additives:conf.Additives, Bakes:conf.Bakes, Drinks:conf.Drinks, Syrups:conf.Syrups, Volumes:conf.Volumes}
+	return &newChc
+}
+

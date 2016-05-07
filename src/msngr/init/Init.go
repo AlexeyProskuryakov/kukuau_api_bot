@@ -185,10 +185,8 @@ func StartBot(db *d.MainDb, result chan string) c.Configuration {
 
 		for _, coffee_conf := range conf.Coffee {
 			c_store := coffee.NewCoffeeConfigHandler(db)
-			coffeeHouseConfiguration, err := c_store.LoadFromConfig(coffee_conf)
-			if err != nil {
-				log.Printf("INIT ERROR at init coffee %v is %v", coffee_conf.Name, err)
-			}
+			coffeeHouseConfiguration := coffee.NewCHCFromConfig(coffee_conf)
+
 			cbc := coffee.FormBotCoffeeContext(coffee_conf, db, coffeeHouseConfiguration, configStorage)
 			cntrl := m.FormBotController(cbc, db)
 			route := fmt.Sprintf("/bot/coffee/%v", coffee_conf.Name)
