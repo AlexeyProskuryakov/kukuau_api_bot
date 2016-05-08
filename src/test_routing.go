@@ -13,7 +13,7 @@ import (
 func formTestMartini() *martini.Martini {
 	config := configuration.ReadTestConfigInRecursive()
 	mainDb := db.NewMainDb(config.Main.Database.ConnString, config.Main.Database.Name)
-	m := web.NewSessionAuthorisationMartini(mainDb)
+	m := web.NewSessionAuthorisationHandler(mainDb)
 	m.Use(render.Renderer(render.Options{
 		Directory:"templates/auth",
 		Extensions: []string{".tmpl", ".html"},

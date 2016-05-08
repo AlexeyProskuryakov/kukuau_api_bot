@@ -9,7 +9,7 @@ import (
 	"msngr/web"
 
 	"github.com/go-martini/martini"
-	"github.com/martini-contrib/auth"
+	//"github.com/martini-contrib/auth"
 	"github.com/martini-contrib/render"
 	"gopkg.in/mgo.v2/bson"
 
@@ -23,12 +23,13 @@ import (
 	"net/http"
 	"log"
 	"strings"
+	"github.com/martini-contrib/sessionauth"
+	"github.com/martini-contrib/sessions"
 )
 
 const (
 	ALL = "all"
 )
-
 
 func getContacts(db *d.MainDb, to_name string) ([]usrs.Contact, error) {
 	resp := []usrs.Contact{}
@@ -70,33 +71,18 @@ func getRenderer(cName, cId, start_addr string) martini.Handler {
 	return renderer
 }
 
-func getBasicAuth(db *d.MainDb) martini.Handler {
-	return auth.BasicFunc(func(username, password string) bool {
-		usr, _ := db.Users.GetUser(bson.M{"user_name":username, "role":usrs.MANAGER})
-		if usr != nil {
-			return u.PHash(password) == usr.Password
-		}
-		return username == usrs.DEFAULT_USER && password == usrs.DEFAULT_PWD
-	})
-}
-
 func GetMartini(cName, cId, start_addr string, db *d.MainDb) *martini.ClassicMartini {
 	m := martini.Classic()
 	m.Use(getRenderer(cName, cId, start_addr))
-	m.Use(getBasicAuth(db))
+	web.FillSession(m.Martini)
 	return m
 }
 
-//func GetMartiniTemplatesDir(cName, cId, start_addr, template_dir string, db *d.MainDb) *martini.ClassicMartini {
-//	m := martini.Classic()
-//	m.Use(getRendererTemplateDir(cName, cId, start_addr, template_dir))
-//	m.Use(getBasicAuth(db))
-//	return m
-//}
-
 func GetChatMainHandler(start_addr string, notifier *ntf.Notifier, db *d.MainDb, config c.ChatConfig) http.Handler {
 	m := GetMartini(config.Name, config.CompanyId, start_addr, db)
-	m.Get(start_addr, func(r render.Render, params martini.Params, req *http.Request) {
+	log.Printf("sessionauth: %v, %v %v", sessionauth.RedirectParam, sessionauth.RedirectUrl, sessionauth.SessionKey)
+	m.Get(start_addr, sessionauth.LoginRequired, func(ses sessions.Session, r render.Render, params martini.Params, req *http.Request, user sessionauth.User) {
+		log.Printf("session: %+v", ses)
 		var with string
 		result_data := map[string]interface{}{}
 		query := req.URL.Query()
@@ -151,7 +137,7 @@ func GetChatMainHandler(start_addr string, notifier *ntf.Notifier, db *d.MainDb,
 
 func GetChatDeleteMessagesHandler(start_addr string, db *d.MainDb, config c.ChatConfig) http.Handler {
 	m := GetMartini(config.Name, config.CompanyId, start_addr, db)
-	m.Delete(start_addr, func(ren render.Render, req *http.Request) {
+	m.Delete(start_addr, sessionauth.LoginRequired, func(ren render.Render, req *http.Request) {
 		type DeleteInfo struct {
 			From string `json:"from"`
 			To   string `json:"to"`
@@ -181,7 +167,7 @@ func GetChatDeleteMessagesHandler(start_addr string, db *d.MainDb, config c.Chat
 
 func GetChatSendHandler(start_addr string, notifier *ntf.Notifier, db *d.MainDb, config c.ChatConfig, cs *ChatStorage) http.Handler {
 	m := GetMartini(config.Name, config.CompanyId, start_addr, db)
-	m.Post(start_addr, func(render render.Render, req *http.Request) {
+	m.Post(start_addr, sessionauth.LoginRequired, func(render render.Render, req *http.Request) {
 		type MessageFromF struct {
 			From string `json:"from"`
 			To   string `json:"to"`
@@ -226,7 +212,7 @@ func GetChatSendHandler(start_addr string, notifier *ntf.Notifier, db *d.MainDb,
 }
 func GetChatMessageReadHandler(start_addr string, notifier *ntf.Notifier, db *d.MainDb, config c.ChatConfig) http.Handler {
 	m := GetMartini(config.Name, config.CompanyId, start_addr, db)
-	m.Post(start_addr, func(render render.Render, req *http.Request) {
+	m.Post(start_addr, sessionauth.LoginRequired, func(render render.Render, req *http.Request) {
 		type Readed struct {
 			From string `json:"from"`
 		}
@@ -283,7 +269,7 @@ func get_messages(between1, between2 string, db *d.MainDb) ([]d.MessageWrapper, 
 }
 func GetChatUnreadMessagesHandler(start_addr string, notifier *ntf.Notifier, db *d.MainDb, config c.ChatConfig) http.Handler {
 	m := GetMartini(config.Name, config.CompanyId, start_addr, db)
-	m.Post(start_addr, func(render render.Render, req *http.Request) {
+	m.Post(start_addr, sessionauth.LoginRequired, func(render render.Render, req *http.Request) {
 		type NewMessagesReq struct {
 			For string `json:"m_for"`
 		}
@@ -308,7 +294,7 @@ func GetChatUnreadMessagesHandler(start_addr string, notifier *ntf.Notifier, db 
 }
 func GetChatContactsHandler(start_addr string, notifier *ntf.Notifier, db *d.MainDb, config c.ChatConfig) http.Handler {
 	m := GetMartini(config.Name, config.CompanyId, start_addr, db)
-	m.Post(start_addr, func(render render.Render, req *http.Request) {
+	m.Post(start_addr, sessionauth.LoginRequired, func(render render.Render, req *http.Request) {
 		type NewContactsReq struct {
 			After int64 `json:"after"`
 			Exist []string `json:"exist"`
@@ -354,7 +340,7 @@ func GetChatContactsHandler(start_addr string, notifier *ntf.Notifier, db *d.Mai
 
 func GetChatContactsChangeHandler(start_addr string, notifier *ntf.Notifier, db *d.MainDb, config c.ChatConfig) http.Handler {
 	m := GetMartini(config.Name, config.CompanyId, start_addr, db)
-	m.Post(start_addr, func(render render.Render, req *http.Request) {
+	m.Post(start_addr, sessionauth.LoginRequired, func(render render.Render, req *http.Request) {
 		type NewContactName struct {
 			Id      string `json:"id"`
 			NewName string `json:"new_name"`
@@ -383,13 +369,8 @@ func GetChatContactsChangeHandler(start_addr string, notifier *ntf.Notifier, db 
 
 func GetChatConfigHandler(start_addr, prefix string, db *d.MainDb, config c.ChatConfig) http.Handler {
 	m := GetMartini(config.Name, config.CompanyId, prefix, db)
-	m.Get(start_addr, func(ren render.Render, req *http.Request) {
+	m.Get(start_addr, sessionauth.LoginRequired, func(ren render.Render, req *http.Request) {
 		ren.HTML(200, "config", map[string]interface{}{}, render.HTMLOptions{Layout:"base"})
 	})
 	return m
 }
-
-//func GetChatRoutesForCompany(companyId string, db *d.MainDb) martini.Router {
-//	router := martini.NewRouter()
-//	router.Group(fmt.Sprintf("web/chat/%s", companyId))
-//}

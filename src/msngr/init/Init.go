@@ -26,6 +26,7 @@ import (
 
 	"msngr/utils"
 	"msngr/users"
+	"msngr/web"
 )
 
 func GetTaxiAPI(params c.TaxiApiParams, for_name string) (t.TaxiInterface, error) {
@@ -139,6 +140,12 @@ func StartBot(db *d.MainDb, result chan string) c.Configuration {
 	configStorage := d.NewConfigurationStorage(conf.Main.ConfigDatabase)
 	qs := q.NewQuestStorage(conf.Main.Database.ConnString, conf.Main.Database.Name)
 
+	//serving static for chats and coffee
+	fs := http.FileServer(http.Dir("static"))
+	http.Handle("/static/", http.StripPrefix("/static/", fs))
+	//starting serve for auth
+	http.Handle("/auth", web.NewSessionAuthorisationHandler(db))
+
 	for q_name, qConf := range conf.Quests {
 		log.Printf("Will handling quests controller for quest: %v", q_name)
 		configStorage.UpdateInformation(qConf.CompanyId, qConf.Info)
@@ -178,12 +185,7 @@ func StartBot(db *d.MainDb, result chan string) c.Configuration {
 		result <- "vote"
 	}
 
-
-
 	if len(conf.Coffee) > 0 {
-		fs := http.FileServer(http.Dir("static"))
-		http.Handle("/static/", http.StripPrefix("/static/", fs))
-
 		for _, coffee_conf := range conf.Coffee {
 			c_store := coffee.NewCoffeeConfigHandler(db)
 			coffeeHouseConfiguration, err := c_store.LoadFromConfig(coffee_conf)
@@ -252,11 +254,6 @@ func StartBot(db *d.MainDb, result chan string) c.Configuration {
 		result <- "coffee"
 	}
 	if len(conf.Chats) > 0 {
-		if len(conf.Coffee) == 0 {
-			fs := http.FileServer(http.Dir("static"))
-			http.Handle("/static/", http.StripPrefix("/static/", fs))
-		}
-
 		for _, chat_conf := range conf.Chats {
 			chatBotContext := chat.FormChatBotContext(db, configStorage, chat_conf.CompanyId)
 			chatBotController := m.FormBotController(chatBotContext, db)
