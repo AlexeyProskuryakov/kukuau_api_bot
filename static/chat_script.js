@@ -105,33 +105,36 @@ function is_message_with_data(message){
 }
 
 function paste_message(message){
-    var text_message =      "<div class='msg' id={{MessageID}}>"+
-    "<h4 class='media-heading'>{{FromName}} <small class='time'>{{time}}</small></h4>"+
-    "<div class='col-lg-11'>{{Body}}</div>"+
-    "</div>"+
-    "<hr>";
+    if ($("#"+message.SID).length != 0){
+        return
+    }
+    var text_message =      "<div class='msg' id={{SID}}>"+
+                                "<h4 class='media-heading'>{{From}} <small class='time'>{{time}}</small></h4>"+
+                                "<div class='col-lg-11'>{{Body}}</div>"+
+                        "</div>"+
+                        "<hr>";
 
     if (is_message_with_data(message)) {
-        text_message =  "<div class='msg' id={{MessageID}}>"+
-        "<h4 class='media-heading'>{{FromName}}"+
-        "<small class='time'>{{stamp_date $message.Time}}</small>"+
-        "</h4>"+
-        "<div class='msg-with-data'>"+
-        "<h4>{{Body}}</h4>"+
-        "<table class='table table-condensed table-bordered table-hover table-little-text'>"+
-        "{{#AdditionalData}}"+
-        "{{#Value}}"+
-        "<tr><td>{{Name}}</td><td>{{Value}}</td></tr>"+
-        "{{/Value}}"+
-        "{{/AdditionalData}}"+
-        "</table>"+
-        "{{#AdditionalFuncs}}"+
-        "<button class='btn btn-default btn-sm' onclick='call_message_func(\"{{Action}}\", \"{{&Context}}\", \"{{MessageID}}\")' id=\"{{Action}}-{{MessageID}}\" {{#Used}}disabled{{/Used}}>{{Name}}</button> "+
-        "{{/AdditionalFuncs}}"+
-        "<div class='status'><h5> Статус: <big id='state-{{MessageID}}'>{{RelatedOrderState}}</big></h5></div>"+
-        "</div>"+
+        text_message =  "<div class='msg' id={{SID}}>"+
+                            "<h4 class='media-heading'>{{From}}"+
+                                "<small class='time'>{{stamp_date $message.Time}}</small>"+
+                        "</h4>"+
+                            "<div class='msg-with-data'>"+
+                            "<h4>{{Body}}</h4>"+
+                                "<table class='table table-condensed table-bordered table-hover table-little-text'>"+
+                                "{{#AdditionalData}}"+
+                                "{{#Value}}"+
+                                    "<tr><td>{{Name}}</td><td>{{Value}}</td></tr>"+
+                                   "{{/Value}}"+
+                                "{{/AdditionalData}}"+
+                                 "</table>"+
+                                 "{{#AdditionalFuncs}}"+
+                                 "<button class='btn btn-default btn-sm' onclick='call_message_func(\"{{Action}}\", \"{{&Context}}\", \"{{MessageID}}\")'>{{Name}}</button>"+
+                                 "{{/AdditionalFuncs}}"+
+                            "<div class='status'><h5> Статус: <big id='state-{{MessageID}}'>{{RelatedOrderState}}</big></h5></div>"+
+                            "</div>"+
 
-        "</div>";
+                        "</div>";
         for (var i=0; i < message.AdditionalFuncs.length; i++){
             message.AdditionalFuncs[i].Context = JSON.stringify(message.AdditionalFuncs[i].Context).replace(/\"/gi,"\\x22");
         }
@@ -188,36 +191,14 @@ function set_contact_new_message(contact_id, count){
 
 function paste_new_contact(contact){
     if (contact.NewMessagesCount != 0){
-        var c_text = "<div class='contact' id='{{ID}}'>"+
-        "<a class='{{#HaveActiveOrder}}a-contact-with-order{{/HaveActiveOrder}}{{^HaveActiveOrder}}a-contact{{/HaveActiveOrder}}' href='"+url_prefix+"?with={{ID}}'> "+
-        "{{Name}} <span class='small new-message-counter' id='s-{{ID}}' count='{{NewMessagesCount}}'>({{NewMessagesCount}})<span></a></div>";
+        var c_text = "<div class='contact' id='{{ID}}'><a class='a-contact' href='"+url_prefix+"?with={{ID}}'> {{Name}} <span class='small new-message-counter' id='s-{{ID}}' count='{{NewMessagesCount}}'>({{NewMessagesCount}})<span></a></div>";
         var result = Mustache.render(c_text, contact);
-        if (contact.HaveActiveOrder == true){
-            $("#with-orders").prepend(result)
-        }else{
-            $("#without-orders").prepend(result)
-        }
         $(result).insertAfter("#write-all")
         playNotification();
         showNotification("У вас новое сообщение от "+contact.Name, "Klichat");
     }
 }
-function change_contact_with_order_position(contact_id, have_orders){
-   if (have_orders == true){
-    var contact_view = $("#without-orders").find("#"+contact_id);
-    if (contact_view.length == 1){
-        $("#with-orders").prepend(contact_view);
-        // $("#without-orders > #"+contact_id).remove();
-    }
-} else {
-    var contact_view = $("#with-orders").find("#"+contact_id);
-    if (contact_view.length == 1){
-        $("#without-orders").prepend(contact_view);
-        // $("#with-orders > #"+contact_id).remove();
-    }
 
-}
-}
 function update_contacts(){
     var exists = $(".contact");
     var ex_values = new Array();
@@ -235,13 +216,10 @@ function update_contacts(){
         success:        function(x){
             if (x.ok){
                 var update = [];
-                console.log(x);
                 x['old'].forEach(function(c){
                     console.log("old: ",c);
                     set_contact_new_message(c.ID, c.NewMessagesCount);
-                    change_contact_with_order_position(c.ID, c.HaveActiveOrder);
                     update.push(c.ID);
-
                 });
                 x['new'].forEach(function(c){
                     console.log("new: ",c);
@@ -502,19 +480,17 @@ $("a.a-contact").on("click", function(e){
     }
 
 function call_message_func(action, context_str, message_id){
-        var context = JSON.parse(context_str);
-        data = {action:action, context:context, message_id:message_id};
-        $.ajax({type:"POST",
-            url:            url_prefix+"/message_function",
-            contentType:    'application/json',
-            data:           JSON.stringify(data),
-            dataType:       'json',
-            success:        function(x){
-                if (x.ok==true){
-                    $("#state-"+message_id).text(x.result);
-                    $("#"+action+"-"+message_id).prop('disabled', true);
-                    change_contact_with_order_position(context.user_name, x.user_have_active_orders);
-                }
+    var context = JSON.parse(context_str);
+    data = {action:action, context:context, message_id:message_id};
+    $.ajax({type:"POST",
+        url:            url_prefix+"/message_function",
+        contentType:    'application/json',
+        data:           JSON.stringify(data),
+        dataType:       'json',
+        success:        function(x){
+            if (x.ok==true){
+                $("#state-"+message_id).text(x.result);
+            }
         }
     });
 }

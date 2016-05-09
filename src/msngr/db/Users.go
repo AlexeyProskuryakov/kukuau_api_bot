@@ -74,30 +74,19 @@ func (uh *UserHandler) ensureIndexes() {
 	uh.UsersCollection = usersCollection
 }
 
-func (uh *UserHandler) UserLogin(userId string) (*UserData, error) {
-	found := &UserData{}
-	err := uh.UsersCollection.Find(bson.M{"user_id":userId}).One(found)
-	if err != nil {
-		return nil, err
-	}
-	err = uh.UsersCollection.Update(bson.M{"user_id":userId}, bson.M{"$set":bson.M{"auth":true, "last_logged":time.Now()}})
-	return found, err
+func (uh *UserHandler) LogoutUser(userId string) (error) {
+	err := uh.UsersCollection.Update(bson.M{"user_id":userId}, bson.M{"$set":bson.M{"auth":false}})
+	return err
 }
 
-func (uh *UserHandler) UserLogout(userId string) (*UserData, error) {
-	found := &UserData{}
-	err := uh.UsersCollection.Find(bson.M{"user_id":userId}).One(found)
-	if err != nil {
-		return nil, err
-	}
-	err = uh.UsersCollection.Update(bson.M{"user_id":userId}, bson.M{"$set":bson.M{"auth":false}})
-	return found, err
-}
-
-func (uh *UserHandler) GetUserDataForWeb(userName, password string) (*UserData, error) {
+func (uh *UserHandler) LoginUser(userName, password string) (*UserData, error) {
 	tmp := UserData{}
 	err := uh.UsersCollection.Find(bson.M{"$or":[]bson.M{bson.M{"user_name": userName}, bson.M{"email":userName}}, "password": utils.PHash(password)}).One(&tmp)
-	return &tmp, err
+	if err == nil {
+		err = uh.UsersCollection.Update(bson.M{"user_id":tmp.UserId}, bson.M{"$set":bson.M{"auth":true, "last_logged":time.Now()}})
+		return &tmp, err
+	}
+	return nil, err
 }
 
 func (uh *UserHandler) AddRightToUser(userId string, rightType string, rights ...string) error {

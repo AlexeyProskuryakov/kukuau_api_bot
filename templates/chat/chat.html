@@ -11,87 +11,44 @@
             {{$all_tm := "all_hash_writers"}}
 
             <div id="contacts-wrapper" closed="true">
-                <!--<p id="write-all">-->
-                <!--<a class="bg-danger a-contact {{if eq_s $with $all}} c-active {{end}}"-->
-                <!--href="{{ chat_with $all}}">-->
-                <!--Написать всем-->
-                <!--</a>-->
-                <!--</p>-->
-                <!--<br>-->
+                <p id="write-all">
+                    <a class="bg-danger a-contact {{if eq_s $with $all}} c-active {{end}}"
+                       href="{{ chat_with $all}}">
+                        Написать всем
+                    </a>
+                </p>
+                <br>
+                {{range $contact := .contacts}}
+                <div class="contact" id="{{$contact.ID}}">
+                    <a id="a-{{$contact.ID}}" class="a-contact {{if eq_s $with $contact.ID}} c-active {{end}}"
+                       href='{{ chat_with $contact.ID }}'>
+                        {{$contact.Name}}
+                        <small id="s-{{$contact.ID}}" class="new-message-counter" count="{{$contact.NewMessagesCount}}">
+                            {{if $contact.NewMessagesCount}}
+                            ({{$contact.NewMessagesCount}})
+                            {{end}}
+                        </small>
+                    </a>
 
-                <div id="with-orders">
-                    {{if .contacts_with_order}}
-                    {{range $contact := .contacts_with_order}}
-                    <div class="contact" id="{{$contact.ID}}">
-                        <a id="a-{{$contact.ID}}"
-                           class="a-contact-with-order {{if eq_s $with $contact.ID}} c-active {{end}}"
-                           href='{{ chat_with $contact.ID }}'>
-                            {{$contact.Name}}
-                            <small id="s-{{$contact.ID}}" class="new-message-counter"
-                                   count="{{$contact.NewMessagesCount}}">
-                                {{if $contact.NewMessagesCount}}
-                                ({{$contact.NewMessagesCount}})
-                                {{end}}
-                            </small>
-                        </a>
+                    <div class="name-change form-inline">
+                        <div class="form-group">
+                            <input class="form-control name-change-input" type="text" name="{{$contact.ID}}"
+                                   value="{{$contact.Name}}">
 
-                        <div class="name-change form-inline">
-                            <div class="form-group">
-                                <input class="form-control name-change-input" type="text" name="{{$contact.ID}}"
-                                       value="{{$contact.Name}}">
+                            <button class="btn btn-sm btn-default change-name-ok"
+                                    onclick="applyNewName('{{$contact.ID}}')">
+                                <span class="glyphicon glyphicon-ok" aria-hidden="true"></span>
+                            </button>
 
-                                <button class="btn btn-sm btn-default change-name-ok"
-                                        onclick="applyNewName('{{$contact.ID}}')">
-                                    <span class="glyphicon glyphicon-ok" aria-hidden="true"></span>
-                                </button>
-
-                                <button class="btn btn-sm btn-default change-name-cancel"
-                                        onclick="notApplyNewName('{{$contact.ID}}')">
-                                    <span class="glyphicon glyphicon-remove" aria-hidden="true"></span>
-                                </button>
-                            </div>
+                            <button class="btn btn-sm btn-default change-name-cancel"
+                                    onclick="notApplyNewName('{{$contact.ID}}')">
+                                <span class="glyphicon glyphicon-remove" aria-hidden="true"></span>
+                            </button>
                         </div>
                     </div>
-
-                    {{end}}
-                    {{end}}
-                    <hr>
                 </div>
 
-                <div id="without-orders">
-                    {{range $contact := .contacts}}
-                    <div class="contact" id="{{$contact.ID}}">
-                        <a id="a-{{$contact.ID}}" class="a-contact {{if eq_s $with $contact.ID}} c-active {{end}}"
-                           href='{{ chat_with $contact.ID }}'>
-                            {{$contact.Name}}
-                            <small id="s-{{$contact.ID}}" class="new-message-counter"
-                                   count="{{$contact.NewMessagesCount}}">
-                                {{if $contact.NewMessagesCount}}
-                                ({{$contact.NewMessagesCount}})
-                                {{end}}
-                            </small>
-                        </a>
-
-                        <div class="name-change form-inline">
-                            <div class="form-group">
-                                <input class="form-control name-change-input" type="text" name="{{$contact.ID}}"
-                                       value="{{$contact.Name}}">
-
-                                <button class="btn btn-sm btn-default change-name-ok"
-                                        onclick="applyNewName('{{$contact.ID}}')">
-                                    <span class="glyphicon glyphicon-ok" aria-hidden="true"></span>
-                                </button>
-
-                                <button class="btn btn-sm btn-default change-name-cancel"
-                                        onclick="notApplyNewName('{{$contact.ID}}')">
-                                    <span class="glyphicon glyphicon-remove" aria-hidden="true"></span>
-                                </button>
-                            </div>
-                        </div>
-                    </div>
-
-                    {{end}}
-                </div>
+                {{end}}
             </div>
             {{if eq_s $with "all"}}
             {{else}}
@@ -140,7 +97,7 @@
                     <div class="msg-wrap" id="chat-wrapper">
                         {{range $message := .messages}}
                         {{if has_additional_data $message }}
-                        <div class="msg" id="{{$message.MessageID}}">
+                        <div class="msg" id="{{$message.SID}}">
                             <h4 class="media-heading">{{$message.From}}
                                 <small class="time">{{stamp_date $message.Time}}</small>
                             </h4>
@@ -158,13 +115,7 @@
                                 </table>
                                 {{range $addFuncEl := $message.AdditionalFuncs}}
                                 <button class="btn btn-default btn-sm"
-                                        onclick="call_message_func('{{$addFuncEl.Action}}', '{{get_context $addFuncEl}}', '{{$message.MessageID}}')"
-                                        id="{{$addFuncEl.Action}}-{{$message.MessageID}}"
-                                        {{if $addFuncEl.Used}}
-                                        disabled
-                                        {{end}}
-                                >
-
+                                        onclick="call_message_func('{{$addFuncEl.Action}}', '{{get_context $addFuncEl}}', '{{$message.MessageID}}')">
                                     {{$addFuncEl.Name}}
                                 </button>
                                 {{end}}
@@ -177,7 +128,7 @@
 
                         </div>
                         {{else}}
-                        <div class="msg" id="{{$message.MessageID}}">
+                        <div class="msg" id="{{$message.SID}}">
                             <h4 class="media-heading">{{$message.From}}
                                 <small class="time">{{stamp_date $message.Time}}</small>
                             </h4>
@@ -229,8 +180,6 @@
 </audio>
 <script>
     var url_prefix = "{{ prefix }}";
-    var _with = "{{$with}}";
-
 
 
 </script>

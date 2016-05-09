@@ -283,6 +283,7 @@ func StartBot(db *d.MainDb, result chan string) c.Configuration {
 			http.Handle(sr("/contacts_change"), chat.GetChatContactsChangeHandler(sr("/contacts_change"), notifier, db, chat_conf))
 			http.Handle(sr("/config"), chat.GetChatConfigHandler(sr("/config"), webRoute, db, chat_conf))
 			http.Handle(sr("/delete_messages"), chat.GetChatDeleteMessagesHandler(sr("/delete_messages"), db, chat_conf))
+			http.Handle(sr("/logout"), chat.GetChatLogoutHandler(sr("/logout"), webRoute, db, chat_conf))
 
 			log.Printf("I will handling web requests for chat at : [%v]", webRoute)
 

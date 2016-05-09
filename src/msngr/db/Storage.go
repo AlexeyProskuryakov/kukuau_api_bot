@@ -87,12 +87,20 @@ func NewDbHelper(conn, dbname string) *DbHelper {
 	return res
 }
 
+type DB interface {
+	UsersStorage() *UserHandler
+}
+
 type MainDb struct {
 	DbHelper
 	Orders   *orderHandler
 	Users    *UserHandler
 	Errors   *errorHandler
 	Messages *MessageHandler
+}
+
+func (db *MainDb) UsersStorage() *UserHandler {
+	return db.Users
 }
 
 var DELETE_DB = false
@@ -500,15 +508,15 @@ func (uh *UserHandler) GetUserById(user_id string) (*UserData, error) {
 	if !uh.parent.Check() {
 		return nil, errors.New("БД не доступна")
 	}
-	result := UserData{}
-	err := uh.UsersCollection.Find(bson.M{"user_id": user_id}).One(&result)
+	result := &UserData{}
+	err := uh.UsersCollection.Find(bson.M{"user_id": user_id}).One(result)
 	if err != nil && err != mgo.ErrNotFound {
 		log.Printf("Ощибка определения пользователя %v", err)
 		return nil, err
 	} else if err == mgo.ErrNotFound {
 		return nil, nil
 	}
-	return &result, err
+	return result, err
 }
 
 func (uh *UserHandler) SetUserShowedName(user_id, new_name string) error {
