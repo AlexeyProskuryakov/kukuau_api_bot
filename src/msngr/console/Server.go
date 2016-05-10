@@ -169,6 +169,12 @@ func Run(addr string, db *d.MainDb, qs *quests.QuestStorage, vdh *voting.VotingD
 				"is_additional_data_valid":func(ad d.AdditionalDataElement) bool {
 					return ad.Value != ""
 				},
+				"from_slice":func(slice []string) string {
+					return strings.Join(slice, " ")
+				},
+				"clear":func(s string) string {
+					return regexp.MustCompile("[^a-zA-Z0-9]+").ReplaceAllString(s,"")
+				},
 			},
 		},
 	}))

@@ -23,12 +23,27 @@
                 <div class="form-group">
                     <label for="role">Роль:</label>
                     <input type="text" class="form-control" id="role" name="user-role" value="manager">
+                    <label for="read-rights">Права на чтение (через пробел):</label>
+                    <input type="text" class="form-control" id="read-rights" name="read-rights">
+                    <label for="write-rights">Права на запись (через пробел):</label>
+                    <input type="text" class="form-control" id="write-rights" name="write-rights">
+                    <label for="belongs-to">Принадлежит компании:</label>
+                    <input type="text" class="form-control" id="belongs-to" name="belongs-to">
                 </div>
                 <div class="form-group">
                     <button type="submit" class="btn btn-info">Добавить</button>
                 </div>
             </form>
         </div>
+    </div>
+    <div class="row">
+        {{if .is_error}}
+        <div class="col-md-5 col-md-offset-3">
+            <div class="alert alert-warning">
+                {{.error_text}}
+            </div>
+        </div>
+        {{end}}
     </div>
     <div class="row">
         <table class="table table-striped">
@@ -65,12 +80,12 @@
                 <td class="col-md-1">
 
                     <button type="submit" class="btn btn-main change-user-button"
-                            data-target="#change-user-modal-{{$user.UserId}}" data-toggle="modal">Изменить
+                            data-target="#change-user-modal-{{clear $user.UserId}}" data-toggle="modal">Изменить
                     </button>
 
 
                     <!-- Modal -->
-                    <div class="modal fade" id="change-user-modal-{{$user.UserId}}" role="dialog">
+                    <div class="modal fade" id="change-user-modal-{{clear $user.UserId}}" role="dialog">
                         <div class="modal-dialog">
                             <!-- Modal content-->
                             <div class="modal-content">
@@ -100,6 +115,20 @@
                                             <label for="user-pwd-{{$user.UserId}}">Пароль </label>
                                             <input type="text" class="form-control" id="user-pwd-{{$user.UserId}}"
                                                    name="user-pwd">
+
+                                            <label for="read-rights-{{$user.UserId}}">Права на чтение (через
+                                                пробел):</label>
+                                            <input type="text" class="form-control" id="read-rights-{{$user.UserId}}"
+                                                   name="read-rights" value="{{from_slice $user.ReadRights}}">
+
+                                            <label for="write-rights-{{$user.UserId}}">Права на запись (через
+                                                пробел):</label>
+                                            <input type="text" class="form-control" id="write-rights-{{$user.UserId}}"
+                                                   name="write-rights" value="{{from_slice $user.WriteRights}}">
+
+                                            <label for="belongs-to-{{$user.UserId}}">Принадлежит компании:</label>
+                                            <input type="text" class="form-control" id="belongs-to-{{$user.UserId}}"
+                                                   name="belongs-to" value="{{$user.BelongsTo}}">
 
                                         </div>
 

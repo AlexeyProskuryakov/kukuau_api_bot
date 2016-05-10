@@ -20,6 +20,7 @@ import (
 	d "msngr/db"
 	"time"
 	u "msngr/utils"
+	"strings"
 )
 
 func ConfigurationView(request *http.Request, render render.Render, cs d.CommandsStorage) {
@@ -140,20 +141,34 @@ func EnsureWorkWithUsers(r martini.Router, db *d.MainDb) martini.Router {
 			r.HTML(200, "users", GetUsersInfo("", db), render.HTMLOptions{Layout:"base"})
 		})
 
-		r.Post("/add", w.LoginRequired, w.AutHandler.CheckIncludeAnyRole(MANAGER), func(user auth.User, render render.Render, request *http.Request) {
-			u_id := request.FormValue("user-id")
-			u_name := request.FormValue("user-name")
+		r.Post("/add", w.LoginRequired, w.AutHandler.CheckIncludeAnyRole(MANAGER), func(r render.Render, request *http.Request) {
+			u_id := strings.TrimSpace(request.FormValue("user-id"))
+			u_name := strings.TrimSpace(request.FormValue("user-name"))
 			u_phone := request.FormValue("user-phone")
 			u_email := request.FormValue("user-e-mail")
-			u_role := request.FormValue("user-role")
+			u_role := strings.TrimSpace(request.FormValue("user-role"))
 			u_pwd := request.FormValue("user-pwd")
+			u_read_rights := strings.Fields(request.FormValue("read-rights"))
+			u_write_rights := strings.Fields(request.FormValue("write-rights"))
+			u_belongs_to := strings.TrimSpace(request.FormValue("belongs-to"))
 
 			log.Printf("CONSOLE WEB add user [%s]  '%s' +%s %s |%v| {%s}", u_id, u_name, u_phone, u_email, u_role, u_pwd)
 			if u_name != "" && u_id != "" {
-				db.Users.AddOrUpdateUserObject(d.UserData{UserId:u_id, UserName:u_name, Email:u_email, Phone:u_phone, Role:u_role, Password:u.PHash(u_pwd), LastUpdate:time.Now()})
-				render.Redirect("/users")
+				db.Users.AddOrUpdateUserObject(d.UserData{
+					UserId:u_id,
+					UserName:u_name,
+					Email:u_email,
+					Phone:u_phone,
+					Role:u_role,
+					Password:u.PHash(u_pwd),
+					LastUpdate:time.Now(),
+					ReadRights:u_read_rights,
+					WriteRights:u_write_rights,
+					BelongsTo:u_belongs_to,
+				})
+				r.Redirect("/users")
 			} else {
-				render.HTML(200, "users", GetUsersInfo("Невалидные значения имени и (или) идентификатора добавляемого пользователя", db))
+				r.HTML(200, "users", GetUsersInfo("Невалидные значения имени и (или) идентификатора добавляемого пользователя", db), render.HTMLOptions{Layout:"base"})
 			}
 		})
 
@@ -166,11 +181,14 @@ func EnsureWorkWithUsers(r martini.Router, db *d.MainDb) martini.Router {
 
 		r.Post("/update/:id", w.LoginRequired, w.AutHandler.CheckIncludeAnyRole(MANAGER), func(params martini.Params, render render.Render, request *http.Request) {
 			u_id := params["id"]
-			u_name := request.FormValue("user-name")
+			u_name := strings.TrimSpace(request.FormValue("user-name"))
 			u_phone := request.FormValue("user-phone")
 			u_email := request.FormValue("user-e-mail")
 			u_role := request.FormValue("user-role")
 			u_pwd := request.FormValue("user-pwd")
+			u_read_rights := strings.Fields(request.FormValue("read-rights"))
+			u_write_rights := strings.Fields(request.FormValue("write-rights"))
+			u_belongs_to := strings.TrimSpace(request.FormValue("belongs-to"))
 
 			upd := bson.M{}
 			if u_name != "" {
@@ -187,6 +205,15 @@ func EnsureWorkWithUsers(r martini.Router, db *d.MainDb) martini.Router {
 			}
 			if u_pwd != "" {
 				upd["password"] = u.PHash(u_pwd)
+			}
+			if len(u_read_rights) > 0 {
+				upd["read_rights"] = u_read_rights
+			}
+			if len(u_write_rights) > 0 {
+				upd["write_rights"] = u_write_rights
+			}
+			if u_belongs_to != "" {
+				upd["belongs_to"] = u_belongs_to
 			}
 			db.Users.UsersCollection.Update(bson.M{"user_id":u_id}, bson.M{"$set":upd})
 			log.Printf("CONSOLE WEB update user [%s]  '%s' +%s %s |%v| {%v}", u_id, u_name, u_phone, u_email, u_role, u_pwd)

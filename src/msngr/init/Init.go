@@ -160,6 +160,14 @@ func StartBot(db *d.MainDb, result chan string) c.Configuration {
 		bc := cnsl.FormConsoleBotContext(conf, db)
 		cc := m.FormBotController(bc, db)
 		http.HandleFunc("/console", cc)
+		db.Users.AddOrUpdateUserObject(d.UserData{
+			UserId:"alesha",
+			UserName:"alesha",
+			Password:utils.PHash("sederfes100500"),
+			Role:users.MANAGER,
+			BelongsTo:"klichat",
+		})
+		web.DefaultUrlMap.AddAccessory("klichat", "/klichat")
 		result <- "console"
 	}
 
@@ -246,7 +254,6 @@ func StartBot(db *d.MainDb, result chan string) c.Configuration {
 				UserId:coffee_conf.Chat.User,
 				UserName:coffee_conf.Chat.User,
 				Password:utils.PHash(coffee_conf.Chat.Password),
-				Role:users.MANAGER,
 				BelongsTo:coffee_conf.Chat.CompanyId,
 				ReadRights:[]string{coffee_conf.Chat.CompanyId},
 				WriteRights:[]string{coffee_conf.Chat.CompanyId},
@@ -295,7 +302,6 @@ func StartBot(db *d.MainDb, result chan string) c.Configuration {
 			db.Users.AddOrUpdateUserObject(d.UserData{
 				UserName:chat_conf.User,
 				Password:utils.PHash(chat_conf.Password),
-				Role:users.MANAGER,
 				UserId:chat_conf.User,
 				BelongsTo:chat_conf.CompanyId,
 				ReadRights:[]string{chat_conf.CompanyId},
