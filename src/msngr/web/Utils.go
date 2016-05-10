@@ -116,9 +116,9 @@ func GetFuncMap(cName, cId, start_addr string) template.FuncMap {
 	}
 }
 
-func GetRenderer(cName, cId, start_addr, template string) martini.Handler {
+func GetRenderer(cName, cId, start_addr, templateName string) martini.Handler {
 	renderer := render.Renderer(render.Options{
-		Directory:fmt.Sprintf("templates/%v", template),
+		Directory:fmt.Sprintf("templates/%v", templateName),
 		//Layout: "console/layout",
 		Extensions: []string{".tmpl", ".html"},
 		Charset: "UTF-8",
