@@ -144,7 +144,7 @@ func StartBot(db *d.MainDb, result chan string) c.Configuration {
 	fs := http.FileServer(http.Dir("static"))
 	http.Handle("/static/", http.StripPrefix("/static/", fs))
 	//starting serve for auth
-	http.Handle("/auth", web.NewSessionAuthorisationHandler(db))
+	http.Handle("/", web.NewSessionAuthorisationHandler(db))
 
 	for q_name, qConf := range conf.Quests {
 		log.Printf("Will handling quests controller for quest: %v", q_name)
@@ -255,6 +255,7 @@ func StartBot(db *d.MainDb, result chan string) c.Configuration {
 	}
 	if len(conf.Chats) > 0 {
 		for _, chat_conf := range conf.Chats {
+
 			chatBotContext := chat.FormChatBotContext(db, configStorage, chat_conf.CompanyId)
 			chatBotController := m.FormBotController(chatBotContext, db)
 			route := fmt.Sprintf("/bot/chat/%v", chat_conf.CompanyId)
@@ -272,6 +273,7 @@ func StartBot(db *d.MainDb, result chan string) c.Configuration {
 			}
 			webRoute := fmt.Sprintf("/web/chat/%v", salt)
 			http.Handle(webRoute, chat.GetChatMainHandler(webRoute, notifier, db, chat_conf))
+			web.DefaultUrlMap.AddAccessory(chat_conf.CompanyId, webRoute)
 
 			sr := func(s string) string {
 				return fmt.Sprintf("%v%v", webRoute, s)
@@ -287,7 +289,15 @@ func StartBot(db *d.MainDb, result chan string) c.Configuration {
 
 			log.Printf("I will handling web requests for chat at : [%v]", webRoute)
 
-			db.Users.AddOrUpdateUserObject(d.UserData{UserName:chat_conf.User, Password:utils.PHash(chat_conf.Password), Role:users.MANAGER, UserId:chat_conf.User})
+			db.Users.AddOrUpdateUserObject(d.UserData{
+				UserName:chat_conf.User,
+				Password:utils.PHash(chat_conf.Password),
+				Role:users.MANAGER,
+				UserId:chat_conf.User,
+				BelongsTo:chat_conf.CompanyId,
+				ReadRights:[]string{chat_conf.CompanyId},
+				WriteRights:[]string{chat_conf.CompanyId},
+			})
 
 			configStorage.SetChatConfig(chat_conf, false)
 		}

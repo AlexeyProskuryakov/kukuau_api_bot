@@ -18,6 +18,8 @@ type User interface {
 	CanWrite(right string) bool
 	IsAuthenticated() bool
 	UniqueId() string
+	RoleName() string
+	BelongsToCompany() string
 }
 
 type user struct {
@@ -55,8 +57,18 @@ func (u *user) UniqueId() string {
 	return u.UserId
 }
 
+func (u *user) RoleName() string {
+	log.Printf("User role: %v", u.Role)
+	return u.Role
+}
+
+func (u *user) BelongsToCompany() string {
+	log.Printf("User belongs to %v", u.BelongsTo)
+	return u.BelongsTo
+}
+
 const (
-	AUTH_URL = "/auth"
+	AUTH_URL = "/"
 	REDIRECT_PARAM = "from"
 	COOKIE_NAME = "current_user_id"
 )
@@ -88,7 +100,7 @@ func NewSessionAuthorisationHandler(mainDb *d.MainDb, ) http.Handler {
 	flash := Flash{}
 	r := martini.NewRouter()
 
-	r.Get("/auth", func(r render.Render, prms martini.Params, req *http.Request) {
+	r.Get("/", func(r render.Render, prms martini.Params, req *http.Request) {
 		flashMessage, fType := flash.GetMessage()
 		query := req.URL.Query()
 
@@ -99,7 +111,7 @@ func NewSessionAuthorisationHandler(mainDb *d.MainDb, ) http.Handler {
 		r.HTML(200, "login", result, render.HTMLOptions{Layout:"base"})
 	})
 
-	r.Post("/auth", binding.Bind(user{}), func(postedUser user, r render.Render, req *http.Request, w http.ResponseWriter) {
+	r.Post("/", binding.Bind(user{}), func(postedUser user, r render.Render, req *http.Request, w http.ResponseWriter) {
 		userData, err := mainDb.Users.LoginUser(postedUser.LoginName, postedUser.Password)
 		if err != nil {
 			log.Printf("AUTH user %+v not found: %v", postedUser, err)
@@ -111,8 +123,10 @@ func NewSessionAuthorisationHandler(mainDb *d.MainDb, ) http.Handler {
 		}
 		user := NewUser(userData)
 		StartAuthSession(user, w)
-		params := req.URL.Query()
-		redirect := params.Get(REDIRECT_PARAM)
+		redirect := req.URL.Query().Get(REDIRECT_PARAM)
+		if redirect == ""{
+			redirect = DefaultUrlMap.GetDefaultUrl(user.BelongsToCompany())
+		}
 		http.Redirect(w, req, redirect, 302)
 	})
 

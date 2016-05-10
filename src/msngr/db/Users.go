@@ -26,6 +26,7 @@ type UserData struct {
 	ReadRights  []string `bson:"read_rights"`
 	WriteRights []string `bson:"write_rights"`
 	Auth        bool `bson:"auth"`
+	BelongsTo   string `bson:"belongs_to"`
 }
 
 func (uw *UserData) GetStateValue(state_key string) (string, bool) {
@@ -66,9 +67,6 @@ func (uh *UserHandler) ensureIndexes() {
 		Key:        []string{"role"},
 	})
 	usersCollection.EnsureIndex(mgo.Index{
-		Key:        []string{"last_marker"},
-	})
-	usersCollection.EnsureIndex(mgo.Index{
 		Key:        []string{"auth"},
 	})
 	uh.UsersCollection = usersCollection
@@ -97,4 +95,7 @@ func (uh *UserHandler) AddRightToUser(userId string, rightType string, rights ..
 	}
 	err := uh.UsersCollection.Update(bson.M{"user_id":userId}, bson.M{"$addToSet":bson.M{fmt.Sprintf("%v_rights", rightType):rights}})
 	return err
+}
+func (uh *UserHandler) AddRoleToUser(userId, role string) error {
+	return uh.UsersCollection.Update(bson.M{"user_id": userId}, bson.M{"$set":bson.M{"role":role}})
 }

@@ -6,6 +6,25 @@ import (
 	"fmt"
 )
 
+type AuthMap struct {
+	//map for mapping default pages of chats or another services with users rights
+	data map[string]string
+}
+
+func (a *AuthMap) AddAccessory(companyId, defaultUrl string) {
+	a.data[companyId] = defaultUrl
+}
+
+func (a *AuthMap) GetDefaultUrl(companyId string) string {
+	if dUrl, ok := a.data[companyId]; ok {
+		return dUrl
+	} else {
+		return ""
+	}
+}
+
+var DefaultUrlMap = &AuthMap{data:make(map[string]string)}
+
 type AuthHandler struct {
 	RedirectUrl string
 }
@@ -16,10 +35,10 @@ const (
 	CAN_NOT_WRITE = "can_not_write"
 )
 
-func (ah *AuthHandler) CheckIncludeAnyRole(roles ...string) func(r render.Render, user user, req *http.Request) {
-	return func(r render.Render, user user, req *http.Request) {
+func (ah *AuthHandler) CheckIncludeAnyRole(roles ...string) func(r render.Render, user User, req *http.Request) {
+	return func(r render.Render, user User, req *http.Request) {
 		for _, role := range roles {
-			if user.Role == role {
+			if user.RoleName() == role {
 				return
 			}
 		}
@@ -28,8 +47,8 @@ func (ah *AuthHandler) CheckIncludeAnyRole(roles ...string) func(r render.Render
 	}
 }
 
-func (ah *AuthHandler) CheckReadRights(rights ...string) func(r render.Render, user user, req *http.Request) {
-	return func(r render.Render, user user, req *http.Request) {
+func (ah *AuthHandler) CheckReadRights(rights ...string) func(r render.Render, user User, req *http.Request) {
+	return func(r render.Render, user User, req *http.Request) {
 		for _, right := range rights {
 			if !user.CanRead(right) {
 				path := fmt.Sprintf("%s?%s=%s", ah.RedirectUrl, CAN_NOT_READ, req.URL.Path)
@@ -39,8 +58,8 @@ func (ah *AuthHandler) CheckReadRights(rights ...string) func(r render.Render, u
 	}
 }
 
-func (ah *AuthHandler) CheckWriteRights(rights ...string) func(r render.Render, user user, req *http.Request) {
-	return func(r render.Render, user user, req *http.Request) {
+func (ah *AuthHandler) CheckWriteRights(rights ...string) func(r render.Render, user User, req *http.Request) {
+	return func(r render.Render, user User, req *http.Request) {
 		for _, right := range rights {
 			if !user.CanWrite(right) {
 				path := fmt.Sprintf("%s?%s=%s", ah.RedirectUrl, CAN_NOT_WRITE, req.URL.Path)
