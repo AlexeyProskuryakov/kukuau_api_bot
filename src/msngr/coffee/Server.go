@@ -40,7 +40,6 @@ func GetMartini(cName, cId, start_addr string, db *d.MainDb) *martini.ClassicMar
 	return m
 }
 
-
 func GetMessageAdditionalFunctionsHandler(start_addr string, notifier *ntf.Notifier, db *d.MainDb, config c.ChatConfig, chc *CoffeeHouseConfiguration) http.Handler {
 	m := GetMartini(config.Name, config.CompanyId, start_addr, db)
 	m.Post(start_addr, func(render render.Render, req *http.Request) {
@@ -198,7 +197,6 @@ func GetChatConfigHandler(start_addr, prefix string, db *d.MainDb, config c.Chat
 	return m
 }
 
-
 func GetChatMainHandler(start_addr string, notifier *ntf.Notifier, db *d.MainDb, config c.ChatConfig) http.Handler {
 	m := GetMartini(config.Name, config.CompanyId, start_addr, db)
 	m.Get(start_addr, func(r render.Render, params martini.Params, req *http.Request) {
@@ -308,3 +306,16 @@ func GetChatContactsHandler(start_addr string, notifier *ntf.Notifier, db *d.Mai
 	return m
 }
 
+func GetChatLogoutHandler(start_addr, prefix string, db *d.MainDb, config c.ChatConfig) http.Handler {
+	m := GetMartini(config.Name, config.CompanyId, prefix, db)
+	m.Get(start_addr, web.LoginRequired, func(user web.User, db d.DB, ren render.Render, req *http.Request, w http.ResponseWriter) {
+		err := db.UsersStorage().LogoutUser(user.UniqueId())
+		if err != nil {
+			log.Printf("COFFEE error at logout user: %v", err)
+		}
+		web.StopAuthSession(w)
+
+		ren.Redirect(web.AUTH_URL, 302)
+	})
+	return m
+}

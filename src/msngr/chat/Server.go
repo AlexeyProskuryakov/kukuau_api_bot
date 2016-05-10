@@ -13,8 +13,6 @@ import (
 	"gopkg.in/mgo.v2/bson"
 
 	"sort"
-
-	"html/template"
 	"time"
 	"fmt"
 	"encoding/json"
