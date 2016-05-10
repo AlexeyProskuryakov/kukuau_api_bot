@@ -123,9 +123,9 @@ func NewSessionAuthorisationHandler(mainDb *d.MainDb, ) http.Handler {
 		}
 		user := NewUser(userData)
 		StartAuthSession(user, w)
-		redirect := req.URL.Query().Get(REDIRECT_PARAM)
-		if redirect == ""{
-			redirect = DefaultUrlMap.GetDefaultUrl(user.BelongsToCompany())
+		redirect := DefaultUrlMap.GetDefaultUrl(user.BelongsToCompany())
+		if redirect == "" {
+			redirect = req.URL.Query().Get(REDIRECT_PARAM)
 		}
 		http.Redirect(w, req, redirect, 302)
 	})

@@ -25,9 +25,11 @@ func (a *AuthMap) GetDefaultUrl(companyId string) string {
 
 var DefaultUrlMap = &AuthMap{data:make(map[string]string)}
 
-type AuthHandler struct {
+type authHandler struct {
 	RedirectUrl string
 }
+
+var AutHandler = &authHandler{RedirectUrl:AUTH_URL}
 
 const (
 	NOT_BELONG_ROLES = "not_belong_role"
@@ -35,7 +37,7 @@ const (
 	CAN_NOT_WRITE = "can_not_write"
 )
 
-func (ah *AuthHandler) CheckIncludeAnyRole(roles ...string) func(r render.Render, user User, req *http.Request) {
+func (ah *authHandler) CheckIncludeAnyRole(roles ...string) func(r render.Render, user User, req *http.Request) {
 	return func(r render.Render, user User, req *http.Request) {
 		for _, role := range roles {
 			if user.RoleName() == role {
@@ -47,7 +49,7 @@ func (ah *AuthHandler) CheckIncludeAnyRole(roles ...string) func(r render.Render
 	}
 }
 
-func (ah *AuthHandler) CheckReadRights(rights ...string) func(r render.Render, user User, req *http.Request) {
+func (ah *authHandler) CheckReadRights(rights ...string) func(r render.Render, user User, req *http.Request) {
 	return func(r render.Render, user User, req *http.Request) {
 		for _, right := range rights {
 			if !user.CanRead(right) {
@@ -58,7 +60,7 @@ func (ah *AuthHandler) CheckReadRights(rights ...string) func(r render.Render, u
 	}
 }
 
-func (ah *AuthHandler) CheckWriteRights(rights ...string) func(r render.Render, user User, req *http.Request) {
+func (ah *authHandler) CheckWriteRights(rights ...string) func(r render.Render, user User, req *http.Request) {
 	return func(r render.Render, user User, req *http.Request) {
 		for _, right := range rights {
 			if !user.CanWrite(right) {

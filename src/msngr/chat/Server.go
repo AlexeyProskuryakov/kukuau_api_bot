@@ -77,7 +77,7 @@ func GetMartini(cName, cId, start_addr string, db *d.MainDb) *martini.ClassicMar
 
 func GetChatMainHandler(start_addr string, notifier *ntf.Notifier, db *d.MainDb, config c.ChatConfig) http.Handler {
 	m := GetMartini(config.Name, config.CompanyId, start_addr, db)
-	m.Get(start_addr, web.LoginRequired, func(r render.Render, params martini.Params, req *http.Request, user web.User) {
+	m.Get(start_addr, web.LoginRequired, web.AutHandler.CheckReadRights(config.CompanyId), func(r render.Render, params martini.Params, req *http.Request, user web.User) {
 		var with string
 		result_data := map[string]interface{}{}
 		query := req.URL.Query()
@@ -132,7 +132,7 @@ func GetChatMainHandler(start_addr string, notifier *ntf.Notifier, db *d.MainDb,
 
 func GetChatDeleteMessagesHandler(start_addr string, db *d.MainDb, config c.ChatConfig) http.Handler {
 	m := GetMartini(config.Name, config.CompanyId, start_addr, db)
-	m.Delete(start_addr, web.LoginRequired, func(ren render.Render, req *http.Request) {
+	m.Delete(start_addr, web.LoginRequired, web.AutHandler.CheckWriteRights(config.CompanyId), func(ren render.Render, req *http.Request) {
 		type DeleteInfo struct {
 			From string `json:"from"`
 			To   string `json:"to"`
@@ -162,7 +162,7 @@ func GetChatDeleteMessagesHandler(start_addr string, db *d.MainDb, config c.Chat
 
 func GetChatSendHandler(start_addr string, notifier *ntf.Notifier, db *d.MainDb, config c.ChatConfig, cs *ChatStorage) http.Handler {
 	m := GetMartini(config.Name, config.CompanyId, start_addr, db)
-	m.Post(start_addr, web.LoginRequired, func(render render.Render, req *http.Request) {
+	m.Post(start_addr, web.LoginRequired, web.AutHandler.CheckWriteRights(config.CompanyId), func(render render.Render, req *http.Request) {
 		type MessageFromF struct {
 			From string `json:"from"`
 			To   string `json:"to"`
@@ -207,7 +207,7 @@ func GetChatSendHandler(start_addr string, notifier *ntf.Notifier, db *d.MainDb,
 }
 func GetChatMessageReadHandler(start_addr string, notifier *ntf.Notifier, db *d.MainDb, config c.ChatConfig) http.Handler {
 	m := GetMartini(config.Name, config.CompanyId, start_addr, db)
-	m.Post(start_addr, web.LoginRequired, func(render render.Render, req *http.Request) {
+	m.Post(start_addr, web.LoginRequired, web.AutHandler.CheckReadRights(config.CompanyId), func(render render.Render, req *http.Request) {
 		type Readed struct {
 			From string `json:"from"`
 		}
@@ -335,7 +335,7 @@ func GetChatContactsHandler(start_addr string, notifier *ntf.Notifier, db *d.Mai
 
 func GetChatContactsChangeHandler(start_addr string, notifier *ntf.Notifier, db *d.MainDb, config c.ChatConfig) http.Handler {
 	m := GetMartini(config.Name, config.CompanyId, start_addr, db)
-	m.Post(start_addr, web.LoginRequired, func(render render.Render, req *http.Request) {
+	m.Post(start_addr, web.LoginRequired, web.AutHandler.CheckWriteRights(config.CompanyId), func(render render.Render, req *http.Request) {
 		type NewContactName struct {
 			Id      string `json:"id"`
 			NewName string `json:"new_name"`
@@ -364,7 +364,7 @@ func GetChatContactsChangeHandler(start_addr string, notifier *ntf.Notifier, db 
 
 func GetChatConfigHandler(start_addr, prefix string, db *d.MainDb, config c.ChatConfig) http.Handler {
 	m := GetMartini(config.Name, config.CompanyId, prefix, db)
-	m.Get(start_addr, web.LoginRequired, func(ren render.Render, req *http.Request) {
+	m.Get(start_addr, web.LoginRequired, web.AutHandler.CheckWriteRights(config.CompanyId), func(ren render.Render, req *http.Request) {
 		ren.HTML(200, "config", map[string]interface{}{}, render.HTMLOptions{Layout:"base"})
 	})
 	return m
@@ -379,7 +379,7 @@ func GetChatLogoutHandler(start_addr, prefix string, db *d.MainDb, config c.Chat
 		}
 		web.StopAuthSession(w)
 
-		ren.Redirect(fmt.Sprintf("%s?%s=%s", web.AUTH_URL, web.REDIRECT_PARAM, prefix), 302)
+		ren.Redirect(web.AUTH_URL, 302)
 	})
 	return m
 }
