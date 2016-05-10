@@ -53,24 +53,10 @@ func getContacts(db *d.MainDb, to_name string) ([]usrs.Contact, error) {
 	return result, nil
 }
 
-func getRenderer(cName, cId, start_addr string) martini.Handler {
-	renderer := render.Renderer(render.Options{
-		Directory:"templates/chat",
-		//Layout: "console/layout",
-		Extensions: []string{".tmpl", ".html"},
-		Charset: "UTF-8",
-		IndentJSON: true,
-		IndentXML: true,
-		Funcs:[]template.FuncMap{
-			web.GetFuncMap(cName, cId, start_addr),
-		},
-	})
-	return renderer
-}
 
 func GetMartini(cName, cId, start_addr string, db *d.MainDb) *martini.ClassicMartini {
 	m := martini.Classic()
-	m.Use(getRenderer(cName, cId, start_addr))
+	m.Use(web.GetRenderer(cName, cId, start_addr, "chat"))
 	m.MapTo(db, (*d.DB)(nil))
 	return m
 }

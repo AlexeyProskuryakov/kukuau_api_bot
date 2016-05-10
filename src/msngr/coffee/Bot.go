@@ -212,7 +212,7 @@ func getAdditionalFuncs(orderId int64, companyName, userName, messageId string) 
 
 func FormBotCoffeeContext(config c.CoffeeConfig, store *db.MainDb, coffeeHouseConfiguration *CoffeeHouseConfiguration, configStore *db.ConfigurationStorage) *m.BotContext {
 	commandsGenerator := func(in *s.InPkg) (*[]s.OutCommand, error) {
-		lastOrder, err := store.Orders.GetByOwnerLast(in.From, config.Name)
+		lastOrder, err := store.Orders.GetByOwnerLast(in.From, config.Chat.CompanyId)
 		if err != nil {
 			log.Printf("COFFEE BOT error getting last order for %v is: %v", in.From, err)
 			return nil, err
@@ -231,12 +231,12 @@ func FormBotCoffeeContext(config c.CoffeeConfig, store *db.MainDb, coffeeHouseCo
 		"commands":&RequestCommandsProcessor{CommandsFunc:commandsGenerator},
 	}
 	result.MessageProcessors = map[string]s.MessageCommandProcessor{
-		"":m.NewFuncTextBodyProcessor(store, commandsGenerator, config.Name, nil),
+		"":m.NewFuncTextBodyProcessor(store, commandsGenerator, config.Chat.CompanyId, nil),
 		"information":m.NewUpdatableInformationProcessor(configStore, commandsGenerator, config.Chat.CompanyId),
-		"order_bake":&OrderBakeProcessor{Storage:store, CompanyName:config.Name, CommandsFunc:commandsGenerator},
-		"order_drink":&OrderDrinkProcessor{Storage:store, CompanyName:config.Name, CommandsFunc:commandsGenerator},
-		"cancel":&CancelOrderProcessor{Storage:store, CompanyName:config.Name, CommandsFunc:commandsGenerator},
-		"repeat":&RepeatOrderProcessor{Storage:store, CompanyName:config.Name, CommandsFunc:commandsGenerator},
+		"order_bake":&OrderBakeProcessor{Storage:store, CompanyName:config.Chat.CompanyId, CommandsFunc:commandsGenerator},
+		"order_drink":&OrderDrinkProcessor{Storage:store, CompanyName:config.Chat.CompanyId, CommandsFunc:commandsGenerator},
+		"cancel":&CancelOrderProcessor{Storage:store, CompanyName:config.Chat.CompanyId, CommandsFunc:commandsGenerator},
+		"repeat":&RepeatOrderProcessor{Storage:store, CompanyName:config.Chat.CompanyId, CommandsFunc:commandsGenerator},
 	}
 	return &result
 }

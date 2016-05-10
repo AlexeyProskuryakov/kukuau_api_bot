@@ -20,6 +20,7 @@ import (
 	d "msngr/db"
 	c "msngr/configuration"
 	"msngr/chat"
+	"msngr/web"
 )
 
 type CoffeeFunctionData struct {
@@ -32,8 +33,16 @@ type CoffeeFunctionData struct {
 	MessageId string `json:"message_id"`
 }
 
+func GetMartini(cName, cId, start_addr string, db *d.MainDb) *martini.ClassicMartini {
+	m := martini.Classic()
+	m.Use(web.GetRenderer(cName, cId, start_addr, "coffee"))
+	m.MapTo(db, (*d.DB)(nil))
+	return m
+}
+
+
 func GetMessageAdditionalFunctionsHandler(start_addr string, notifier *ntf.Notifier, db *d.MainDb, config c.ChatConfig, chc *CoffeeHouseConfiguration) http.Handler {
-	m := chat.GetMartini(config.Name, config.CompanyId, start_addr, db)
+	m := GetMartini(config.Name, config.CompanyId, start_addr, db)
 	m.Post(start_addr, func(render render.Render, req *http.Request) {
 		cfd := CoffeeFunctionData{}
 		request_body, err := ioutil.ReadAll(req.Body)
@@ -108,7 +117,7 @@ func getActiveOrderMessages(company_id string, db *d.MainDb) ([]d.MessageWrapper
 }
 
 func GetOrdersPageFunctionHandler(start_addr, prefix string, db *d.MainDb, config c.ChatConfig, company_id string) http.Handler {
-	m := chat.GetMartini(config.Name, config.CompanyId, prefix, db)
+	m := GetMartini(config.Name, config.CompanyId, prefix, db)
 	m.Get(start_addr, func(ren render.Render) {
 		log.Printf("Coffee serv getting orders for %v", company_id)
 		messages, _ := getActiveOrderMessages(company_id, db)
@@ -118,7 +127,7 @@ func GetOrdersPageFunctionHandler(start_addr, prefix string, db *d.MainDb, confi
 }
 
 func GetOrdersPageSupplierFunctionHandler(start_addr, prefix string, db *d.MainDb, config c.ChatConfig, company_id string) http.Handler {
-	m := chat.GetMartini(config.Name, config.CompanyId, prefix, db)
+	m := GetMartini(config.Name, config.CompanyId, prefix, db)
 	m.Post(start_addr, func(ren render.Render, req *http.Request) {
 		type ExceptMessages struct {
 			Except []string `json:"except"`
@@ -181,9 +190,17 @@ func GetContacts(db *d.MainDb, to_name string) ([]users.Contact, error) {
 	sort.Sort(users.ByContactsLastMessageTime(result))
 	return result, nil
 }
+func GetChatConfigHandler(start_addr, prefix string, db *d.MainDb, config c.ChatConfig) http.Handler {
+	m := GetMartini(config.Name, config.CompanyId, prefix, db)
+	m.Get(start_addr, web.LoginRequired, web.AutHandler.CheckWriteRights(config.CompanyId), func(ren render.Render, req *http.Request) {
+		ren.HTML(200, "config", map[string]interface{}{}, render.HTMLOptions{Layout:"base"})
+	})
+	return m
+}
+
 
 func GetChatMainHandler(start_addr string, notifier *ntf.Notifier, db *d.MainDb, config c.ChatConfig) http.Handler {
-	m := chat.GetMartini(config.Name, config.CompanyId, start_addr, db)
+	m := GetMartini(config.Name, config.CompanyId, start_addr, db)
 	m.Get(start_addr, func(r render.Render, params martini.Params, req *http.Request) {
 		var with string
 		result_data := map[string]interface{}{}
@@ -248,7 +265,7 @@ func GetChatMainHandler(start_addr string, notifier *ntf.Notifier, db *d.MainDb,
 }
 
 func GetChatContactsHandler(start_addr string, notifier *ntf.Notifier, db *d.MainDb, config c.ChatConfig) http.Handler {
-	m := chat.GetMartini(config.Name, config.CompanyId, start_addr, db)
+	m := GetMartini(config.Name, config.CompanyId, start_addr, db)
 	m.Post(start_addr, func(render render.Render, req *http.Request) {
 		type NewContactsReq struct {
 			Exist []string `json:"exist"`

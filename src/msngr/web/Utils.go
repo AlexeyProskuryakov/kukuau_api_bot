@@ -13,6 +13,7 @@ import (
 	"html/template"
 
 	d "msngr/db"
+	"github.com/martini-contrib/render"
 )
 
 func NonJsonLogger() martini.Handler {
@@ -113,4 +114,19 @@ func GetFuncMap(cName, cId, start_addr string) template.FuncMap {
 			return string(data)
 		},
 	}
+}
+
+func GetRenderer(cName, cId, start_addr, template string) martini.Handler {
+	renderer := render.Renderer(render.Options{
+		Directory:fmt.Sprintf("templates/%v", template),
+		//Layout: "console/layout",
+		Extensions: []string{".tmpl", ".html"},
+		Charset: "UTF-8",
+		IndentJSON: true,
+		IndentXML: true,
+		Funcs:[]template.FuncMap{
+			GetFuncMap(cName, cId, start_addr),
+		},
+	})
+	return renderer
 }

@@ -205,14 +205,14 @@ func (cch *CoffeeConfigHandler) GetConfig(name string) (*CoffeeHouseConfiguratio
 
 func (cch *CoffeeConfigHandler) LoadFromConfig(conf configuration.CoffeeConfig) (*CoffeeHouseConfiguration, error) {
 	chc := CoffeeHouseConfiguration{}
-	err := cch.Configuration.Find(bson.M{"name":conf.Name}).One(&chc)
+	err := cch.Configuration.Find(bson.M{"name":conf.Chat.CompanyId}).One(&chc)
 	if err != nil && err != mgo.ErrNotFound {
 		return nil, err
 
 	} else {
-		newChc := CoffeeHouseConfiguration{Name: conf.Name, Additives:conf.Additives, Bakes:conf.Bakes, Drinks:conf.Drinks, Syrups:conf.Syrups, Volumes:conf.Volumes}
+		newChc := CoffeeHouseConfiguration{Name: conf.Chat.CompanyId, Additives:conf.Additives, Bakes:conf.Bakes, Drinks:conf.Drinks, Syrups:conf.Syrups, Volumes:conf.Volumes}
 		if err != mgo.ErrNotFound {
-			cch.Configuration.Remove(bson.M{"name":conf.Name})
+			cch.Configuration.Remove(bson.M{"name":conf.Chat.CompanyId})
 		}
 		err := cch.Configuration.Insert(newChc)
 		return &newChc, err
@@ -221,7 +221,7 @@ func (cch *CoffeeConfigHandler) LoadFromConfig(conf configuration.CoffeeConfig) 
 }
 
 func NewCHCFromConfig(conf configuration.CoffeeConfig) (*CoffeeHouseConfiguration) {
-	newChc := CoffeeHouseConfiguration{Name: conf.Name, Additives:conf.Additives, Bakes:conf.Bakes, Drinks:conf.Drinks, Syrups:conf.Syrups, Volumes:conf.Volumes}
+	newChc := CoffeeHouseConfiguration{Name: conf.Chat.CompanyId, Additives:conf.Additives, Bakes:conf.Bakes, Drinks:conf.Drinks, Syrups:conf.Syrups, Volumes:conf.Volumes}
 	return &newChc
 }
 
