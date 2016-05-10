@@ -105,6 +105,7 @@ type QuestConfig struct {
 	Key           string `json:"key"`
 	AdditionalKey string `json:"additional_key"`
 	QuestTimes    []string `json:"quest_times"`
+	CompanyId     string `json:"id"`
 }
 
 type ConsoleConfig struct {

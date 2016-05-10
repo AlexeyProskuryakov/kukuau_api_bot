@@ -15,6 +15,9 @@ build(){
     ${EXEC} get github.com/go-martini/martini
     ${EXEC} get github.com/martini-contrib/auth
     ${EXEC} get github.com/martini-contrib/render
+    ${EXEC} get github.com/martini-contrib/sessions
+    ${EXEC} get github.com/martini-contrib/sessionauth
+    ${EXEC} get github.com/martini-contrib/binding
     ${EXEC} get gopkg.in/olivere/elastic.v2
     ${EXEC} get github.com/lib/pq
     ${EXEC} get github.com/renstrom/fuzzysearch/fuzzy

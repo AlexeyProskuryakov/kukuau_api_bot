@@ -50,46 +50,17 @@ type OrderWrapper struct {
 	Active     bool `bson:"is_active"`
 }
 
-type UserWrapper struct {
-	ID         bson.ObjectId `bson:"_id,omitempty"`
-	States     map[string]string `bson:"states"`
-	UserId     string `bson:"user_id"`
-	UserName   string `bson:"user_name"`
-	ShowedName string `bson:"showed_name"`
-	Password   string `bson:"password"`
-	Phone      string `bson:"phone"`
-	Email      string `bson:"email"`
-	LastUpdate time.Time `bson:"last_update"`
-	Role       string `bson:"role"`
-}
-
-func (uw *UserWrapper) GetStateValue(state_key string) (string, bool) {
-	res, ok := uw.States[state_key]
-	return res, ok
-}
-
-func (uw *UserWrapper) GetName() string {
-	if uw.ShowedName != "" {
-		return uw.ShowedName
-	}
-	return uw.UserName
-}
-
 type ErrorWrapper struct {
 	Username string
 	Error    string
 	Time     time.Time
 }
 
-
 type orderHandler struct {
 	Collection *mgo.Collection
 	parent     *MainDb
 }
-type UserHandler struct {
-	Collection *mgo.Collection
-	parent     *MainDb
-}
+
 type errorHandler struct {
 	Collection *mgo.Collection
 	parent     *MainDb
@@ -116,12 +87,20 @@ func NewDbHelper(conn, dbname string) *DbHelper {
 	return res
 }
 
+type DB interface {
+	UsersStorage() *UserHandler
+}
+
 type MainDb struct {
 	DbHelper
 	Orders   *orderHandler
 	Users    *UserHandler
 	Errors   *errorHandler
 	Messages *MessageHandler
+}
+
+func (db *MainDb) UsersStorage() *UserHandler {
+	return db.Users
 }
 
 var DELETE_DB = false
@@ -199,31 +178,7 @@ func (odbh *MainDb) ensureIndexes() {
 		Unique:false,
 	})
 
-	users_collection := odbh.Session.DB(odbh.DbName).C("users")
-	users_collection.EnsureIndex(mgo.Index{
-		Key:        []string{"user_id"},
-		Background: true,
-		Unique:     true,
-		DropDups:   true,
-	})
-	users_collection.EnsureIndex(mgo.Index{
-		Key:        []string{"last_update"},
-	})
-	users_collection.EnsureIndex(mgo.Index{
-		Key:        []string{"user_state"},
-	})
-	users_collection.EnsureIndex(mgo.Index{
-		Key:        []string{"user_name"},
-	})
-	users_collection.EnsureIndex(mgo.Index{
-		Key:        []string{"role"},
-	})
-	users_collection.EnsureIndex(mgo.Index{
-		Key:        []string{"last_marker"},
-	})
-
 	error_collection := odbh.Session.DB(odbh.DbName).C("errors")
-
 	error_collection.EnsureIndex(mgo.Index{
 		Key: []string{"username"},
 		Unique:false,
@@ -233,11 +188,10 @@ func (odbh *MainDb) ensureIndexes() {
 		Unique:false,
 	})
 
-
-	odbh.Users.Collection = users_collection
 	odbh.Orders.Collection = orders_collection
 	odbh.Errors.Collection = error_collection
-	odbh.Messages.ensureIndexes(odbh)
+	odbh.Users.ensureIndexes()
+	odbh.Messages.ensureIndexes()
 }
 
 func NewMainDb(conn, dbname string) *MainDb {
@@ -421,12 +375,12 @@ func (oh *orderHandler) GetOrdersSort(q bson.M, sort string) ([]OrderWrapper, er
 	return result, nil
 }
 
-func (uh *UserHandler) GetUser(req bson.M) (*UserWrapper, error) {
+func (uh *UserHandler) GetUser(req bson.M) (*UserData, error) {
 	if !uh.parent.Check() {
 		return nil, errors.New("БД не доступна")
 	}
-	tmp := UserWrapper{}
-	err := uh.Collection.Find(req).One(&tmp)
+	tmp := UserData{}
+	err := uh.UsersCollection.Find(req).One(&tmp)
 	if err == mgo.ErrNotFound {
 		return nil, nil
 	}
@@ -442,7 +396,7 @@ func (uh *UserHandler) AddUser(user_id, name, phone, email string) error {
 	}
 	tmp, err := uh.GetUser(bson.M{"user_id": user_id, "phone": phone})
 	if tmp == nil {
-		err = uh.Collection.Insert(&UserWrapper{UserId: user_id, UserName:name, Email:email, Phone: phone, LastUpdate: time.Now()})
+		err = uh.UsersCollection.Insert(&UserData{UserId: user_id, UserName:name, Email:email, Phone: phone, LastUpdate: time.Now()})
 		return err
 	}
 	return errors.New(fmt.Sprintf("Duplicate user! [%v] %v {%v}", user_id, name, phone))
@@ -453,7 +407,7 @@ func (uh *UserHandler) StoreUser(user_id, name, phone, email string) error {
 		return errors.New("БД не доступна")
 	}
 	if u, _ := uh.GetUserById(user_id); u == nil {
-		return uh.Collection.Insert(&UserWrapper{UserId: user_id, UserName:name, Email:email, Phone: phone, LastUpdate: time.Now()})
+		return uh.UsersCollection.Insert(&UserData{UserId: user_id, UserName:name, Email:email, Phone: phone, LastUpdate: time.Now()})
 	} else {
 		return uh.UpdateUserData(user_id, name, phone, email)
 	}
@@ -464,23 +418,23 @@ func (uh *UserHandler) StoreUserData(user_id string, user_data *s.InUserData) er
 		return errors.New("БД не доступна")
 	}
 	if u, _ := uh.GetUserById(user_id); u == nil {
-		return uh.Collection.Insert(&UserWrapper{UserId: user_id, UserName:user_data.Name, Email:user_data.Email, Phone: user_data.Phone, LastUpdate: time.Now()})
+		return uh.UsersCollection.Insert(&UserData{UserId: user_id, UserName:user_data.Name, Email:user_data.Email, Phone: user_data.Phone, LastUpdate: time.Now()})
 	} else {
 		return uh.UpdateUserData(user_id, user_data.Name, user_data.Phone, user_data.Email)
 	}
 }
 
-func (uh UserHandler) AddOrUpdateUserObject(uw UserWrapper) error {
+func (uh UserHandler) AddOrUpdateUserObject(uw UserData) error {
 	if !uh.parent.Check() {
 		return errors.New("БД не доступна")
 	}
-	obj := UserWrapper{}
-	err := uh.Collection.Find(bson.M{"user_id":uw.UserId}).One(&obj)
+	obj := UserData{}
+	err := uh.UsersCollection.Find(bson.M{"user_id":uw.UserId}).One(&obj)
 	if err == mgo.ErrNotFound {
-		err = uh.Collection.Insert(uw)
+		err = uh.UsersCollection.Insert(uw)
 		return err
 	} else {
-		err = uh.Collection.UpdateId(obj.ID, uw)
+		err = uh.UsersCollection.UpdateId(obj.ID, uw)
 		return err
 	}
 	return err
@@ -496,10 +450,10 @@ func (uh *UserHandler) SetUserState(user_id, state_key, state_value string) erro
 	}
 	tmp, _ := uh.GetUser(bson.M{"user_id": user_id})
 	if tmp == nil {
-		err := uh.Collection.Insert(&UserWrapper{UserId: user_id, States: map[string]string{state_key:state_value}, LastUpdate: time.Now()})
+		err := uh.UsersCollection.Insert(&UserData{UserId: user_id, States: map[string]string{state_key:state_value}, LastUpdate: time.Now()})
 		return err
 	} else {
-		err := uh.Collection.Update(
+		err := uh.UsersCollection.Update(
 			bson.M{"user_id": user_id},
 			bson.M{"$set": bson.M{fmt.Sprintf("states.%v", state_key): state_value, "last_update": time.Now()}},
 		)
@@ -528,11 +482,11 @@ func (uh *UserHandler) SetUserPassword(username, password string) error {
 	}
 	tmp, _ := uh.GetUser(bson.M{"user_name": username})
 	if tmp == nil {
-		err := uh.Collection.Insert(&UserWrapper{UserId: username, UserName: username, Password: u.PHash(password), LastUpdate: time.Now()})
+		err := uh.UsersCollection.Insert(&UserData{UserId: username, UserName: username, Password: u.PHash(password), LastUpdate: time.Now()})
 		return err
 	} else if u.PHash(password) != tmp.Password {
 		log.Println("changing password! for user ", username)
-		err := uh.Collection.Update(
+		err := uh.UsersCollection.Update(
 			bson.M{"user_name": username},
 			bson.M{"$set": bson.M{"password": u.PHash(password), "last_update": time.Now()}},
 		)
@@ -545,24 +499,24 @@ func (uh *UserHandler) CheckUserPassword(username, password string) (bool, error
 	if !uh.parent.Check() {
 		return false, errors.New("БД не доступна")
 	}
-	tmp := UserWrapper{}
-	err := uh.Collection.Find(bson.M{"user_name": username, "password": u.PHash(password)}).One(&tmp)
+	tmp := UserData{}
+	err := uh.UsersCollection.Find(bson.M{"user_name": username, "password": u.PHash(password)}).One(&tmp)
 	return err != nil, err
 }
 
-func (uh *UserHandler) GetUserById(user_id string) (*UserWrapper, error) {
+func (uh *UserHandler) GetUserById(user_id string) (*UserData, error) {
 	if !uh.parent.Check() {
 		return nil, errors.New("БД не доступна")
 	}
-	result := UserWrapper{}
-	err := uh.Collection.Find(bson.M{"user_id": user_id}).One(&result)
+	result := &UserData{}
+	err := uh.UsersCollection.Find(bson.M{"user_id": user_id}).One(result)
 	if err != nil && err != mgo.ErrNotFound {
 		log.Printf("Ощибка определения пользователя %v", err)
 		return nil, err
 	} else if err == mgo.ErrNotFound {
 		return nil, nil
 	}
-	return &result, err
+	return result, err
 }
 
 func (uh *UserHandler) SetUserShowedName(user_id, new_name string) error {
@@ -571,7 +525,7 @@ func (uh *UserHandler) SetUserShowedName(user_id, new_name string) error {
 	}
 	user, _ := uh.GetUserById(user_id)
 	if user != nil {
-		err := uh.Collection.Update(bson.M{"user_id":user_id}, bson.M{"$set":bson.M{"showed_name":new_name}})
+		err := uh.UsersCollection.Update(bson.M{"user_id":user_id}, bson.M{"$set":bson.M{"showed_name":new_name}})
 		return err
 	}
 	return errors.New("User not found :(")
@@ -592,20 +546,20 @@ func (uh *UserHandler) UpdateUserData(user_id, name, phone, email string) error 
 		to_upd["email"] = email
 	}
 
-	err := uh.Collection.Update(bson.M{"user_id":user_id}, bson.M{"$set":to_upd})
+	err := uh.UsersCollection.Update(bson.M{"user_id":user_id}, bson.M{"$set":to_upd})
 	return err
 }
 func (uh *UserHandler) Count() int {
-	r, _ := uh.Collection.Count()
+	r, _ := uh.UsersCollection.Count()
 	return r
 }
 
-func (uh *UserHandler) GetBy(req bson.M) ([]UserWrapper, error) {
+func (uh *UserHandler) GetBy(req bson.M) ([]UserData, error) {
 	if !uh.parent.Check() {
 		return nil, errors.New("БД не доступна")
 	}
-	result := []UserWrapper{}
-	err := uh.Collection.Find(req).Sort("last_update").All(&result)
+	result := []UserData{}
+	err := uh.UsersCollection.Find(req).Sort("last_update").All(&result)
 	if err != nil && err != mgo.ErrNotFound {
 		return nil, err
 	} else if err == mgo.ErrNotFound {
@@ -633,7 +587,6 @@ func (eh *errorHandler) GetBy(req bson.M) (*[]ErrorWrapper, error) {
 	err := eh.Collection.Find(req).Sort("time").All(&result)
 	return &result, err
 }
-
 
 type CommandsStorage struct {
 	DbHelper
@@ -776,7 +729,7 @@ func (cs *ConfigurationStorage) UpdateAutoAnswers(companyId string, autoAnswers 
 
 func (cs *ConfigurationStorage) UpdateInformation(companyId, information string) error {
 	ci, err := cs.Collection.Upsert(bson.M{"company_id":companyId}, bson.M{"$set":bson.M{"information":information}})
-	log.Printf("Update information %+v", ci)
+	log.Printf("Update information for: %v, new: %v, result: %+v", companyId, information, ci)
 	return err
 }
 

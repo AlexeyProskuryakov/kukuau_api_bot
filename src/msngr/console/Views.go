@@ -150,7 +150,7 @@ func EnsureWorkWithUsers(r martini.Router, db *d.MainDb) martini.Router {
 
 			log.Printf("CONSOLE WEB add user [%s]  '%s' +%s %s |%v| {%s}", u_id, u_name, u_phone, u_email, u_role, u_pwd)
 			if u_name != "" && u_id != "" {
-				db.Users.AddOrUpdateUserObject(d.UserWrapper{UserId:u_id, UserName:u_name, Email:u_email, Phone:u_phone, Role:u_role, Password:u.PHash(u_pwd), LastUpdate:time.Now()})
+				db.Users.AddOrUpdateUserObject(d.UserData{UserId:u_id, UserName:u_name, Email:u_email, Phone:u_phone, Role:u_role, Password:u.PHash(u_pwd), LastUpdate:time.Now()})
 				render.Redirect("/users")
 			} else {
 				render.HTML(200, "users", GetUsersInfo("Невалидные значения имени и (или) идентификатора добавляемого пользователя", db))
@@ -159,7 +159,7 @@ func EnsureWorkWithUsers(r martini.Router, db *d.MainDb) martini.Router {
 
 		r.Post("/delete/:id", func(params martini.Params, render render.Render) {
 			uid := params["id"]
-			err := db.Users.Collection.Remove(bson.M{"user_id":uid})
+			err := db.Users.UsersCollection.Remove(bson.M{"user_id":uid})
 			log.Printf("CONSOLE WEB will delete user %v (%v)", uid, err)
 			render.Redirect("/users")
 		})
@@ -188,7 +188,7 @@ func EnsureWorkWithUsers(r martini.Router, db *d.MainDb) martini.Router {
 			if u_pwd != "" {
 				upd["password"] = u.PHash(u_pwd)
 			}
-			db.Users.Collection.Update(bson.M{"user_id":u_id}, bson.M{"$set":upd})
+			db.Users.UsersCollection.Update(bson.M{"user_id":u_id}, bson.M{"$set":upd})
 			log.Printf("CONSOLE WEB update user [%s]  '%s' +%s %s |%v| {%v}", u_id, u_name, u_phone, u_email, u_role, u_pwd)
 			render.Redirect("/users")
 		})

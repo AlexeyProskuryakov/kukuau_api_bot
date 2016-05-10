@@ -45,8 +45,8 @@ func (s *ChatStorage) SetUserCompany(userId, companyId string) error {
 	return err
 }
 
-func (s *ChatStorage) GetUsersOfCompany(companyId string) ([]db.UserWrapper, error) {
-	result := []db.UserWrapper{}
+func (s *ChatStorage) GetUsersOfCompany(companyId string) ([]db.UserData, error) {
+	result := []db.UserData{}
 	users_mapping := []userCompanyMappingElement{}
 	err := s.userCompanyMappings.Find(bson.M{"company_id":companyId}).All(&users_mapping)
 	if err != nil {

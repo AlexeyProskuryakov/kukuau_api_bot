@@ -26,6 +26,7 @@ import (
 
 	"msngr/utils"
 	"msngr/users"
+	"msngr/web"
 )
 
 func GetTaxiAPI(params c.TaxiApiParams, for_name string) (t.TaxiInterface, error) {
@@ -136,12 +137,19 @@ func StartBot(db *d.MainDb, result chan string) c.Configuration {
 		http.HandleFunc(conf.RuPost.WorkUrl, rp_controller)
 		result <- "rupost"
 	}
-
+	configStorage := d.NewConfigurationStorage(conf.Main.ConfigDatabase)
 	qs := q.NewQuestStorage(conf.Main.Database.ConnString, conf.Main.Database.Name)
 
-	for q_name, _ := range conf.Quests {
+	//serving static for chats and coffee
+	fs := http.FileServer(http.Dir("static"))
+	http.Handle("/static/", http.StripPrefix("/static/", fs))
+	//starting serve for auth
+	http.Handle("/", web.NewSessionAuthorisationHandler(db))
+
+	for q_name, qConf := range conf.Quests {
 		log.Printf("Will handling quests controller for quest: %v", q_name)
-		qb_controller := q.FormQuestBotContext(conf, q_name, qs, db)
+		configStorage.UpdateInformation(qConf.CompanyId, qConf.Info)
+		qb_controller := q.FormQuestBotContext(conf, q_name, qs, db, configStorage)
 		q_controller := m.FormBotController(qb_controller, db)
 		http.HandleFunc(fmt.Sprintf("/quest/%v", q_name), q_controller)
 		result <- fmt.Sprintf("quest_%v", q_name)
@@ -177,12 +185,7 @@ func StartBot(db *d.MainDb, result chan string) c.Configuration {
 		result <- "vote"
 	}
 
-	configStorage := d.NewConfigurationStorage(conf.Main.ConfigDatabase)
-
 	if len(conf.Coffee) > 0 {
-		fs := http.FileServer(http.Dir("static"))
-		http.Handle("/static/", http.StripPrefix("/static/", fs))
-
 		for _, coffee_conf := range conf.Coffee {
 			c_store := coffee.NewCoffeeConfigHandler(db)
 			coffeeHouseConfiguration := coffee.NewCHCFromConfig(coffee_conf)
@@ -237,7 +240,7 @@ func StartBot(db *d.MainDb, result chan string) c.Configuration {
 			http.Handle(sr("/order_page_supply"), coffee.GetOrdersPageSupplierFunctionHandler(sr("/order_page_supply"), webRoute, db, coffee_conf.Chat, coffee_conf.Name))
 
 			log.Printf("I will handling web requests for coffee %v at : [%v]", coffee_conf.Name, webRoute)
-			db.Users.AddOrUpdateUserObject(d.UserWrapper{
+			db.Users.AddOrUpdateUserObject(d.UserData{
 				UserId:coffee_conf.Chat.User,
 				UserName:coffee_conf.Chat.User,
 				Password:utils.PHash(coffee_conf.Chat.Password),
@@ -249,12 +252,8 @@ func StartBot(db *d.MainDb, result chan string) c.Configuration {
 		result <- "coffee"
 	}
 	if len(conf.Chats) > 0 {
-		if len(conf.Coffee) == 0 {
-			fs := http.FileServer(http.Dir("static"))
-			http.Handle("/static/", http.StripPrefix("/static/", fs))
-		}
-
 		for _, chat_conf := range conf.Chats {
+
 			chatBotContext := chat.FormChatBotContext(db, configStorage, chat_conf.CompanyId)
 			chatBotController := m.FormBotController(chatBotContext, db)
 			route := fmt.Sprintf("/bot/chat/%v", chat_conf.CompanyId)
@@ -272,6 +271,7 @@ func StartBot(db *d.MainDb, result chan string) c.Configuration {
 			}
 			webRoute := fmt.Sprintf("/web/chat/%v", salt)
 			http.Handle(webRoute, chat.GetChatMainHandler(webRoute, notifier, db, chat_conf))
+			web.DefaultUrlMap.AddAccessory(chat_conf.CompanyId, webRoute)
 
 			sr := func(s string) string {
 				return fmt.Sprintf("%v%v", webRoute, s)
@@ -283,10 +283,19 @@ func StartBot(db *d.MainDb, result chan string) c.Configuration {
 			http.Handle(sr("/contacts_change"), chat.GetChatContactsChangeHandler(sr("/contacts_change"), notifier, db, chat_conf))
 			http.Handle(sr("/config"), chat.GetChatConfigHandler(sr("/config"), webRoute, db, chat_conf))
 			http.Handle(sr("/delete_messages"), chat.GetChatDeleteMessagesHandler(sr("/delete_messages"), db, chat_conf))
+			http.Handle(sr("/logout"), chat.GetChatLogoutHandler(sr("/logout"), webRoute, db, chat_conf))
 
 			log.Printf("I will handling web requests for chat at : [%v]", webRoute)
 
-			db.Users.AddOrUpdateUserObject(d.UserWrapper{UserName:chat_conf.User, Password:utils.PHash(chat_conf.Password), Role:users.MANAGER, UserId:chat_conf.User})
+			db.Users.AddOrUpdateUserObject(d.UserData{
+				UserName:chat_conf.User,
+				Password:utils.PHash(chat_conf.Password),
+				Role:users.MANAGER,
+				UserId:chat_conf.User,
+				BelongsTo:chat_conf.CompanyId,
+				ReadRights:[]string{chat_conf.CompanyId},
+				WriteRights:[]string{chat_conf.CompanyId},
+			})
 
 			configStorage.SetChatConfig(chat_conf, false)
 		}

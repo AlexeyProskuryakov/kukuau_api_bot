@@ -6,9 +6,9 @@ import (
 	u "msngr/utils"
 	ntf "msngr/notify"
 	usrs "msngr/users"
+	"msngr/web"
 
 	"github.com/go-martini/martini"
-	"github.com/martini-contrib/auth"
 	"github.com/martini-contrib/render"
 	"gopkg.in/mgo.v2/bson"
 
@@ -28,39 +28,7 @@ const (
 	ALL = "all"
 )
 
-func getFuncMap(cName, cId, start_addr string) template.FuncMap {
-	return template.FuncMap{
-		"eq_s":func(a, b string) bool {
-			return a == b
-		},
-		"stamp_date":func(t time.Time) string {
-			return t.Format(time.Stamp)
-		},
-		"header_name":func() string {
-			return cName
-		},
-		"me":func() string {
-			return cId
-		},
-		"prefix":func() string {
-			return start_addr
-		},
-		"chat_with":func(with string) string {
-			return fmt.Sprintf("%v?with=%v", start_addr, with)
-		},
-		"has_additional_data":func(msg d.MessageWrapper) bool {
-			return len(msg.AdditionalData) > 0
-		},
-		"is_additional_data_valid":func(ad d.AdditionalDataElement) bool {
-			return ad.Value != ""
-		},
-		"get_context":func(adF d.AdditionalFuncElement) string {
-			data, _ := json.Marshal(adF.Context)
-			return string(data)
-		},
-	}
-}
-func GetContacts(db *d.MainDb, to_name string) ([]usrs.Contact, error) {
+func getContacts(db *d.MainDb, to_name string) ([]usrs.Contact, error) {
 	resp := []usrs.Contact{}
 	err := db.Messages.MessagesCollection.Pipe([]bson.M{
 		bson.M{"$match":bson.M{"to":to_name}},
@@ -94,53 +62,22 @@ func getRenderer(cName, cId, start_addr string) martini.Handler {
 		IndentJSON: true,
 		IndentXML: true,
 		Funcs:[]template.FuncMap{
-			getFuncMap(cName, cId, start_addr),
+			web.GetFuncMap(cName, cId, start_addr),
 		},
 	})
 	return renderer
-}
-
-func getRendererTemplateDir(cName, cId, start_addr, template_dir string) martini.Handler {
-	renderer := render.Renderer(render.Options{
-		Directory:template_dir,
-		//Layout: "console/layout",
-		Extensions: []string{".tmpl", ".html"},
-		Charset: "UTF-8",
-		IndentJSON: true,
-		IndentXML: true,
-		Funcs:[]template.FuncMap{
-			getFuncMap(cName, cId, start_addr),
-		},
-	})
-	return renderer
-}
-func getBasicAuth(db *d.MainDb) martini.Handler {
-	return auth.BasicFunc(func(username, password string) bool {
-		usr, _ := db.Users.GetUser(bson.M{"user_name":username, "role":usrs.MANAGER})
-		if usr != nil {
-			return u.PHash(password) == usr.Password
-		}
-		return username == usrs.DEFAULT_USER && password == usrs.DEFAULT_PWD
-	})
 }
 
 func GetMartini(cName, cId, start_addr string, db *d.MainDb) *martini.ClassicMartini {
 	m := martini.Classic()
 	m.Use(getRenderer(cName, cId, start_addr))
-	m.Use(getBasicAuth(db))
-	return m
-}
-
-func GetMartiniTemplatesDir(cName, cId, start_addr, template_dir string, db *d.MainDb) *martini.ClassicMartini {
-	m := martini.Classic()
-	m.Use(getRendererTemplateDir(cName, cId, start_addr, template_dir))
-	m.Use(getBasicAuth(db))
+	m.MapTo(db, (*d.DB)(nil))
 	return m
 }
 
 func GetChatMainHandler(start_addr string, notifier *ntf.Notifier, db *d.MainDb, config c.ChatConfig) http.Handler {
 	m := GetMartini(config.Name, config.CompanyId, start_addr, db)
-	m.Get(start_addr, func(r render.Render, params martini.Params, req *http.Request) {
+	m.Get(start_addr, web.LoginRequired, web.AutHandler.CheckReadRights(config.CompanyId), func(r render.Render, params martini.Params, req *http.Request, user web.User) {
 		var with string
 		result_data := map[string]interface{}{}
 		query := req.URL.Query()
@@ -184,7 +121,7 @@ func GetChatMainHandler(start_addr string, notifier *ntf.Notifier, db *d.MainDb,
 		result_data["messages"] = messages
 		result_data["companyId"] = config.CompanyId
 
-		if contacts, err := GetContacts(db, config.CompanyId); err == nil {
+		if contacts, err := getContacts(db, config.CompanyId); err == nil {
 			result_data["contacts"] = contacts
 		}
 		r.HTML(200, "chat", result_data, render.HTMLOptions{Layout:"base"})
@@ -195,7 +132,7 @@ func GetChatMainHandler(start_addr string, notifier *ntf.Notifier, db *d.MainDb,
 
 func GetChatDeleteMessagesHandler(start_addr string, db *d.MainDb, config c.ChatConfig) http.Handler {
 	m := GetMartini(config.Name, config.CompanyId, start_addr, db)
-	m.Delete(start_addr, func(ren render.Render, req *http.Request) {
+	m.Delete(start_addr, web.LoginRequired, web.AutHandler.CheckWriteRights(config.CompanyId), func(ren render.Render, req *http.Request) {
 		type DeleteInfo struct {
 			From string `json:"from"`
 			To   string `json:"to"`
@@ -225,7 +162,7 @@ func GetChatDeleteMessagesHandler(start_addr string, db *d.MainDb, config c.Chat
 
 func GetChatSendHandler(start_addr string, notifier *ntf.Notifier, db *d.MainDb, config c.ChatConfig, cs *ChatStorage) http.Handler {
 	m := GetMartini(config.Name, config.CompanyId, start_addr, db)
-	m.Post(start_addr, func(render render.Render, req *http.Request) {
+	m.Post(start_addr, web.LoginRequired, web.AutHandler.CheckWriteRights(config.CompanyId), func(render render.Render, req *http.Request) {
 		type MessageFromF struct {
 			From string `json:"from"`
 			To   string `json:"to"`
@@ -270,7 +207,7 @@ func GetChatSendHandler(start_addr string, notifier *ntf.Notifier, db *d.MainDb,
 }
 func GetChatMessageReadHandler(start_addr string, notifier *ntf.Notifier, db *d.MainDb, config c.ChatConfig) http.Handler {
 	m := GetMartini(config.Name, config.CompanyId, start_addr, db)
-	m.Post(start_addr, func(render render.Render, req *http.Request) {
+	m.Post(start_addr, web.LoginRequired, web.AutHandler.CheckReadRights(config.CompanyId), func(render render.Render, req *http.Request) {
 		type Readed struct {
 			From string `json:"from"`
 		}
@@ -368,7 +305,7 @@ func GetChatContactsHandler(start_addr string, notifier *ntf.Notifier, db *d.Mai
 			render.JSON(500, map[string]interface{}{"ok":false, "detail":fmt.Sprintf("can not unmarshal request body %v \n %s", err, request_body)})
 			return
 		}
-		contacts, err := GetContacts(db, config.CompanyId)
+		contacts, err := getContacts(db, config.CompanyId)
 		if err != nil {
 			render.JSON(500, map[string]interface{}{"ok":false, "detail":fmt.Sprintf("db err body %v", err)})
 			return
@@ -398,7 +335,7 @@ func GetChatContactsHandler(start_addr string, notifier *ntf.Notifier, db *d.Mai
 
 func GetChatContactsChangeHandler(start_addr string, notifier *ntf.Notifier, db *d.MainDb, config c.ChatConfig) http.Handler {
 	m := GetMartini(config.Name, config.CompanyId, start_addr, db)
-	m.Post(start_addr, func(render render.Render, req *http.Request) {
+	m.Post(start_addr, web.LoginRequired, web.AutHandler.CheckWriteRights(config.CompanyId), func(render render.Render, req *http.Request) {
 		type NewContactName struct {
 			Id      string `json:"id"`
 			NewName string `json:"new_name"`
@@ -427,9 +364,22 @@ func GetChatContactsChangeHandler(start_addr string, notifier *ntf.Notifier, db 
 
 func GetChatConfigHandler(start_addr, prefix string, db *d.MainDb, config c.ChatConfig) http.Handler {
 	m := GetMartini(config.Name, config.CompanyId, prefix, db)
-	m.Get(start_addr, func(ren render.Render, req *http.Request) {
+	m.Get(start_addr, web.LoginRequired, web.AutHandler.CheckWriteRights(config.CompanyId), func(ren render.Render, req *http.Request) {
 		ren.HTML(200, "config", map[string]interface{}{}, render.HTMLOptions{Layout:"base"})
 	})
 	return m
 }
 
+func GetChatLogoutHandler(start_addr, prefix string, db *d.MainDb, config c.ChatConfig) http.Handler {
+	m := GetMartini(config.Name, config.CompanyId, prefix, db)
+	m.Get(start_addr, web.LoginRequired, func(user web.User, db d.DB, ren render.Render, req *http.Request, w http.ResponseWriter) {
+		err := db.UsersStorage().LogoutUser(user.UniqueId())
+		if err != nil {
+			log.Printf("CHAT error at logout user: %v", err)
+		}
+		web.StopAuthSession(w)
+
+		ren.Redirect(web.AUTH_URL, 302)
+	})
+	return m
+}
