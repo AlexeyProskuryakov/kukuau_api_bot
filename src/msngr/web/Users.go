@@ -73,6 +73,8 @@ const (
 	COOKIE_NAME = "current_user_id"
 )
 
+var flash = Flash{}
+
 func StartAuthSession(user User, w http.ResponseWriter) {
 	expiration := time.Now().Add(7 * 24 * time.Hour)
 	cookie := http.Cookie{Name: COOKIE_NAME, Value: user.UniqueId(), Expires: expiration, Path:"/"}
@@ -86,20 +88,7 @@ func StopAuthSession(w http.ResponseWriter) {
 	http.SetCookie(w, &cookie)
 }
 
-func NewSessionAuthorisationHandler(mainDb *d.MainDb, ) http.Handler {
-	m := martini.New()
-	m.Use(NonJsonLogger())
-	m.Use(martini.Recovery())
-	m.Use(martini.Static("static"))
-	m.Use(render.Renderer(render.Options{
-		Directory:"templates/auth",
-		Extensions: []string{".tmpl", ".html"},
-		Charset: "UTF-8",
-	}))
-
-	flash := Flash{}
-	r := martini.NewRouter()
-
+func EnsureAuth(r martini.Router, mainDb *d.MainDb) martini.Router {
 	r.Get("/", func(r render.Render, prms martini.Params, req *http.Request) {
 		flashMessage, fType := flash.GetMessage()
 		query := req.URL.Query()
@@ -123,13 +112,28 @@ func NewSessionAuthorisationHandler(mainDb *d.MainDb, ) http.Handler {
 		}
 		user := NewUser(userData)
 		StartAuthSession(user, w)
-		redirect := DefaultUrlMap.GetDefaultUrl(user.BelongsToCompany())
+		redirect := req.URL.Query().Get(REDIRECT_PARAM)
 		if redirect == "" {
-			redirect = req.URL.Query().Get(REDIRECT_PARAM)
+			redirect = DefaultUrlMap.GetDefaultUrl(user.BelongsToCompany())
 		}
 		http.Redirect(w, req, redirect, 302)
 	})
+	return r
+}
 
+func NewSessionAuthorisationHandler(mainDb *d.MainDb, ) http.Handler {
+	m := martini.New()
+	m.Use(NonJsonLogger())
+	m.Use(martini.Recovery())
+	m.Use(martini.Static("static"))
+	m.Use(render.Renderer(render.Options{
+		Directory:"templates/auth",
+		Extensions: []string{".tmpl", ".html"},
+		Charset: "UTF-8",
+	}))
+
+	r := martini.NewRouter()
+	r = EnsureAuth(r, mainDb)
 	m.Action(r.Handle)
 	return m
 }

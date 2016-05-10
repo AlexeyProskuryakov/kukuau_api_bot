@@ -17,10 +17,9 @@ import (
 	ntf "msngr/notify"
 	usrs "msngr/users"
 	w "msngr/web"
-	"msngr/quests"
 
+	"msngr/quests"
 	"github.com/go-martini/martini"
-	"github.com/martini-contrib/auth"
 	"github.com/martini-contrib/render"
 	"gopkg.in/mgo.v2/bson"
 	"os"
@@ -136,9 +135,8 @@ func ProfileTextTagClear(p *Profile) *Profile {
 func Run(addr string, db *d.MainDb, qs *quests.QuestStorage, vdh *voting.VotingDataHandler, ntf *ntf.Notifier, cfg c.Configuration) {
 	m := martini.New()
 	m.Use(w.NonJsonLogger())
-
 	m.Use(martini.Recovery())
-
+	m.Use(martini.Static("static"))
 	m.Use(render.Renderer(render.Options{
 		Directory:"templates/console",
 		//Layout: "console/layout",
@@ -174,19 +172,13 @@ func Run(addr string, db *d.MainDb, qs *quests.QuestStorage, vdh *voting.VotingD
 			},
 		},
 	}))
-	m.Use(auth.BasicFunc(func(username, password string) bool {
-		usr, _ := db.Users.GetUser(bson.M{"user_name":username, "role":usrs.MANAGER})
-		if usr != nil {
-			return u.PHash(password) == usr.Password
-		}
-		return username == usrs.DEFAULT_USER && password == usrs.DEFAULT_PWD
-	}))
 
-	m.Use(martini.Static("static"))
+	m.MapTo(db, (*d.DB)(nil))
 
 	r := martini.NewRouter()
+	r = w.EnsureAuth(r, db)
 
-	r.Get("/", func(user auth.User, r render.Render) {
+	r.Get("/klichat", w.LoginRequired, w.AutHandler.CheckIncludeAnyRole(MANAGER), func(r render.Render) {
 		r.HTML(200, "index", map[string]interface{}{}, render.HTMLOptions{Layout:"base"})
 	})
 
@@ -200,7 +192,7 @@ func Run(addr string, db *d.MainDb, qs *quests.QuestStorage, vdh *voting.VotingD
 			panic(err)
 		}
 
-		r.Get("", func(render render.Render) {
+		r.Get("", w.LoginRequired, w.AutHandler.CheckIncludeAnyRole(MANAGER), func(render render.Render) {
 			render.HTML(200, "profile", map[string]interface{}{})
 		})
 		r.Get("/all", func(render render.Render) {
@@ -219,7 +211,7 @@ func Run(addr string, db *d.MainDb, qs *quests.QuestStorage, vdh *voting.VotingD
 		r.Get("/link_types", func(render render.Render) {
 			render.JSON(200, map[string]interface{}{"data":ph.GetContactLinkTypes()})
 		})
-		r.Post("/read", func(render render.Render, params martini.Params, req *http.Request) {
+		r.Post("/read", w.LoginRequired, w.AutHandler.CheckIncludeAnyRole(MANAGER), func(render render.Render, params martini.Params, req *http.Request) {
 			data, err := ioutil.ReadAll(req.Body)
 			if err != nil {
 				log.Printf("error at reading post data %v", err)
@@ -246,7 +238,7 @@ func Run(addr string, db *d.MainDb, qs *quests.QuestStorage, vdh *voting.VotingD
 			render.JSON(200, map[string]interface{}{"success":true, "data":out})
 		})
 
-		r.Post("/create", func(render render.Render, params martini.Params, req *http.Request) {
+		r.Post("/create", w.LoginRequired, w.AutHandler.CheckIncludeAnyRole(MANAGER), func(render render.Render, params martini.Params, req *http.Request) {
 			data, err := ioutil.ReadAll(req.Body)
 			if err != nil {
 				log.Printf("error at reading post data %v", err)
@@ -274,7 +266,7 @@ func Run(addr string, db *d.MainDb, qs *quests.QuestStorage, vdh *voting.VotingD
 			render.JSON(200, map[string]interface{}{"success":true, "data":out})
 		})
 
-		r.Post("/update", func(render render.Render, params martini.Params, req *http.Request) {
+		r.Post("/update", w.LoginRequired, w.AutHandler.CheckIncludeAnyRole(MANAGER), func(render render.Render, params martini.Params, req *http.Request) {
 			data, err := ioutil.ReadAll(req.Body)
 			log.Printf("CS UPDATE data: %s", data)
 			if err != nil {
@@ -299,7 +291,7 @@ func Run(addr string, db *d.MainDb, qs *quests.QuestStorage, vdh *voting.VotingD
 			render.JSON(200, map[string]interface{}{"success":true})
 		})
 
-		r.Post("/delete", func(render render.Render, params martini.Params, req *http.Request) {
+		r.Post("/delete", w.LoginRequired, w.AutHandler.CheckIncludeAnyRole(MANAGER), func(render render.Render, params martini.Params, req *http.Request) {
 			data, err := ioutil.ReadAll(req.Body)
 			if err != nil {
 				log.Printf("CS DELETE error at reading post data %v", err)
@@ -416,7 +408,7 @@ func Run(addr string, db *d.MainDb, qs *quests.QuestStorage, vdh *voting.VotingD
 
 	r.Group("/chat", func(r martini.Router) {
 
-		r.Get("", func(r render.Render, params martini.Params, req *http.Request) {
+		r.Get("", w.LoginRequired, w.AutHandler.CheckIncludeAnyRole(MANAGER), func(r render.Render, params martini.Params, req *http.Request) {
 			var with string
 			result_data := map[string]interface{}{}
 			query := req.URL.Query()
@@ -480,7 +472,7 @@ func Run(addr string, db *d.MainDb, qs *quests.QuestStorage, vdh *voting.VotingD
 			r.HTML(200, "chat", result_data, render.HTMLOptions{Layout:"base"})
 		})
 
-		r.Post("/send", func(render render.Render, req *http.Request) {
+		r.Post("/send", w.LoginRequired, w.AutHandler.CheckIncludeAnyRole(MANAGER), func(render render.Render, req *http.Request) {
 			type MessageFromF struct {
 				From string `json:"from"`
 				To   string `json:"to"`
@@ -527,7 +519,7 @@ func Run(addr string, db *d.MainDb, qs *quests.QuestStorage, vdh *voting.VotingD
 			render.JSON(200, map[string]interface{}{"ok":true, "message":d.NewMessageForWeb(messageSID, message.From, message.To, message.Body)})
 		})
 
-		r.Post("/messages_read", func(render render.Render, req *http.Request) {
+		r.Post("/messages_read", w.LoginRequired, w.AutHandler.CheckIncludeAnyRole(MANAGER), func(render render.Render, req *http.Request) {
 			type Readed struct {
 				From string `json:"from"`
 			}
@@ -636,7 +628,7 @@ func Run(addr string, db *d.MainDb, qs *quests.QuestStorage, vdh *voting.VotingD
 			})
 
 		})
-		r.Delete("/delete_messages", func(params martini.Params, ren render.Render, req *http.Request) {
+		r.Delete("/delete_messages", w.LoginRequired, w.AutHandler.CheckIncludeAnyRole(MANAGER), func(params martini.Params, ren render.Render, req *http.Request) {
 			type DeleteInfo struct {
 				From string `json:"from"`
 				To   string `json:"to"`
@@ -662,7 +654,7 @@ func Run(addr string, db *d.MainDb, qs *quests.QuestStorage, vdh *voting.VotingD
 			ren.JSON(200, map[string]interface{}{"success":true, "deleted":count})
 		})
 
-		r.Post("/contacts_change", func(render render.Render, req *http.Request) {
+		r.Post("/contacts_change", w.LoginRequired, w.AutHandler.CheckIncludeAnyRole(MANAGER), func(render render.Render, req *http.Request) {
 			type NewContactName struct {
 				Id      string `json:"id"`
 				NewName string `json:"new_name"`
@@ -687,7 +679,7 @@ func Run(addr string, db *d.MainDb, qs *quests.QuestStorage, vdh *voting.VotingD
 		})
 	})
 
-	r.Get("/vote_result", func(ren render.Render) {
+	r.Get("/vote_result", w.LoginRequired, w.AutHandler.CheckIncludeAnyRole(MANAGER), func(ren render.Render) {
 		votes, err := vdh.GetTopVotes(-1)
 		if err != nil {
 			log.Printf("CS ERROR at retrieving votes %v", err)
@@ -698,7 +690,7 @@ func Run(addr string, db *d.MainDb, qs *quests.QuestStorage, vdh *voting.VotingD
 	r = EnsureWorkWithKeys(r, qs)
 	r = EnsureWorkWithUsers(r, db)
 
-	r.Get("/statistic", func(render render.Render) {
+	r.Get("/statistic", w.LoginRequired, w.AutHandler.CheckIncludeAnyRole(MANAGER), func(render render.Render) {
 		err := EnsureStatistic(filepath.Join(martini.Root, "static", "tmp"))
 		if err != nil {
 			log.Printf("CS ERROR at formin statistics :( ")
@@ -708,6 +700,17 @@ func Run(addr string, db *d.MainDb, qs *quests.QuestStorage, vdh *voting.VotingD
 		render.Redirect("/tmp/statistic.xlsx")
 	})
 
+	r.Get("/logout",
+		w.LoginRequired,
+		func(user w.User, db d.DB, ren render.Render, req *http.Request, rw http.ResponseWriter) {
+			err := db.UsersStorage().LogoutUser(user.UniqueId())
+			if err != nil {
+				log.Printf("CONSOLE error at logout user: %v", err)
+			}
+			w.StopAuthSession(rw)
+
+			ren.Redirect(w.AUTH_URL, 302)
+		})
 	m.Action(r.Handle)
 	m.RunOnAddr(addr)
 }

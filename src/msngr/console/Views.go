@@ -46,7 +46,7 @@ func ConfigurationView(request *http.Request, render render.Render, cs d.Command
 
 func EnsureWorkWithKeys(r martini.Router, qs *quests.QuestStorage) martini.Router {
 	//todo add group and refactor normal
-	r.Post("/load/up", func(render render.Render, request *http.Request) {
+	r.Post("/load/up", w.LoginRequired, w.AutHandler.CheckIncludeAnyRole(MANAGER), func(render render.Render, request *http.Request) {
 		xlsFileReg := regexp.MustCompile(".+\\.xlsx?")
 		//body, _ := ioutil.ReadAll(request.Body)
 		//log.Printf("header: %+v", request.Header)
@@ -86,12 +86,12 @@ func EnsureWorkWithKeys(r martini.Router, qs *quests.QuestStorage) martini.Route
 		render.Redirect("/new_keys")
 	})
 
-	r.Get("/new_keys", func(r render.Render) {
+	r.Get("/new_keys", w.LoginRequired, w.AutHandler.CheckIncludeAnyRole(MANAGER), func(r render.Render) {
 		log.Printf("CONSOLE WEB will show keys")
 		r.HTML(200, "new_keys", GetKeysInfo("", qs), render.HTMLOptions{Layout:"base"})
 	})
 
-	r.Post("/add_key", func(user auth.User, render render.Render, request *http.Request) {
+	r.Post("/add_key", w.LoginRequired, w.AutHandler.CheckIncludeAnyRole(MANAGER), func(user auth.User, render render.Render, request *http.Request) {
 		start_key := request.FormValue("start-key")
 		next_key := request.FormValue("next-key")
 		description := request.FormValue("description")
@@ -106,14 +106,14 @@ func EnsureWorkWithKeys(r martini.Router, qs *quests.QuestStorage) martini.Route
 		}
 	})
 
-	r.Post("/delete_key/:key", func(params martini.Params, render render.Render) {
+	r.Post("/delete_key/:key", w.LoginRequired, w.AutHandler.CheckIncludeAnyRole(MANAGER), func(params martini.Params, render render.Render) {
 		key := params["key"]
 		err := qs.DeleteStep(key)
 		log.Printf("CONSOLE WEB will delete %v (%v)", key, err)
 		render.Redirect("/new_keys")
 	})
 
-	r.Post("/update_key/:key", func(params martini.Params, render render.Render, request *http.Request) {
+	r.Post("/update_key/:key", w.LoginRequired, w.AutHandler.CheckIncludeAnyRole(MANAGER), func(params martini.Params, render render.Render, request *http.Request) {
 		key_id := params["key"]
 
 		start_key := request.FormValue("start-key")
@@ -125,7 +125,7 @@ func EnsureWorkWithKeys(r martini.Router, qs *quests.QuestStorage) martini.Route
 		render.Redirect("/new_keys")
 	})
 
-	r.Get("/delete_key_all", func(render render.Render) {
+	r.Get("/delete_key_all", w.LoginRequired, w.AutHandler.CheckIncludeAnyRole(MANAGER), func(render render.Render) {
 		log.Printf("CONSOLE WEB was delete all keys")
 		qs.Steps.RemoveAll(bson.M{})
 		render.Redirect("/new_keys")
@@ -136,11 +136,11 @@ func EnsureWorkWithKeys(r martini.Router, qs *quests.QuestStorage) martini.Route
 
 func EnsureWorkWithUsers(r martini.Router, db *d.MainDb) martini.Router {
 	r.Group("/users", func(r martini.Router) {
-		r.Get("", func(r render.Render, req *http.Request) {
+		r.Get("", w.LoginRequired, w.AutHandler.CheckIncludeAnyRole(MANAGER), func(r render.Render, req *http.Request) {
 			r.HTML(200, "users", GetUsersInfo("", db), render.HTMLOptions{Layout:"base"})
 		})
 
-		r.Post("/add", func(user auth.User, render render.Render, request *http.Request) {
+		r.Post("/add", w.LoginRequired, w.AutHandler.CheckIncludeAnyRole(MANAGER), func(user auth.User, render render.Render, request *http.Request) {
 			u_id := request.FormValue("user-id")
 			u_name := request.FormValue("user-name")
 			u_phone := request.FormValue("user-phone")
@@ -157,14 +157,14 @@ func EnsureWorkWithUsers(r martini.Router, db *d.MainDb) martini.Router {
 			}
 		})
 
-		r.Post("/delete/:id", func(params martini.Params, render render.Render) {
+		r.Post("/delete/:id", w.LoginRequired, w.AutHandler.CheckIncludeAnyRole(MANAGER), func(params martini.Params, render render.Render) {
 			uid := params["id"]
 			err := db.Users.UsersCollection.Remove(bson.M{"user_id":uid})
 			log.Printf("CONSOLE WEB will delete user %v (%v)", uid, err)
 			render.Redirect("/users")
 		})
 
-		r.Post("/update/:id", func(params martini.Params, render render.Render, request *http.Request) {
+		r.Post("/update/:id", w.LoginRequired, w.AutHandler.CheckIncludeAnyRole(MANAGER), func(params martini.Params, render render.Render, request *http.Request) {
 			u_id := params["id"]
 			u_name := request.FormValue("user-name")
 			u_phone := request.FormValue("user-phone")
