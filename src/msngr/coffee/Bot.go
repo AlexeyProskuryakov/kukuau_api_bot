@@ -76,7 +76,7 @@ func getCommandsTextAndFieldForDrink(chc *CoffeeHouseConfiguration) (string, []s
 		})
 	}
 	if len(chc.Syrups) > 0 {
-		result = fmt.Sprintf("%v ?(syrup)", result)
+		result = fmt.Sprintf("%v, ?(syrup),", result)
 		resultFields = append(resultFields, s.OutField{
 			Name: "syrup",
 			Type: "list-single",
