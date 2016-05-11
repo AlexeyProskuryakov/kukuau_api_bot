@@ -97,7 +97,7 @@ func GetCurrentUser(req *http.Request, db d.DB) (User, error) {
 	userId := cookie.Value
 	log.Printf("found userId : [%v] cookie: {%+v}", userId, cookie)
 	userData, err := db.UsersStorage().GetUserById(userId)
-	if err != nil {
+	if err != nil || userData == nil{
 		log.Printf("can not find user by [%v], because: %v", userId, err)
 		return nil, err
 	}
