@@ -154,7 +154,6 @@ func Run(addr string, db *d.MainDb, qs *quests.QuestStorage, vdh *voting.VotingD
 				},
 				"chat_with":func(with string) string {
 					result := fmt.Sprintf("/chat?with=%v", with)
-					log.Printf("chat with: %v", result)
 					return result
 				},
 				"me":func() string {
@@ -173,7 +172,15 @@ func Run(addr string, db *d.MainDb, qs *quests.QuestStorage, vdh *voting.VotingD
 					return strings.Join(slice, " ")
 				},
 				"clear":func(s string) string {
-					return regexp.MustCompile("[^a-zA-Z0-9]+").ReplaceAllString(s,"")
+					return regexp.MustCompile("[^a-zA-Z0-9]+").ReplaceAllString(s, "")
+				},
+				"is_auth":func(u interface{}) bool {
+					log.Printf("Is auth user: %v", u)
+					if u != nil {
+						user := u.(w.User)
+						return user.IsAuthenticated()
+					}
+					return false
 				},
 			},
 		},
@@ -184,8 +191,8 @@ func Run(addr string, db *d.MainDb, qs *quests.QuestStorage, vdh *voting.VotingD
 	r := martini.NewRouter()
 	r = w.EnsureAuth(r, db)
 
-	r.Get("/klichat", w.LoginRequired, w.AutHandler.CheckIncludeAnyRole(MANAGER), func(r render.Render) {
-		r.HTML(200, "index", map[string]interface{}{}, render.HTMLOptions{Layout:"base"})
+	r.Get("/klichat", w.LoginRequired, w.AutHandler.CheckIncludeAnyRole(MANAGER), func(r render.Render, req *http.Request) {
+		r.HTML(200, "index", w.AddCurrentUser(map[string]interface{}{}, req, db), render.HTMLOptions{Layout:"base"})
 	})
 
 	r.Group("/profile", func(r martini.Router) {
@@ -475,7 +482,7 @@ func Run(addr string, db *d.MainDb, qs *quests.QuestStorage, vdh *voting.VotingD
 				result_data["contacts"] = contacts
 			}
 			log.Printf("CS result data :%+v", result_data)
-			r.HTML(200, "chat", result_data, render.HTMLOptions{Layout:"base"})
+			r.HTML(200, "chat", w.AddCurrentUser(result_data, req, db), render.HTMLOptions{Layout:"base"})
 		})
 
 		r.Post("/send", w.LoginRequired, w.AutHandler.CheckIncludeAnyRole(MANAGER), func(render render.Render, req *http.Request) {
@@ -685,12 +692,12 @@ func Run(addr string, db *d.MainDb, qs *quests.QuestStorage, vdh *voting.VotingD
 		})
 	})
 
-	r.Get("/vote_result", w.LoginRequired, w.AutHandler.CheckIncludeAnyRole(MANAGER), func(ren render.Render) {
+	r.Get("/vote_result", w.LoginRequired, w.AutHandler.CheckIncludeAnyRole(MANAGER), func(ren render.Render, req *http.Request) {
 		votes, err := vdh.GetTopVotes(-1)
 		if err != nil {
 			log.Printf("CS ERROR at retrieving votes %v", err)
 		}
-		ren.HTML(200, "vote_result", map[string]interface{}{"votes":votes}, render.HTMLOptions{Layout:"base"})
+		ren.HTML(200, "vote_result", w.AddCurrentUser(map[string]interface{}{"votes":votes}, req, db), render.HTMLOptions{Layout:"base"})
 	})
 
 	r = EnsureWorkWithKeys(r, qs)
