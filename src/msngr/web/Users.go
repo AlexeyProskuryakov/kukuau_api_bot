@@ -73,6 +73,8 @@ const (
 	COOKIE_NAME = "current_user_id"
 )
 
+var flash = Flash{}
+
 func StartAuthSession(user User, w http.ResponseWriter) {
 	expiration := time.Now().Add(7 * 24 * time.Hour)
 	cookie := http.Cookie{Name: COOKIE_NAME, Value: user.UniqueId(), Expires: expiration, Path:"/"}
@@ -86,29 +88,42 @@ func StopAuthSession(w http.ResponseWriter) {
 	http.SetCookie(w, &cookie)
 }
 
-func NewSessionAuthorisationHandler(mainDb *d.MainDb, ) http.Handler {
-	m := martini.New()
-	m.Use(NonJsonLogger())
-	m.Use(martini.Recovery())
-	m.Use(martini.Static("static"))
-	m.Use(render.Renderer(render.Options{
-		Directory:"templates/auth",
-		Extensions: []string{".tmpl", ".html"},
-		Charset: "UTF-8",
-	}))
+func GetCurrentUser(req *http.Request, db d.DB) (User, error) {
+	cookie, err := req.Cookie(COOKIE_NAME)
+	if err != nil {
+		log.Printf("cookie getting error %v, redirect", err)
+		return nil, err
+	}
+	userId := cookie.Value
+	log.Printf("found userId : [%v] cookie: {%+v}", userId, cookie)
+	userData, err := db.UsersStorage().GetUserById(userId)
+	if err != nil {
+		log.Printf("can not find user by [%v], because: %v", userId, err)
+		return nil, err
+	}
+	log.Printf("load user data: %+v", userData)
+	user := NewUser(userData)
+	return user, nil
 
-	flash := Flash{}
-	r := martini.NewRouter()
+}
+
+func AddCurrentUser(data map[string]interface{}, req *http.Request, db d.DB) map[string]interface{} {
+	user, _ := GetCurrentUser(req, db)
+	data["c_user"] = user
+	return data
+}
+
+func EnsureAuth(r martini.Router, mainDb *d.MainDb) martini.Router {
 
 	r.Get("/", func(r render.Render, prms martini.Params, req *http.Request) {
 		flashMessage, fType := flash.GetMessage()
 		query := req.URL.Query()
-
 		result := map[string]interface{}{
 			fmt.Sprintf("flash_%v", fType):flashMessage,
 			"from": query.Get("from"),
 		}
-		r.HTML(200, "login", result, render.HTMLOptions{Layout:"base"})
+
+		r.HTML(200, "login", AddCurrentUser(result, req, mainDb), render.HTMLOptions{Layout:"base"})
 	})
 
 	r.Post("/", binding.Bind(user{}), func(postedUser user, r render.Render, req *http.Request, w http.ResponseWriter) {
@@ -123,36 +138,40 @@ func NewSessionAuthorisationHandler(mainDb *d.MainDb, ) http.Handler {
 		}
 		user := NewUser(userData)
 		StartAuthSession(user, w)
-		redirect := DefaultUrlMap.GetDefaultUrl(user.BelongsToCompany())
+		redirect := req.URL.Query().Get(REDIRECT_PARAM)
 		if redirect == "" {
-			redirect = req.URL.Query().Get(REDIRECT_PARAM)
+			redirect = DefaultUrlMap.GetDefaultUrl(user.BelongsToCompany())
 		}
 		http.Redirect(w, req, redirect, 302)
 	})
+	return r
+}
 
+func NewSessionAuthorisationHandler(mainDb *d.MainDb, ) http.Handler {
+	m := martini.New()
+	m.Use(NonJsonLogger())
+	m.Use(martini.Recovery())
+	m.Use(martini.Static("static"))
+	m.Use(render.Renderer(render.Options{
+		Directory:"templates/auth",
+		Extensions: []string{".tmpl", ".html"},
+		Charset: "UTF-8",
+	}))
+
+	r := martini.NewRouter()
+	r = EnsureAuth(r, mainDb)
 	m.Action(r.Handle)
 	return m
 }
 
 func LoginRequired(db d.DB, c martini.Context, r render.Render, req *http.Request) {
-	cookie, err := req.Cookie(COOKIE_NAME)
+	user, err := GetCurrentUser(req, db)
 	if err != nil {
-		log.Printf("cookie getting error %v, redirect", err)
+		log.Printf("AUTH can not retrieve user %v", err)
 		path := fmt.Sprintf("%s?%s=%s", AUTH_URL, REDIRECT_PARAM, req.URL.Path)
 		r.Redirect(path, 302)
 		return
 	}
-	userId := cookie.Value
-	log.Printf("found userId : [%v] cookie: {%+v}", userId, cookie)
-	userData, err := db.UsersStorage().GetUserById(userId)
-	if err != nil {
-		log.Printf("can not find user by [%v], because: %v", userId, err)
-		path := fmt.Sprintf("%s?%s=%s", AUTH_URL, REDIRECT_PARAM, req.URL.Path)
-		r.Redirect(path, 302)
-		return
-	}
-	log.Printf("load user data: %+v", userData)
-	user := NewUser(userData)
 	if user.IsAuthenticated() {
 		c.MapTo(user, (*User)(nil))
 		return

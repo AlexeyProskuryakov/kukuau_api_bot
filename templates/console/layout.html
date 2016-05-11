@@ -27,7 +27,7 @@
 
 
 {{define "head_menu"}}
-<nav class="navbar navbar-default navbar-static-top">
+<nav class="navbar navbar-default navbar-custom navbar-static-top">
     <div class="container">
         <div class="navbar-header">
             <button type="button" class="navbar-toggle collapsed" data-toggle="collapse" data-target="#navbar"
@@ -37,17 +37,22 @@
                 <span class="icon-bar"></span>
                 <span class="icon-bar"></span>
             </button>
-            <a class="navbar-brand" href="/">Консоль</a>
+            <a class="navbar-brand" href="/klichat">Консоль</a>
         </div>
         <div id="navbar" class="collapse navbar-collapse visible-xs-*">
+
             <ul class="nav navbar-nav">
+                {{if is_auth .c_user }}
                 <li><a href="/new_keys">Добавить информационные ключи</a></li>
                 <li><a href="/chat">Сообщения</a></li>
                 <li><a href="/users">Пользователи</a></li>
                 <li><a href="/profile">Профайлы</a></li>
                 <li><a href="/vote_result">Результаты голосования</a></li>
                 <li><a href="/statistic">Статистика заказов</a></li>
+                <li><a href="/logout">Выйти</a></li>
+                {{end}}
             </ul>
+
         </div>
     </div>
 </nav>
