@@ -101,7 +101,7 @@ func getActiveOrderMessages(company_id string, db *d.MainDb) ([]d.MessageWrapper
 			continue
 		}
 		user, err := db.Users.GetUserById(message.From)
-		if err != nil || message == nil {
+		if err != nil || user == nil {
 			log.Printf("Coffee serv: error or can not find user from message")
 			continue
 		}
