@@ -45,16 +45,13 @@ func ConfigurationView(request *http.Request, render render.Render, cs d.Command
 	render.JSON(200, map[string]interface{}{"OK":true})
 }
 
-func EnsureWorkWithKeys(r martini.Router, qs *quests.QuestStorage) martini.Router {
+func EnsureWorkWithKeys(r martini.Router, qs *quests.QuestStorage, db *d.MainDb) martini.Router {
 	//todo add group and refactor normal
 	r.Post("/load/up", w.LoginRequired, w.AutHandler.CheckIncludeAnyRole(MANAGER), func(render render.Render, request *http.Request) {
 		xlsFileReg := regexp.MustCompile(".+\\.xlsx?")
-		//body, _ := ioutil.ReadAll(request.Body)
-		//log.Printf("header: %+v", request.Header)
-		//log.Printf("body: %s", body)
 		file, header, err := request.FormFile("file")
 		if err != nil {
-			render.HTML(200, "new_keys", GetKeysInfo(fmt.Sprintf("Ошибка загрузки файлика: %v", err), qs))
+			render.HTML(200, "new_keys", w.AddCurrentUser(GetKeysInfo(fmt.Sprintf("Ошибка загрузки файлика: %v", err), qs), request, db))
 			return
 		}
 		log.Printf("Form file information: file: %+v \nheader:%v, %v\nerr:%v", file, header.Filename, header.Header, err)
@@ -62,7 +59,7 @@ func EnsureWorkWithKeys(r martini.Router, qs *quests.QuestStorage) martini.Route
 
 		data, err := ioutil.ReadAll(file)
 		if err != nil {
-			render.HTML(200, "new_keys", GetKeysInfo(fmt.Sprintf("Ошибка загрузки файлика: %v", err), qs))
+			render.HTML(200, "new_keys", w.AddCurrentUser(GetKeysInfo(fmt.Sprintf("Ошибка загрузки файлика: %v", err), qs), request, db))
 			return
 		}
 
@@ -70,7 +67,7 @@ func EnsureWorkWithKeys(r martini.Router, qs *quests.QuestStorage) martini.Route
 			xlFile, err := xlsx.OpenBinary(data)
 			log.Printf("file: %+v, err: %v", xlFile, err)
 			if err != nil || xlFile == nil {
-				render.HTML(200, "quests/new_keys", GetKeysInfo(fmt.Sprintf("Ошибка обработки файлика: %v", err), qs))
+				render.HTML(200, "quests/new_keys", w.AddCurrentUser(GetKeysInfo(fmt.Sprintf("Ошибка обработки файлика: %v", err), qs), request, db))
 				return
 			}
 			skip_rows, _ := strconv.Atoi(request.FormValue("skip-rows"))
@@ -81,15 +78,15 @@ func EnsureWorkWithKeys(r martini.Router, qs *quests.QuestStorage) martini.Route
 				qs.AddStep(prel[0], prel[1], prel[2])
 			}
 		} else {
-			render.HTML(200, "new_keys", GetKeysInfo("Файл имеет не то расширение :(", qs))
+			render.HTML(200, "new_keys", w.AddCurrentUser(GetKeysInfo("Файл имеет не то расширение :(", qs), request, db))
 		}
 
 		render.Redirect("/new_keys")
 	})
 
-	r.Get("/new_keys", w.LoginRequired, w.AutHandler.CheckIncludeAnyRole(MANAGER), func(r render.Render) {
+	r.Get("/new_keys", w.LoginRequired, w.AutHandler.CheckIncludeAnyRole(MANAGER), func(r render.Render, req *http.Request) {
 		log.Printf("CONSOLE WEB will show keys")
-		r.HTML(200, "new_keys", GetKeysInfo("", qs), render.HTMLOptions{Layout:"base"})
+		r.HTML(200, "new_keys", w.AddCurrentUser(GetKeysInfo("", qs), req, db), render.HTMLOptions{Layout:"base"})
 	})
 
 	r.Post("/add_key", w.LoginRequired, w.AutHandler.CheckIncludeAnyRole(MANAGER), func(user auth.User, render render.Render, request *http.Request) {
@@ -103,7 +100,7 @@ func EnsureWorkWithKeys(r martini.Router, qs *quests.QuestStorage) martini.Route
 			log.Printf("QW is error? %v key: %v", err, key)
 			render.Redirect("/new_keys")
 		} else {
-			render.HTML(200, "console/new_keys", GetKeysInfo("Невалидные значения ключа или ответа", qs))
+			render.HTML(200, "console/new_keys", w.AddCurrentUser(GetKeysInfo("Невалидные значения ключа или ответа", qs), request, db))
 		}
 	})
 
@@ -138,7 +135,7 @@ func EnsureWorkWithKeys(r martini.Router, qs *quests.QuestStorage) martini.Route
 func EnsureWorkWithUsers(r martini.Router, db *d.MainDb) martini.Router {
 	r.Group("/users", func(r martini.Router) {
 		r.Get("", w.LoginRequired, w.AutHandler.CheckIncludeAnyRole(MANAGER), func(r render.Render, req *http.Request) {
-			r.HTML(200, "users", GetUsersInfo("", db), render.HTMLOptions{Layout:"base"})
+			r.HTML(200, "users", w.AddCurrentUser(GetUsersInfo("", db), req, db), render.HTMLOptions{Layout:"base"})
 		})
 
 		r.Post("/add", w.LoginRequired, w.AutHandler.CheckIncludeAnyRole(MANAGER), func(r render.Render, request *http.Request) {
@@ -168,7 +165,10 @@ func EnsureWorkWithUsers(r martini.Router, db *d.MainDb) martini.Router {
 				})
 				r.Redirect("/users")
 			} else {
-				r.HTML(200, "users", GetUsersInfo("Невалидные значения имени и (или) идентификатора добавляемого пользователя", db), render.HTMLOptions{Layout:"base"})
+				r.HTML(200,
+					"users",
+					w.AddCurrentUser(GetUsersInfo("Невалидные значения имени и (или) идентификатора добавляемого пользователя", db), request, db),
+					render.HTMLOptions{Layout:"base"})
 			}
 		})
 

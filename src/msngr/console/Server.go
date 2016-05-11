@@ -700,7 +700,7 @@ func Run(addr string, db *d.MainDb, qs *quests.QuestStorage, vdh *voting.VotingD
 		ren.HTML(200, "vote_result", w.AddCurrentUser(map[string]interface{}{"votes":votes}, req, db), render.HTMLOptions{Layout:"base"})
 	})
 
-	r = EnsureWorkWithKeys(r, qs)
+	r = EnsureWorkWithKeys(r, qs, db)
 	r = EnsureWorkWithUsers(r, db)
 
 	r.Get("/statistic", w.LoginRequired, w.AutHandler.CheckIncludeAnyRole(MANAGER), func(render render.Render) {
