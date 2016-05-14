@@ -19,7 +19,7 @@ Ext.define('Console.view.Profile', {
         var me = this
         this.items = [{
             xtype: 'form',
-           layout:'accordion',
+            layout:'accordion',
             // autoScroll:true,
             items: [
             new Ext.form.FormPanel({
@@ -375,6 +375,8 @@ Ext.define('Console.view.Profile', {
                 defaults: {
                     xtype: 'form',
                 },
+                // layout: 'fit',
+                autoScroll:true,
                 items: [
                 {
                     xtype: 'checkbox',
@@ -413,6 +415,19 @@ Ext.define('Console.view.Profile', {
                     fieldLabel: 'Слоган',
                     padding: 10, 
                     allowBlank:false,
+                    listeners: {
+                        afterrender: function (htmlEditor) {
+                            new Ext.Resizable(htmlEditor.wrap.id, {
+                                handles: 's',
+                                minHeight: 100,
+                                listeners: {
+                                    resize: function (resizer, width, height) {
+                                        htmlEditor.setSize(width, height);
+                                    }
+                                }
+                            });
+                        }
+                    }
                 },
                 {
                     xtype: 'htmleditor',
