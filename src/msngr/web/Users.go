@@ -97,9 +97,14 @@ func GetCurrentUser(req *http.Request, db d.DB) (User, error) {
 	userId := cookie.Value
 	log.Printf("found userId : [%v] cookie: {%+v}", userId, cookie)
 	userData, err := db.UsersStorage().GetUserById(userId)
-	if err != nil || userData == nil{
-		log.Printf("can not find user by [%v], because: %v", userId, err)
+
+	if err != nil {
+		log.Printf("error find user by [%v], because: %v", userId, err)
 		return nil, err
+	}
+	if userData == nil{
+		log.Printf("user not found :(")
+		return nil, nil
 	}
 	log.Printf("load user data: %+v", userData)
 	user := NewUser(userData)
@@ -172,11 +177,11 @@ func LoginRequired(db d.DB, c martini.Context, r render.Render, req *http.Reques
 		r.Redirect(path, 302)
 		return
 	}
-	if user.IsAuthenticated() {
+	if user != nil && user.IsAuthenticated() {
 		c.MapTo(user, (*User)(nil))
 		return
 	}
-	log.Printf("user not authentificated :( ")
+	log.Printf("user not authentificated or not found :( ")
 	path := fmt.Sprintf("%s?%s=%s", AUTH_URL, REDIRECT_PARAM, req.URL.Path)
 	r.Redirect(path, 302)
 }

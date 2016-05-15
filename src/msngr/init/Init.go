@@ -254,6 +254,7 @@ func StartBot(db *d.MainDb, result chan string) c.Configuration {
 			db.Users.AddOrUpdateUserObject(d.UserData{
 				UserId:coffee_conf.Chat.User,
 				UserName:coffee_conf.Chat.User,
+				ShowedName:coffee_conf.Chat.Name,
 				Password:utils.PHash(coffee_conf.Chat.Password),
 				BelongsTo:coffee_conf.Chat.CompanyId,
 				ReadRights:[]string{coffee_conf.Chat.CompanyId},
