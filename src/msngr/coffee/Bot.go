@@ -29,7 +29,7 @@ func getCommandsTextAndFieldForDrink(chc *CoffeeHouseConfiguration) (string, []s
 				Label:    "напиток",
 				Required: true,
 			},
-			Items:s.FormItemsFromMap(chc.Drinks),
+			Items:s.FormItemsFromSortedWithPrice(chc.Drinks),
 		},
 		s.OutField{
 			Name:"sugar",
@@ -72,7 +72,7 @@ func getCommandsTextAndFieldForDrink(chc *CoffeeHouseConfiguration) (string, []s
 				Required: false,
 				EmptyText:&NO_ADD,
 			},
-			Items:s.FormItemsFromMap(chc.Additives),
+			Items:s.FormItemsFromSortedWithPrice(chc.Additives),
 		})
 	}
 	if len(chc.Syrups) > 0 {
@@ -85,7 +85,7 @@ func getCommandsTextAndFieldForDrink(chc *CoffeeHouseConfiguration) (string, []s
 				Required: false,
 				EmptyText:&NO_SYRUP,
 			},
-			Items:s.FormItemsFromMap(chc.Syrups),
+			Items:s.FormItemsFromSortedWithPrice(chc.Syrups),
 		})
 	}
 	result = fmt.Sprintf("%v ?(sugar), ?(count) ?(to_time)", result)
@@ -125,7 +125,7 @@ func getCommands(coffeeHouseConfig *CoffeeHouseConfiguration, isFirst, isActive 
 							Label:    "выпечка",
 							Required: true,
 						},
-						Items:s.FormItemsFromMap(coffeeHouseConfig.Bakes),
+						Items:s.FormItemsFromSortedWithPrice(coffeeHouseConfig.Bakes),
 					},
 					s.OutField{
 						Name:"count",

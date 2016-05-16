@@ -15,10 +15,10 @@ import (
 
 type CoffeeHouseConfiguration struct {
 	Name      string `bson:"name"`
-	Bakes     map[string]string `bson:"bakes"`
-	Drinks    map[string]string `bson:"drinks"`
-	Additives map[string]string `bson:"additives"`
-	Syrups    map[string]string `bson:"syrups"`
+	Bakes     []configuration.SortedElementWithPrice `bson:"bakes"`
+	Drinks    []configuration.SortedElementWithPrice `bson:"drinks"`
+	Additives []configuration.SortedElementWithPrice `bson:"additives"`
+	Syrups    []configuration.SortedElementWithPrice `bson:"syrups"`
 	Volumes   []string `bson:"volumes"`
 }
 
