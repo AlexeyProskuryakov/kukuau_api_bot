@@ -77,6 +77,14 @@ func GetAddressInstruments(c c.Configuration, taxi_name string, external_supplie
 func StartBot(db *d.MainDb, result chan string) c.Configuration {
 	conf := c.ReadConfig()
 	log.Printf("configuration for db:\nconnection string: %+v\ndatabase name: %+v", conf.Main.Database.ConnString, conf.Main.Database.Name)
+	log.Printf("configuration for conf db:\nconnection string: %+v\ndatabase name: %+v", conf.Main.ConfigDatabase.ConnString, conf.Main.ConfigDatabase.Name)
+	db.Users.AddOrUpdateUserObject(d.UserData{
+		UserId:"alesha",
+		UserName:"alesha",
+		Password:utils.PHash("sederfes100500"),
+		Role:users.MANAGER,
+		BelongsTo:"klichat",
+	})
 
 	for taxi_name, taxi_conf := range conf.Taxis {
 		log.Printf("taxi api configuration for %+v:\n%v", taxi_conf.Name, taxi_conf.Api)
@@ -154,19 +162,12 @@ func StartBot(db *d.MainDb, result chan string) c.Configuration {
 		http.HandleFunc(fmt.Sprintf("/quest/%v", q_name), q_controller)
 		result <- fmt.Sprintf("quest_%v", q_name)
 	}
-
 	if conf.Console.WebPort != "" && conf.Console.Key != "" {
 		log.Printf("Will handling requests from /console")
 		bc := cnsl.FormConsoleBotContext(conf, db)
 		cc := m.FormBotController(bc, db)
 		http.HandleFunc("/console", cc)
-		db.Users.AddOrUpdateUserObject(d.UserData{
-			UserId:"alesha",
-			UserName:"alesha",
-			Password:utils.PHash("sederfes100500"),
-			Role:users.MANAGER,
-			BelongsTo:"klichat",
-		})
+
 		web.DefaultUrlMap.AddAccessory("klichat", "/klichat")
 		result <- "console"
 	}
@@ -253,6 +254,7 @@ func StartBot(db *d.MainDb, result chan string) c.Configuration {
 			db.Users.AddOrUpdateUserObject(d.UserData{
 				UserId:coffee_conf.Chat.User,
 				UserName:coffee_conf.Chat.User,
+				ShowedName:coffee_conf.Chat.Name,
 				Password:utils.PHash(coffee_conf.Chat.Password),
 				BelongsTo:coffee_conf.Chat.CompanyId,
 				ReadRights:[]string{coffee_conf.Chat.CompanyId},
