@@ -247,8 +247,8 @@ func StartBot(db *d.MainDb, result chan string) c.Configuration {
 			http.Handle(sr("/config"), coffee.GetChatConfigHandler(sr("/config"), webRoute, db, coffee_conf.Chat))
 			http.Handle(sr("/contacts"), coffee.GetChatContactsHandler(sr("/contacts"), notifier, db, coffee_conf.Chat))
 			http.Handle(sr("/message_function"), coffee.GetMessageAdditionalFunctionsHandler(sr("/message_function"), notifier, db, coffee_conf.Chat, coffeeHouseConfiguration))
-			http.Handle(sr("/order_page"), coffee.GetOrdersPageFunctionHandler(sr("/order_page"), webRoute, db, coffee_conf.Chat, coffee_conf.Chat.CompanyId))
-			http.Handle(sr("/order_page_supply"), coffee.GetOrdersPageSupplierFunctionHandler(sr("/order_page_supply"), webRoute, db, coffee_conf.Chat, coffee_conf.Chat.CompanyId))
+			//http.Handle(sr("/order_page"), coffee.GetOrdersPageFunctionHandler(sr("/order_page"), webRoute, db, coffee_conf.Chat, coffee_conf.Chat.CompanyId))
+			//http.Handle(sr("/order_page_supply"), coffee.GetOrdersPageSupplierFunctionHandler(sr("/order_page_supply"), webRoute, db, coffee_conf.Chat, coffee_conf.Chat.CompanyId))
 			http.Handle(sr("/logout"), coffee.GetChatLogoutHandler(sr("/logout"), webRoute, db, coffee_conf.Chat))
 
 			log.Printf("I will handling web requests for coffee %v at : [%v]", coffee_conf.Chat.CompanyId, webRoute)
