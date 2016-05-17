@@ -6,7 +6,6 @@ import (
 	"io/ioutil"
 	"log"
 	"os"
-
 	u "msngr/utils"
 	"path"
 )
@@ -133,14 +132,21 @@ type ChatConfig struct {
 	Password      string `json:"password" bson:"password"`
 }
 
+type SortedElementWithPrice struct {
+	Name     string `json:"name"`
+	Position int `json:"position"`
+	Price    int `json:"price"`
+	Id       string `json:"id"`
+}
+
 type CoffeeConfig struct {
-	DictUrl     string `json:"dict_url"`
-	Bakes       map[string]string `json:"bakes"`
-	Drinks      map[string]string `json:"drinks"`
-	Additives   map[string]string `json:"additives"`
-	Syrups	    map[string]string `json:"syrups"`
-	Volumes     []string `json:"volumes"`
-	Chat        ChatConfig `json:"chat"`
+	DictUrl   string `json:"dict_url"`
+	Bakes     []SortedElementWithPrice `json:"bakes"`
+	Drinks    []SortedElementWithPrice `json:"drinks"`
+	Additives []SortedElementWithPrice `json:"additives"`
+	Syrups    []SortedElementWithPrice `json:"syrups"`
+	Volumes   []string `json:"volumes"`
+	Chat      ChatConfig `json:"chat"`
 }
 
 type MongoDbConfig  struct {

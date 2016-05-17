@@ -197,6 +197,7 @@ func StartBot(db *d.MainDb, result chan string) c.Configuration {
 	if len(conf.Coffee) > 0 {
 		for _, coffee_conf := range conf.Coffee {
 			c_store := coffee.NewCoffeeConfigHandler(db)
+			c_store.LoadFromConfig(coffee_conf)
 			coffeeHouseConfiguration := coffee.NewCHCFromConfig(coffee_conf)
 
 			cbc := coffee.FormBotCoffeeContext(coffee_conf, db, coffeeHouseConfiguration, configStorage)

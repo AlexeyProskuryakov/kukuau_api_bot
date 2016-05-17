@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"time"
 	"log"
+	"msngr/configuration"
 )
 
 type FieldAttribute struct {
@@ -168,6 +169,27 @@ func FormItemsFromMap(items map[string]string) []FieldItem {
 					Title:name,
 				},
 			}
+		}
+		result = append(result, fi)
+	}
+	return result
+}
+
+func FormItemsFromSortedWithPrice(items []configuration.SortedElementWithPrice) []FieldItem {
+	result := []FieldItem{}
+	for _, etc := range items {
+		var fieldId string
+		if etc.Id != "" {
+			fieldId = etc.Id
+		} else {
+			fieldId = etc.Name
+		}
+		fi := FieldItem{
+			Value:fieldId,
+			Content:FieldItemContent{
+				Title:etc.Name,
+				Subtitle:fmt.Sprintf("%v руб", etc.Price),
+			},
 		}
 		result = append(result, fi)
 	}
