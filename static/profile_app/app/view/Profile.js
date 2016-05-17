@@ -415,19 +415,6 @@ Ext.define('Console.view.Profile', {
                     fieldLabel: 'Слоган',
                     padding: 10, 
                     allowBlank:false,
-                    listeners: {
-                        afterrender: function (htmlEditor) {
-                            new Ext.Resizable(htmlEditor.wrap.id, {
-                                handles: 's',
-                                minHeight: 100,
-                                listeners: {
-                                    resize: function (resizer, width, height) {
-                                        htmlEditor.setSize(width, height);
-                                    }
-                                }
-                            });
-                        }
-                    }
                 },
                 {
                     xtype: 'htmleditor',

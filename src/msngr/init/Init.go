@@ -27,6 +27,7 @@ import (
 	"msngr/utils"
 	"msngr/users"
 	"msngr/web"
+	"msngr/autoanswers"
 )
 
 func GetTaxiAPI(params c.TaxiApiParams, for_name string) (t.TaxiInterface, error) {
@@ -162,13 +163,16 @@ func StartBot(db *d.MainDb, result chan string) c.Configuration {
 		http.HandleFunc(fmt.Sprintf("/quest/%v", q_name), q_controller)
 		result <- fmt.Sprintf("quest_%v", q_name)
 	}
-	if conf.Console.WebPort != "" && conf.Console.Key != "" {
-		log.Printf("Will handling requests from /console")
-		bc := cnsl.FormConsoleBotContext(conf, db)
+	if conf.Console.WebPort != "" && conf.Console.Chat.Key != "" {
+		log.Printf("Will handling requests from /console at %v", conf.Console.WebPort)
+		bc := cnsl.FormConsoleBotContext(conf, db, configStorage)
 		cc := m.FormBotController(bc, db)
 		http.HandleFunc("/console", cc)
 
 		web.DefaultUrlMap.AddAccessory("klichat", "/klichat")
+
+		configStorage.SetChatConfig(conf.Console.Chat, false)
+
 		result <- "console"
 	}
 
@@ -317,7 +321,7 @@ func StartBot(db *d.MainDb, result chan string) c.Configuration {
 	}
 
 	go n.WatchUnreadMessages(db, configStorage, conf.Main.CallbackAddrMembers)
-	go chat.WatchNotAnsweredMessages(db, configStorage, conf.Main.CallbackAddr)
+	go autoanswers.WatchNotAnsweredMessages(db, configStorage, conf.Main.CallbackAddr)
 
 	server_address := fmt.Sprintf(":%v", conf.Main.Port)
 	log.Printf("\nStart listen and serving at: %v\n", server_address)

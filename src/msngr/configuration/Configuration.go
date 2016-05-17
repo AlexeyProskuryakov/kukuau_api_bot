@@ -109,10 +109,9 @@ type QuestConfig struct {
 
 type ConsoleConfig struct {
 	WebPort          string `json:"web_port"`
-	Key              string `json:"key"`
-	Information      string `json:"information"`
 	ProfileImgPath   string `json:"profile_img_path"`
 	ProfileImgServer string `json:"profile_img_server"`
+	Chat 		ChatConfig `json:"chat"`
 }
 
 type TimedAnswer struct {

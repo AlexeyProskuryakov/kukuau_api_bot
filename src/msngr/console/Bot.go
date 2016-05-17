@@ -20,20 +20,22 @@ const (
 
 var key_reg = regexp.MustCompile("^\\#[\\w\\dа-яА-Я]+\\-?(?P<team>[\\w\\da-zа-я]+)?")
 
-type ConsoleRequestProcessor struct {
-
-}
-
-func (crp *ConsoleRequestProcessor)ProcessRequest(in *s.InPkg) *s.RequestResult {
-	result := s.RequestResult{Commands:&[]s.OutCommand{
+func GetCommands() *[]s.OutCommand {
+	return &[]s.OutCommand{
 		s.OutCommand{
 			Title:    "Информация",
 			Action:   "information",
 			Position: 1,
 		},
-
-	},
 	}
+}
+
+type ConsoleRequestProcessor struct {
+
+}
+
+func (crp *ConsoleRequestProcessor)ProcessRequest(in *s.InPkg) *s.RequestResult {
+	result := s.RequestResult{Commands:GetCommands()}
 	return &result
 }
 
@@ -84,27 +86,31 @@ func (cmp ConsoleMessageProcessor) ProcessMessage(in *s.InPkg) *s.MessageResult 
 			}
 		}
 		return &s.MessageResult{Type:"chat", Body:"", IsDeferred:true}
-	}else {
+	} else {
 		return &s.MessageResult{Type:"chat", Body:"Нет данных для сообщения или данных пользователя"}
 	}
 }
 
-func FormConsoleBotContext(conf c.Configuration, db_handler *d.MainDb) *m.BotContext {
+func FormConsoleBotContext(conf c.Configuration, db *d.MainDb, configStore *d.ConfigurationStorage) *m.BotContext {
 	result := m.BotContext{}
 	result.RequestProcessors = map[string]s.RequestCommandProcessor{
 		"commands":&ConsoleRequestProcessor{},
 	}
-	qs := quests.NewQuestStorage(conf.Main.Database.ConnString, conf.Main.Database.Name)
 
+	companyId := config.Console.Chat.CompanyId
+	commandsGenerator := func(in *s.InPkg) (*[]s.OutCommand, error) {
+		return GetCommands(), nil
+	}
 	result.MessageProcessors = map[string]s.MessageCommandProcessor{
-		"information":&ConsoleInformationProcessor{Information:conf.Console.Information},
-		"":ConsoleMessageProcessor{MainDb:*db_handler, QuestStorage:qs},
+		"":m.NewFuncTextBodyProcessor(db, commandsGenerator, companyId, nil),
+		"information":m.NewUpdatableInformationProcessor(configStore, commandsGenerator, companyId),
 	}
 
-	notifier := n.NewNotifier(conf.Main.CallbackAddr, conf.Console.Key, db_handler)
+	notifier := n.NewNotifier(conf.Main.CallbackAddr, conf.Console.Chat.Key, db)
+	qs := quests.NewQuestStorage(conf.Main.Database.ConnString, conf.Main.Database.Name)
 
 	vdh, _ := voting.NewVotingHandler(conf.Main.Database.ConnString, conf.Main.Database.Name)
-	go Run(conf.Console.WebPort, db_handler, qs, vdh, notifier, conf)
+	go Run(conf.Console.WebPort, db, qs, vdh, notifier, conf)
 
 	return &result
 }
