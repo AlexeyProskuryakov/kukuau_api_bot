@@ -33,7 +33,7 @@
                         <div class="modal-body">
                             <form class="form form-horizontal" action="/manage" method="post">
                                 <div class="form-group">
-                                    <label for="to-winner" class="col-md-12">Сообщение победителям:</label>
+                                    <label for="to-winner" class="col-md-12">Сообщение победителям (от квеста):</label>
                                     <textarea id="to-winner" class="form-control"
                                               rows="2" name="to-winner">{{.config.EndMessageForWinners}}</textarea>
                                     <div class="checkbox col-md-12">
@@ -46,7 +46,7 @@
                                 </div>
                                 <hr>
                                 <div class="form-group">
-                                    <label for="to-not-winner" class="col-md-12">Сообщение не победителям:</label>
+                                    <label for="to-not-winner" class="col-md-12">Сообщение не победителям (от квеста):</label>
                                     <textarea id="to-not-winner" class="form-control"
                                               rows="2"
                                               name="to-not-winner">{{.config.EndMessageForNotWinners}}</textarea>
@@ -60,7 +60,7 @@
                                 </div>
                                 <hr>
                                 <div class="form-group">
-                                    <label for="to-all" class="col-md-12">Сообщение всем участникам:</label>
+                                    <label for="to-all" class="col-md-12">Сообщение всем участникам (от КлиЧата):</label>
                                     <textarea id="to-all" class="form-control"
                                               rows="2" name="to-all">{{.config.EndMessageForAll}}</textarea>
                                     <div class="checkbox col-md-12">

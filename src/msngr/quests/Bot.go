@@ -168,6 +168,16 @@ func (qmpp QuestMessageProcessor) ProcessMessage(in *s.InPkg) *s.MessageResult {
 		key = strings.TrimSpace(key)
 		if marker_reg.MatchString(key) {
 			key = strings.ToLower(key)
+			qms, err := qmpp.Storage.GetMessageConfiguration(qmpp.Config.Chat.CompanyId)
+			if err != nil {
+				log.Printf("Q E : at getting quest configuration %v", err)
+				return DB_ERROR_RESULT
+			}
+
+			if qms.Started == false {
+				commands := getCommands(qmpp.Config.QuestTimes)
+				return &s.MessageResult{Type:"chat", Body:qms.MessageAtNotStartedQuest, Commands:commands}
+			}
 			log.Printf("Q: Here is key: %v", key)
 			key_info, err := qmpp.Storage.GetStepByStartKey(key)
 			if err != nil {
@@ -200,16 +210,6 @@ func (qmpp QuestMessageProcessor) ProcessMessage(in *s.InPkg) *s.MessageResult {
 			if err != nil {
 				log.Printf("Q E : at getting or persisting user team %v", err)
 				return DB_ERROR_RESULT
-			}
-			qms, err := qmpp.Storage.GetMessageConfiguration(qmpp.Config.Chat.CompanyId)
-			if err != nil {
-				log.Printf("Q E : at getting quest configuration %v", err)
-				return DB_ERROR_RESULT
-			}
-
-			if qms.Started == false {
-				commands := getCommands(qmpp.Config.QuestTimes)
-				return &s.MessageResult{Type:"chat", Body:qms.MessageAtNotStartedQuest, Commands:commands}
 			}
 
 			if member == nil {

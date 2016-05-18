@@ -555,10 +555,41 @@ func Run(config c.QuestConfig, qs *QuestStorage, ntf *ntf.Notifier, additionalNo
 		}
 		if qmc.Started == true {
 			qs.SetQuestStarted(config.Chat.CompanyId, false)
+			teams, err := qs.GetAllTeams()
+			if err != nil {
+				log.Printf("QS QE E: errror at getting teams %v", err)
+			}
+			if qmc.EndMessageForAllActive == true {
+				for _, team := range teams {
+					log.Printf("QS Will send message to team: %v from Klichat", team.Name)
+					members, _ := qs.GetMembersOfTeam(team.Name)
+					SendMessagesToPeoples(members, additionalNotifier, qmc.EndMessageForAll)
+				}
+			}
+			if qmc.EndMessageForWinnersActive == true {
+				for _, team := range teams {
+					if team.Winner == true {
+						log.Printf("QS Will send WIN message to team: %v from quest", team.Name)
+						members, _ := qs.GetMembersOfTeam(team.Name)
+						SendMessagesToPeoples(members, ntf, qmc.EndMessageForWinners)
+					}
+				}
+			}
+			if qmc.EndMessageForNotWinnersActive == true {
+				for _, team := range teams {
+					if team.Winner == false {
+						log.Printf("QS Will send NOT WIN message to team: %v from quest", team.Name)
+						members, _ := qs.GetMembersOfTeam(team.Name)
+						SendMessagesToPeoples(members, ntf, qmc.EndMessageForNotWinners)
+					}
+				}
+			}
+
 			ren.JSON(200, map[string]interface{}{"ok":true})
 		} else {
 			ren.JSON(200, map[string]interface{}{"ok":false, "detail":"already stopped"})
 		}
+
 	})
 
 	r.Get("/delete_chat/:between", func(params martini.Params, render render.Render, req *http.Request) {
