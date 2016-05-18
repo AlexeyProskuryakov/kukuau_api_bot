@@ -310,31 +310,26 @@ func (qep *QuestEnrollProcessor) ProcessMessage(in *s.InPkg) *s.MessageResult {
 	return &s.MessageResult{Type:"chat", Body:"Чего-то не хватает...", Commands:commands}
 }
 
-func FormQuestBotContext(conf c.Configuration, qname string, qs *QuestStorage, db *db.MainDb, cs *db.ConfigurationStorage) *m.BotContext {
+func FormQuestBotContext(conf c.Configuration, qConf c.QuestConfig, qs *QuestStorage, db *db.MainDb, cs *db.ConfigurationStorage) *m.BotContext {
 	result := m.BotContext{}
-	qconf, ok := conf.Quests[qname]
-	if !ok {
-		panic(fmt.Sprintf("Quest configuration with name %v is not exist :(", qname))
-	}
-
 	commandsGenerator := func(in *s.InPkg) (*[]s.OutCommand, error) {
-		commands := getCommands(qconf.QuestTimes)
+		commands := getCommands(qConf.QuestTimes)
 		return commands, nil
 	}
 
 	result.RequestProcessors = map[string]s.RequestCommandProcessor{
-		"commands":&QuestCommandRequestProcessor{Storage:qs, Config:qconf},
+		"commands":&QuestCommandRequestProcessor{Storage:qs, Config:qConf},
 	}
 
 	result.MessageProcessors = map[string]s.MessageCommandProcessor{
-		"information":m.NewUpdatableInformationProcessor(cs, commandsGenerator, qconf.CompanyId),
-		"enroll": &QuestEnrollProcessor{Store:qs, Config:qconf},
-		"":QuestMessageProcessor{Storage:qs, Config:qconf},
+		"information":m.NewUpdatableInformationProcessor(cs, commandsGenerator, qConf.Chat.CompanyId),
+		"enroll": &QuestEnrollProcessor{Store:qs, Config:qConf},
+		"":QuestMessageProcessor{Storage:qs, Config:qConf},
 	}
 
-	notifier := n.NewNotifier(conf.Main.CallbackAddr, qconf.Key, db)
-	additionalNotifier := n.NewNotifier(conf.Main.CallbackAddr, qconf.AdditionalKey, db)
-	go Run(qconf, qs, notifier, additionalNotifier)
+	notifier := n.NewNotifier(conf.Main.CallbackAddr, qConf.Chat.Key, db)
+	additionalNotifier := n.NewNotifier(conf.Main.CallbackAddr, qConf.AdditionalKey, db)
+	go Run(qConf, qs, notifier, additionalNotifier)
 
 	return &result
 }

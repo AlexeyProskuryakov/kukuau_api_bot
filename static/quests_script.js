@@ -40,49 +40,26 @@ function delete_all_keys(){
     });
 }
 
-function send_messages_to_winners(){
-    var winners = [],
-        winners_chbx = $(".winner:checked").each(function(x, obj){
-            winners.push(obj.id);
-        }),
-        text = $("#to-winner").val();
-
+function start_quest(){
     $.ajax({
-        type:           "POST",
-        url:            "/send_messages_at_quest_end",
-        data:           JSON.stringify({teams:winners, text:text, exclude:false}),
-        dataType:       'json',
-        success:        function(x){
-                    if (x.ok == true) {
-                        console.log(x);
-                        text = "<div><p class='bg-success'>Сообщения для выбранных комманд поставлены в очередь на отправление.</p></div>"
-                        el = Mustache.render(text, x);
-                        $("#send-message-result").prepend(el);
-                    }
+        type:"POST",
+        url:"/start_quest",
+        success: function(x){
+            if (x.ok == true){
+                window.location.reload();
+            }
         }
     });
 }
 
-function send_messages_to_losers(){
-    var winners = [],
-        winners_chbx = $(".winner:checked").each(function(x, obj){
-            winners.push(obj.id);
-        }),
-        text = $("#to-not-winner").val();
-
+function stop_quest(){
     $.ajax({
-        type:           "POST",
-        url:            "/send_messages_at_quest_end",
-        data:           JSON.stringify({teams:winners, text:text, exclude:true}),
-        dataType:       'json',
-        success:        function(x){
-                    if (x.ok == true) {
-                        console.log(x);
-                        text = "<div><p class='bg-success'>Сообщения для комманд не входящих в выбранные поставлены в очередь на отправление.</p></div>"
-                        el = Mustache.render(text, x);
-                        $("#send-message-result").prepend(el);
-                    }
+        type:"POST",
+        url:"/stop_quest",
+        success: function(x){
+            if (x.ok == true){
+                window.location.reload();
+            }
         }
     });
 }
-

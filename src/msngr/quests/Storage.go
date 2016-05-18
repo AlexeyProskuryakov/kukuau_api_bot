@@ -39,7 +39,7 @@ type Step struct {
 func (s Step) String() string {
 	if s.IsFound {
 		return fmt.Sprintf("[%v] %v > %v for [%v] found by [%v] \n", s.SID, s.StartKey, s.NextKey, s.ForTeam, s.FoundedBy)
-	}        else {
+	} else {
 		return fmt.Sprintf("[%v] %v > %v for [%v] \n", s.SID, s.StartKey, s.NextKey, s.ForTeam)
 	}
 }
@@ -69,10 +69,11 @@ type Team struct {
 
 type QuestStorage struct {
 	db.DbHelper
-	Steps    *mgo.Collection
-	Messages *mgo.Collection
-	Teams    *mgo.Collection
-	Peoples  *mgo.Collection
+	Steps         *mgo.Collection
+	Messages      *mgo.Collection
+	Teams         *mgo.Collection
+	Peoples       *mgo.Collection
+	Configuration *mgo.Collection
 }
 
 func (qks *QuestStorage) ensureIndexes() {
@@ -138,6 +139,13 @@ func (qks *QuestStorage) ensureIndexes() {
 	})
 
 	qks.Peoples = members_collection
+
+	confCollection := qks.Session.DB(qks.DbName).C("quest_configuration")
+	confCollection.EnsureIndex(mgo.Index{
+		Key:[]string{"compnay_id"},
+	})
+	qks.Configuration = confCollection
+
 }
 
 func NewQuestStorage(conn, dbname string) *QuestStorage {
@@ -312,7 +320,7 @@ func (qs *QuestStorage) GetManByUserId(user_id string) (*TeamMember, error) {
 	err := qs.Peoples.Find(bson.M{"user_id":user_id}).One(&res)
 	if err != nil && err != mgo.ErrNotFound {
 		return nil, err
-	}else if err == mgo.ErrNotFound {
+	} else if err == mgo.ErrNotFound {
 		return nil, nil
 	}
 	return &res, nil
@@ -347,7 +355,7 @@ func (qs *QuestStorage)GetPassersby(query bson.M) (*TeamMember, error) {
 	err := qs.Peoples.Find(query).One(&res)
 	if err == mgo.ErrNotFound {
 		return nil, nil
-	}else if err != nil {
+	} else if err != nil {
 		return nil, err
 	}
 	return &res, err
@@ -471,7 +479,7 @@ func (qs QuestStorage) GetContactsAfter(after int64) ([]Contact, error) {
 			resp[i].IsTeam = true
 			resp[i].IsPassersby = false
 			result = append(result, resp[i])
-		}else {
+		} else {
 			m, _ := qs.GetPassersby(bson.M{"user_id":resp[i].ID})
 			if m != nil {
 				resp[i].Name = m.Name
@@ -482,4 +490,56 @@ func (qs QuestStorage) GetContactsAfter(after int64) ([]Contact, error) {
 		}
 	}
 	return result, nil
+}
+
+
+//configuration
+type QuestMessageConfiguration struct {
+	EndMessageForWinners          string `bson:"msg_for_winners" form:"to-winner"`
+	EndMessageForWinnersActive    bool `bson:"mfw_active" form:"to-winnwer-on"`
+
+	EndMessageForNotWinners       string `bson:"msg_for_not_winners" form:"to-not-winner"`
+	EndMessageForNotWinnersActive bool `bson:"mfnw_active" form:"to-not-winner-in"`
+
+	EndMessageForAll              string `bson:"msg_for_all" form:"to-all"`
+	EndMessageForAllActive        bool `bson:"mfa_active" form:"to-all-on"`
+
+	MessageAtNotStartedQuest      string `bson:"msg_at_not_started_quest" form:"not-started"`
+	CompanyId                     string `bson:"company_id"`
+
+	Started                       bool `bson:"started"`
+}
+
+func (qs QuestStorage) SetMessageConfiguration(conf QuestMessageConfiguration, update bool) error {
+	if update == true {
+		ci, err := qs.Configuration.Upsert(bson.M{"company_id":conf.CompanyId}, conf)
+		log.Printf("QS set config: %+v", ci)
+		return err
+	} else {
+		storedCfg, err := qs.GetMessageConfiguration(conf.CompanyId)
+		if err != nil {
+			log.Printf("QS Error at getting configuration %v", err)
+			return err
+		}
+		if storedCfg == nil {
+			return qs.Configuration.Insert(conf)
+		}
+		return nil
+	}
+}
+
+func (qs QuestStorage) SetQuestStarted(companyId string, state bool) error {
+	return qs.Configuration.Update(bson.M{"company_id":companyId}, bson.M{"$set":bson.M{"started":state}})
+}
+
+func (qs QuestStorage) GetMessageConfiguration(companyId string) (*QuestMessageConfiguration, error) {
+	result := QuestMessageConfiguration{}
+	err := qs.Configuration.Find(bson.M{"company_id":companyId}).One(&result)
+	if err == mgo.ErrNotFound {
+		return nil, nil
+	}
+	if err != nil {
+		return nil, err
+	}
+	return &result, nil
 }

@@ -24,6 +24,7 @@ import (
 	"msngr/utils"
 	w "msngr/web"
 	"errors"
+	"github.com/martini-contrib/binding"
 )
 
 var users = map[string]string{
@@ -54,7 +55,7 @@ func ValidateKeys(kv [][]string) (map[string]string, error) {
 
 		if tkeys, ok := teams[team_name]; ok {
 			teams[team_name] = append(tkeys, start)
-		}else {
+		} else {
 			teams[team_name] = []string{start}
 		}
 	}
@@ -315,7 +316,7 @@ func Run(config c.QuestConfig, qs *QuestStorage, ntf *ntf.Notifier, additionalNo
 						bson.M{"to":team.Name},
 					},
 				})
-			}else {
+			} else {
 				if peoples, _ := qs.GetPeoples(bson.M{"user_id":with}); len(peoples) > 0 {
 					man := peoples[0]
 					collocutor.IsMan = true
@@ -348,7 +349,7 @@ func Run(config c.QuestConfig, qs *QuestStorage, ntf *ntf.Notifier, additionalNo
 		//log.Printf("QS i return this messages: %+v", messages)
 		result_data["with"] = with
 		result_data["collocutor"] = collocutor
-		if len(messages) > 100{
+		if len(messages) > 100 {
 			messages = messages[0:100]
 		}
 		result_data["messages"] = messages
@@ -402,7 +403,7 @@ func Run(config c.QuestConfig, qs *QuestStorage, ntf *ntf.Notifier, additionalNo
 						log.Printf("QSERV: will send [%v] to %v", message.Body, man.UserId)
 						go ntf.NotifyText(man.UserId, message.Body)
 					}
-				}else {
+				} else {
 					peoples, _ := qs.GetMembersOfTeam(team.Name)
 					log.Printf("QSERV: will send [%v] to team members of %v team to %v peoples", message.Body, team.Name, len(peoples))
 					SendMessagesToPeoples(peoples, ntf, message.Body)
@@ -450,7 +451,7 @@ func Run(config c.QuestConfig, qs *QuestStorage, ntf *ntf.Notifier, additionalNo
 			team, _ := qs.GetTeamByName(message.From)
 			if team != nil {
 				messages[i].From = team.Name
-			}else {
+			} else {
 				man, _ := qs.GetManByUserId(message.From)
 				if man != nil {
 					messages[i].From = man.Name
@@ -490,7 +491,7 @@ func Run(config c.QuestConfig, qs *QuestStorage, ntf *ntf.Notifier, additionalNo
 		for _, contact := range contacts {
 			if utils.InS(contact.ID, cr.Exist) {
 				old_contacts = append(old_contacts, contact)
-			}else {
+			} else {
 				new_contacts = append(new_contacts, contact)
 			}
 		}
@@ -504,11 +505,60 @@ func Run(config c.QuestConfig, qs *QuestStorage, ntf *ntf.Notifier, additionalNo
 	})
 
 	r.Get("/manage", func(render render.Render, req *http.Request) {
-		teams, err := qs.GetAllTeams()
+		configResult, err := qs.GetMessageConfiguration(config.Chat.CompanyId)
 		if err != nil {
-			log.Printf("QS E: Can not load teams for manage: %v", err)
+			log.Printf("QS E: Can not load quest configuration for %v, because: %v", config.Chat.CompanyId, err)
 		}
-		render.HTML(200, "manage", map[string]interface{}{"teams":teams})
+		render.HTML(200, "manage", map[string]interface{}{"config":configResult})
+	})
+
+	r.Post("/manage", binding.Bind(QuestMessageConfiguration{}), func(qmc QuestMessageConfiguration, ren render.Render, req *http.Request) {
+		if req.FormValue("to-winner-on") == "on" {
+			qmc.EndMessageForWinnersActive = true
+		}
+		if req.FormValue("to-not-winner-on") == "on" {
+			qmc.EndMessageForNotWinnersActive = true
+		}
+		if req.FormValue("to-all-on") == "on" {
+			qmc.EndMessageForAllActive = true
+		}
+		log.Printf("QS Manage: %+v", qmc)
+		qmc.CompanyId = config.Chat.CompanyId
+		err := qs.SetMessageConfiguration(qmc, true)
+		if err != nil {
+			log.Printf("QS ERROR at update quest message configuration for [%v], because: %v", qmc.CompanyId, err)
+		}
+		ren.Redirect("/manage", 302)
+	})
+
+	r.Post("/start_quest", func(ren render.Render) {
+		qmc, err := qs.GetMessageConfiguration(config.Chat.CompanyId)
+		if err != nil {
+			log.Printf("QS E: Can not load quest configuration for %v, because: %v", config.Chat.CompanyId, err)
+			ren.JSON(500, map[string]interface{}{"ok":false, "detail":err})
+			return
+		}
+		if qmc.Started == false {
+			qs.SetQuestStarted(config.Chat.CompanyId, true)
+			ren.JSON(200, map[string]interface{}{"ok":true})
+		} else {
+			ren.JSON(200, map[string]interface{}{"ok":false, "detail":"already started"})
+		}
+	})
+
+	r.Post("/stop_quest", func(ren render.Render) {
+		qmc, err := qs.GetMessageConfiguration(config.Chat.CompanyId)
+		if err != nil {
+			log.Printf("QS E: Can not load quest configuration for %v, because: %v", config.Chat.CompanyId, err)
+			ren.JSON(500, map[string]interface{}{"ok":false, "detail":err})
+			return
+		}
+		if qmc.Started == true {
+			qs.SetQuestStarted(config.Chat.CompanyId, false)
+			ren.JSON(200, map[string]interface{}{"ok":true})
+		} else {
+			ren.JSON(200, map[string]interface{}{"ok":false, "detail":"already stopped"})
+		}
 	})
 
 	r.Get("/delete_chat/:between", func(params martini.Params, render render.Render, req *http.Request) {
@@ -565,6 +615,7 @@ func Run(config c.QuestConfig, qs *QuestStorage, ntf *ntf.Notifier, additionalNo
 			}
 			render.JSON(200, map[string]interface{}{"ok":true})
 		}
+
 	})
 
 	r.Post("/delete_all_keys", func(render render.Render, req *http.Request) {
@@ -679,6 +730,11 @@ func Run(config c.QuestConfig, qs *QuestStorage, ntf *ntf.Notifier, additionalNo
 		}
 		ren.JSON(200, map[string]interface{}{"ok":true, "foundKeys":result})
 	})
+
+	r.Post("/start_quest", func(ren render.Render, req *http.Request) {
+		ren.JSON(200, map[string]interface{}{"ok":true})
+	})
+	r.Post("/stop_quest")
 
 
 	//m.MapTo(r, (*martini.Routes)(nil))

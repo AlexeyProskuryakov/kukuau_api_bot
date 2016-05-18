@@ -99,19 +99,17 @@ type ShopConfig struct {
 }
 
 type QuestConfig struct {
-	Info          string `json:"information"`
 	WebPort       string `json:"web_port"`
-	Key           string `json:"key"`
 	AdditionalKey string `json:"additional_key"`
 	QuestTimes    []string `json:"quest_times"`
-	CompanyId     string `json:"id"`
+	Chat          ChatConfig  `json:"chat"`
 }
 
 type ConsoleConfig struct {
 	WebPort          string `json:"web_port"`
 	ProfileImgPath   string `json:"profile_img_path"`
 	ProfileImgServer string `json:"profile_img_server"`
-	Chat 		ChatConfig `json:"chat"`
+	Chat             ChatConfig `json:"chat"`
 }
 
 type TimedAnswer struct {

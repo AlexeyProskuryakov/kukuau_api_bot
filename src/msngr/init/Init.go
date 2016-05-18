@@ -86,6 +86,12 @@ func StartBot(db *d.MainDb, result chan string) c.Configuration {
 		Role:users.MANAGER,
 		BelongsTo:"klichat",
 	})
+	configStorage := d.NewConfigurationStorage(conf.Main.ConfigDatabase)
+	questStorage := q.NewQuestStorage(conf.Main.Database.ConnString, conf.Main.Database.Name)
+
+	fs := http.FileServer(http.Dir("static"))
+	http.Handle("/static/", http.StripPrefix("/static/", fs))
+	http.Handle("/", web.NewSessionAuthorisationHandler(db))
 
 	for taxi_name, taxi_conf := range conf.Taxis {
 		log.Printf("taxi api configuration for %+v:\n%v", taxi_conf.Name, taxi_conf.Api)
@@ -146,21 +152,17 @@ func StartBot(db *d.MainDb, result chan string) c.Configuration {
 		http.HandleFunc(conf.RuPost.WorkUrl, rp_controller)
 		result <- "rupost"
 	}
-	configStorage := d.NewConfigurationStorage(conf.Main.ConfigDatabase)
-	qs := q.NewQuestStorage(conf.Main.Database.ConnString, conf.Main.Database.Name)
 
-	//serving static for chats and coffee
-	fs := http.FileServer(http.Dir("static"))
-	http.Handle("/static/", http.StripPrefix("/static/", fs))
-	//starting serve for auth
-	http.Handle("/", web.NewSessionAuthorisationHandler(db))
-
-	for q_name, qConf := range conf.Quests {
+	for _, qConf := range conf.Quests {
+		q_name := qConf.Chat.CompanyId
 		log.Printf("Will handling quests controller for quest: %v", q_name)
-		configStorage.UpdateInformation(qConf.CompanyId, qConf.Info)
-		qb_controller := q.FormQuestBotContext(conf, q_name, qs, db, configStorage)
+		qb_controller := q.FormQuestBotContext(conf, qConf, questStorage, db, configStorage)
 		q_controller := m.FormBotController(qb_controller, db)
 		http.HandleFunc(fmt.Sprintf("/quest/%v", q_name), q_controller)
+
+		configStorage.SetChatConfig(qConf.Chat, false)
+		questStorage.SetMessageConfiguration(q.QuestMessageConfiguration{CompanyId:qConf.Chat.CompanyId}, false)
+
 		result <- fmt.Sprintf("quest_%v", q_name)
 	}
 	if conf.Console.WebPort != "" && conf.Console.Chat.Key != "" {
