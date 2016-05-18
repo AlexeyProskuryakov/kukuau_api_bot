@@ -201,6 +201,17 @@ func (qmpp QuestMessageProcessor) ProcessMessage(in *s.InPkg) *s.MessageResult {
 				log.Printf("Q E : at getting or persisting user team %v", err)
 				return DB_ERROR_RESULT
 			}
+			qms, err := qmpp.Storage.GetMessageConfiguration(qmpp.Config.Chat.CompanyId)
+			if err != nil {
+				log.Printf("Q E : at getting quest configuration %v", err)
+				return DB_ERROR_RESULT
+			}
+
+			if qms.Started == false {
+				commands := getCommands(qmpp.Config.QuestTimes)
+				return &s.MessageResult{Type:"chat", Body:qms.MessageAtNotStartedQuest, Commands:commands}
+			}
+
 			if member == nil {
 				if prev_key == nil {
 					log.Printf("Q:Recognised register key from %v [%+v], add him to team: %v", in.From, in.UserData, team_name)
