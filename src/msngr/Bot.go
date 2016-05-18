@@ -282,7 +282,7 @@ func FormBotController(context *BotContext, db *db.MainDb) controllerHandler {
 			http.Error(w, "I can not work with non POST methods", 405)
 			return
 		}
-
+		log.Printf("have requests %+v", r)
 		out := &s.OutPkg{}
 		var in *s.InPkg
 		var isError, isDeferred bool
