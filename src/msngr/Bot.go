@@ -277,7 +277,6 @@ func process_message_pkg(buff *s.OutPkg, in *s.InPkg, context *BotContext) (*s.O
 type controllerHandler func(w http.ResponseWriter, r *http.Request)
 
 func FormBotController(context *BotContext, db *db.MainDb) controllerHandler {
-
 	return func(w http.ResponseWriter, r *http.Request) {
 		if r.Method != "POST" {
 			http.Error(w, "I can not work with non POST methods", 405)

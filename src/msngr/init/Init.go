@@ -158,7 +158,9 @@ func StartBot(db *d.MainDb, result chan string) c.Configuration {
 		log.Printf("Will handling quests controller for quest: %v", q_name)
 		qb_controller := q.FormQuestBotContext(conf, qConf, questStorage, db, configStorage)
 		q_controller := m.FormBotController(qb_controller, db)
-		http.HandleFunc(fmt.Sprintf("/quest/%v", q_name), q_controller)
+		route := fmt.Sprintf("/quest/%v", q_name)
+		log.Printf("Quest %v will handle at %v", q_name, route)
+		http.HandleFunc(route, q_controller)
 
 		configStorage.SetChatConfig(qConf.Chat, false)
 		questStorage.SetMessageConfiguration(q.QuestMessageConfiguration{CompanyId:qConf.Chat.CompanyId}, false)
