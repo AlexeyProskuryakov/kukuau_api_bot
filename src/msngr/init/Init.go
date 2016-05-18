@@ -91,7 +91,6 @@ func StartBot(db *d.MainDb, result chan string) c.Configuration {
 
 	fs := http.FileServer(http.Dir("static"))
 	http.Handle("/static/", http.StripPrefix("/static/", fs))
-	http.Handle("/", web.NewSessionAuthorisationHandler(db))
 
 	for taxi_name, taxi_conf := range conf.Taxis {
 		log.Printf("taxi api configuration for %+v:\n%v", taxi_conf.Name, taxi_conf.Api)
@@ -333,6 +332,7 @@ func StartBot(db *d.MainDb, result chan string) c.Configuration {
 		Addr: server_address,
 	}
 	result <- "listen"
+	http.Handle("/", web.NewSessionAuthorisationHandler(db))
 	log.Fatal(server.ListenAndServe())
 	return conf
 }

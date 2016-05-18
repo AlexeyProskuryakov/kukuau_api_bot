@@ -11,7 +11,7 @@ import (
 
 	s "msngr/structs"
 	u "msngr/utils"
-	db "msngr/db"
+	"msngr/db"
 )
 
 var DEBUG bool
