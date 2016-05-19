@@ -256,13 +256,20 @@ func (mh *MessageHandler) GetMessagesForNotification(to string, after int) ([]Me
 	}).All(&result)
 	return result, err
 }
-func (mh *MessageHandler) SetMessagesNotified(from, to string, after int) error {
+func (mh *MessageHandler) SetMessagesNotified(from, to string, after int, notificationError error) error {
 	if !mh.parent.Check() {
 		return errors.New("БД не доступна")
 	}
+
+	upd := bson.M{"$push":bson.M{"notifications":NotificationElement{After:after}}}
+
+	if notificationError != nil {
+		upd["$set"] = bson.M{"notification_error":notificationError}
+	}
+
 	_, err := mh.MessagesCollection.UpdateAll(
 		bson.M{"from":from, "to":to, "unread":1},
-		bson.M{"$push":bson.M{"notifications":NotificationElement{After:after}}},
+		upd,
 	)
 	return err
 }
@@ -312,7 +319,6 @@ func (mh *MessageHandler) GetMessages(query bson.M) ([]MessageWrapper, error) {
 	err := mh.MessagesCollection.Find(query).Sort("time_stamp").All(&result)
 	for i, message := range result {
 		filledMessage := mh.FillMessage(&message)
-		log.Printf("filled message: %+v", *filledMessage)
 		result[i] = *filledMessage
 	}
 	return result, err

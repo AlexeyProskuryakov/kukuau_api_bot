@@ -195,6 +195,7 @@ func Run(addr string, db *d.MainDb, qs *quests.QuestStorage, vdh *voting.VotingD
 		r.HTML(200, "index", w.AddCurrentUser(map[string]interface{}{}, req, db), render.HTMLOptions{Layout:"base"})
 	})
 
+
 	r.Group("/profile", func(r martini.Router) {
 		type ProfileId struct {
 			Id string `json:"id"`
@@ -504,10 +505,11 @@ func Run(addr string, db *d.MainDb, qs *quests.QuestStorage, vdh *voting.VotingD
 				render.JSON(500, map[string]interface{}{"error":err})
 				return
 			}
+			log.Printf("SEND MESSAGE: %+v", message)
 			var messageSID string
 			if message.From != "" && message.To != "" && message.Body != "" {
 				if message.To == ALL {
-					peoples, _ := db.Users.GetBy(bson.M{})
+					peoples, _ := db.Users.GetBy(bson.M{"user_id":bson.M{"$ne":message.From}})
 					ntf.SendMessageToPeople(peoples, message.Body)
 
 				} else if message.To == "all_hash_writers" {
@@ -558,7 +560,7 @@ func Run(addr string, db *d.MainDb, qs *quests.QuestStorage, vdh *voting.VotingD
 			render.JSON(200, map[string]interface{}{"ok":true})
 		})
 
-		r.Post("/messages", func(render render.Render, req *http.Request) {
+		r.Post("/unread_messages", func(render render.Render, req *http.Request) {
 			type NewMessagesReq struct {
 				For   string `json:"m_for"`
 				After int64 `json:"after"`

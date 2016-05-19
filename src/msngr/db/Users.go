@@ -47,6 +47,7 @@ type UserHandler struct {
 }
 
 func (uh *UserHandler) ensureIndexes() {
+	log.Printf("UH ensuring indexes at: %v to collection: users", uh.parent.DbName)
 	usersCollection := uh.parent.Session.DB(uh.parent.DbName).C("users")
 	usersCollection.EnsureIndex(mgo.Index{
 		Key:        []string{"user_id"},
@@ -73,6 +74,7 @@ func (uh *UserHandler) ensureIndexes() {
 }
 
 func (uh *UserHandler) LogoutUser(userId string) (error) {
+	log.Printf("UH INFO: user %v logout", userId)
 	err := uh.UsersCollection.Update(bson.M{"user_id":userId}, bson.M{"$set":bson.M{"auth":false}})
 	return err
 }
@@ -80,11 +82,15 @@ func (uh *UserHandler) LogoutUser(userId string) (error) {
 func (uh *UserHandler) LoginUser(userName, password string) (*UserData, error) {
 	tmp := UserData{}
 	err := uh.UsersCollection.Find(bson.M{"$or":[]bson.M{bson.M{"user_name": userName}, bson.M{"email":userName}}, "password": utils.PHash(password)}).One(&tmp)
+	log.Printf("UH INFO: found data: %+v", tmp)
 	if err == nil {
 		log.Printf("UH INFO: for user: %+v set auth true", tmp)
-		err = uh.UsersCollection.Update(bson.M{"user_id":tmp.UserId}, bson.M{"$set":bson.M{"auth":true, "last_logged":time.Now()}})
+		err = uh.UsersCollection.UpdateId(tmp.ID.Hex(), bson.M{"$set":bson.M{"auth":true, "last_logged":time.Now().Unix()}})
+		log.Printf("UH update err? %v", err)
+		err = uh.UsersCollection.FindId(tmp.ID).One(&tmp)
+		log.Printf("UH INFO: UpDATE err: %v after objet: \n%+v", err, tmp)
 		return &tmp, err
-	} else{
+	} else {
 		log.Printf("UH WARN! USER NOT AUTH IN DB, because: %v", err)
 	}
 	return nil, err

@@ -48,7 +48,7 @@ func (u *user) CanWrite(right string) bool {
 }
 
 func (u *user) IsAuthenticated() bool {
-	log.Printf("User is auth %v", u.Auth)
+	log.Printf("User %v is auth %v", u.UserId, u.Auth)
 	return u.Auth
 }
 
@@ -58,12 +58,12 @@ func (u *user) UniqueId() string {
 }
 
 func (u *user) RoleName() string {
-	log.Printf("User role: %v", u.Role)
+	log.Printf("User %v role: %v", u.UserId, u.Role)
 	return u.Role
 }
 
 func (u *user) BelongsToCompany() string {
-	log.Printf("User belongs to %v", u.BelongsTo)
+	log.Printf("User %v belongs to %v", u.UserId, u.BelongsTo)
 	return u.BelongsTo
 }
 
@@ -102,7 +102,7 @@ func GetCurrentUser(req *http.Request, db d.DB) (User, error) {
 		log.Printf("error find user by [%v], because: %v", userId, err)
 		return nil, err
 	}
-	if userData == nil{
+	if userData == nil {
 		log.Printf("user not found :(")
 		return nil, nil
 	}
@@ -142,7 +142,7 @@ func EnsureAuth(r martini.Router, mainDb *d.MainDb) martini.Router {
 			log.Printf("AUTH found user data: %v, %v, %v", userData.UserId, userData.UserName, userData.Auth)
 		}
 		user := NewUser(userData)
-		StartAuthSession(user, w)
+		StartAuthSession(user, w, )
 		redirect := req.URL.Query().Get(REDIRECT_PARAM)
 		if redirect == "" {
 			redirect = DefaultUrlMap.GetDefaultUrl(user.BelongsToCompany())

@@ -94,7 +94,9 @@ func TestTaxiInfinityFail(t *testing.T) {
 		if out_res.Message.Type != "chat" {
 			t.Errorf("Out message type != chat, but == %v", out_res.Message.Type)
 		}
-		if out_res.Message.Body != taxi_conf.Information.Text {
+		ch, _ := configStore.GetChatConfig(taxi_conf.Chat.CompanyId)
+
+		if out_res.Message.Body != ch.Information {
 			t.Errorf("Out message body != info in config, but == %v", out_res.Message.Body)
 		}
 	}
