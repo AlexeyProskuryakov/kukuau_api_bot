@@ -82,7 +82,6 @@ type TaxiGeoOrbit struct {
 type TaxiConfig struct {
 	Api               TaxiApiParams `json:"api"`
 	DictUrl           string `json:"dict_url"`
-	Key               string `json:"key"`
 	Name              string `json:"name"`
 	Information       struct {
 				  Phone string `json:"phone"`

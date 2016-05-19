@@ -105,7 +105,7 @@ func StartBot(db *d.MainDb, result chan string) c.Configuration {
 		apiMixin := t.ExternalApiMixin{API: external_api}
 
 		carsCache := t.NewCarsCache(external_api)
-		notifier := n.NewNotifier(conf.Main.CallbackAddr, taxi_conf.Key, db)
+		notifier := n.NewNotifier(conf.Main.CallbackAddr, taxi_conf.Chat.Key, db)
 
 		address_handler, address_supplier := GetAddressInstruments(conf, taxi_name, external_address_supplier)
 

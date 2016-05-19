@@ -32,11 +32,11 @@ func TestTaxiInfinityFail(t *testing.T) {
 	apiMixin := taxi.ExternalApiMixin{API: external_api}
 
 	carsCache := taxi.NewCarsCache(external_api)
-	notifier := n.NewNotifier(conf.Main.CallbackAddr, taxi_conf.Key, db)
+	notifier := n.NewNotifier(conf.Main.CallbackAddr, taxi_conf.Chat.Key, db)
 
 	address_handler, address_supplier := GetAddressInstruments(conf, taxi_conf.Name, external_address_supplier)
-
-	botContext := taxi.FormTaxiBotContext(&apiMixin, db, taxi_conf, address_handler, carsCache)
+	configStore := d.NewConfigurationStorage(conf.Main.ConfigDatabase)
+	botContext := taxi.FormTaxiBotContext(&apiMixin, db, configStore, taxi_conf, address_handler, carsCache)
 	controller := m.FormBotController(botContext, db)
 
 	t.Logf("Was create bot context: %+v\n", botContext)
@@ -90,7 +90,7 @@ func TestTaxiInfinityFail(t *testing.T) {
 
 	if out_res == nil {
 		t.Error("Out info result is nil!")
-	}else {
+	} else {
 		if out_res.Message.Type != "chat" {
 			t.Errorf("Out message type != chat, but == %v", out_res.Message.Type)
 		}
