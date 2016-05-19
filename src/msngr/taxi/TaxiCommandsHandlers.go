@@ -22,7 +22,6 @@ import (
 const (
 	CAR_INFO_UPDATE_TIME = 30.0
 	NEW_ORDER_TEXT_INFO = "В течении 5 минут Вам будет назначен автомобиль. Или перезвонит оператор если ожидаемое время подачи составит более 15 минут."
-
 )
 
 var CONNECTION_ERROR = s.ErrorMessageResult(errors.New("Система обработки заказов такси не отвечает, попробуйте позже."), nil)
@@ -45,7 +44,7 @@ func (cip *CarInfoProvider) GetCarInfo(car_id int64) *CarInfo {
 	return car_info
 }
 
-func FormTaxiBotContext(im *ExternalApiMixin, db_handler *d.MainDb, tc c.TaxiConfig, ah AddressHandler, cc *CarsCache) *m.BotContext {
+func FormTaxiBotContext(im *ExternalApiMixin, db_handler *d.MainDb, cfgStore *d.ConfigurationStorage, tc c.TaxiConfig, ah AddressHandler, cc *CarsCache) *m.BotContext {
 	context := m.BotContext{}
 	context.Check = func() (detail string, ok bool) {
 		ok = im.API.IsConnected()
@@ -56,16 +55,20 @@ func FormTaxiBotContext(im *ExternalApiMixin, db_handler *d.MainDb, tc c.TaxiCon
 		}
 		return detail, ok
 	}
-	context.Commands = GetCommands(tc.DictUrl)
-	//context.Commands = GetCommands(fmt.Sprintf("http://<host>:%v/taxi/%v/streets")tc.DictUrl)
-	context.Commands = EnsureAvailableCommands(context.Commands, tc.AvailableCommands)
+	context.Commands = EnsureAvailableCommands(GetCommands(tc.DictUrl), tc.AvailableCommands)
 
 	context.Name = tc.Name
 	context.RequestProcessors = map[string]s.RequestCommandProcessor{
 		"commands": &TaxiCommandsProcessor{MainDb: *db_handler, context: &context},
 	}
+
+	commandsGenerator := func(in *s.InPkg) (*[]s.OutCommand, error) {
+		command, err := form_commands(in.From, *db_handler, &context)
+		return command, err
+	}
+
 	context.MessageProcessors = map[string]s.MessageCommandProcessor{
-		"information":      &TaxiInformationProcessor{information:&(tc.Information.Text)},
+		"information":      m.NewUpdatableInformationProcessor(cfgStore, commandsGenerator, tc.Chat.CompanyId),
 		"new_order":        &TaxiNewOrderProcessor{ExternalApiMixin: *im, MainDb: *db_handler, context:&context, AddressHandler:ah, Config: tc},
 		"cancel_order":     &TaxiCancelOrderProcessor{ExternalApiMixin: *im, MainDb: *db_handler, context:&context, alert_phone:tc.Information.Phone},
 		"calculate_price":  &TaxiCalculatePriceProcessor{ExternalApiMixin: *im, context:&context, AddressHandler:ah, Config: tc},
@@ -289,7 +292,7 @@ func (cp *TaxiCarPositionMessageProcessor) ProcessMessage(in *s.InPkg) *s.Messag
 		car_info := cp.Cars.GetCarInfo(car_id)
 		if car_info != nil {
 			return &s.MessageResult{Body:fmt.Sprintf("Lat:%v;Lon:%v", car_info.Lat, car_info.Lon)}
-		}else {
+		} else {
 			return s.ErrorMessageResult(errors.New("Неизвестный автомобиль."), cp.context.Commands[CMDS_CREATED_ORDER])
 		}
 
@@ -378,7 +381,7 @@ func (crmp *TaxiCallbackRequestMessageProcessor) ProcessMessage(in *s.InPkg) *s.
 	var text string
 	if ok {
 		text = fmt.Sprintf("Ожидайте звонка оператора\n%s", result)
-	}else {
+	} else {
 		text = fmt.Sprintf("Ошибка при отправке запроса на обратный звонок.\n%s", result)
 	}
 	return &s.MessageResult{Body:text, Type:"chat"}
@@ -405,7 +408,7 @@ func (twmp *TaxiWhereItMessageProcessor) ProcessMessage(in *s.InPkg) *s.MessageR
 		var text string
 		if ok {
 			text = fmt.Sprintf("О том что вы не видите машину диспетчер уведомлен\n%s", result)
-		}else {
+		} else {
 			text = fmt.Sprintf("Ошибка!\n%s", result)
 		}
 		return &s.MessageResult{Body:text, Type:"chat"}
@@ -623,7 +626,7 @@ func (nop *TaxiNewOrderProcessor) ProcessMessage(in *s.InPkg) *s.MessageResult {
 					Commands: nop.context.Commands[CMDS_NOT_CREATED_ORDER],
 					Type: "chat",
 				}
-			}else {
+			} else {
 				return s.ErrorMessageResult(
 					errors.New(fmt.Sprintf("Не могу определить адрес, потому что %v", err.Error())),
 					nop.context.Commands[CMDS_NOT_CREATED_ORDER])
@@ -787,7 +790,7 @@ func (fp *TaxiFeedbackProcessor) ProcessMessage(in *s.InPkg) *s.MessageResult {
 		if user == nil {
 			log.Printf("Error at implying user by id %v", in.From)
 			return s.ErrorMessageResult(errors.New("Не могу определить пользователя"), fp.context.Commands[CMDS_FEEDBACK])
-		}else {
+		} else {
 			phone = &(user.Phone)
 		}
 	}

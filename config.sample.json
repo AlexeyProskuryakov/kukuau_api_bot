@@ -16,6 +16,7 @@
       "connection_string": "localhost:27017"
     },
     "pg_database": {
+      //для профайлов (которые в консоли)
       "connection_string": "postgres://postgres:123@localhost:5432/kuku?sslmode=disable"
     },
     // Настройка для тестового доступа
@@ -37,7 +38,7 @@
     "chat": {
       //чат конфигурация для консоли требуется для стандартизации использования автонотификаций и автоответов
       "id": "klichat",
-      //
+      // == юзернейм профайла
       "key": "main key",
       "information": "Привет! Это мы Кличим Чат или Клиент Чат или просто Кличат! Пиши сообщения и Саша тебе ответит:)",
       "auto_answers": [
@@ -56,11 +57,11 @@
   },
   "taxis": {
     "marka": {
-      "key": "Kuku demo_taxi_key",
       "dict_url": "http://localhost:9191/taxi/marka/streets",
-      "information": {
-        "phone": "123-45-67",
-        "text": "Такси марка! Самое лучшее такси в академгородке!"
+      "chat": {
+        "key": "Kuku demo_taxi_key",
+        "information": "Такси марка! Самое лучшее такси в академгородке! Телефон: 123-45-67",
+        "id":"marka"
       },
       "name": "marka",
       "api": {
@@ -327,12 +328,16 @@
   },
   "quests": {
     "quest_time": {
-      "additional_key": "Kuku klichat_key", //ключ для отправки сообщений от кличата
-      "web_port": ":9696", //порт на котором будет работать веб морда
+      "additional_key": "Kuku klichat_key",
+      //ключ для отправки сообщений от кличата
+      "web_port": ":9696",
+      //порт на котором будет работать веб морда
       "chat": {
         "information": "Квесты - хуесты. Ищешь в помойках коды получаешь деньги!",
-        "key": "Kuku demo_quest_key", //ключ для отправки сообщений от квеста
-        "id": "time" //идентификатор компании квеста должен быть равен username профайла
+        "key": "Kuku demo_quest_key",
+        //ключ для отправки сообщений от квеста
+        "id": "time"
+        //идентификатор компании квеста должен быть равен username профайла
       }
     }
   },
@@ -360,8 +365,8 @@
           "text": "У вас есть неотвеченные сообщения"
         }
       ],
-      //ответ бота на каждое сообщение сразуже
       "key": "Kuku test_company_key",
+      //ключ для ответов
       "user": "user",
       //логин пароль ползователя для входа в чатик
       "password": "password"
@@ -375,7 +380,6 @@
         "after_min": 1,
         "text": "<Will answer you later. Wait please>"
       },
-      "bot_answer": "<I receive your message>",
       "key": "Kuku test_company_2_key"
     }
   },

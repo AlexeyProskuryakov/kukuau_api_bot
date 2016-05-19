@@ -81,8 +81,11 @@ func (uh *UserHandler) LoginUser(userName, password string) (*UserData, error) {
 	tmp := UserData{}
 	err := uh.UsersCollection.Find(bson.M{"$or":[]bson.M{bson.M{"user_name": userName}, bson.M{"email":userName}}, "password": utils.PHash(password)}).One(&tmp)
 	if err == nil {
+		log.Printf("UH INFO: for user: %+v set auth true", tmp)
 		err = uh.UsersCollection.Update(bson.M{"user_id":tmp.UserId}, bson.M{"$set":bson.M{"auth":true, "last_logged":time.Now()}})
 		return &tmp, err
+	} else{
+		log.Printf("UH WARN! USER NOT AUTH IN DB, because: %v", err)
 	}
 	return nil, err
 }

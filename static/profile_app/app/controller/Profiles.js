@@ -51,19 +51,21 @@ function createProfileForm(profileModel){
     botConfigRaw = profileModel.get('botconfig'),
     botConfig = Ext.create('Console.model.BotConfig', botConfigRaw);
 
-    console.log("f");
-    
-    botConfigRaw.answers.forEach(function(x){
-        x._id = guid();
-        botConfig.answers().add(Ext.create('Console.model.TimedAnswer', x))
-    })
-    answers_grid.reconfigure(botConfig.answers());
+    if (botConfigRaw.answers != undefined && botConfigRaw.answers != null){
+        botConfigRaw.answers.forEach(function(x){
+            x._id = guid();
+            botConfig.answers().add(Ext.create('Console.model.TimedAnswer', x))
+        })
+        answers_grid.reconfigure(botConfig.answers());
+    }
 
-    botConfigRaw.notifications.forEach(function(x){
-        x._id = guid();
-        botConfig.notifications().add(Ext.create('Console.model.TimedAnswer', x))
-    })
-    notifications_grid.reconfigure(botConfig.notifications());
+    if (botConfigRaw.notifications != undefined && botConfigRaw.notifications != null){
+        botConfigRaw.notifications.forEach(function(x){
+            x._id = guid();
+            botConfig.notifications().add(Ext.create('Console.model.TimedAnswer', x))
+        })
+        notifications_grid.reconfigure(botConfig.notifications());
+    }
 
     information_field.setValue(botConfig.get("information"));
 
@@ -197,8 +199,8 @@ Ext.define('Console.controller.Profiles', {
             },
 
             'profilewindow grid[itemId=profile_employees]':{
-             itemdblclick: this.changeEmployee
-         },       
+               itemdblclick: this.changeEmployee
+           },       
             //bot configuration
             'profilewindow grid[itemId=answers]':{
                 itemdblclick: this.changeAnswer

@@ -109,7 +109,7 @@ func StartBot(db *d.MainDb, result chan string) c.Configuration {
 
 		address_handler, address_supplier := GetAddressInstruments(conf, taxi_name, external_address_supplier)
 
-		botContext := t.FormTaxiBotContext(&apiMixin, db, taxi_conf, address_handler, carsCache)
+		botContext := t.FormTaxiBotContext(&apiMixin, db, configStorage, taxi_conf, address_handler, carsCache)
 		controller := m.FormBotController(botContext, db)
 
 		log.Printf("Was create bot context: %+v\n", botContext)
@@ -134,6 +134,8 @@ func StartBot(db *d.MainDb, result chan string) c.Configuration {
 				geo.StreetsSearchController(w, r, external_address_supplier)
 			})
 		}
+
+		configStorage.SetChatConfig(taxi_conf.Chat, false)
 
 		result <- fmt.Sprintf("taxi_%v", taxi_name)
 	}

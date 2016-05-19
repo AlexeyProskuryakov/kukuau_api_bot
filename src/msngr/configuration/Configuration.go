@@ -90,6 +90,7 @@ type TaxiConfig struct {
 			  } `json:"information"`
 	Markups           *[]string `json:"markups,omitempty"`
 	AvailableCommands map[string][]string `json:"available_commands"`
+	Chat              ChatConfig `json:"chat"`
 }
 
 type ShopConfig struct {
@@ -119,11 +120,11 @@ type TimedAnswer struct {
 
 type ChatConfig struct {
 	Name          string `json:"name" bson:"name"`
-	CompanyId     string `json:"id" bson:"company_id"`
-	UrlSalt       string `json:"url_salt" bson:"url_salt"`
+	CompanyId     string `json:"id" bson:"company_id"` //username of profile
+	UrlSalt       string `json:"url_salt" bson:"url_salt,omitempty"`
 	Information   string `json:"information" bson:"information"`
-	AutoAnswers   []TimedAnswer `json:"auto_answers" bson:"auto_answers"`
-	Notifications []TimedAnswer `json:"notifications" bson:"notifications"`
+	AutoAnswers   []TimedAnswer `json:"auto_answers" bson:"auto_answers,omitempty"`
+	Notifications []TimedAnswer `json:"notifications" bson:"notifications,omitempty"`
 	Key           string `json:"key" bson:"key"`
 	User          string `json:"user" bson:"user"`
 	Password      string `json:"password" bson:"password"`
