@@ -99,7 +99,11 @@ const (
 	CMDS_FEEDBACK = "feedback"
 )
 
-var not_point = string("не указан")
+var (
+	not_point = string("не указан")
+	NOW = string("сейчас")
+	EMPTY = string("")
+)
 
 var CommandsData = map[string]s.OutCommand{
 	"where_it":s.OutCommand{
@@ -140,12 +144,21 @@ func EnsureAvailableCommands(default_cmds map[string]*[]s.OutCommand, available_
 
 func GetCommands(dictUrl string) map[string]*[]s.OutCommand {
 	result := make(map[string]*[]s.OutCommand)
+	hours := []string{"00", "01", "02", "03", "04", "05", "06", "07", "08", "09", "10", "11", "12", "13", "14", "15", "16", "17", "18", "19", "20", "21", "22", "23"}
+	minutes := []string{"00", "01", "02", "03", "04", "05", "06", "07", "08", "09", "10", "11", "12", "13", "14", "15", "16", "17", "18", "19", "20", "21", "22", "23", "24", "25",
+		"26", "27", "28", "29", "30", "31", "32", "33", "34", "35", "36", "37", "38", "39", "39", "40", "41", "42", "43", "44", "45", "46", "48", "48", "49", "50", "51", "52", "53", "54", "54", "55", "56", "57", "58", "59" }
+	for i := 0; i < 60; i++ {
+		if i < 24 {
+			hours = append(hours, fmt.Sprintf("%02d", i))
 
+		}
+		minutes = append(minutes, fmt.Sprintf("%02d", i))
+	}
 	var taxi_call_form = &s.OutForm{
 		Title: "Форма вsызова такси",
 		Type:  "form",
 		Name:  "call_taxi",
-		Text:  "Откуда: ?(street_from), ?(house_from), ?(entrance). Куда: ?(street_to), ?(house_to).",
+		Text:  "Откуда: ?(street_from), ?(house_from), ?(entrance). Куда: ?(street_to), ?(house_to). Когда: ?(thour):?(tmin).",
 		Fields: []s.OutField{
 			s.OutField{
 				Name: "street_from",
@@ -166,7 +179,7 @@ func GetCommands(dictUrl string) map[string]*[]s.OutCommand {
 			},
 			s.OutField{
 				Name: "entrance",
-				Type: "number",
+				Type: "text",
 				Attributes: s.FieldAttribute{
 					Label:    "подъезд",
 					Required: false,
@@ -189,6 +202,24 @@ func GetCommands(dictUrl string) map[string]*[]s.OutCommand {
 					Label:    "дом",
 					Required: true,
 				},
+			},
+			s.OutField{
+				Name:"thour",
+				Type:"list-single",
+				Attributes:s.FieldAttribute{
+					Label:"ЧЧ",
+					EmptyText:&NOW,
+				},
+				Items:s.FormItems(hours),
+			},
+			s.OutField{
+				Name:"tmin",
+				Type:"list-single",
+				Attributes:s.FieldAttribute{
+					Label:"MM",
+					EmptyText:&EMPTY,
+				},
+				Items:s.FormItems(minutes),
 			},
 		},
 	}
@@ -486,6 +517,7 @@ func (a *AddressNotHere) Error() string {
 
 func _form_order(fields []s.InField, ah AddressHandler) (*NewOrderInfo, error) {
 	var from_key, from_name, to_key, to_name, hf, ht, entrance string
+	var dHours, dMin int
 	for _, field := range fields {
 		switch fn := field.Name; fn {
 		case "street_from":
@@ -500,9 +532,12 @@ func _form_order(fields []s.InField, ah AddressHandler) (*NewOrderInfo, error) {
 			hf = u.FirstOf(field.Data.Value, field.Data.Text).(string)
 		case "entrance":
 			entrance = u.FirstOf(field.Data.Value, field.Data.Text).(string)
+		case "thour":
+			dHours, _ = strconv.Atoi(field.Data.Text)
+		case "tmin":
+			dMin, _ = strconv.Atoi(field.Data.Text)
 		}
 	}
-	new_order := NewOrderInfo{Notes:"Заказ создан через мессенджер Klichat"}
 	var dest, deliv AddressF
 	if ah != nil {
 		if from_key == "" || to_key == "" {
@@ -533,6 +568,7 @@ func _form_order(fields []s.InField, ah AddressHandler) (*NewOrderInfo, error) {
 		}
 		//		log.Printf("\nDelivery: %v\nDestination: %v", deliv, dest)
 	}
+
 	deliv_id := strconv.FormatInt(deliv.ID, 10)
 	dest_id := strconv.FormatInt(dest.ID, 10)
 
@@ -543,14 +579,26 @@ func _form_order(fields []s.InField, ah AddressHandler) (*NewOrderInfo, error) {
 		City:deliv.City,
 		Entrance:entrance,
 		IdRegion:deliv.IDRegion,
-		IdAddress:deliv_id}
+		IdAddress:deliv_id,
+	}
+
 	destination := Destination{
 		Street:u.FirstOf(to_name, dest.Name).(string),
 		IdStreet:dest.ID,
 		House:ht,
 		IdRegion:dest.IDRegion,
 		IdAddress:dest_id,
-		City:dest.City}
+		City:dest.City,
+	}
+
+	new_order := NewOrderInfo{Notes:"Заказ создан через мессенджер Klichat"}
+	if dHours > 0  && dMin > 0 {
+		dTime := time.Now().Add(time.Duration(dHours) * time.Hour)
+		dTime = time.Now().Add(time.Duration(dMin) * time.Minute)
+		log.Printf("Order after: %+v", dTime)
+		dTime.Format("2006.01.02 15:04:05")
+		new_order.DeliveryTime = dTime.Format("2006.01.02 15:04:05")
+	}
 
 	new_order.Delivery = &delivery
 	new_order.Destinations = []*Destination{&destination}
