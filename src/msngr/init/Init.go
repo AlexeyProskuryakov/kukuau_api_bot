@@ -91,7 +91,6 @@ func StartBot(db *d.MainDb, result chan string) c.Configuration {
 
 	fs := http.FileServer(http.Dir("static"))
 	http.Handle("/static/", http.StripPrefix("/static/", fs))
-	http.Handle("/", web.NewSessionAuthorisationHandler(db))
 
 	for taxi_name, taxi_conf := range conf.Taxis {
 		log.Printf("taxi api configuration for %+v:\n%v", taxi_conf.Name, taxi_conf.Api)
@@ -160,7 +159,9 @@ func StartBot(db *d.MainDb, result chan string) c.Configuration {
 		log.Printf("Will handling quests controller for quest: %v", q_name)
 		qb_controller := q.FormQuestBotContext(conf, qConf, questStorage, db, configStorage)
 		q_controller := m.FormBotController(qb_controller, db)
-		http.HandleFunc(fmt.Sprintf("/quest/%v", q_name), q_controller)
+		route := fmt.Sprintf("/quest/%v", q_name)
+		log.Printf("Quest %v will handle at %v", q_name, route)
+		http.HandleFunc(route, q_controller)
 
 		configStorage.SetChatConfig(qConf.Chat, false)
 		questStorage.SetMessageConfiguration(q.QuestMessageConfiguration{CompanyId:qConf.Chat.CompanyId}, false)
@@ -333,6 +334,7 @@ func StartBot(db *d.MainDb, result chan string) c.Configuration {
 		Addr: server_address,
 	}
 	result <- "listen"
+	http.Handle("/", web.NewSessionAuthorisationHandler(db))
 	log.Fatal(server.ListenAndServe())
 	return conf
 }
